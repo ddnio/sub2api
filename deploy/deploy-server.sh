@@ -28,6 +28,11 @@ echo "==> [1/4] 拉取最新代码"
 cd "$REPO_ROOT"
 git pull
 
+if [[ ! -f "$CONFIG_FILE" ]]; then
+    echo "错误: 配置文件不存在: ${CONFIG_FILE}"
+    exit 1
+fi
+
 echo "==> [2/4] 构建镜像 ${IMAGE_NAME}"
 docker build \
     -t "$IMAGE_NAME" \
@@ -43,6 +48,7 @@ docker run -d \
     --name "$CONTAINER_NAME" \
     --restart unless-stopped \
     --network "$NETWORK" \
+    --ulimit nofile=100000:100000 \
     -v "${CONFIG_FILE}:/app/data/config.yaml:ro" \
     -p "${HOST_PORT}:8080" \
     "$IMAGE_NAME"
