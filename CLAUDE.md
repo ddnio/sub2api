@@ -40,6 +40,23 @@ bash deploy/deploy-server.sh prod   # 部署生产环境
 脚本会自动 git pull → docker build → 重启容器。
 服务器配置文件在 `/etc/sub2api/test.yaml` 和 `prod.yaml`，不在代码库里。
 
+## 部署补充
+
+- 服务器当前跟踪分支不一定是 main，`git pull` 只拉当前分支
+- 部署新分支前需在服务器先 `git checkout <branch>` 再运行脚本
+- 测试域名：`https://sub.aibewinjpq.com`（→ 127.0.0.1:8081）
+- 新功能上测试环境后，需在服务器跑对应 migration SQL
+- migration 文件在 `backend/migrations/`，按编号顺序执行
+
+## 支付模块
+
+- 实现在 `feature/payment-module` 分支，尚未合并 main
+- 支付服务商：mazfu.com 易支付接口（MApi）
+- Provider 实现：`backend/internal/repository/easypay_provider.go`
+- 服务器 `/etc/sub2api/test.yaml` 需添加 `payment:` 配置块（含 app_id、sign_key）
+- Migration：`backend/migrations/077_add_payment_tables.sql`
+- **密钥不要提交 git**，只放服务器 `/etc/sub2api/` 配置文件里
+
 ## 关键文件
 
 | 文件 | 说明 |
