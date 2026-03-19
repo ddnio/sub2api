@@ -83,6 +83,7 @@ type Config struct {
 	Gemini                  GeminiConfig                  `mapstructure:"gemini"`
 	Update                  UpdateConfig                  `mapstructure:"update"`
 	Idempotency             IdempotencyConfig             `mapstructure:"idempotency"`
+	Payment                 PaymentConfig                 `mapstructure:"payment"`
 }
 
 type LogConfig struct {
@@ -2371,6 +2372,18 @@ func ValidateFrontendRedirectURL(raw string) error {
 // isHTTPScheme 检查是否为 HTTP 或 HTTPS 协议
 func isHTTPScheme(scheme string) bool {
 	return strings.EqualFold(scheme, "http") || strings.EqualFold(scheme, "https")
+}
+
+type PaymentConfig struct {
+	Provider        string  `mapstructure:"provider"`          // easypay
+	EasyPayBaseURL  string  `mapstructure:"easypay_base_url"`
+	EasyPayAppID    string  `mapstructure:"easypay_app_id"`
+	EasyPaySignKey  string  `mapstructure:"easypay_sign_key"`
+	CallbackBaseURL string  `mapstructure:"callback_base_url"`
+	OrderExpirySec  int     `mapstructure:"order_expiry_sec"`  // default 900
+	ExpiryTickSec   int     `mapstructure:"expiry_tick_sec"`   // default 60
+	MinTopupAmount  float64 `mapstructure:"min_topup_amount"`  // default 1.00
+	MaxTopupAmount  float64 `mapstructure:"max_topup_amount"`  // default 10000.00
 }
 
 func warnIfInsecureURL(field, raw string) {
