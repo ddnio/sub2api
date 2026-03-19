@@ -154,6 +154,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/payment',
+    name: 'Payment',
+    component: () => import('@/views/user/PaymentView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Recharge / Plans',
+      titleKey: 'payment.title',
+      descriptionKey: 'payment.description'
+    }
+  },
+  {
     path: '/redeem',
     name: 'Redeem',
     component: () => import('@/views/user/RedeemView.vue'),
@@ -324,6 +336,28 @@ const routes: RouteRecordRaw[] = [
       title: 'Proxy Management',
       titleKey: 'admin.proxies.title',
       descriptionKey: 'admin.proxies.description'
+    }
+  },
+  {
+    path: '/admin/payment/plans',
+    name: 'AdminPaymentPlans',
+    component: () => import('@/views/admin/PaymentPlansView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Payment Plans',
+      titleKey: 'adminPayment.plansTitle'
+    }
+  },
+  {
+    path: '/admin/payment/orders',
+    name: 'AdminPaymentOrders',
+    component: () => import('@/views/admin/PaymentOrdersView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Payment Orders',
+      titleKey: 'adminPayment.ordersTitle'
     }
   },
   {
