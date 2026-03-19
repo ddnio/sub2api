@@ -77,8 +77,9 @@
 | type | string(20) | NOT NULL | `plan` / `topup` |
 | plan_id | bigint | nullable, FK → payment_plans, ON DELETE RESTRICT | 套餐订单关联 |
 | amount | decimal(20,8) | NOT NULL, >= 0 | 实付金额（元） |
-| credit_amount | decimal(20,8) | nullable, >= 0 | 实际发放金额 |
+| credit_amount | decimal(20,8) | nullable, >= 0 | 实际发放金额（充值场景：可含赠送，如充 20 送 2 则为 22；套餐场景：不使用） |
 | status | string(20) | NOT NULL, default 'pending' | 订单状态 |
+| currency | string(3) | NOT NULL, default 'CNY' | 币种（预留国际化） |
 | provider | string(20) | nullable | `alipay` / `wechat` |
 | provider_order_no | string(64) | nullable, UNIQUE | 第三方流水号 |
 | paid_at | timestamptz | nullable | 支付时间 |
@@ -168,7 +169,7 @@ backend/internal/
 │   └── payment_order_handler.go      # 订单管理
 ├── handler/dto/
 │   └── (mappers.go 中新增转换函数)
-├── ent/schema/
+../../ent/schema/              # 注意：Ent schema 在 backend/ent/schema/，不在 internal/ 下
 │   ├── payment_plan.go
 │   └── payment_order.go
 ├── config/
@@ -194,7 +195,10 @@ type PaymentConfig struct {
     EasyPayAppID    string `mapstructure:"easypay_app_id"`
     EasyPaySignKey  string `mapstructure:"easypay_sign_key"`
     CallbackBaseURL string `mapstructure:"callback_base_url"` // 回调地址前缀
-    OrderExpirySec  int    `mapstructure:"order_expiry_sec"`  // 订单过期时间，默认 900（15分钟）
+    OrderExpirySec  int     `mapstructure:"order_expiry_sec"`  // 订单过期时间，默认 900（15分钟）
+    ExpiryTickSec   int     `mapstructure:"expiry_tick_sec"`   // 过期扫描间隔，默认 60（1分钟）
+    MinTopupAmount  float64 `mapstructure:"min_topup_amount"`  // 最小充值金额，默认 1.00
+    MaxTopupAmount  float64 `mapstructure:"max_topup_amount"`  // 最大充值金额，默认 10000.00
 }
 ```
 
@@ -243,6 +247,8 @@ type PaymentConfig struct {
 { "type": "topup", "amount": 50.00, "provider": "wechat" }
 ```
 
+**充值金额约束：** 最小 ¥1.00，最大 ¥10000.00，在 `PaymentConfig` 中可配置 `MinTopupAmount` / `MaxTopupAmount`。
+
 **Response:**
 ```json
 {
@@ -267,6 +273,8 @@ type PaymentConfig struct {
 
 轮询订单状态（前端支付弹窗使用）。
 
+**轮询策略：** 前端每 2 秒轮询一次，最长轮询 15 分钟（与订单过期时间一致）。服务端对该端点额外限流：每用户每秒最多 1 次。
+
 **Response:**
 ```json
 { "data": { "status": "completed" } }
@@ -285,9 +293,13 @@ type PaymentConfig struct {
 4. `UPDATE payment_orders SET status='paid' WHERE order_no=? AND status IN ('pending','expired')` — 乐观锁
 5. 如果 affected rows = 0，说明已处理，返回成功（幂等）
 6. 在 DB 事务内发放权益：
-   - `topup` → `UserService.UpdateBalance(userID, creditAmount)`
-   - `plan` → `SubscriptionService.AssignOrExtendSubscription(userID, groupID, days)`
-7. 更新 status = 'completed'，写入 `paid_at`、`completed_at`、`provider_order_no`、`callback_raw`
+   - `topup` → `UserService.UpdateBalance(userID, float64(creditAmount))`
+     - 注意：现有 `UpdateBalance` 接受 `float64`，在调用处将 `decimal` 转为 `float64`
+     - `credit_amount` 赋值：一期与 `amount` 相同；后续支持赠送时可按配置计算
+   - `plan` → `SubscriptionService.AssignOrExtendSubscription(input)`
+     - `input.AssignedBy = 0`（系统自动发放）
+     - `input.Notes = "Payment order: <orderNo>"`
+7. 更新 status = 'completed'，写入 `paid_at`、`completed_at`、`provider_order_no`、`callback_raw`、`credit_amount`
 8. 事务提交后异步失效缓存（5s 超时 goroutine）
 9. `ReleaseCallbackLock(orderNo)`
 10. 返回支付平台要求的成功响应
@@ -314,7 +326,7 @@ type PaymentConfig struct {
 | GET | /api/v1/admin/payment/orders | 列表（分页、按状态/时间/用户/类型筛选） |
 | GET | /api/v1/admin/payment/orders/:id | 详情 |
 | POST | /api/v1/admin/payment/orders/:id/complete | 手动补发权益（paid → completed） |
-| POST | /api/v1/admin/payment/orders/:id/refund | 标记退款（completed → refunded） |
+| POST | /api/v1/admin/payment/orders/:id/refund | 标记退款（completed → refunded，仅记账标记，不自动撤销已发放权益） |
 | GET | /api/v1/admin/payment/orders/stats | 收入统计 |
 
 #### 收入统计 GET /api/v1/admin/payment/orders/stats
@@ -398,8 +410,9 @@ type PaymentOrderRepository interface {
 type PaymentPlanRepository interface {
     Create(ctx context.Context, plan *PaymentPlan) (*PaymentPlan, error)
     Update(ctx context.Context, id int64, updates map[string]any) (*PaymentPlan, error)
-    GetByID(ctx context.Context, id int64) (*PaymentPlan, error)
-    ListActive(ctx context.Context) ([]*PaymentPlan, error) // 用户端，只看激活的
+    GetByID(ctx context.Context, id int64) (*PaymentPlan, error)           // 绕过软删除过滤，订单详情需要查已下架的 Plan
+    GetByIDActive(ctx context.Context, id int64) (*PaymentPlan, error)     // 受软删除过滤，创建订单时验证 Plan 有效
+    ListActive(ctx context.Context) ([]*PaymentPlan, error)                // 用户端，只看激活的
     ListAll(ctx context.Context, pagination Pagination) ([]*PaymentPlan, int, error) // 管理端
     SoftDelete(ctx context.Context, id int64) error
 }
@@ -415,6 +428,7 @@ type PaymentPlanRepository interface {
 | 支付平台不可用 | `CreatePayment` 返回错误，前端提示"支付暂不可用" |
 | Redis 不可用 | 跳过分布式锁，依赖 DB 乐观锁保证正确性 |
 | 余额更新竞争 | 复用已有模式：`UPDATE users SET balance = balance + ? WHERE id = ?` |
+| 退款处理 | 一期仅做记账标记（`completed → refunded`），不自动撤销余额或订阅。管理员需手动通过已有的 admin 接口调整余额或撤销订阅 |
 
 ## 安全
 
@@ -461,7 +475,7 @@ type PaymentPlanRepository interface {
 
 | 项 | 惯例 | 本模块遵循方式 |
 |----|------|---------------|
-| Service 构造 | `NewXxxService(deps...) *XxxService`，具体类型注入 | `NewPaymentService(orderRepo, planRepo, provider, cache, userSvc, subSvc, billingCache, entClient, authInvalidator)` |
+| Service 构造 | `NewXxxService(deps...) *XxxService`，具体类型注入 | `NewPaymentService(orderRepo, planRepo, provider, cache, userSvc, subSvc, billingCache, entClient)` |
 | Repository 接口 | 定义在 service 包，repo 包提供未导出实现 | 同上 |
 | 事务 | `s.entClient.Tx(ctx)` + defer Rollback | 回调处理流程使用同一模式 |
 | 分布式锁 | service 定义 Cache interface，repo 实现，失败降级 | PaymentCache interface + 降级到 DB 乐观锁 |
@@ -480,5 +494,5 @@ type PaymentPlanRepository interface {
 - Stripe 国际支付
 - 优惠券/促销码与支付联动
 - 邮件/站内通知
-- 退款自动化（一期只做标记）
+- 退款自动化（一期仅记账标记，不自动撤销权益，需管理员手动处理）
 - 独立 Pricing Page（登录后在 Dashboard 内完成）
