@@ -518,3 +518,50 @@ type PromoCodeUsage struct {
 
 	User *User `json:"user,omitempty"`
 }
+
+// --- Payment DTOs ---
+
+type PaymentPlanDTO struct {
+	ID              int64    `json:"id"`
+	Name            string   `json:"name"`
+	Description     string   `json:"description"`
+	Badge           *string  `json:"badge,omitempty"`
+	GroupName       string   `json:"group_name"`
+	DurationDays    int      `json:"duration_days"`
+	Price           float64  `json:"price"`
+	OriginalPrice   *float64 `json:"original_price,omitempty"`
+	DailyLimitUSD   float64  `json:"daily_limit_usd"`
+	WeeklyLimitUSD  float64  `json:"weekly_limit_usd"`
+	MonthlyLimitUSD float64  `json:"monthly_limit_usd"`
+}
+
+type AdminPaymentPlanDTO struct {
+	PaymentPlanDTO
+	GroupID   int64 `json:"group_id"`
+	SortOrder int   `json:"sort_order"`
+	IsActive  bool  `json:"is_active"`
+}
+
+type PaymentOrderDTO struct {
+	ID          int64   `json:"id"`
+	OrderNo     string  `json:"order_no"`
+	Type        string  `json:"type"`
+	Amount      float64 `json:"amount"`
+	Currency    string  `json:"currency"`
+	Status      string  `json:"status"`
+	Provider    *string `json:"provider,omitempty"`
+	CreatedAt   string  `json:"created_at"`
+	PaidAt      *string `json:"paid_at,omitempty"`
+	CompletedAt *string `json:"completed_at,omitempty"`
+	PlanName    *string `json:"plan_name,omitempty"`
+}
+
+type AdminPaymentOrderDTO struct {
+	PaymentOrderDTO
+	UserID          int64    `json:"user_id"`
+	PlanID          *int64   `json:"plan_id,omitempty"`
+	CreditAmount    *float64 `json:"credit_amount,omitempty"`
+	ProviderOrderNo *string  `json:"provider_order_no,omitempty"`
+	RefundedAt      *string  `json:"refunded_at,omitempty"`
+	AdminNote       *string  `json:"admin_note,omitempty"`
+}
