@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"time"
 
+	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/google/wire"
@@ -403,6 +404,36 @@ func ProvideSettingService(settingRepo SettingRepository, groupRepo GroupReposit
 	return svc
 }
 
+// ProvidePaymentService creates PaymentService with config-driven parameters
+func ProvidePaymentService(
+	orderRepo PaymentOrderRepository,
+	planRepo PaymentPlanRepository,
+	provider PaymentProvider,
+	cache PaymentCache,
+	userService *UserService,
+	subscriptionService *SubscriptionService,
+	billingCacheService *BillingCacheService,
+	entClient *dbent.Client,
+	cfg *config.Config,
+) *PaymentService {
+	return NewPaymentService(
+		orderRepo, planRepo, provider, cache,
+		userService, subscriptionService, billingCacheService, entClient,
+		cfg.Payment.OrderExpirySec, cfg.Payment.MinTopupAmount, cfg.Payment.MaxTopupAmount,
+	)
+}
+
+// ProvidePaymentExpiryService creates and starts PaymentExpiryService
+func ProvidePaymentExpiryService(orderRepo PaymentOrderRepository, cfg *config.Config) *PaymentExpiryService {
+	interval := time.Duration(cfg.Payment.ExpiryTickSec) * time.Second
+	if interval <= 0 {
+		interval = time.Minute
+	}
+	svc := NewPaymentExpiryService(orderRepo, interval)
+	svc.Start()
+	return svc
+}
+
 // ProviderSet is the Wire provider set for all services
 var ProviderSet = wire.NewSet(
 	// Core services
@@ -487,4 +518,6 @@ var ProviderSet = wire.NewSet(
 	ProvideScheduledTestService,
 	ProvideScheduledTestRunnerService,
 	NewGroupCapacityService,
+	ProvidePaymentService,
+	ProvidePaymentExpiryService,
 )

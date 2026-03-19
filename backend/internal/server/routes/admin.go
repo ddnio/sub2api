@@ -84,6 +84,9 @@ func RegisterAdminRoutes(
 
 		// 定时测试计划
 		registerScheduledTestRoutes(admin, h)
+
+		// 支付管理
+		registerAdminPaymentRoutes(admin, h)
 	}
 }
 
@@ -549,5 +552,23 @@ func registerErrorPassthroughRoutes(admin *gin.RouterGroup, h *handler.Handlers)
 		rules.POST("", h.Admin.ErrorPassthrough.Create)
 		rules.PUT("/:id", h.Admin.ErrorPassthrough.Update)
 		rules.DELETE("/:id", h.Admin.ErrorPassthrough.Delete)
+	}
+}
+
+func registerAdminPaymentRoutes(adminGroup *gin.RouterGroup, h *handler.Handlers) {
+	plans := adminGroup.Group("/payment/plans")
+	{
+		plans.GET("", h.Admin.PaymentPlan.List)
+		plans.POST("", h.Admin.PaymentPlan.Create)
+		plans.PUT("/:id", h.Admin.PaymentPlan.Update)
+		plans.DELETE("/:id", h.Admin.PaymentPlan.Delete)
+	}
+	orders := adminGroup.Group("/payment/orders")
+	{
+		orders.GET("", h.Admin.PaymentOrder.List)
+		orders.GET("/stats", h.Admin.PaymentOrder.Stats) // must be before /:id
+		orders.GET("/:id", h.Admin.PaymentOrder.GetByID)
+		orders.POST("/:id/complete", h.Admin.PaymentOrder.Complete)
+		orders.POST("/:id/refund", h.Admin.PaymentOrder.Refund)
 	}
 }

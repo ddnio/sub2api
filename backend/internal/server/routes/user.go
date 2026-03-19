@@ -90,5 +90,26 @@ func RegisterUserRoutes(
 			subscriptions.GET("/progress", h.Subscription.GetProgress)
 			subscriptions.GET("/summary", h.Subscription.GetSummary)
 		}
+
+		// 支付
+		registerPaymentRoutes(authenticated, h)
+	}
+}
+
+func registerPaymentRoutes(authenticated *gin.RouterGroup, h *handler.Handlers) {
+	payment := authenticated.Group("/payment")
+	{
+		payment.GET("/plans", h.Payment.ListPlans)
+		payment.POST("/orders", h.Payment.CreateOrder)
+		payment.GET("/orders", h.Payment.ListOrders)
+		payment.GET("/orders/:id/status", h.Payment.GetOrderStatus)
+	}
+}
+
+// RegisterPaymentCallbackRoutes registers the payment callback route (no JWT required)
+func RegisterPaymentCallbackRoutes(v1 *gin.RouterGroup, h *handler.Handlers) {
+	paymentCb := v1.Group("/payment")
+	{
+		paymentCb.POST("/callback/:provider", h.PaymentCallback.Handle)
 	}
 }

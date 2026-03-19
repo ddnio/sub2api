@@ -117,10 +117,20 @@ var ProviderSet = wire.NewSet(
 	NewGeminiCliCodeAssistClient,
 	NewGeminiDriveClient,
 
+	NewPaymentOrderRepository,
+	NewPaymentPlanRepository,
+	NewPaymentCache,
+	ProvideEasyPayProvider,
+
 	ProvideEnt,
 	ProvideSQLDB,
 	ProvideRedis,
 )
+
+// ProvideEasyPayProvider creates EasyPay provider as PaymentProvider interface
+func ProvideEasyPayProvider(cfg *config.Config) service.PaymentProvider {
+	return NewEasyPayProvider(cfg.Payment)
+}
 
 // ProvideEnt 为依赖注入提供 Ent 客户端。
 //

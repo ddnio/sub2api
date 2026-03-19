@@ -32,6 +32,8 @@ func ProvideAdminHandlers(
 	errorPassthroughHandler *admin.ErrorPassthroughHandler,
 	apiKeyHandler *admin.AdminAPIKeyHandler,
 	scheduledTestHandler *admin.ScheduledTestHandler,
+	paymentPlanHandler *admin.PaymentPlanHandler,
+	paymentOrderHandler *admin.PaymentOrderHandler,
 ) *AdminHandlers {
 	return &AdminHandlers{
 		Dashboard:        dashboardHandler,
@@ -57,6 +59,8 @@ func ProvideAdminHandlers(
 		ErrorPassthrough: errorPassthroughHandler,
 		APIKey:           apiKeyHandler,
 		ScheduledTest:    scheduledTestHandler,
+		PaymentPlan:      paymentPlanHandler,
+		PaymentOrder:     paymentOrderHandler,
 	}
 }
 
@@ -88,22 +92,26 @@ func ProvideHandlers(
 	totpHandler *TotpHandler,
 	_ *service.IdempotencyCoordinator,
 	_ *service.IdempotencyCleanupService,
+	paymentHandler *PaymentHandler,
+	paymentCallbackHandler *PaymentCallbackHandler,
 ) *Handlers {
 	return &Handlers{
-		Auth:          authHandler,
-		User:          userHandler,
-		APIKey:        apiKeyHandler,
-		Usage:         usageHandler,
-		Redeem:        redeemHandler,
-		Subscription:  subscriptionHandler,
-		Announcement:  announcementHandler,
-		Admin:         adminHandlers,
-		Gateway:       gatewayHandler,
-		OpenAIGateway: openaiGatewayHandler,
-		SoraGateway:   soraGatewayHandler,
-		SoraClient:    soraClientHandler,
-		Setting:       settingHandler,
-		Totp:          totpHandler,
+		Auth:            authHandler,
+		User:            userHandler,
+		APIKey:          apiKeyHandler,
+		Usage:           usageHandler,
+		Redeem:          redeemHandler,
+		Subscription:    subscriptionHandler,
+		Announcement:    announcementHandler,
+		Admin:           adminHandlers,
+		Gateway:         gatewayHandler,
+		OpenAIGateway:   openaiGatewayHandler,
+		SoraGateway:     soraGatewayHandler,
+		SoraClient:      soraClientHandler,
+		Setting:         settingHandler,
+		Totp:            totpHandler,
+		Payment:         paymentHandler,
+		PaymentCallback: paymentCallbackHandler,
 	}
 }
 
@@ -147,6 +155,12 @@ var ProviderSet = wire.NewSet(
 	admin.NewErrorPassthroughHandler,
 	admin.NewAdminAPIKeyHandler,
 	admin.NewScheduledTestHandler,
+	admin.NewPaymentPlanHandler,
+	admin.NewPaymentOrderHandler,
+
+	// User-facing payment handlers
+	NewPaymentHandler,
+	NewPaymentCallbackHandler,
 
 	// AdminHandlers and Handlers constructors
 	ProvideAdminHandlers,
