@@ -23,6 +23,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
+	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
 	"github.com/Wei-Shaw/sub2api/ent/promocode"
 	"github.com/Wei-Shaw/sub2api/ent/promocodeusage"
@@ -62,6 +63,8 @@ type Client struct {
 	Group *GroupClient
 	// IdempotencyRecord is the client for interacting with the IdempotencyRecord builders.
 	IdempotencyRecord *IdempotencyRecordClient
+	// PaymentOrder is the client for interacting with the PaymentOrder builders.
+	PaymentOrder *PaymentOrderClient
 	// PaymentPlan is the client for interacting with the PaymentPlan builders.
 	PaymentPlan *PaymentPlanClient
 	// PromoCode is the client for interacting with the PromoCode builders.
@@ -109,6 +112,7 @@ func (c *Client) init() {
 	c.ErrorPassthroughRule = NewErrorPassthroughRuleClient(c.config)
 	c.Group = NewGroupClient(c.config)
 	c.IdempotencyRecord = NewIdempotencyRecordClient(c.config)
+	c.PaymentOrder = NewPaymentOrderClient(c.config)
 	c.PaymentPlan = NewPaymentPlanClient(c.config)
 	c.PromoCode = NewPromoCodeClient(c.config)
 	c.PromoCodeUsage = NewPromoCodeUsageClient(c.config)
@@ -223,6 +227,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ErrorPassthroughRule:    NewErrorPassthroughRuleClient(cfg),
 		Group:                   NewGroupClient(cfg),
 		IdempotencyRecord:       NewIdempotencyRecordClient(cfg),
+		PaymentOrder:            NewPaymentOrderClient(cfg),
 		PaymentPlan:             NewPaymentPlanClient(cfg),
 		PromoCode:               NewPromoCodeClient(cfg),
 		PromoCodeUsage:          NewPromoCodeUsageClient(cfg),
@@ -264,6 +269,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ErrorPassthroughRule:    NewErrorPassthroughRuleClient(cfg),
 		Group:                   NewGroupClient(cfg),
 		IdempotencyRecord:       NewIdempotencyRecordClient(cfg),
+		PaymentOrder:            NewPaymentOrderClient(cfg),
 		PaymentPlan:             NewPaymentPlanClient(cfg),
 		PromoCode:               NewPromoCodeClient(cfg),
 		PromoCodeUsage:          NewPromoCodeUsageClient(cfg),
@@ -308,10 +314,11 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.APIKey, c.Account, c.AccountGroup, c.Announcement, c.AnnouncementRead,
-		c.ErrorPassthroughRule, c.Group, c.IdempotencyRecord, c.PaymentPlan,
-		c.PromoCode, c.PromoCodeUsage, c.Proxy, c.RedeemCode, c.SecuritySecret,
-		c.Setting, c.UsageCleanupTask, c.UsageLog, c.User, c.UserAllowedGroup,
-		c.UserAttributeDefinition, c.UserAttributeValue, c.UserSubscription,
+		c.ErrorPassthroughRule, c.Group, c.IdempotencyRecord, c.PaymentOrder,
+		c.PaymentPlan, c.PromoCode, c.PromoCodeUsage, c.Proxy, c.RedeemCode,
+		c.SecuritySecret, c.Setting, c.UsageCleanupTask, c.UsageLog, c.User,
+		c.UserAllowedGroup, c.UserAttributeDefinition, c.UserAttributeValue,
+		c.UserSubscription,
 	} {
 		n.Use(hooks...)
 	}
@@ -322,10 +329,11 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.APIKey, c.Account, c.AccountGroup, c.Announcement, c.AnnouncementRead,
-		c.ErrorPassthroughRule, c.Group, c.IdempotencyRecord, c.PaymentPlan,
-		c.PromoCode, c.PromoCodeUsage, c.Proxy, c.RedeemCode, c.SecuritySecret,
-		c.Setting, c.UsageCleanupTask, c.UsageLog, c.User, c.UserAllowedGroup,
-		c.UserAttributeDefinition, c.UserAttributeValue, c.UserSubscription,
+		c.ErrorPassthroughRule, c.Group, c.IdempotencyRecord, c.PaymentOrder,
+		c.PaymentPlan, c.PromoCode, c.PromoCodeUsage, c.Proxy, c.RedeemCode,
+		c.SecuritySecret, c.Setting, c.UsageCleanupTask, c.UsageLog, c.User,
+		c.UserAllowedGroup, c.UserAttributeDefinition, c.UserAttributeValue,
+		c.UserSubscription,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -350,6 +358,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Group.mutate(ctx, m)
 	case *IdempotencyRecordMutation:
 		return c.IdempotencyRecord.mutate(ctx, m)
+	case *PaymentOrderMutation:
+		return c.PaymentOrder.mutate(ctx, m)
 	case *PaymentPlanMutation:
 		return c.PaymentPlan.mutate(ctx, m)
 	case *PromoCodeMutation:
@@ -1740,6 +1750,171 @@ func (c *IdempotencyRecordClient) mutate(ctx context.Context, m *IdempotencyReco
 	}
 }
 
+// PaymentOrderClient is a client for the PaymentOrder schema.
+type PaymentOrderClient struct {
+	config
+}
+
+// NewPaymentOrderClient returns a client for the PaymentOrder from the given config.
+func NewPaymentOrderClient(c config) *PaymentOrderClient {
+	return &PaymentOrderClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `paymentorder.Hooks(f(g(h())))`.
+func (c *PaymentOrderClient) Use(hooks ...Hook) {
+	c.hooks.PaymentOrder = append(c.hooks.PaymentOrder, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `paymentorder.Intercept(f(g(h())))`.
+func (c *PaymentOrderClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PaymentOrder = append(c.inters.PaymentOrder, interceptors...)
+}
+
+// Create returns a builder for creating a PaymentOrder entity.
+func (c *PaymentOrderClient) Create() *PaymentOrderCreate {
+	mutation := newPaymentOrderMutation(c.config, OpCreate)
+	return &PaymentOrderCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PaymentOrder entities.
+func (c *PaymentOrderClient) CreateBulk(builders ...*PaymentOrderCreate) *PaymentOrderCreateBulk {
+	return &PaymentOrderCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PaymentOrderClient) MapCreateBulk(slice any, setFunc func(*PaymentOrderCreate, int)) *PaymentOrderCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PaymentOrderCreateBulk{err: fmt.Errorf("calling to PaymentOrderClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PaymentOrderCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PaymentOrderCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PaymentOrder.
+func (c *PaymentOrderClient) Update() *PaymentOrderUpdate {
+	mutation := newPaymentOrderMutation(c.config, OpUpdate)
+	return &PaymentOrderUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PaymentOrderClient) UpdateOne(_m *PaymentOrder) *PaymentOrderUpdateOne {
+	mutation := newPaymentOrderMutation(c.config, OpUpdateOne, withPaymentOrder(_m))
+	return &PaymentOrderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PaymentOrderClient) UpdateOneID(id int64) *PaymentOrderUpdateOne {
+	mutation := newPaymentOrderMutation(c.config, OpUpdateOne, withPaymentOrderID(id))
+	return &PaymentOrderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PaymentOrder.
+func (c *PaymentOrderClient) Delete() *PaymentOrderDelete {
+	mutation := newPaymentOrderMutation(c.config, OpDelete)
+	return &PaymentOrderDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PaymentOrderClient) DeleteOne(_m *PaymentOrder) *PaymentOrderDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PaymentOrderClient) DeleteOneID(id int64) *PaymentOrderDeleteOne {
+	builder := c.Delete().Where(paymentorder.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PaymentOrderDeleteOne{builder}
+}
+
+// Query returns a query builder for PaymentOrder.
+func (c *PaymentOrderClient) Query() *PaymentOrderQuery {
+	return &PaymentOrderQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePaymentOrder},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PaymentOrder entity by its id.
+func (c *PaymentOrderClient) Get(ctx context.Context, id int64) (*PaymentOrder, error) {
+	return c.Query().Where(paymentorder.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PaymentOrderClient) GetX(ctx context.Context, id int64) *PaymentOrder {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a PaymentOrder.
+func (c *PaymentOrderClient) QueryUser(_m *PaymentOrder) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.UserTable, paymentorder.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryPlan queries the plan edge of a PaymentOrder.
+func (c *PaymentOrderClient) QueryPlan(_m *PaymentOrder) *PaymentPlanQuery {
+	query := (&PaymentPlanClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
+			sqlgraph.To(paymentplan.Table, paymentplan.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.PlanTable, paymentorder.PlanColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *PaymentOrderClient) Hooks() []Hook {
+	return c.hooks.PaymentOrder
+}
+
+// Interceptors returns the client interceptors.
+func (c *PaymentOrderClient) Interceptors() []Interceptor {
+	return c.inters.PaymentOrder
+}
+
+func (c *PaymentOrderClient) mutate(ctx context.Context, m *PaymentOrderMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PaymentOrderCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PaymentOrderUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PaymentOrderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PaymentOrderDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PaymentOrder mutation op: %q", m.Op())
+	}
+}
+
 // PaymentPlanClient is a client for the PaymentPlan schema.
 type PaymentPlanClient struct {
 	config
@@ -1857,6 +2032,22 @@ func (c *PaymentPlanClient) QueryGroup(_m *PaymentPlan) *GroupQuery {
 			sqlgraph.From(paymentplan.Table, paymentplan.FieldID, id),
 			sqlgraph.To(group.Table, group.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, paymentplan.GroupTable, paymentplan.GroupColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOrders queries the orders edge of a PaymentPlan.
+func (c *PaymentPlanClient) QueryOrders(_m *PaymentPlan) *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentplan.Table, paymentplan.FieldID, id),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, paymentplan.OrdersTable, paymentplan.OrdersColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -3385,6 +3576,22 @@ func (c *UserClient) QueryPromoCodeUsages(_m *User) *PromoCodeUsageQuery {
 	return query
 }
 
+// QueryPaymentOrders queries the payment_orders edge of a User.
+func (c *UserClient) QueryPaymentOrders(_m *User) *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.PaymentOrdersTable, user.PaymentOrdersColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryUserAllowedGroups queries the user_allowed_groups edge of a User.
 func (c *UserClient) QueryUserAllowedGroups(_m *User) *UserAllowedGroupQuery {
 	query := (&UserAllowedGroupClient{config: c.config}).Query()
@@ -4063,17 +4270,17 @@ func (c *UserSubscriptionClient) mutate(ctx context.Context, m *UserSubscription
 type (
 	hooks struct {
 		APIKey, Account, AccountGroup, Announcement, AnnouncementRead,
-		ErrorPassthroughRule, Group, IdempotencyRecord, PaymentPlan, PromoCode,
-		PromoCodeUsage, Proxy, RedeemCode, SecuritySecret, Setting, UsageCleanupTask,
-		UsageLog, User, UserAllowedGroup, UserAttributeDefinition, UserAttributeValue,
-		UserSubscription []ent.Hook
+		ErrorPassthroughRule, Group, IdempotencyRecord, PaymentOrder, PaymentPlan,
+		PromoCode, PromoCodeUsage, Proxy, RedeemCode, SecuritySecret, Setting,
+		UsageCleanupTask, UsageLog, User, UserAllowedGroup, UserAttributeDefinition,
+		UserAttributeValue, UserSubscription []ent.Hook
 	}
 	inters struct {
 		APIKey, Account, AccountGroup, Announcement, AnnouncementRead,
-		ErrorPassthroughRule, Group, IdempotencyRecord, PaymentPlan, PromoCode,
-		PromoCodeUsage, Proxy, RedeemCode, SecuritySecret, Setting, UsageCleanupTask,
-		UsageLog, User, UserAllowedGroup, UserAttributeDefinition, UserAttributeValue,
-		UserSubscription []ent.Interceptor
+		ErrorPassthroughRule, Group, IdempotencyRecord, PaymentOrder, PaymentPlan,
+		PromoCode, PromoCodeUsage, Proxy, RedeemCode, SecuritySecret, Setting,
+		UsageCleanupTask, UsageLog, User, UserAllowedGroup, UserAttributeDefinition,
+		UserAttributeValue, UserSubscription []ent.Interceptor
 	}
 )
 

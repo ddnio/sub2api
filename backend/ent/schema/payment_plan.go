@@ -69,6 +69,7 @@ func (PaymentPlan) Edges() []ent.Edge {
 			Field("group_id").
 			Required().
 			Unique(),
+		edge.To("orders", PaymentOrder.Type),
 	}
 }
 

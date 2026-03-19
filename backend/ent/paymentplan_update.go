@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/Wei-Shaw/sub2api/ent/group"
+	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
 )
@@ -226,6 +227,21 @@ func (_u *PaymentPlanUpdate) SetGroup(v *Group) *PaymentPlanUpdate {
 	return _u.SetGroupID(v.ID)
 }
 
+// AddOrderIDs adds the "orders" edge to the PaymentOrder entity by IDs.
+func (_u *PaymentPlanUpdate) AddOrderIDs(ids ...int64) *PaymentPlanUpdate {
+	_u.mutation.AddOrderIDs(ids...)
+	return _u
+}
+
+// AddOrders adds the "orders" edges to the PaymentOrder entity.
+func (_u *PaymentPlanUpdate) AddOrders(v ...*PaymentOrder) *PaymentPlanUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOrderIDs(ids...)
+}
+
 // Mutation returns the PaymentPlanMutation object of the builder.
 func (_u *PaymentPlanUpdate) Mutation() *PaymentPlanMutation {
 	return _u.mutation
@@ -235,6 +251,27 @@ func (_u *PaymentPlanUpdate) Mutation() *PaymentPlanMutation {
 func (_u *PaymentPlanUpdate) ClearGroup() *PaymentPlanUpdate {
 	_u.mutation.ClearGroup()
 	return _u
+}
+
+// ClearOrders clears all "orders" edges to the PaymentOrder entity.
+func (_u *PaymentPlanUpdate) ClearOrders() *PaymentPlanUpdate {
+	_u.mutation.ClearOrders()
+	return _u
+}
+
+// RemoveOrderIDs removes the "orders" edge to PaymentOrder entities by IDs.
+func (_u *PaymentPlanUpdate) RemoveOrderIDs(ids ...int64) *PaymentPlanUpdate {
+	_u.mutation.RemoveOrderIDs(ids...)
+	return _u
+}
+
+// RemoveOrders removes "orders" edges to PaymentOrder entities.
+func (_u *PaymentPlanUpdate) RemoveOrders(v ...*PaymentOrder) *PaymentPlanUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOrderIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -392,6 +429,51 @@ func (_u *PaymentPlanUpdate) sqlSave(ctx context.Context) (_node int, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OrdersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentplan.OrdersTable,
+			Columns: []string{paymentplan.OrdersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOrdersIDs(); len(nodes) > 0 && !_u.mutation.OrdersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentplan.OrdersTable,
+			Columns: []string{paymentplan.OrdersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OrdersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentplan.OrdersTable,
+			Columns: []string{paymentplan.OrdersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {
@@ -616,6 +698,21 @@ func (_u *PaymentPlanUpdateOne) SetGroup(v *Group) *PaymentPlanUpdateOne {
 	return _u.SetGroupID(v.ID)
 }
 
+// AddOrderIDs adds the "orders" edge to the PaymentOrder entity by IDs.
+func (_u *PaymentPlanUpdateOne) AddOrderIDs(ids ...int64) *PaymentPlanUpdateOne {
+	_u.mutation.AddOrderIDs(ids...)
+	return _u
+}
+
+// AddOrders adds the "orders" edges to the PaymentOrder entity.
+func (_u *PaymentPlanUpdateOne) AddOrders(v ...*PaymentOrder) *PaymentPlanUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOrderIDs(ids...)
+}
+
 // Mutation returns the PaymentPlanMutation object of the builder.
 func (_u *PaymentPlanUpdateOne) Mutation() *PaymentPlanMutation {
 	return _u.mutation
@@ -625,6 +722,27 @@ func (_u *PaymentPlanUpdateOne) Mutation() *PaymentPlanMutation {
 func (_u *PaymentPlanUpdateOne) ClearGroup() *PaymentPlanUpdateOne {
 	_u.mutation.ClearGroup()
 	return _u
+}
+
+// ClearOrders clears all "orders" edges to the PaymentOrder entity.
+func (_u *PaymentPlanUpdateOne) ClearOrders() *PaymentPlanUpdateOne {
+	_u.mutation.ClearOrders()
+	return _u
+}
+
+// RemoveOrderIDs removes the "orders" edge to PaymentOrder entities by IDs.
+func (_u *PaymentPlanUpdateOne) RemoveOrderIDs(ids ...int64) *PaymentPlanUpdateOne {
+	_u.mutation.RemoveOrderIDs(ids...)
+	return _u
+}
+
+// RemoveOrders removes "orders" edges to PaymentOrder entities.
+func (_u *PaymentPlanUpdateOne) RemoveOrders(v ...*PaymentOrder) *PaymentPlanUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOrderIDs(ids...)
 }
 
 // Where appends a list predicates to the PaymentPlanUpdate builder.
@@ -812,6 +930,51 @@ func (_u *PaymentPlanUpdateOne) sqlSave(ctx context.Context) (_node *PaymentPlan
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OrdersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentplan.OrdersTable,
+			Columns: []string{paymentplan.OrdersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOrdersIDs(); len(nodes) > 0 && !_u.mutation.OrdersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentplan.OrdersTable,
+			Columns: []string{paymentplan.OrdersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OrdersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentplan.OrdersTable,
+			Columns: []string{paymentplan.OrdersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

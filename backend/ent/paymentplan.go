@@ -52,9 +52,11 @@ type PaymentPlan struct {
 type PaymentPlanEdges struct {
 	// Group holds the value of the group edge.
 	Group *Group `json:"group,omitempty"`
+	// Orders holds the value of the orders edge.
+	Orders []*PaymentOrder `json:"orders,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // GroupOrErr returns the Group value or an error if the edge
@@ -66,6 +68,15 @@ func (e PaymentPlanEdges) GroupOrErr() (*Group, error) {
 		return nil, &NotFoundError{label: group.Label}
 	}
 	return nil, &NotLoadedError{edge: "group"}
+}
+
+// OrdersOrErr returns the Orders value or an error if the edge
+// was not loaded in eager-loading.
+func (e PaymentPlanEdges) OrdersOrErr() ([]*PaymentOrder, error) {
+	if e.loadedTypes[1] {
+		return e.Orders, nil
+	}
+	return nil, &NotLoadedError{edge: "orders"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -195,6 +206,11 @@ func (_m *PaymentPlan) Value(name string) (ent.Value, error) {
 // QueryGroup queries the "group" edge of the PaymentPlan entity.
 func (_m *PaymentPlan) QueryGroup() *GroupQuery {
 	return NewPaymentPlanClient(_m.config).QueryGroup(_m)
+}
+
+// QueryOrders queries the "orders" edge of the PaymentPlan entity.
+func (_m *PaymentPlan) QueryOrders() *PaymentOrderQuery {
+	return NewPaymentPlanClient(_m.config).QueryOrders(_m)
 }
 
 // Update returns a builder for updating this PaymentPlan.

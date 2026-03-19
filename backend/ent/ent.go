@@ -20,6 +20,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
+	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
 	"github.com/Wei-Shaw/sub2api/ent/promocode"
 	"github.com/Wei-Shaw/sub2api/ent/promocodeusage"
@@ -102,6 +103,7 @@ func checkColumn(t, c string) error {
 			errorpassthroughrule.Table:    errorpassthroughrule.ValidColumn,
 			group.Table:                   group.ValidColumn,
 			idempotencyrecord.Table:       idempotencyrecord.ValidColumn,
+			paymentorder.Table:            paymentorder.ValidColumn,
 			paymentplan.Table:             paymentplan.ValidColumn,
 			promocode.Table:               promocode.ValidColumn,
 			promocodeusage.Table:          promocodeusage.ValidColumn,

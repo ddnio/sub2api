@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -13,61 +12,61 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
+	"github.com/Wei-Shaw/sub2api/ent/user"
 )
 
-// PaymentPlanQuery is the builder for querying PaymentPlan entities.
-type PaymentPlanQuery struct {
+// PaymentOrderQuery is the builder for querying PaymentOrder entities.
+type PaymentOrderQuery struct {
 	config
 	ctx        *QueryContext
-	order      []paymentplan.OrderOption
+	order      []paymentorder.OrderOption
 	inters     []Interceptor
-	predicates []predicate.PaymentPlan
-	withGroup  *GroupQuery
-	withOrders *PaymentOrderQuery
+	predicates []predicate.PaymentOrder
+	withUser   *UserQuery
+	withPlan   *PaymentPlanQuery
 	modifiers  []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 }
 
-// Where adds a new predicate for the PaymentPlanQuery builder.
-func (_q *PaymentPlanQuery) Where(ps ...predicate.PaymentPlan) *PaymentPlanQuery {
+// Where adds a new predicate for the PaymentOrderQuery builder.
+func (_q *PaymentOrderQuery) Where(ps ...predicate.PaymentOrder) *PaymentOrderQuery {
 	_q.predicates = append(_q.predicates, ps...)
 	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (_q *PaymentPlanQuery) Limit(limit int) *PaymentPlanQuery {
+func (_q *PaymentOrderQuery) Limit(limit int) *PaymentOrderQuery {
 	_q.ctx.Limit = &limit
 	return _q
 }
 
 // Offset to start from.
-func (_q *PaymentPlanQuery) Offset(offset int) *PaymentPlanQuery {
+func (_q *PaymentOrderQuery) Offset(offset int) *PaymentOrderQuery {
 	_q.ctx.Offset = &offset
 	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (_q *PaymentPlanQuery) Unique(unique bool) *PaymentPlanQuery {
+func (_q *PaymentOrderQuery) Unique(unique bool) *PaymentOrderQuery {
 	_q.ctx.Unique = &unique
 	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (_q *PaymentPlanQuery) Order(o ...paymentplan.OrderOption) *PaymentPlanQuery {
+func (_q *PaymentOrderQuery) Order(o ...paymentorder.OrderOption) *PaymentOrderQuery {
 	_q.order = append(_q.order, o...)
 	return _q
 }
 
-// QueryGroup chains the current query on the "group" edge.
-func (_q *PaymentPlanQuery) QueryGroup() *GroupQuery {
-	query := (&GroupClient{config: _q.config}).Query()
+// QueryUser chains the current query on the "user" edge.
+func (_q *PaymentOrderQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -77,9 +76,9 @@ func (_q *PaymentPlanQuery) QueryGroup() *GroupQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(paymentplan.Table, paymentplan.FieldID, selector),
-			sqlgraph.To(group.Table, group.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, paymentplan.GroupTable, paymentplan.GroupColumn),
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.UserTable, paymentorder.UserColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -87,9 +86,9 @@ func (_q *PaymentPlanQuery) QueryGroup() *GroupQuery {
 	return query
 }
 
-// QueryOrders chains the current query on the "orders" edge.
-func (_q *PaymentPlanQuery) QueryOrders() *PaymentOrderQuery {
-	query := (&PaymentOrderClient{config: _q.config}).Query()
+// QueryPlan chains the current query on the "plan" edge.
+func (_q *PaymentOrderQuery) QueryPlan() *PaymentPlanQuery {
+	query := (&PaymentPlanClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -99,9 +98,9 @@ func (_q *PaymentPlanQuery) QueryOrders() *PaymentOrderQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(paymentplan.Table, paymentplan.FieldID, selector),
-			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, paymentplan.OrdersTable, paymentplan.OrdersColumn),
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, selector),
+			sqlgraph.To(paymentplan.Table, paymentplan.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.PlanTable, paymentorder.PlanColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -109,21 +108,21 @@ func (_q *PaymentPlanQuery) QueryOrders() *PaymentOrderQuery {
 	return query
 }
 
-// First returns the first PaymentPlan entity from the query.
-// Returns a *NotFoundError when no PaymentPlan was found.
-func (_q *PaymentPlanQuery) First(ctx context.Context) (*PaymentPlan, error) {
+// First returns the first PaymentOrder entity from the query.
+// Returns a *NotFoundError when no PaymentOrder was found.
+func (_q *PaymentOrderQuery) First(ctx context.Context) (*PaymentOrder, error) {
 	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
-		return nil, &NotFoundError{paymentplan.Label}
+		return nil, &NotFoundError{paymentorder.Label}
 	}
 	return nodes[0], nil
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (_q *PaymentPlanQuery) FirstX(ctx context.Context) *PaymentPlan {
+func (_q *PaymentOrderQuery) FirstX(ctx context.Context) *PaymentOrder {
 	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -131,22 +130,22 @@ func (_q *PaymentPlanQuery) FirstX(ctx context.Context) *PaymentPlan {
 	return node
 }
 
-// FirstID returns the first PaymentPlan ID from the query.
-// Returns a *NotFoundError when no PaymentPlan ID was found.
-func (_q *PaymentPlanQuery) FirstID(ctx context.Context) (id int64, err error) {
+// FirstID returns the first PaymentOrder ID from the query.
+// Returns a *NotFoundError when no PaymentOrder ID was found.
+func (_q *PaymentOrderQuery) FirstID(ctx context.Context) (id int64, err error) {
 	var ids []int64
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
-		err = &NotFoundError{paymentplan.Label}
+		err = &NotFoundError{paymentorder.Label}
 		return
 	}
 	return ids[0], nil
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *PaymentPlanQuery) FirstIDX(ctx context.Context) int64 {
+func (_q *PaymentOrderQuery) FirstIDX(ctx context.Context) int64 {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -154,10 +153,10 @@ func (_q *PaymentPlanQuery) FirstIDX(ctx context.Context) int64 {
 	return id
 }
 
-// Only returns a single PaymentPlan entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when more than one PaymentPlan entity is found.
-// Returns a *NotFoundError when no PaymentPlan entities are found.
-func (_q *PaymentPlanQuery) Only(ctx context.Context) (*PaymentPlan, error) {
+// Only returns a single PaymentOrder entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when more than one PaymentOrder entity is found.
+// Returns a *NotFoundError when no PaymentOrder entities are found.
+func (_q *PaymentOrderQuery) Only(ctx context.Context) (*PaymentOrder, error) {
 	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
@@ -166,14 +165,14 @@ func (_q *PaymentPlanQuery) Only(ctx context.Context) (*PaymentPlan, error) {
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return nil, &NotFoundError{paymentplan.Label}
+		return nil, &NotFoundError{paymentorder.Label}
 	default:
-		return nil, &NotSingularError{paymentplan.Label}
+		return nil, &NotSingularError{paymentorder.Label}
 	}
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (_q *PaymentPlanQuery) OnlyX(ctx context.Context) *PaymentPlan {
+func (_q *PaymentOrderQuery) OnlyX(ctx context.Context) *PaymentOrder {
 	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
@@ -181,10 +180,10 @@ func (_q *PaymentPlanQuery) OnlyX(ctx context.Context) *PaymentPlan {
 	return node
 }
 
-// OnlyID is like Only, but returns the only PaymentPlan ID in the query.
-// Returns a *NotSingularError when more than one PaymentPlan ID is found.
+// OnlyID is like Only, but returns the only PaymentOrder ID in the query.
+// Returns a *NotSingularError when more than one PaymentOrder ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *PaymentPlanQuery) OnlyID(ctx context.Context) (id int64, err error) {
+func (_q *PaymentOrderQuery) OnlyID(ctx context.Context) (id int64, err error) {
 	var ids []int64
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
@@ -193,15 +192,15 @@ func (_q *PaymentPlanQuery) OnlyID(ctx context.Context) (id int64, err error) {
 	case 1:
 		id = ids[0]
 	case 0:
-		err = &NotFoundError{paymentplan.Label}
+		err = &NotFoundError{paymentorder.Label}
 	default:
-		err = &NotSingularError{paymentplan.Label}
+		err = &NotSingularError{paymentorder.Label}
 	}
 	return
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *PaymentPlanQuery) OnlyIDX(ctx context.Context) int64 {
+func (_q *PaymentOrderQuery) OnlyIDX(ctx context.Context) int64 {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -209,18 +208,18 @@ func (_q *PaymentPlanQuery) OnlyIDX(ctx context.Context) int64 {
 	return id
 }
 
-// All executes the query and returns a list of PaymentPlans.
-func (_q *PaymentPlanQuery) All(ctx context.Context) ([]*PaymentPlan, error) {
+// All executes the query and returns a list of PaymentOrders.
+func (_q *PaymentOrderQuery) All(ctx context.Context) ([]*PaymentOrder, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	qr := querierAll[[]*PaymentPlan, *PaymentPlanQuery]()
-	return withInterceptors[[]*PaymentPlan](ctx, _q, qr, _q.inters)
+	qr := querierAll[[]*PaymentOrder, *PaymentOrderQuery]()
+	return withInterceptors[[]*PaymentOrder](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (_q *PaymentPlanQuery) AllX(ctx context.Context) []*PaymentPlan {
+func (_q *PaymentOrderQuery) AllX(ctx context.Context) []*PaymentOrder {
 	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
@@ -228,20 +227,20 @@ func (_q *PaymentPlanQuery) AllX(ctx context.Context) []*PaymentPlan {
 	return nodes
 }
 
-// IDs executes the query and returns a list of PaymentPlan IDs.
-func (_q *PaymentPlanQuery) IDs(ctx context.Context) (ids []int64, err error) {
+// IDs executes the query and returns a list of PaymentOrder IDs.
+func (_q *PaymentOrderQuery) IDs(ctx context.Context) (ids []int64, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
-	if err = _q.Select(paymentplan.FieldID).Scan(ctx, &ids); err != nil {
+	if err = _q.Select(paymentorder.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *PaymentPlanQuery) IDsX(ctx context.Context) []int64 {
+func (_q *PaymentOrderQuery) IDsX(ctx context.Context) []int64 {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -250,16 +249,16 @@ func (_q *PaymentPlanQuery) IDsX(ctx context.Context) []int64 {
 }
 
 // Count returns the count of the given query.
-func (_q *PaymentPlanQuery) Count(ctx context.Context) (int, error) {
+func (_q *PaymentOrderQuery) Count(ctx context.Context) (int, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, _q, querierCount[*PaymentPlanQuery](), _q.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*PaymentOrderQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (_q *PaymentPlanQuery) CountX(ctx context.Context) int {
+func (_q *PaymentOrderQuery) CountX(ctx context.Context) int {
 	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
@@ -268,7 +267,7 @@ func (_q *PaymentPlanQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (_q *PaymentPlanQuery) Exist(ctx context.Context) (bool, error) {
+func (_q *PaymentOrderQuery) Exist(ctx context.Context) (bool, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
 	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
@@ -281,7 +280,7 @@ func (_q *PaymentPlanQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (_q *PaymentPlanQuery) ExistX(ctx context.Context) bool {
+func (_q *PaymentOrderQuery) ExistX(ctx context.Context) bool {
 	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
@@ -289,45 +288,45 @@ func (_q *PaymentPlanQuery) ExistX(ctx context.Context) bool {
 	return exist
 }
 
-// Clone returns a duplicate of the PaymentPlanQuery builder, including all associated steps. It can be
+// Clone returns a duplicate of the PaymentOrderQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (_q *PaymentPlanQuery) Clone() *PaymentPlanQuery {
+func (_q *PaymentOrderQuery) Clone() *PaymentOrderQuery {
 	if _q == nil {
 		return nil
 	}
-	return &PaymentPlanQuery{
+	return &PaymentOrderQuery{
 		config:     _q.config,
 		ctx:        _q.ctx.Clone(),
-		order:      append([]paymentplan.OrderOption{}, _q.order...),
+		order:      append([]paymentorder.OrderOption{}, _q.order...),
 		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.PaymentPlan{}, _q.predicates...),
-		withGroup:  _q.withGroup.Clone(),
-		withOrders: _q.withOrders.Clone(),
+		predicates: append([]predicate.PaymentOrder{}, _q.predicates...),
+		withUser:   _q.withUser.Clone(),
+		withPlan:   _q.withPlan.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
 }
 
-// WithGroup tells the query-builder to eager-load the nodes that are connected to
-// the "group" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *PaymentPlanQuery) WithGroup(opts ...func(*GroupQuery)) *PaymentPlanQuery {
-	query := (&GroupClient{config: _q.config}).Query()
+// WithUser tells the query-builder to eager-load the nodes that are connected to
+// the "user" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PaymentOrderQuery) WithUser(opts ...func(*UserQuery)) *PaymentOrderQuery {
+	query := (&UserClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withGroup = query
+	_q.withUser = query
 	return _q
 }
 
-// WithOrders tells the query-builder to eager-load the nodes that are connected to
-// the "orders" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *PaymentPlanQuery) WithOrders(opts ...func(*PaymentOrderQuery)) *PaymentPlanQuery {
-	query := (&PaymentOrderClient{config: _q.config}).Query()
+// WithPlan tells the query-builder to eager-load the nodes that are connected to
+// the "plan" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PaymentOrderQuery) WithPlan(opts ...func(*PaymentPlanQuery)) *PaymentOrderQuery {
+	query := (&PaymentPlanClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withOrders = query
+	_q.withPlan = query
 	return _q
 }
 
@@ -337,19 +336,19 @@ func (_q *PaymentPlanQuery) WithOrders(opts ...func(*PaymentOrderQuery)) *Paymen
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		OrderNo string `json:"order_no,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
-//	client.PaymentPlan.Query().
-//		GroupBy(paymentplan.FieldCreatedAt).
+//	client.PaymentOrder.Query().
+//		GroupBy(paymentorder.FieldOrderNo).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (_q *PaymentPlanQuery) GroupBy(field string, fields ...string) *PaymentPlanGroupBy {
+func (_q *PaymentOrderQuery) GroupBy(field string, fields ...string) *PaymentOrderGroupBy {
 	_q.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &PaymentPlanGroupBy{build: _q}
+	grbuild := &PaymentOrderGroupBy{build: _q}
 	grbuild.flds = &_q.ctx.Fields
-	grbuild.label = paymentplan.Label
+	grbuild.label = paymentorder.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
 }
@@ -360,26 +359,26 @@ func (_q *PaymentPlanQuery) GroupBy(field string, fields ...string) *PaymentPlan
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		OrderNo string `json:"order_no,omitempty"`
 //	}
 //
-//	client.PaymentPlan.Query().
-//		Select(paymentplan.FieldCreatedAt).
+//	client.PaymentOrder.Query().
+//		Select(paymentorder.FieldOrderNo).
 //		Scan(ctx, &v)
-func (_q *PaymentPlanQuery) Select(fields ...string) *PaymentPlanSelect {
+func (_q *PaymentOrderQuery) Select(fields ...string) *PaymentOrderSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
-	sbuild := &PaymentPlanSelect{PaymentPlanQuery: _q}
-	sbuild.label = paymentplan.Label
+	sbuild := &PaymentOrderSelect{PaymentOrderQuery: _q}
+	sbuild.label = paymentorder.Label
 	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
-// Aggregate returns a PaymentPlanSelect configured with the given aggregations.
-func (_q *PaymentPlanQuery) Aggregate(fns ...AggregateFunc) *PaymentPlanSelect {
+// Aggregate returns a PaymentOrderSelect configured with the given aggregations.
+func (_q *PaymentOrderQuery) Aggregate(fns ...AggregateFunc) *PaymentOrderSelect {
 	return _q.Select().Aggregate(fns...)
 }
 
-func (_q *PaymentPlanQuery) prepareQuery(ctx context.Context) error {
+func (_q *PaymentOrderQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
@@ -391,7 +390,7 @@ func (_q *PaymentPlanQuery) prepareQuery(ctx context.Context) error {
 		}
 	}
 	for _, f := range _q.ctx.Fields {
-		if !paymentplan.ValidColumn(f) {
+		if !paymentorder.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
@@ -405,20 +404,20 @@ func (_q *PaymentPlanQuery) prepareQuery(ctx context.Context) error {
 	return nil
 }
 
-func (_q *PaymentPlanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*PaymentPlan, error) {
+func (_q *PaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*PaymentOrder, error) {
 	var (
-		nodes       = []*PaymentPlan{}
+		nodes       = []*PaymentOrder{}
 		_spec       = _q.querySpec()
 		loadedTypes = [2]bool{
-			_q.withGroup != nil,
-			_q.withOrders != nil,
+			_q.withUser != nil,
+			_q.withPlan != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
-		return (*PaymentPlan).scanValues(nil, columns)
+		return (*PaymentOrder).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &PaymentPlan{config: _q.config}
+		node := &PaymentOrder{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -435,27 +434,26 @@ func (_q *PaymentPlanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withGroup; query != nil {
-		if err := _q.loadGroup(ctx, query, nodes, nil,
-			func(n *PaymentPlan, e *Group) { n.Edges.Group = e }); err != nil {
+	if query := _q.withUser; query != nil {
+		if err := _q.loadUser(ctx, query, nodes, nil,
+			func(n *PaymentOrder, e *User) { n.Edges.User = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := _q.withOrders; query != nil {
-		if err := _q.loadOrders(ctx, query, nodes,
-			func(n *PaymentPlan) { n.Edges.Orders = []*PaymentOrder{} },
-			func(n *PaymentPlan, e *PaymentOrder) { n.Edges.Orders = append(n.Edges.Orders, e) }); err != nil {
+	if query := _q.withPlan; query != nil {
+		if err := _q.loadPlan(ctx, query, nodes, nil,
+			func(n *PaymentOrder, e *PaymentPlan) { n.Edges.Plan = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (_q *PaymentPlanQuery) loadGroup(ctx context.Context, query *GroupQuery, nodes []*PaymentPlan, init func(*PaymentPlan), assign func(*PaymentPlan, *Group)) error {
+func (_q *PaymentOrderQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*PaymentOrder, init func(*PaymentOrder), assign func(*PaymentOrder, *User)) error {
 	ids := make([]int64, 0, len(nodes))
-	nodeids := make(map[int64][]*PaymentPlan)
+	nodeids := make(map[int64][]*PaymentOrder)
 	for i := range nodes {
-		fk := nodes[i].GroupID
+		fk := nodes[i].UserID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -464,7 +462,7 @@ func (_q *PaymentPlanQuery) loadGroup(ctx context.Context, query *GroupQuery, no
 	if len(ids) == 0 {
 		return nil
 	}
-	query.Where(group.IDIn(ids...))
+	query.Where(user.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
@@ -472,7 +470,7 @@ func (_q *PaymentPlanQuery) loadGroup(ctx context.Context, query *GroupQuery, no
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "group_id" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "user_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -480,41 +478,40 @@ func (_q *PaymentPlanQuery) loadGroup(ctx context.Context, query *GroupQuery, no
 	}
 	return nil
 }
-func (_q *PaymentPlanQuery) loadOrders(ctx context.Context, query *PaymentOrderQuery, nodes []*PaymentPlan, init func(*PaymentPlan), assign func(*PaymentPlan, *PaymentOrder)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int64]*PaymentPlan)
+func (_q *PaymentOrderQuery) loadPlan(ctx context.Context, query *PaymentPlanQuery, nodes []*PaymentOrder, init func(*PaymentOrder), assign func(*PaymentOrder, *PaymentPlan)) error {
+	ids := make([]int64, 0, len(nodes))
+	nodeids := make(map[int64][]*PaymentOrder)
 	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
+		if nodes[i].PlanID == nil {
+			continue
 		}
+		fk := *nodes[i].PlanID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(paymentorder.FieldPlanID)
+	if len(ids) == 0 {
+		return nil
 	}
-	query.Where(predicate.PaymentOrder(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(paymentplan.OrdersColumn), fks...))
-	}))
+	query.Where(paymentplan.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.PlanID
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "plan_id" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "plan_id" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "plan_id" returned %v`, n.ID)
 		}
-		assign(node, n)
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }
 
-func (_q *PaymentPlanQuery) sqlCount(ctx context.Context) (int, error) {
+func (_q *PaymentOrderQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
 	if len(_q.modifiers) > 0 {
 		_spec.Modifiers = _q.modifiers
@@ -526,8 +523,8 @@ func (_q *PaymentPlanQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (_q *PaymentPlanQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(paymentplan.Table, paymentplan.Columns, sqlgraph.NewFieldSpec(paymentplan.FieldID, field.TypeInt64))
+func (_q *PaymentOrderQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := sqlgraph.NewQuerySpec(paymentorder.Table, paymentorder.Columns, sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeInt64))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -536,14 +533,17 @@ func (_q *PaymentPlanQuery) querySpec() *sqlgraph.QuerySpec {
 	}
 	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
-		_spec.Node.Columns = append(_spec.Node.Columns, paymentplan.FieldID)
+		_spec.Node.Columns = append(_spec.Node.Columns, paymentorder.FieldID)
 		for i := range fields {
-			if fields[i] != paymentplan.FieldID {
+			if fields[i] != paymentorder.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
 		}
-		if _q.withGroup != nil {
-			_spec.Node.AddColumnOnce(paymentplan.FieldGroupID)
+		if _q.withUser != nil {
+			_spec.Node.AddColumnOnce(paymentorder.FieldUserID)
+		}
+		if _q.withPlan != nil {
+			_spec.Node.AddColumnOnce(paymentorder.FieldPlanID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {
@@ -569,12 +569,12 @@ func (_q *PaymentPlanQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (_q *PaymentPlanQuery) sqlQuery(ctx context.Context) *sql.Selector {
+func (_q *PaymentOrderQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(_q.driver.Dialect())
-	t1 := builder.Table(paymentplan.Table)
+	t1 := builder.Table(paymentorder.Table)
 	columns := _q.ctx.Fields
 	if len(columns) == 0 {
-		columns = paymentplan.Columns
+		columns = paymentorder.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
 	if _q.sql != nil {
@@ -607,7 +607,7 @@ func (_q *PaymentPlanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 // ForUpdate locks the selected rows against concurrent updates, and prevent them from being
 // updated, deleted or "selected ... for update" by other sessions, until the transaction is
 // either committed or rolled-back.
-func (_q *PaymentPlanQuery) ForUpdate(opts ...sql.LockOption) *PaymentPlanQuery {
+func (_q *PaymentOrderQuery) ForUpdate(opts ...sql.LockOption) *PaymentOrderQuery {
 	if _q.driver.Dialect() == dialect.Postgres {
 		_q.Unique(false)
 	}
@@ -620,7 +620,7 @@ func (_q *PaymentPlanQuery) ForUpdate(opts ...sql.LockOption) *PaymentPlanQuery 
 // ForShare behaves similarly to ForUpdate, except that it acquires a shared mode lock
 // on any rows that are read. Other sessions can read the rows, but cannot modify them
 // until your transaction commits.
-func (_q *PaymentPlanQuery) ForShare(opts ...sql.LockOption) *PaymentPlanQuery {
+func (_q *PaymentOrderQuery) ForShare(opts ...sql.LockOption) *PaymentOrderQuery {
 	if _q.driver.Dialect() == dialect.Postgres {
 		_q.Unique(false)
 	}
@@ -630,28 +630,28 @@ func (_q *PaymentPlanQuery) ForShare(opts ...sql.LockOption) *PaymentPlanQuery {
 	return _q
 }
 
-// PaymentPlanGroupBy is the group-by builder for PaymentPlan entities.
-type PaymentPlanGroupBy struct {
+// PaymentOrderGroupBy is the group-by builder for PaymentOrder entities.
+type PaymentOrderGroupBy struct {
 	selector
-	build *PaymentPlanQuery
+	build *PaymentOrderQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (_g *PaymentPlanGroupBy) Aggregate(fns ...AggregateFunc) *PaymentPlanGroupBy {
+func (_g *PaymentOrderGroupBy) Aggregate(fns ...AggregateFunc) *PaymentOrderGroupBy {
 	_g.fns = append(_g.fns, fns...)
 	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_g *PaymentPlanGroupBy) Scan(ctx context.Context, v any) error {
+func (_g *PaymentOrderGroupBy) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
 	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*PaymentPlanQuery, *PaymentPlanGroupBy](ctx, _g.build, _g, _g.build.inters, v)
+	return scanWithInterceptors[*PaymentOrderQuery, *PaymentOrderGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (_g *PaymentPlanGroupBy) sqlScan(ctx context.Context, root *PaymentPlanQuery, v any) error {
+func (_g *PaymentOrderGroupBy) sqlScan(ctx context.Context, root *PaymentOrderQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
 	aggregation := make([]string, 0, len(_g.fns))
 	for _, fn := range _g.fns {
@@ -678,28 +678,28 @@ func (_g *PaymentPlanGroupBy) sqlScan(ctx context.Context, root *PaymentPlanQuer
 	return sql.ScanSlice(rows, v)
 }
 
-// PaymentPlanSelect is the builder for selecting fields of PaymentPlan entities.
-type PaymentPlanSelect struct {
-	*PaymentPlanQuery
+// PaymentOrderSelect is the builder for selecting fields of PaymentOrder entities.
+type PaymentOrderSelect struct {
+	*PaymentOrderQuery
 	selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (_s *PaymentPlanSelect) Aggregate(fns ...AggregateFunc) *PaymentPlanSelect {
+func (_s *PaymentOrderSelect) Aggregate(fns ...AggregateFunc) *PaymentOrderSelect {
 	_s.fns = append(_s.fns, fns...)
 	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_s *PaymentPlanSelect) Scan(ctx context.Context, v any) error {
+func (_s *PaymentOrderSelect) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
 	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*PaymentPlanQuery, *PaymentPlanSelect](ctx, _s.PaymentPlanQuery, _s, _s.inters, v)
+	return scanWithInterceptors[*PaymentOrderQuery, *PaymentOrderSelect](ctx, _s.PaymentOrderQuery, _s, _s.inters, v)
 }
 
-func (_s *PaymentPlanSelect) sqlScan(ctx context.Context, root *PaymentPlanQuery, v any) error {
+func (_s *PaymentOrderSelect) sqlScan(ctx context.Context, root *PaymentOrderQuery, v any) error {
 	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(_s.fns))
 	for _, fn := range _s.fns {

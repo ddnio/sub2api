@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/Wei-Shaw/sub2api/ent/group"
+	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
 )
 
@@ -170,6 +171,21 @@ func (_c *PaymentPlanCreate) SetNillableIsActive(v *bool) *PaymentPlanCreate {
 // SetGroup sets the "group" edge to the Group entity.
 func (_c *PaymentPlanCreate) SetGroup(v *Group) *PaymentPlanCreate {
 	return _c.SetGroupID(v.ID)
+}
+
+// AddOrderIDs adds the "orders" edge to the PaymentOrder entity by IDs.
+func (_c *PaymentPlanCreate) AddOrderIDs(ids ...int64) *PaymentPlanCreate {
+	_c.mutation.AddOrderIDs(ids...)
+	return _c
+}
+
+// AddOrders adds the "orders" edges to the PaymentOrder entity.
+func (_c *PaymentPlanCreate) AddOrders(v ...*PaymentOrder) *PaymentPlanCreate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddOrderIDs(ids...)
 }
 
 // Mutation returns the PaymentPlanMutation object of the builder.
@@ -380,6 +396,22 @@ func (_c *PaymentPlanCreate) createSpec() (*PaymentPlan, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.GroupID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.OrdersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentplan.OrdersTable,
+			Columns: []string{paymentplan.OrdersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

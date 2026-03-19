@@ -41,6 +41,8 @@ const (
 	FieldIsActive = "is_active"
 	// EdgeGroup holds the string denoting the group edge name in mutations.
 	EdgeGroup = "group"
+	// EdgeOrders holds the string denoting the orders edge name in mutations.
+	EdgeOrders = "orders"
 	// Table holds the table name of the paymentplan in the database.
 	Table = "payment_plans"
 	// GroupTable is the table that holds the group relation/edge.
@@ -50,6 +52,13 @@ const (
 	GroupInverseTable = "groups"
 	// GroupColumn is the table column denoting the group relation/edge.
 	GroupColumn = "group_id"
+	// OrdersTable is the table that holds the orders relation/edge.
+	OrdersTable = "payment_orders"
+	// OrdersInverseTable is the table name for the PaymentOrder entity.
+	// It exists in this package in order to avoid circular dependency with the "paymentorder" package.
+	OrdersInverseTable = "payment_orders"
+	// OrdersColumn is the table column denoting the orders relation/edge.
+	OrdersColumn = "plan_id"
 )
 
 // Columns holds all SQL columns for paymentplan fields.
@@ -185,10 +194,31 @@ func ByGroupField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newGroupStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByOrdersCount orders the results by orders count.
+func ByOrdersCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newOrdersStep(), opts...)
+	}
+}
+
+// ByOrders orders the results by orders terms.
+func ByOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOrdersStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newGroupStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(GroupInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, GroupTable, GroupColumn),
+	)
+}
+func newOrdersStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OrdersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, OrdersTable, OrdersColumn),
 	)
 }

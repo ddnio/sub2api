@@ -30,6 +30,8 @@ type Tx struct {
 	Group *GroupClient
 	// IdempotencyRecord is the client for interacting with the IdempotencyRecord builders.
 	IdempotencyRecord *IdempotencyRecordClient
+	// PaymentOrder is the client for interacting with the PaymentOrder builders.
+	PaymentOrder *PaymentOrderClient
 	// PaymentPlan is the client for interacting with the PaymentPlan builders.
 	PaymentPlan *PaymentPlanClient
 	// PromoCode is the client for interacting with the PromoCode builders.
@@ -197,6 +199,7 @@ func (tx *Tx) init() {
 	tx.ErrorPassthroughRule = NewErrorPassthroughRuleClient(tx.config)
 	tx.Group = NewGroupClient(tx.config)
 	tx.IdempotencyRecord = NewIdempotencyRecordClient(tx.config)
+	tx.PaymentOrder = NewPaymentOrderClient(tx.config)
 	tx.PaymentPlan = NewPaymentPlanClient(tx.config)
 	tx.PromoCode = NewPromoCodeClient(tx.config)
 	tx.PromoCodeUsage = NewPromoCodeUsageClient(tx.config)
