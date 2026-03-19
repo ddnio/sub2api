@@ -13,6 +13,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
+	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
 	"github.com/Wei-Shaw/sub2api/ent/promocode"
 	"github.com/Wei-Shaw/sub2api/ent/promocodeusage"
 	"github.com/Wei-Shaw/sub2api/ent/proxy"
@@ -498,6 +499,69 @@ func init() {
 	idempotencyrecordDescErrorReason := idempotencyrecordFields[6].Descriptor()
 	// idempotencyrecord.ErrorReasonValidator is a validator for the "error_reason" field. It is called by the builders before save.
 	idempotencyrecord.ErrorReasonValidator = idempotencyrecordDescErrorReason.Validators[0].(func(string) error)
+	paymentplanMixin := schema.PaymentPlan{}.Mixin()
+	paymentplanMixinHooks1 := paymentplanMixin[1].Hooks()
+	paymentplan.Hooks[0] = paymentplanMixinHooks1[0]
+	paymentplanMixinInters1 := paymentplanMixin[1].Interceptors()
+	paymentplan.Interceptors[0] = paymentplanMixinInters1[0]
+	paymentplanMixinFields0 := paymentplanMixin[0].Fields()
+	_ = paymentplanMixinFields0
+	paymentplanFields := schema.PaymentPlan{}.Fields()
+	_ = paymentplanFields
+	// paymentplanDescCreatedAt is the schema descriptor for created_at field.
+	paymentplanDescCreatedAt := paymentplanMixinFields0[0].Descriptor()
+	// paymentplan.DefaultCreatedAt holds the default value on creation for the created_at field.
+	paymentplan.DefaultCreatedAt = paymentplanDescCreatedAt.Default.(func() time.Time)
+	// paymentplanDescUpdatedAt is the schema descriptor for updated_at field.
+	paymentplanDescUpdatedAt := paymentplanMixinFields0[1].Descriptor()
+	// paymentplan.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	paymentplan.DefaultUpdatedAt = paymentplanDescUpdatedAt.Default.(func() time.Time)
+	// paymentplan.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	paymentplan.UpdateDefaultUpdatedAt = paymentplanDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// paymentplanDescName is the schema descriptor for name field.
+	paymentplanDescName := paymentplanFields[0].Descriptor()
+	// paymentplan.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	paymentplan.NameValidator = func() func(string) error {
+		validators := paymentplanDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// paymentplanDescDescription is the schema descriptor for description field.
+	paymentplanDescDescription := paymentplanFields[1].Descriptor()
+	// paymentplan.DefaultDescription holds the default value on creation for the description field.
+	paymentplan.DefaultDescription = paymentplanDescDescription.Default.(string)
+	// paymentplanDescBadge is the schema descriptor for badge field.
+	paymentplanDescBadge := paymentplanFields[2].Descriptor()
+	// paymentplan.BadgeValidator is a validator for the "badge" field. It is called by the builders before save.
+	paymentplan.BadgeValidator = paymentplanDescBadge.Validators[0].(func(string) error)
+	// paymentplanDescDurationDays is the schema descriptor for duration_days field.
+	paymentplanDescDurationDays := paymentplanFields[4].Descriptor()
+	// paymentplan.DurationDaysValidator is a validator for the "duration_days" field. It is called by the builders before save.
+	paymentplan.DurationDaysValidator = paymentplanDescDurationDays.Validators[0].(func(int) error)
+	// paymentplanDescPrice is the schema descriptor for price field.
+	paymentplanDescPrice := paymentplanFields[5].Descriptor()
+	// paymentplan.DefaultPrice holds the default value on creation for the price field.
+	paymentplan.DefaultPrice = paymentplanDescPrice.Default.(float64)
+	// paymentplanDescSortOrder is the schema descriptor for sort_order field.
+	paymentplanDescSortOrder := paymentplanFields[7].Descriptor()
+	// paymentplan.DefaultSortOrder holds the default value on creation for the sort_order field.
+	paymentplan.DefaultSortOrder = paymentplanDescSortOrder.Default.(int)
+	// paymentplan.SortOrderValidator is a validator for the "sort_order" field. It is called by the builders before save.
+	paymentplan.SortOrderValidator = paymentplanDescSortOrder.Validators[0].(func(int) error)
+	// paymentplanDescIsActive is the schema descriptor for is_active field.
+	paymentplanDescIsActive := paymentplanFields[8].Descriptor()
+	// paymentplan.DefaultIsActive holds the default value on creation for the is_active field.
+	paymentplan.DefaultIsActive = paymentplanDescIsActive.Default.(bool)
 	promocodeFields := schema.PromoCode{}.Fields()
 	_ = promocodeFields
 	// promocodeDescCode is the schema descriptor for code field.

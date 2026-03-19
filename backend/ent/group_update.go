@@ -15,6 +15,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/account"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/group"
+	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
@@ -713,6 +714,21 @@ func (_u *GroupUpdate) AddUsageLogs(v ...*UsageLog) *GroupUpdate {
 	return _u.AddUsageLogIDs(ids...)
 }
 
+// AddPaymentPlanIDs adds the "payment_plans" edge to the PaymentPlan entity by IDs.
+func (_u *GroupUpdate) AddPaymentPlanIDs(ids ...int64) *GroupUpdate {
+	_u.mutation.AddPaymentPlanIDs(ids...)
+	return _u
+}
+
+// AddPaymentPlans adds the "payment_plans" edges to the PaymentPlan entity.
+func (_u *GroupUpdate) AddPaymentPlans(v ...*PaymentPlan) *GroupUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPaymentPlanIDs(ids...)
+}
+
 // AddAccountIDs adds the "accounts" edge to the Account entity by IDs.
 func (_u *GroupUpdate) AddAccountIDs(ids ...int64) *GroupUpdate {
 	_u.mutation.AddAccountIDs(ids...)
@@ -830,6 +846,27 @@ func (_u *GroupUpdate) RemoveUsageLogs(v ...*UsageLog) *GroupUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveUsageLogIDs(ids...)
+}
+
+// ClearPaymentPlans clears all "payment_plans" edges to the PaymentPlan entity.
+func (_u *GroupUpdate) ClearPaymentPlans() *GroupUpdate {
+	_u.mutation.ClearPaymentPlans()
+	return _u
+}
+
+// RemovePaymentPlanIDs removes the "payment_plans" edge to PaymentPlan entities by IDs.
+func (_u *GroupUpdate) RemovePaymentPlanIDs(ids ...int64) *GroupUpdate {
+	_u.mutation.RemovePaymentPlanIDs(ids...)
+	return _u
+}
+
+// RemovePaymentPlans removes "payment_plans" edges to PaymentPlan entities.
+func (_u *GroupUpdate) RemovePaymentPlans(v ...*PaymentPlan) *GroupUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePaymentPlanIDs(ids...)
 }
 
 // ClearAccounts clears all "accounts" edges to the Account entity.
@@ -1322,6 +1359,51 @@ func (_u *GroupUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PaymentPlansCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.PaymentPlansTable,
+			Columns: []string{group.PaymentPlansColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentplan.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPaymentPlansIDs(); len(nodes) > 0 && !_u.mutation.PaymentPlansCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.PaymentPlansTable,
+			Columns: []string{group.PaymentPlansColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentplan.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PaymentPlansIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.PaymentPlansTable,
+			Columns: []string{group.PaymentPlansColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentplan.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {
@@ -2141,6 +2223,21 @@ func (_u *GroupUpdateOne) AddUsageLogs(v ...*UsageLog) *GroupUpdateOne {
 	return _u.AddUsageLogIDs(ids...)
 }
 
+// AddPaymentPlanIDs adds the "payment_plans" edge to the PaymentPlan entity by IDs.
+func (_u *GroupUpdateOne) AddPaymentPlanIDs(ids ...int64) *GroupUpdateOne {
+	_u.mutation.AddPaymentPlanIDs(ids...)
+	return _u
+}
+
+// AddPaymentPlans adds the "payment_plans" edges to the PaymentPlan entity.
+func (_u *GroupUpdateOne) AddPaymentPlans(v ...*PaymentPlan) *GroupUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPaymentPlanIDs(ids...)
+}
+
 // AddAccountIDs adds the "accounts" edge to the Account entity by IDs.
 func (_u *GroupUpdateOne) AddAccountIDs(ids ...int64) *GroupUpdateOne {
 	_u.mutation.AddAccountIDs(ids...)
@@ -2258,6 +2355,27 @@ func (_u *GroupUpdateOne) RemoveUsageLogs(v ...*UsageLog) *GroupUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveUsageLogIDs(ids...)
+}
+
+// ClearPaymentPlans clears all "payment_plans" edges to the PaymentPlan entity.
+func (_u *GroupUpdateOne) ClearPaymentPlans() *GroupUpdateOne {
+	_u.mutation.ClearPaymentPlans()
+	return _u
+}
+
+// RemovePaymentPlanIDs removes the "payment_plans" edge to PaymentPlan entities by IDs.
+func (_u *GroupUpdateOne) RemovePaymentPlanIDs(ids ...int64) *GroupUpdateOne {
+	_u.mutation.RemovePaymentPlanIDs(ids...)
+	return _u
+}
+
+// RemovePaymentPlans removes "payment_plans" edges to PaymentPlan entities.
+func (_u *GroupUpdateOne) RemovePaymentPlans(v ...*PaymentPlan) *GroupUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePaymentPlanIDs(ids...)
 }
 
 // ClearAccounts clears all "accounts" edges to the Account entity.
@@ -2780,6 +2898,51 @@ func (_u *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PaymentPlansCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.PaymentPlansTable,
+			Columns: []string{group.PaymentPlansColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentplan.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPaymentPlansIDs(); len(nodes) > 0 && !_u.mutation.PaymentPlansCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.PaymentPlansTable,
+			Columns: []string{group.PaymentPlansColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentplan.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PaymentPlansIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.PaymentPlansTable,
+			Columns: []string{group.PaymentPlansColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentplan.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

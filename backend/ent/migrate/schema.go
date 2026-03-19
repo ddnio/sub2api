@@ -487,6 +487,48 @@ var (
 			},
 		},
 	}
+	// PaymentPlansColumns holds the columns for the "payment_plans" table.
+	PaymentPlansColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "name", Type: field.TypeString, Unique: true, Size: 100},
+		{Name: "description", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "badge", Type: field.TypeString, Nullable: true, Size: 20},
+		{Name: "duration_days", Type: field.TypeInt},
+		{Name: "price", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "original_price", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "sort_order", Type: field.TypeInt, Default: 0},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "group_id", Type: field.TypeInt64},
+	}
+	// PaymentPlansTable holds the schema information for the "payment_plans" table.
+	PaymentPlansTable = &schema.Table{
+		Name:       "payment_plans",
+		Columns:    PaymentPlansColumns,
+		PrimaryKey: []*schema.Column{PaymentPlansColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "payment_plans_groups_payment_plans",
+				Columns:    []*schema.Column{PaymentPlansColumns[12]},
+				RefColumns: []*schema.Column{GroupsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "paymentplan_group_id",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentPlansColumns[12]},
+			},
+			{
+				Name:    "paymentplan_is_active_sort_order",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentPlansColumns[11], PaymentPlansColumns[10]},
+			},
+		},
+	}
 	// PromoCodesColumns holds the columns for the "promo_codes" table.
 	PromoCodesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
@@ -1099,6 +1141,7 @@ var (
 		ErrorPassthroughRulesTable,
 		GroupsTable,
 		IdempotencyRecordsTable,
+		PaymentPlansTable,
 		PromoCodesTable,
 		PromoCodeUsagesTable,
 		ProxiesTable,
@@ -1146,6 +1189,10 @@ func init() {
 	}
 	IdempotencyRecordsTable.Annotation = &entsql.Annotation{
 		Table: "idempotency_records",
+	}
+	PaymentPlansTable.ForeignKeys[0].RefTable = GroupsTable
+	PaymentPlansTable.Annotation = &entsql.Annotation{
+		Table: "payment_plans",
 	}
 	PromoCodesTable.Annotation = &entsql.Annotation{
 		Table: "promo_codes",
