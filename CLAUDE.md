@@ -1,0 +1,52 @@
+# CLAUDE.md
+
+Claude Code 在本仓库工作时必须先读本文件。
+
+## 项目说明
+
+Sub2API 是一个 AI API 网关平台。后端 Go，前端 Vue3，数据库 PostgreSQL，缓存 Redis。
+发布时前端静态文件通过 `go:embed` 打包进后端二进制，单文件部署。
+
+## 工程规范
+
+详细规范见 `AGENTS.md`，核心要点：
+
+- `origin` = 团队 fork（ddnio/sub2api），`upstream` = 上游（Wei-Shaw/sub2api）
+- 日常功能在 `feature/<topic>` 分支开发，不直接推 `main`
+- 变更部署方式时，同步更新 `docs/engineering/deployment.md`
+- **不要提交任何 config.yaml、密钥、生产密码**
+
+## 本地开发
+
+```bash
+# 后端（需要 Go 1.26+）
+cd backend && go run ./cmd/server
+
+# 前端
+pnpm --dir frontend dev
+```
+
+配置文件放 `backend/config.yaml`（已在 `.gitignore`），连接服务器测试库（Tailscale IP：`100.71.166.42`）。
+参考 `docs/engineering/deployment.md` 了解完整配置。
+
+## 部署
+
+```bash
+# 在服务器 /data/service/sub2api 下执行
+bash deploy/deploy-server.sh test   # 部署测试环境
+bash deploy/deploy-server.sh prod   # 部署生产环境
+```
+
+脚本会自动 git pull → docker build → 重启容器。
+服务器配置文件在 `/etc/sub2api/test.yaml` 和 `prod.yaml`，不在代码库里。
+
+## 关键文件
+
+| 文件 | 说明 |
+|------|------|
+| `deploy/deploy-server.sh` | 服务器部署脚本 |
+| `deploy/docker-compose.yml` | 基础设施（postgres + redis） |
+| `deploy/docker-compose.override.yml` | 服务器本地覆盖（端口暴露，不提交） |
+| `docs/engineering/deployment.md` | 完整部署文档 |
+| `docs/engineering/git-workflow.md` | Git 工作流 |
+| `backend/config.yaml` | 本地配置（不提交） |
