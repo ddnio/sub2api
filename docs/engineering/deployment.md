@@ -193,6 +193,38 @@ totp:
 
 > **注意**：`jwt.secret` 和 `totp.encryption_key` 一旦设定不要更改，否则所有用户需要重新登录，2FA 全部失效。
 
+### 支付模块配置（feature/payment-module 分支起）
+
+支付相关密钥同样只放服务器配置文件，**不提交 git**。私钥文件也不要提交（已加入 `.gitignore`）。
+
+```yaml
+payment:
+  provider: "wxpay"                          # 当前支持 wxpay / easypay
+  callback_base_url: "https://sub.aibewinjpq.com"  # 测试环境；生产环境改对应域名
+
+  # 微信支付商户信息（在微信支付商户平台获取）
+  wxpay_app_id: "wxXXXXXXXXXXXXXXXX"        # 公众号/小程序 AppID
+  wxpay_mch_id: "XXXXXXXXXX"                 # 商户号（10位）
+  wxpay_api_v3_key: "32位字符串"              # APIv3 密钥（商户平台自行设置）
+  wxpay_serial_no: "证书序列号"               # apiclient_cert.pem 中的 serialNumber
+
+  # 商户 API 私钥（从商户平台下载 apiclient_key.pem 的内容）
+  wxpay_private_key: |
+    -----BEGIN PRIVATE KEY-----
+    MIIEvAIBADANBgk...
+    -----END PRIVATE KEY-----
+
+  # 微信支付公钥模式（2024年后新商户）
+  # 在商户平台「账户中心 → API安全 → 微信支付公钥」下载 pub_key.pem
+  wxpay_public_key_id: "PUB_KEY_ID_XXXXXXXXXXXXXXXXXX"  # 注意必须保留 PUB_KEY_ID_ 前缀
+  wxpay_public_key: |
+    -----BEGIN PUBLIC KEY-----
+    MIIBIjANBgk...
+    -----END PUBLIC KEY-----
+```
+
+> **公钥模式 vs 证书模式**：2024 年后开通的商户默认使用公钥模式（回调 Header `Wechatpay-Serial` 以 `PUB_KEY_ID_` 开头）。此时必须配置 `wxpay_public_key_id` 和 `wxpay_public_key`；若不配置则回退到平台证书模式（旧商户）。
+
 ---
 
 ## 六、迭代流程
@@ -202,6 +234,22 @@ totp:
   → git push origin <branch>
   → SSH 到服务器
   → cd /data/service/sub2api
+  → git checkout <branch>               # 若服务器跟踪的分支不同，需先切换
   → bash deploy/deploy-server.sh test   # 验证测试环境
   → bash deploy/deploy-server.sh prod   # 确认后上生产
 ```
+
+### 包含 DB Migration 时
+
+新功能有 migration SQL（`backend/migrations/0XX_*.sql`）时，部署后需手动执行：
+
+```bash
+# 在服务器上连接对应数据库执行
+psql -h localhost -U sub2api -d sub2api_test -f /data/service/sub2api/backend/migrations/0XX_feature.sql
+```
+
+按文件编号从小到大顺序执行，不要跳号。当前各功能对应的 migration：
+
+| 分支 / 功能 | Migration 文件 |
+|------------|----------------|
+| 支付模块 | `077_add_payment_tables.sql` |
