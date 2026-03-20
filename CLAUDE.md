@@ -60,6 +60,11 @@ bash deploy/deploy-server.sh prod   # 部署生产环境
 - **密钥不要提交 git**，只放服务器 `/etc/sub2api/` 配置文件里
 - 本地密钥文件放 `backend/config/`（已在 `.gitignore`）
 
+## Wire DI
+
+项目使用 Wire 做依赖注入，但 **Go 1.26.1 与 `wire` 生成工具不兼容**，无法运行 `wire gen`。
+`backend/internal/repository/wire_gen.go` 需要**手动维护**：新增或修改 Provider 后直接编辑 `wire_gen.go`，不要尝试跑 `wire` 命令。
+
 ## 关键文件
 
 | 文件 | 说明 |
@@ -70,3 +75,7 @@ bash deploy/deploy-server.sh prod   # 部署生产环境
 | `docs/engineering/deployment.md` | 完整部署文档 |
 | `docs/engineering/git-workflow.md` | Git 工作流 |
 | `backend/config.yaml` | 本地配置（不提交） |
+| `backend/internal/repository/wire_gen.go` | 手动维护的 Wire 注入文件 |
+| `backend/internal/repository/wxpay_provider.go` | 微信支付 Native Pay v3 Provider |
+| `backend/internal/service/payment_service.go` | 支付业务逻辑（创单、回调、发放权益） |
+| `backend/migrations/077_add_payment_tables.sql` | 支付模块 DB migration |
