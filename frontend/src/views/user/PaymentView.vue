@@ -282,8 +282,7 @@ const quickAmounts = [10, 30, 50, 100, 200, 500]
 // 支付方式
 const selectedProvider = ref<'wxpay' | 'alipay'>('wxpay')
 const providers = computed(() => [
-  { value: 'wxpay' as const, label: t('payment.wxpay'), icon: '💚' },
-  { value: 'alipay' as const, label: t('payment.alipay'), icon: '💙' }
+  { value: 'wxpay' as const, label: t('payment.wxpay'), icon: '💚' }
 ])
 
 // 订单列表

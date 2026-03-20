@@ -348,6 +348,7 @@ func (s *PaymentService) CreateOrder(ctx context.Context, input CreateOrderInput
 			domain.PaymentStatusFailed,
 			map[string]any{},
 		)
+		log.Printf("[Payment] Provider error for order %s: %v", orderNo, err)
 		return nil, nil, ErrPaymentProviderError
 	}
 
