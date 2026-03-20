@@ -99,24 +99,9 @@
             </button>
           </div>
           <!-- 支付方式 -->
-          <div class="mb-5">
-            <label class="input-label">{{ t('payment.selectProvider') }}</label>
-            <div class="mt-2 flex gap-3">
-              <button
-                v-for="p in providers"
-                :key="p.value"
-                @click="selectedProvider = p.value"
-                :class="[
-                  'flex flex-1 items-center justify-center gap-2 rounded-xl border-2 py-3 text-sm font-medium transition-colors',
-                  selectedProvider === p.value
-                    ? 'border-primary-500 bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:text-gray-400'
-                ]"
-              >
-                <span class="text-lg">{{ p.icon }}</span>
-                {{ p.label }}
-              </button>
-            </div>
+          <div class="mb-5 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <span class="text-base">💚</span>
+            <span>{{ t('payment.wxpay') }}</span>
           </div>
           <button
             class="btn btn-primary w-full"
@@ -281,9 +266,6 @@ const quickAmounts = [10, 30, 50, 100, 200, 500]
 
 // 支付方式
 const selectedProvider = ref<'wxpay'>('wxpay')
-const providers = computed(() => [
-  { value: 'wxpay' as const, label: t('payment.wxpay'), icon: '💚' }
-])
 
 // 订单列表
 const orders = ref<PaymentOrder[]>([])
