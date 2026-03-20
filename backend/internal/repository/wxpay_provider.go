@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"crypto/rsa"
 	"fmt"
 	"net/http"
 	"time"
@@ -21,18 +20,20 @@ import (
 )
 
 type wxpayProvider struct {
-	client     *core.Client
-	handler    *notify.Handler
-	cfg        config.PaymentConfig
-	privateKey *rsa.PrivateKey
+	client  *core.Client
+	handler *notify.Handler
+	cfg     config.PaymentConfig
 }
 
 // NewWxpayProvider 初始化微信支付 Native Pay v3 Provider。
-// 在 Wire 启动时调用，会向 SDK 全局 DownloaderManager 注册平台证书下载器。
+//
+// 支持两种验签模式：
+//   - 公钥模式（推荐，新商户默认）：配置 wxpay_public_key + wxpay_public_key_id
+//   - 平台证书模式（旧商户）：无需额外配置，SDK 自动下载证书
 func NewWxpayProvider(cfg config.PaymentConfig) (service.PaymentProvider, error) {
 	if cfg.WxpayMchID == "" || cfg.WxpayAppID == "" || cfg.WxpayApiV3Key == "" ||
 		cfg.WxpayPrivateKey == "" || cfg.WxpaySerialNo == "" {
-		return nil, fmt.Errorf("wxpay: missing required config fields (mch_id/app_id/api_v3_key/private_key/serial_no)")
+		return nil, fmt.Errorf("wxpay: missing required config (mch_id/app_id/api_v3_key/private_key/serial_no)")
 	}
 
 	privateKey, err := utils.LoadPrivateKey(cfg.WxpayPrivateKey)
@@ -42,34 +43,60 @@ func NewWxpayProvider(cfg config.PaymentConfig) (service.PaymentProvider, error)
 
 	ctx := context.Background()
 
-	// WithWechatPayAutoAuthCipher 自动下载并缓存平台证书，同时启用签名/验签/加解密
-	client, err := core.NewClient(ctx,
-		option.WithWechatPayAutoAuthCipher(
-			cfg.WxpayMchID,
-			cfg.WxpaySerialNo,
-			privateKey,
-			cfg.WxpayApiV3Key,
-		),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("wxpay: create client: %w", err)
-	}
+	var client *core.Client
+	var handler *notify.Handler
 
-	// 使用全局 DownloaderManager 的证书访问器构造回调验签 handler
-	certVisitor := downloader.MgrInstance().GetCertificateVisitor(cfg.WxpayMchID)
-	handler, err := notify.NewRSANotifyHandler(
-		cfg.WxpayApiV3Key,
-		verifiers.NewSHA256WithRSAVerifier(certVisitor),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("wxpay: create notify handler: %w", err)
+	if cfg.WxpayPublicKey != "" && cfg.WxpayPublicKeyID != "" {
+		// ── 公钥模式（新版，2024 年后新开通商户默认启用）──
+		publicKey, err := utils.LoadPublicKey(cfg.WxpayPublicKey)
+		if err != nil {
+			return nil, fmt.Errorf("wxpay: load public key: %w", err)
+		}
+
+		client, err = core.NewClient(ctx,
+			option.WithWechatPayPublicKeyAuthCipher(
+				cfg.WxpayMchID,
+				cfg.WxpaySerialNo,
+				privateKey,
+				cfg.WxpayPublicKeyID,
+				publicKey,
+			),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("wxpay: create client (pubkey mode): %w", err)
+		}
+
+		// 公钥模式的回调验签：使用微信支付公钥
+		pubkeyVerifier := verifiers.NewSHA256WithRSAPubkeyVerifier(cfg.WxpayPublicKeyID, *publicKey)
+		handler, err = notify.NewRSANotifyHandler(cfg.WxpayApiV3Key, pubkeyVerifier)
+		if err != nil {
+			return nil, fmt.Errorf("wxpay: create notify handler (pubkey mode): %w", err)
+		}
+	} else {
+		// ── 平台证书模式（旧商户）── SDK 自动下载并缓存平台证书
+		client, err = core.NewClient(ctx,
+			option.WithWechatPayAutoAuthCipher(
+				cfg.WxpayMchID,
+				cfg.WxpaySerialNo,
+				privateKey,
+				cfg.WxpayApiV3Key,
+			),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("wxpay: create client (cert mode): %w", err)
+		}
+
+		certVisitor := downloader.MgrInstance().GetCertificateVisitor(cfg.WxpayMchID)
+		handler, err = notify.NewRSANotifyHandler(cfg.WxpayApiV3Key, verifiers.NewSHA256WithRSAVerifier(certVisitor))
+		if err != nil {
+			return nil, fmt.Errorf("wxpay: create notify handler (cert mode): %w", err)
+		}
 	}
 
 	return &wxpayProvider{
-		client:     client,
-		handler:    handler,
-		cfg:        cfg,
-		privateKey: privateKey,
+		client:  client,
+		handler: handler,
+		cfg:     cfg,
 	}, nil
 }
 
@@ -77,8 +104,6 @@ func NewWxpayProvider(cfg config.PaymentConfig) (service.PaymentProvider, error)
 // code_url 是 weixin:// 协议 URL，前端用 qrcode 库渲染成二维码供用户扫码支付。
 func (p *wxpayProvider) CreatePayment(ctx context.Context, req service.PaymentRequest) (*service.PaymentResult, error) {
 	notifyURL := fmt.Sprintf("%s/api/v1/payment/callback/wxpay", p.cfg.CallbackBaseURL)
-
-	// 订单有效期：与 service 层 order_expiry_sec 保持一致（默认 15 分钟）
 	expireTime := time.Now().Add(15 * time.Minute)
 
 	svc := native.NativeApiService{Client: p.client}
@@ -146,7 +171,7 @@ func (p *wxpayProvider) ParseCallback(r *http.Request) (*service.CallbackResult,
 
 // yuanToFen 将元转换为分（微信支付金额单位为分）。
 func yuanToFen(yuan float64) int64 {
-	return int64(yuan*100 + 0.5) // 四舍五入
+	return int64(yuan*100 + 0.5)
 }
 
 // fenToYuan 将分转换为元。
