@@ -209,7 +209,10 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	scheduledTestHandler := admin.NewScheduledTestHandler(scheduledTestService)
 	paymentOrderRepository := repository.NewPaymentOrderRepository(client)
 	paymentPlanRepository := repository.NewPaymentPlanRepository(client)
-	paymentProvider := repository.ProvideEasyPayProvider(configConfig)
+	paymentProvider, err := repository.ProvidePaymentProvider(configConfig)
+	if err != nil {
+		return nil, err
+	}
 	paymentCache := repository.NewPaymentCache(redisClient)
 	paymentService := service.ProvidePaymentService(paymentOrderRepository, paymentPlanRepository, paymentProvider, paymentCache, userService, subscriptionService, billingCacheService, client, configConfig)
 	paymentExpiryService := service.ProvidePaymentExpiryService(paymentOrderRepository, configConfig)

@@ -2384,6 +2384,13 @@ type PaymentConfig struct {
 	ExpiryTickSec   int     `mapstructure:"expiry_tick_sec"`   // default 60
 	MinTopupAmount  float64 `mapstructure:"min_topup_amount"`  // default 1.00
 	MaxTopupAmount  float64 `mapstructure:"max_topup_amount"`  // default 10000.00
+
+	// 微信支付 Native Pay v3
+	WxpayAppID      string `mapstructure:"wxpay_app_id"`
+	WxpayMchID      string `mapstructure:"wxpay_mch_id"`
+	WxpayApiV3Key   string `mapstructure:"wxpay_api_v3_key"`
+	WxpayPrivateKey string `mapstructure:"wxpay_private_key"` // PEM 内容（多行，YAML literal block）
+	WxpaySerialNo   string `mapstructure:"wxpay_serial_no"`
 }
 
 func warnIfInsecureURL(field, raw string) {
