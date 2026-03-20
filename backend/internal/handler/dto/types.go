@@ -551,6 +551,7 @@ type PaymentOrderDTO struct {
 	Status      string  `json:"status"`
 	Provider    *string `json:"provider,omitempty"`
 	CreatedAt   string  `json:"created_at"`
+	ExpiredAt   string  `json:"expired_at"`
 	PaidAt      *string `json:"paid_at,omitempty"`
 	CompletedAt *string `json:"completed_at,omitempty"`
 	PlanName    *string `json:"plan_name,omitempty"`

@@ -535,10 +535,15 @@ func (s *PaymentService) AdminCompleteOrder(ctx context.Context, orderID int64, 
 	if order == nil {
 		return ErrPaymentOrderNotFound
 	}
+	// NOTE(C2): "paid" orders may have benefits already delivered (if server crashed after
+	// deliverBenefits but before status→completed). Completing them again via admin could
+	// double-credit. Safe path: only manually complete "failed" orders; "paid" orders should
+	// resolve via the automatic expiry/retry mechanism. TODO: add benefits_delivered flag.
 	if order.Status != domain.PaymentStatusPaid && order.Status != domain.PaymentStatusFailed {
 		return ErrPaymentInvalidStatus
 	}
 
+	log.Printf("[Payment] AdminCompleteOrder: order=%s status=%s", order.OrderNo, order.Status)
 	deliverErr := s.deliverBenefits(ctx, order)
 	if deliverErr != nil {
 		return ErrPaymentDeliveryFailed

@@ -771,6 +771,7 @@ func PaymentOrderFromService(o *service.PaymentOrder) PaymentOrderDTO {
 		Status:    o.Status,
 		Provider:  o.Provider,
 		CreatedAt: o.CreatedAt.Format(time.RFC3339),
+		ExpiredAt: o.ExpiredAt.Format(time.RFC3339),
 	}
 	if o.PaidAt != nil {
 		s := o.PaidAt.Format(time.RFC3339)
