@@ -11,10 +11,14 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 )
+
+// httpClient with explicit timeout to avoid hanging on slow providers.
+var easypayHTTPClient = &http.Client{Timeout: 15 * time.Second}
 
 type easypayProvider struct {
 	cfg config.PaymentConfig
@@ -53,18 +57,18 @@ func (p *easypayProvider) sign(params map[string]string) string {
 }
 
 // mapiResponse 是易支付 mapi.php 返回的 JSON 结构。
+// mazfu.com 的实现只返回 trade_no，不含 qrcode/payurl；
+// 支付页面 URL 需要拼接为 {scheme}://{host}/pay/{trade_no}。
 type mapiResponse struct {
-	Code      int    `json:"code"`       // 1=成功
-	Msg       string `json:"msg"`
-	TradeNo   string `json:"trade_no"`   // 平台订单号
-	PayURL    string `json:"payurl"`     // 跳转支付链接
-	QRCode    string `json:"qrcode"`     // 二维码内容（wxpay native）
-	URLScheme string `json:"urlscheme"`  // 微信 URL Scheme
+	Code    int    `json:"code"`     // 1=成功
+	Msg     string `json:"msg"`
+	TradeNo string `json:"trade_no"` // 平台订单号
 }
 
-// CreatePayment 调用易支付 mapi.php 创建订单，返回支付二维码 URL。
+// CreatePayment 调用易支付 mapi.php 创建订单，返回支付跳转 URL。
+// mazfu.com 特有：mapi.php 返回 trade_no，支付 URL 为 {base}/pay/{trade_no}。
 func (p *easypayProvider) CreatePayment(ctx context.Context, req service.PaymentRequest) (*service.PaymentResult, error) {
-	// 确定支付类型
+	// 确定支付类型（仅支持 wxpay）
 	payType := "wxpay"
 	if req.Provider == "alipay" {
 		payType = "alipay"
@@ -96,7 +100,7 @@ func (p *easypayProvider) CreatePayment(ctx context.Context, req service.Payment
 		return nil, fmt.Errorf("easypay: build request: %w", err)
 	}
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := easypayHTTPClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("easypay: http request: %w", err)
 	}
@@ -116,16 +120,18 @@ func (p *easypayProvider) CreatePayment(ctx context.Context, req service.Payment
 		return nil, fmt.Errorf("easypay: order creation failed: %s", result.Msg)
 	}
 
-	// 优先用 qrcode（微信 native 扫码），其次 payurl
-	qrURL := result.QRCode
-	if qrURL == "" {
-		qrURL = result.PayURL
-	}
-	if qrURL == "" {
-		return nil, fmt.Errorf("easypay: no qrcode or payurl in response")
+	if result.TradeNo == "" {
+		return nil, fmt.Errorf("easypay: empty trade_no in response")
 	}
 
-	return &service.PaymentResult{QRCodeURL: qrURL}, nil
+	// mazfu.com：从 EasyPayBaseURL 提取 scheme://host，构造支付页面 URL
+	parsedBase, err := url.Parse(p.cfg.EasyPayBaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("easypay: invalid base URL config: %w", err)
+	}
+	paymentPageURL := fmt.Sprintf("%s://%s/pay/%s", parsedBase.Scheme, parsedBase.Host, result.TradeNo)
+
+	return &service.PaymentResult{QRCodeURL: paymentPageURL}, nil
 }
 
 // ParseCallback 解析并验证易支付异步回调通知。

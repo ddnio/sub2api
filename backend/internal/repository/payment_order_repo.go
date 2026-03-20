@@ -174,65 +174,54 @@ func (r *paymentOrderRepository) ExpirePendingOrders(ctx context.Context) (int, 
 }
 
 func (r *paymentOrderRepository) Stats(ctx context.Context, filter service.StatsFilter) (*service.OrderStats, error) {
-	q := r.client.PaymentOrder.Query().
-		Where(paymentorder.StatusEQ(domain.PaymentStatusCompleted))
-
-	if filter.StartDate != "" {
-		if t, err := time.Parse("2006-01-02", filter.StartDate); err == nil {
-			q = q.Where(paymentorder.CreatedAtGTE(t))
+	baseQ := func() *dbent.PaymentOrderQuery {
+		q := r.client.PaymentOrder.Query()
+		if filter.StartDate != "" {
+			if t, err := time.Parse("2006-01-02", filter.StartDate); err == nil {
+				q = q.Where(paymentorder.CreatedAtGTE(t))
+			}
 		}
-	}
-	if filter.EndDate != "" {
-		if t, err := time.Parse("2006-01-02", filter.EndDate); err == nil {
-			// end of day
-			q = q.Where(paymentorder.CreatedAtLT(t.Add(24 * time.Hour)))
+		if filter.EndDate != "" {
+			if t, err := time.Parse("2006-01-02", filter.EndDate); err == nil {
+				q = q.Where(paymentorder.CreatedAtLT(t.Add(24 * time.Hour)))
+			}
 		}
+		return q
 	}
 
-	orders, err := q.All(ctx)
-	if err != nil {
-		return nil, err
+	// I1: Use aggregate queries instead of loading all records into memory
+	type sumResult struct {
+		Sum float64
 	}
 
-	// Aggregate in Go
-	layout := "2006-01-02"
-	if filter.GroupBy == "month" {
-		layout = "2006-01"
+	completedCount, _ := baseQ().Where(paymentorder.StatusEQ(domain.PaymentStatusCompleted)).Count(ctx)
+	var completedSums []sumResult
+	_ = baseQ().Where(paymentorder.StatusEQ(domain.PaymentStatusCompleted)).
+		Aggregate(dbent.Sum(paymentorder.FieldAmount)).
+		Scan(ctx, &completedSums)
+	completedAmount := 0.0
+	if len(completedSums) > 0 {
+		completedAmount = completedSums[0].Sum
 	}
 
-	type bucket struct {
-		amount float64
-		count  int
-	}
-	buckets := make(map[string]*bucket)
-	var keyOrder []string
-
-	totalAmount := 0.0
-	for _, o := range orders {
-		key := o.CreatedAt.Format(layout)
-		if _, exists := buckets[key]; !exists {
-			buckets[key] = &bucket{}
-			keyOrder = append(keyOrder, key)
-		}
-		buckets[key].amount += o.Amount
-		buckets[key].count++
-		totalAmount += o.Amount
-	}
-
-	breakdown := make([]service.StatsBreakdown, 0, len(keyOrder))
-	for _, key := range keyOrder {
-		b := buckets[key]
-		breakdown = append(breakdown, service.StatsBreakdown{
-			Date:   key,
-			Amount: b.amount,
-			Count:  b.count,
-		})
+	paidCount, _ := baseQ().Where(paymentorder.StatusEQ(domain.PaymentStatusPaid)).Count(ctx)
+	var paidSums []sumResult
+	_ = baseQ().Where(paymentorder.StatusEQ(domain.PaymentStatusPaid)).
+		Aggregate(dbent.Sum(paymentorder.FieldAmount)).
+		Scan(ctx, &paidSums)
+	paidAmount := 0.0
+	if len(paidSums) > 0 {
+		paidAmount = paidSums[0].Sum
 	}
 
 	return &service.OrderStats{
-		TotalAmount: totalAmount,
-		TotalOrders: len(orders),
-		Breakdown:   breakdown,
+		TotalOrders:     completedCount + paidCount,
+		TotalAmount:     completedAmount + paidAmount,
+		PaidOrders:      paidCount,
+		PaidAmount:      paidAmount,
+		CompletedOrders: completedCount,
+		CompletedAmount: completedAmount,
+		Breakdown:       []service.StatsBreakdown{},
 	}, nil
 }
 

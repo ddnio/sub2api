@@ -357,7 +357,11 @@ const createTopupOrder = async () => {
 
 const openPayDialog = () => {
   payStatus.value = 'waiting'
-  countdownSec.value = 1800
+  // M1: Use order.expired_at for accurate countdown instead of hardcoded 1800s
+  const expiredAt = currentOrder.value?.expired_at
+  countdownSec.value = expiredAt
+    ? Math.max(0, Math.floor((new Date(expiredAt).getTime() - Date.now()) / 1000))
+    : 900
   showPayDialog.value = true
   nextTick(() => renderQRCode())
   startPolling()

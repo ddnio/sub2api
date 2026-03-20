@@ -105,9 +105,13 @@ type StatsFilter struct {
 }
 
 type OrderStats struct {
-	TotalAmount float64          `json:"total_amount"`
-	TotalOrders int              `json:"total_orders"`
-	Breakdown   []StatsBreakdown `json:"breakdown"`
+	TotalAmount     float64          `json:"total_amount"`
+	TotalOrders     int              `json:"total_orders"`
+	PaidAmount      float64          `json:"paid_amount"`
+	PaidOrders      int              `json:"paid_orders"`
+	CompletedAmount float64          `json:"completed_amount"`
+	CompletedOrders int              `json:"completed_orders"`
+	Breakdown       []StatsBreakdown `json:"breakdown"`
 }
 
 type StatsBreakdown struct {
@@ -279,6 +283,11 @@ func (s *PaymentService) CreateOrder(ctx context.Context, input CreateOrderInput
 	var subject string
 	var planID *int64
 
+	// C1: Validate provider
+	if input.Provider != "wxpay" && input.Provider != "alipay" {
+		return nil, nil, infraerrors.BadRequest("PAYMENT_INVALID_PROVIDER", "invalid payment provider, must be wxpay or alipay")
+	}
+
 	switch input.Type {
 	case domain.PaymentOrderTypePlan:
 		if input.PlanID == nil {
@@ -333,6 +342,12 @@ func (s *PaymentService) CreateOrder(ctx context.Context, input CreateOrderInput
 		Subject:  subject,
 	})
 	if err != nil {
+		// I7: Mark order as failed immediately so no orphan pending records accumulate
+		_, _ = s.orderRepo.UpdateStatusAtomically(ctx, orderNo,
+			[]string{domain.PaymentStatusPending},
+			domain.PaymentStatusFailed,
+			map[string]any{},
+		)
 		return nil, nil, ErrPaymentProviderError
 	}
 
@@ -433,7 +448,7 @@ func (s *PaymentService) ProcessCallback(ctx context.Context, r *http.Request) e
 	}
 
 	// 6. Deliver benefits in transaction
-	deliverErr := s.deliverBenefits(ctx, order, result)
+	deliverErr := s.deliverBenefits(ctx, order)
 	if deliverErr != nil {
 		log.Printf("[Payment] Failed to deliver benefits for order %s: %v", order.OrderNo, deliverErr)
 		// Order stays at 'paid', admin can manually complete
@@ -456,7 +471,7 @@ func (s *PaymentService) ProcessCallback(ctx context.Context, r *http.Request) e
 	return nil
 }
 
-func (s *PaymentService) deliverBenefits(ctx context.Context, order *PaymentOrder, result *CallbackResult) error {
+func (s *PaymentService) deliverBenefits(ctx context.Context, order *PaymentOrder) error {
 	switch order.Type {
 	case domain.PaymentOrderTypeTopup:
 		creditAmount := order.Amount // v1: credit_amount == amount
@@ -523,7 +538,7 @@ func (s *PaymentService) AdminCompleteOrder(ctx context.Context, orderID int64, 
 		return ErrPaymentInvalidStatus
 	}
 
-	deliverErr := s.deliverBenefits(ctx, order, nil)
+	deliverErr := s.deliverBenefits(ctx, order)
 	if deliverErr != nil {
 		return ErrPaymentDeliveryFailed
 	}
@@ -548,13 +563,28 @@ func (s *PaymentService) AdminRefundOrder(ctx context.Context, orderID int64, ad
 	if order == nil {
 		return ErrPaymentOrderNotFound
 	}
-	if order.Status != domain.PaymentStatusCompleted {
+	if order.Status != domain.PaymentStatusCompleted && order.Status != domain.PaymentStatusPaid {
 		return ErrPaymentInvalidStatus
+	}
+
+	// C2: Reverse benefits for completed topup orders
+	if order.Status == domain.PaymentStatusCompleted && order.Type == domain.PaymentOrderTypeTopup {
+		creditAmount := order.Amount
+		if order.CreditAmount != nil {
+			creditAmount = *order.CreditAmount
+		}
+		if err := s.userService.UpdateBalance(ctx, order.UserID, -creditAmount); err != nil {
+			log.Printf("[Payment] Refund: failed to deduct balance for order %s: %v", order.OrderNo, err)
+			return ErrPaymentDeliveryFailed
+		}
+		s.asyncInvalidateCache(order.UserID)
+	} else if order.Status == domain.PaymentStatusCompleted && order.Type == domain.PaymentOrderTypePlan {
+		log.Printf("[Payment] WARN: Refunding plan order %s - subscription benefits not reversed automatically, handle manually", order.OrderNo)
 	}
 
 	refundedAt := time.Now()
 	_, err = s.orderRepo.UpdateStatusAtomically(ctx, order.OrderNo,
-		[]string{domain.PaymentStatusCompleted},
+		[]string{domain.PaymentStatusCompleted, domain.PaymentStatusPaid},
 		domain.PaymentStatusRefunded,
 		map[string]any{
 			"refunded_at": refundedAt,

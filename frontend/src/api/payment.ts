@@ -41,7 +41,6 @@ export interface CreateOrderResponse {
 
 export interface OrderStatusResponse {
   status: string
-  order: PaymentOrder
 }
 
 async function listPlans(): Promise<PaymentPlan[]> {
