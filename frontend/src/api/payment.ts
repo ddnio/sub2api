@@ -52,7 +52,7 @@ async function createOrder(params: {
   type: 'plan' | 'topup'
   plan_id?: number
   amount?: number
-  provider: 'wxpay' | 'alipay'
+  provider: 'wxpay'
 }): Promise<CreateOrderResponse> {
   const { data } = await apiClient.post('/payment/orders', params)
   return data

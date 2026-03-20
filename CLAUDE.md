@@ -51,11 +51,14 @@ bash deploy/deploy-server.sh prod   # 部署生产环境
 ## 支付模块
 
 - 实现在 `feature/payment-module` 分支，尚未合并 main
-- 支付服务商：mazfu.com 易支付接口（MApi）
-- Provider 实现：`backend/internal/repository/easypay_provider.go`
-- 服务器 `/etc/sub2api/test.yaml` 需添加 `payment:` 配置块（含 app_id、sign_key）
+- 支付服务商：**微信支付 Native Pay v3**（官方直连）
+- Provider 实现：`backend/internal/repository/wxpay_provider.go`
+- 备用 Provider：`backend/internal/repository/easypay_provider.go`（易支付，可切换）
+- 通过 `payment.provider` 配置项切换（`wxpay` 或 `easypay`）
+- 微信支付公钥模式（2024年后新商户默认），需配置 `wxpay_public_key_id`（带 `PUB_KEY_ID_` 前缀）
 - Migration：`backend/migrations/077_add_payment_tables.sql`
 - **密钥不要提交 git**，只放服务器 `/etc/sub2api/` 配置文件里
+- 本地密钥文件放 `backend/config/`（已在 `.gitignore`）
 
 ## 关键文件
 

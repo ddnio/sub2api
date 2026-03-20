@@ -217,7 +217,7 @@
           <!-- 等待支付 -->
           <div v-else class="text-center">
             <p class="mb-1 text-base font-semibold text-gray-900 dark:text-white">
-              {{ t('payment.scanQRCode', { provider: selectedProvider === 'wxpay' ? t('payment.wxpay') : t('payment.alipay') }) }}
+              {{ t('payment.scanQRCode', { provider: t('payment.wxpay') }) }}
             </p>
             <p class="mb-4 text-sm text-gray-500">
               ¥{{ currentOrder?.amount?.toFixed(2) }}
@@ -280,7 +280,7 @@ const topupAmount = ref<number | null>(null)
 const quickAmounts = [10, 30, 50, 100, 200, 500]
 
 // 支付方式
-const selectedProvider = ref<'wxpay' | 'alipay'>('wxpay')
+const selectedProvider = ref<'wxpay'>('wxpay')
 const providers = computed(() => [
   { value: 'wxpay' as const, label: t('payment.wxpay'), icon: '💚' }
 ])
