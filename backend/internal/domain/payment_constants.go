@@ -20,7 +20,7 @@ const (
 // Payment providers
 const (
 	PaymentProviderAlipay = "alipay"
-	PaymentProviderWechat = "wechat"
+	PaymentProviderWxpay  = "wxpay"
 )
 
 // Default currency

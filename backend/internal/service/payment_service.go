@@ -88,7 +88,7 @@ type CreateOrderInput struct {
 	Type     string  // plan / topup
 	PlanID   *int64  // for plan orders
 	Amount   float64 // for topup orders
-	Provider string  // alipay / wechat
+	Provider string  // alipay / wxpay
 }
 
 type OrderFilter struct {
@@ -130,7 +130,7 @@ type PaymentProvider interface {
 type PaymentRequest struct {
 	OrderNo  string
 	Amount   float64
-	Provider string // alipay / wechat
+	Provider string // alipay / wxpay
 	Subject  string
 }
 
@@ -535,11 +535,11 @@ func (s *PaymentService) AdminCompleteOrder(ctx context.Context, orderID int64, 
 	if order == nil {
 		return ErrPaymentOrderNotFound
 	}
-	// NOTE(C2): "paid" orders may have benefits already delivered (if server crashed after
-	// deliverBenefits but before status→completed). Completing them again via admin could
-	// double-credit. Safe path: only manually complete "failed" orders; "paid" orders should
-	// resolve via the automatic expiry/retry mechanism. TODO: add benefits_delivered flag.
-	if order.Status != domain.PaymentStatusPaid && order.Status != domain.PaymentStatusFailed {
+	// Only allow completing "failed" orders. "paid" orders may have already had benefits
+	// delivered (crash between deliverBenefits and status→completed), so re-running
+	// deliverBenefits on them risks double-crediting. Failed orders have never had benefits
+	// delivered, making them safe to complete manually.
+	if order.Status != domain.PaymentStatusFailed {
 		return ErrPaymentInvalidStatus
 	}
 
@@ -551,7 +551,7 @@ func (s *PaymentService) AdminCompleteOrder(ctx context.Context, orderID int64, 
 
 	completedAt := time.Now()
 	_, err = s.orderRepo.UpdateStatusAtomically(ctx, order.OrderNo,
-		[]string{domain.PaymentStatusPaid, domain.PaymentStatusFailed},
+		[]string{domain.PaymentStatusFailed},
 		domain.PaymentStatusCompleted,
 		map[string]any{
 			"completed_at": completedAt,

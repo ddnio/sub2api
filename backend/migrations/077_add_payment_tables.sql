@@ -52,4 +52,4 @@ COMMENT ON TABLE payment_plans IS '支付套餐';
 COMMENT ON TABLE payment_orders IS '支付订单';
 COMMENT ON COLUMN payment_orders.type IS '订单类型: plan（订阅套餐）/ topup（余额充值）';
 COMMENT ON COLUMN payment_orders.status IS '订单状态: pending / paid / completed / failed / expired / refunded';
-COMMENT ON COLUMN payment_orders.provider IS '支付渠道: alipay / wechat';
+COMMENT ON COLUMN payment_orders.provider IS '支付渠道: alipay / wxpay';

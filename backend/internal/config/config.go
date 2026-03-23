@@ -2392,7 +2392,7 @@ type PaymentConfig struct {
 	WxpayPrivateKey  string `mapstructure:"wxpay_private_key"`  // 商户私钥 PEM（多行，YAML literal block）
 	WxpaySerialNo    string `mapstructure:"wxpay_serial_no"`    // 商户证书序列号
 	WxpayPublicKey   string `mapstructure:"wxpay_public_key"`   // 微信支付公钥 PEM（新版公钥模式，从商户平台下载）
-	WxpayPublicKeyID string `mapstructure:"wxpay_public_key_id"` // 公钥 ID（PUB_KEY_ID_ 后面的部分）
+	WxpayPublicKeyID string `mapstructure:"wxpay_public_key_id"` // 公钥 ID，含 PUB_KEY_ID_ 前缀完整填写（如 PUB_KEY_ID_0114...）
 }
 
 func warnIfInsecureURL(field, raw string) {
