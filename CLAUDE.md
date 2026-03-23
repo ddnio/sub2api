@@ -40,6 +40,31 @@ bash deploy/deploy-server.sh prod   # 部署生产环境
 脚本会自动 git pull → docker build → 重启容器。
 服务器配置文件在 `/etc/sub2api/test.yaml` 和 `prod.yaml`，不在代码库里。
 
+## 部署补充
+
+- 服务器当前跟踪分支不一定是 main，`git pull` 只拉当前分支
+- 部署新分支前需在服务器先 `git checkout <branch>` 再运行脚本
+- 测试域名：`https://sub.aibewinjpq.com`（→ 127.0.0.1:8081）
+- 新功能上测试环境后，需在服务器跑对应 migration SQL
+- migration 文件在 `backend/migrations/`，按编号顺序执行
+
+## 支付模块
+
+- 实现在 `feature/payment-module` 分支，尚未合并 main
+- 支付服务商：**微信支付 Native Pay v3**（官方直连）
+- Provider 实现：`backend/internal/repository/wxpay_provider.go`
+- 备用 Provider：`backend/internal/repository/easypay_provider.go`（易支付，可切换）
+- 通过 `payment.provider` 配置项切换（`wxpay` 或 `easypay`）
+- 微信支付公钥模式（2024年后新商户默认），需配置 `wxpay_public_key_id`（带 `PUB_KEY_ID_` 前缀）
+- Migration：`backend/migrations/077_add_payment_tables.sql`
+- **密钥不要提交 git**，只放服务器 `/etc/sub2api/` 配置文件里
+- 本地密钥文件放 `backend/config/`（已在 `.gitignore`）
+
+## Wire DI
+
+项目使用 Wire 做依赖注入，但 **Go 1.26.1 与 `wire` 生成工具不兼容**，无法运行 `wire gen`。
+`backend/internal/repository/wire_gen.go` 需要**手动维护**：新增或修改 Provider 后直接编辑 `wire_gen.go`，不要尝试跑 `wire` 命令。
+
 ## 关键文件
 
 | 文件 | 说明 |
@@ -50,3 +75,7 @@ bash deploy/deploy-server.sh prod   # 部署生产环境
 | `docs/engineering/deployment.md` | 完整部署文档 |
 | `docs/engineering/git-workflow.md` | Git 工作流 |
 | `backend/config.yaml` | 本地配置（不提交） |
+| `backend/internal/repository/wire_gen.go` | 手动维护的 Wire 注入文件 |
+| `backend/internal/repository/wxpay_provider.go` | 微信支付 Native Pay v3 Provider |
+| `backend/internal/service/payment_service.go` | 支付业务逻辑（创单、回调、发放权益） |
+| `backend/migrations/077_add_payment_tables.sql` | 支付模块 DB migration |

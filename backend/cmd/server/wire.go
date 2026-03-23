@@ -95,6 +95,7 @@ func provideCleanup(
 	openAIGateway *service.OpenAIGatewayService,
 	scheduledTestRunner *service.ScheduledTestRunnerService,
 	backupSvc *service.BackupService,
+	paymentExpiry *service.PaymentExpiryService,
 ) func() {
 	return func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -237,6 +238,7 @@ func provideCleanup(
 				}
 				return nil
 			}},
+			{"PaymentExpiry", func() error { paymentExpiry.Stop(); return nil }},
 		}
 
 		infraSteps := []cleanupStep{

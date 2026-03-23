@@ -487,6 +487,112 @@ var (
 			},
 		},
 	}
+	// PaymentOrdersColumns holds the columns for the "payment_orders" table.
+	PaymentOrdersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "order_no", Type: field.TypeString, Unique: true, Size: 32},
+		{Name: "type", Type: field.TypeString, Size: 20},
+		{Name: "amount", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "credit_amount", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "currency", Type: field.TypeString, Size: 3, Default: "CNY"},
+		{Name: "status", Type: field.TypeString, Size: 20, Default: "pending"},
+		{Name: "provider", Type: field.TypeString, Nullable: true, Size: 20},
+		{Name: "provider_order_no", Type: field.TypeString, Unique: true, Nullable: true, Size: 64},
+		{Name: "paid_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "refunded_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "expired_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "callback_raw", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "admin_note", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "plan_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "user_id", Type: field.TypeInt64},
+	}
+	// PaymentOrdersTable holds the schema information for the "payment_orders" table.
+	PaymentOrdersTable = &schema.Table{
+		Name:       "payment_orders",
+		Columns:    PaymentOrdersColumns,
+		PrimaryKey: []*schema.Column{PaymentOrdersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "payment_orders_payment_plans_orders",
+				Columns:    []*schema.Column{PaymentOrdersColumns[17]},
+				RefColumns: []*schema.Column{PaymentPlansColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "payment_orders_users_payment_orders",
+				Columns:    []*schema.Column{PaymentOrdersColumns[18]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "paymentorder_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentOrdersColumns[18]},
+			},
+			{
+				Name:    "paymentorder_plan_id",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentOrdersColumns[17]},
+			},
+			{
+				Name:    "paymentorder_status",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentOrdersColumns[6]},
+			},
+			{
+				Name:    "paymentorder_status_expired_at",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentOrdersColumns[6], PaymentOrdersColumns[12]},
+			},
+		},
+	}
+	// PaymentPlansColumns holds the columns for the "payment_plans" table.
+	PaymentPlansColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "name", Type: field.TypeString, Unique: true, Size: 100},
+		{Name: "description", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "badge", Type: field.TypeString, Nullable: true, Size: 20},
+		{Name: "duration_days", Type: field.TypeInt},
+		{Name: "price", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "original_price", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "sort_order", Type: field.TypeInt, Default: 0},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "group_id", Type: field.TypeInt64},
+	}
+	// PaymentPlansTable holds the schema information for the "payment_plans" table.
+	PaymentPlansTable = &schema.Table{
+		Name:       "payment_plans",
+		Columns:    PaymentPlansColumns,
+		PrimaryKey: []*schema.Column{PaymentPlansColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "payment_plans_groups_payment_plans",
+				Columns:    []*schema.Column{PaymentPlansColumns[12]},
+				RefColumns: []*schema.Column{GroupsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "paymentplan_group_id",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentPlansColumns[12]},
+			},
+			{
+				Name:    "paymentplan_is_active_sort_order",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentPlansColumns[11], PaymentPlansColumns[10]},
+			},
+		},
+	}
 	// PromoCodesColumns holds the columns for the "promo_codes" table.
 	PromoCodesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
@@ -1099,6 +1205,8 @@ var (
 		ErrorPassthroughRulesTable,
 		GroupsTable,
 		IdempotencyRecordsTable,
+		PaymentOrdersTable,
+		PaymentPlansTable,
 		PromoCodesTable,
 		PromoCodeUsagesTable,
 		ProxiesTable,
@@ -1146,6 +1254,15 @@ func init() {
 	}
 	IdempotencyRecordsTable.Annotation = &entsql.Annotation{
 		Table: "idempotency_records",
+	}
+	PaymentOrdersTable.ForeignKeys[0].RefTable = PaymentPlansTable
+	PaymentOrdersTable.ForeignKeys[1].RefTable = UsersTable
+	PaymentOrdersTable.Annotation = &entsql.Annotation{
+		Table: "payment_orders",
+	}
+	PaymentPlansTable.ForeignKeys[0].RefTable = GroupsTable
+	PaymentPlansTable.Annotation = &entsql.Annotation{
+		Table: "payment_plans",
 	}
 	PromoCodesTable.Annotation = &entsql.Annotation{
 		Table: "promo_codes",

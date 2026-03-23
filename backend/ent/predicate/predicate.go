@@ -30,6 +30,12 @@ type Group func(*sql.Selector)
 // IdempotencyRecord is the predicate function for idempotencyrecord builders.
 type IdempotencyRecord func(*sql.Selector)
 
+// PaymentOrder is the predicate function for paymentorder builders.
+type PaymentOrder func(*sql.Selector)
+
+// PaymentPlan is the predicate function for paymentplan builders.
+type PaymentPlan func(*sql.Selector)
+
 // PromoCode is the predicate function for promocode builders.
 type PromoCode func(*sql.Selector)
 

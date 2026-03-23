@@ -10,6 +10,8 @@ export { apiClient } from './client'
 export { authAPI, isTotp2FARequired, type LoginResponse } from './auth'
 
 // User APIs
+export { paymentAPI } from './payment'
+export type { PaymentPlan, PaymentOrder, CreateOrderResponse, OrderStatusResponse } from './payment'
 export { keysAPI } from './keys'
 export { usageAPI } from './usage'
 export { userAPI } from './user'

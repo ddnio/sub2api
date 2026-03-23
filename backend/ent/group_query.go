@@ -17,6 +17,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/accountgroup"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/group"
+	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
@@ -36,6 +37,7 @@ type GroupQuery struct {
 	withRedeemCodes       *RedeemCodeQuery
 	withSubscriptions     *UserSubscriptionQuery
 	withUsageLogs         *UsageLogQuery
+	withPaymentPlans      *PaymentPlanQuery
 	withAccounts          *AccountQuery
 	withAllowedUsers      *UserQuery
 	withAccountGroups     *AccountGroupQuery
@@ -158,6 +160,28 @@ func (_q *GroupQuery) QueryUsageLogs() *UsageLogQuery {
 			sqlgraph.From(group.Table, group.FieldID, selector),
 			sqlgraph.To(usagelog.Table, usagelog.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, group.UsageLogsTable, group.UsageLogsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryPaymentPlans chains the current query on the "payment_plans" edge.
+func (_q *GroupQuery) QueryPaymentPlans() *PaymentPlanQuery {
+	query := (&PaymentPlanClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(group.Table, group.FieldID, selector),
+			sqlgraph.To(paymentplan.Table, paymentplan.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, group.PaymentPlansTable, group.PaymentPlansColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -449,6 +473,7 @@ func (_q *GroupQuery) Clone() *GroupQuery {
 		withRedeemCodes:       _q.withRedeemCodes.Clone(),
 		withSubscriptions:     _q.withSubscriptions.Clone(),
 		withUsageLogs:         _q.withUsageLogs.Clone(),
+		withPaymentPlans:      _q.withPaymentPlans.Clone(),
 		withAccounts:          _q.withAccounts.Clone(),
 		withAllowedUsers:      _q.withAllowedUsers.Clone(),
 		withAccountGroups:     _q.withAccountGroups.Clone(),
@@ -500,6 +525,17 @@ func (_q *GroupQuery) WithUsageLogs(opts ...func(*UsageLogQuery)) *GroupQuery {
 		opt(query)
 	}
 	_q.withUsageLogs = query
+	return _q
+}
+
+// WithPaymentPlans tells the query-builder to eager-load the nodes that are connected to
+// the "payment_plans" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *GroupQuery) WithPaymentPlans(opts ...func(*PaymentPlanQuery)) *GroupQuery {
+	query := (&PaymentPlanClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withPaymentPlans = query
 	return _q
 }
 
@@ -625,11 +661,12 @@ func (_q *GroupQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Group,
 	var (
 		nodes       = []*Group{}
 		_spec       = _q.querySpec()
-		loadedTypes = [8]bool{
+		loadedTypes = [9]bool{
 			_q.withAPIKeys != nil,
 			_q.withRedeemCodes != nil,
 			_q.withSubscriptions != nil,
 			_q.withUsageLogs != nil,
+			_q.withPaymentPlans != nil,
 			_q.withAccounts != nil,
 			_q.withAllowedUsers != nil,
 			_q.withAccountGroups != nil,
@@ -682,6 +719,13 @@ func (_q *GroupQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Group,
 		if err := _q.loadUsageLogs(ctx, query, nodes,
 			func(n *Group) { n.Edges.UsageLogs = []*UsageLog{} },
 			func(n *Group, e *UsageLog) { n.Edges.UsageLogs = append(n.Edges.UsageLogs, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withPaymentPlans; query != nil {
+		if err := _q.loadPaymentPlans(ctx, query, nodes,
+			func(n *Group) { n.Edges.PaymentPlans = []*PaymentPlan{} },
+			func(n *Group, e *PaymentPlan) { n.Edges.PaymentPlans = append(n.Edges.PaymentPlans, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -840,6 +884,36 @@ func (_q *GroupQuery) loadUsageLogs(ctx context.Context, query *UsageLogQuery, n
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "group_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *GroupQuery) loadPaymentPlans(ctx context.Context, query *PaymentPlanQuery, nodes []*Group, init func(*Group), assign func(*Group, *PaymentPlan)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int64]*Group)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(paymentplan.FieldGroupID)
+	}
+	query.Where(predicate.PaymentPlan(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(group.PaymentPlansColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.GroupID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "group_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

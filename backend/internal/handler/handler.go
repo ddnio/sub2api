@@ -29,24 +29,28 @@ type AdminHandlers struct {
 	ErrorPassthrough *admin.ErrorPassthroughHandler
 	APIKey           *admin.AdminAPIKeyHandler
 	ScheduledTest    *admin.ScheduledTestHandler
+	PaymentPlan      *admin.PaymentPlanHandler
+	PaymentOrder     *admin.PaymentOrderHandler
 }
 
 // Handlers contains all HTTP handlers
 type Handlers struct {
-	Auth          *AuthHandler
-	User          *UserHandler
-	APIKey        *APIKeyHandler
-	Usage         *UsageHandler
-	Redeem        *RedeemHandler
-	Subscription  *SubscriptionHandler
-	Announcement  *AnnouncementHandler
-	Admin         *AdminHandlers
-	Gateway       *GatewayHandler
-	OpenAIGateway *OpenAIGatewayHandler
-	SoraGateway   *SoraGatewayHandler
-	SoraClient    *SoraClientHandler
-	Setting       *SettingHandler
-	Totp          *TotpHandler
+	Auth            *AuthHandler
+	User            *UserHandler
+	APIKey          *APIKeyHandler
+	Usage           *UsageHandler
+	Redeem          *RedeemHandler
+	Subscription    *SubscriptionHandler
+	Announcement    *AnnouncementHandler
+	Admin           *AdminHandlers
+	Gateway         *GatewayHandler
+	OpenAIGateway   *OpenAIGatewayHandler
+	SoraGateway     *SoraGatewayHandler
+	SoraClient      *SoraClientHandler
+	Setting         *SettingHandler
+	Totp            *TotpHandler
+	Payment         *PaymentHandler
+	PaymentCallback *PaymentCallbackHandler
 }
 
 // BuildInfo contains build-time information

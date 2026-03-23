@@ -87,6 +87,8 @@ const (
 	EdgeSubscriptions = "subscriptions"
 	// EdgeUsageLogs holds the string denoting the usage_logs edge name in mutations.
 	EdgeUsageLogs = "usage_logs"
+	// EdgePaymentPlans holds the string denoting the payment_plans edge name in mutations.
+	EdgePaymentPlans = "payment_plans"
 	// EdgeAccounts holds the string denoting the accounts edge name in mutations.
 	EdgeAccounts = "accounts"
 	// EdgeAllowedUsers holds the string denoting the allowed_users edge name in mutations.
@@ -125,6 +127,13 @@ const (
 	UsageLogsInverseTable = "usage_logs"
 	// UsageLogsColumn is the table column denoting the usage_logs relation/edge.
 	UsageLogsColumn = "group_id"
+	// PaymentPlansTable is the table that holds the payment_plans relation/edge.
+	PaymentPlansTable = "payment_plans"
+	// PaymentPlansInverseTable is the table name for the PaymentPlan entity.
+	// It exists in this package in order to avoid circular dependency with the "paymentplan" package.
+	PaymentPlansInverseTable = "payment_plans"
+	// PaymentPlansColumn is the table column denoting the payment_plans relation/edge.
+	PaymentPlansColumn = "group_id"
 	// AccountsTable is the table that holds the accounts relation/edge. The primary key declared below.
 	AccountsTable = "account_groups"
 	// AccountsInverseTable is the table name for the Account entity.
@@ -475,6 +484,20 @@ func ByUsageLogs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByPaymentPlansCount orders the results by payment_plans count.
+func ByPaymentPlansCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPaymentPlansStep(), opts...)
+	}
+}
+
+// ByPaymentPlans orders the results by payment_plans terms.
+func ByPaymentPlans(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPaymentPlansStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByAccountsCount orders the results by accounts count.
 func ByAccountsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -556,6 +579,13 @@ func newUsageLogsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(UsageLogsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, UsageLogsTable, UsageLogsColumn),
+	)
+}
+func newPaymentPlansStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PaymentPlansInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, PaymentPlansTable, PaymentPlansColumn),
 	)
 }
 func newAccountsStep() *sqlgraph.Step {

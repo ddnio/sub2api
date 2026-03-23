@@ -16,6 +16,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
+	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
+	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
 	"github.com/Wei-Shaw/sub2api/ent/promocode"
 	"github.com/Wei-Shaw/sub2api/ent/promocodeusage"
@@ -302,6 +304,60 @@ func (f TraverseIdempotencyRecord) Traverse(ctx context.Context, q ent.Query) er
 		return f(ctx, q)
 	}
 	return fmt.Errorf("unexpected query type %T. expect *ent.IdempotencyRecordQuery", q)
+}
+
+// The PaymentOrderFunc type is an adapter to allow the use of ordinary function as a Querier.
+type PaymentOrderFunc func(context.Context, *ent.PaymentOrderQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f PaymentOrderFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.PaymentOrderQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.PaymentOrderQuery", q)
+}
+
+// The TraversePaymentOrder type is an adapter to allow the use of ordinary function as Traverser.
+type TraversePaymentOrder func(context.Context, *ent.PaymentOrderQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraversePaymentOrder) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraversePaymentOrder) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.PaymentOrderQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.PaymentOrderQuery", q)
+}
+
+// The PaymentPlanFunc type is an adapter to allow the use of ordinary function as a Querier.
+type PaymentPlanFunc func(context.Context, *ent.PaymentPlanQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f PaymentPlanFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.PaymentPlanQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.PaymentPlanQuery", q)
+}
+
+// The TraversePaymentPlan type is an adapter to allow the use of ordinary function as Traverser.
+type TraversePaymentPlan func(context.Context, *ent.PaymentPlanQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraversePaymentPlan) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraversePaymentPlan) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.PaymentPlanQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.PaymentPlanQuery", q)
 }
 
 // The PromoCodeFunc type is an adapter to allow the use of ordinary function as a Querier.
@@ -674,6 +730,10 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.GroupQuery, predicate.Group, group.OrderOption]{typ: ent.TypeGroup, tq: q}, nil
 	case *ent.IdempotencyRecordQuery:
 		return &query[*ent.IdempotencyRecordQuery, predicate.IdempotencyRecord, idempotencyrecord.OrderOption]{typ: ent.TypeIdempotencyRecord, tq: q}, nil
+	case *ent.PaymentOrderQuery:
+		return &query[*ent.PaymentOrderQuery, predicate.PaymentOrder, paymentorder.OrderOption]{typ: ent.TypePaymentOrder, tq: q}, nil
+	case *ent.PaymentPlanQuery:
+		return &query[*ent.PaymentPlanQuery, predicate.PaymentPlan, paymentplan.OrderOption]{typ: ent.TypePaymentPlan, tq: q}, nil
 	case *ent.PromoCodeQuery:
 		return &query[*ent.PromoCodeQuery, predicate.PromoCode, promocode.OrderOption]{typ: ent.TypePromoCode, tq: q}, nil
 	case *ent.PromoCodeUsageQuery:

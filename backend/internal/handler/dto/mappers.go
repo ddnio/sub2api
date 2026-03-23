@@ -735,3 +735,70 @@ func PromoCodeUsageFromService(u *service.PromoCodeUsage) *PromoCodeUsage {
 		User:        UserFromServiceShallow(u.User),
 	}
 }
+
+func PaymentPlanFromService(p *service.PaymentPlan) PaymentPlanDTO {
+	return PaymentPlanDTO{
+		ID:              p.ID,
+		Name:            p.Name,
+		Description:     p.Description,
+		Badge:           p.Badge,
+		GroupName:       p.GroupName,
+		DurationDays:    p.DurationDays,
+		Price:           p.Price,
+		OriginalPrice:   p.OriginalPrice,
+		DailyLimitUSD:   p.DailyLimitUSD,
+		WeeklyLimitUSD:  p.WeeklyLimitUSD,
+		MonthlyLimitUSD: p.MonthlyLimitUSD,
+	}
+}
+
+func AdminPaymentPlanFromService(p *service.PaymentPlan) AdminPaymentPlanDTO {
+	return AdminPaymentPlanDTO{
+		PaymentPlanDTO: PaymentPlanFromService(p),
+		GroupID:        p.GroupID,
+		SortOrder:      p.SortOrder,
+		IsActive:       p.IsActive,
+	}
+}
+
+func PaymentOrderFromService(o *service.PaymentOrder) PaymentOrderDTO {
+	dto := PaymentOrderDTO{
+		ID:        o.ID,
+		OrderNo:   o.OrderNo,
+		Type:      o.Type,
+		Amount:    o.Amount,
+		Currency:  o.Currency,
+		Status:    o.Status,
+		Provider:  o.Provider,
+		CreatedAt: o.CreatedAt.Format(time.RFC3339),
+		ExpiredAt: o.ExpiredAt.Format(time.RFC3339),
+	}
+	if o.PaidAt != nil {
+		s := o.PaidAt.Format(time.RFC3339)
+		dto.PaidAt = &s
+	}
+	if o.CompletedAt != nil {
+		s := o.CompletedAt.Format(time.RFC3339)
+		dto.CompletedAt = &s
+	}
+	if o.Plan != nil {
+		dto.PlanName = &o.Plan.Name
+	}
+	return dto
+}
+
+func AdminPaymentOrderFromService(o *service.PaymentOrder) AdminPaymentOrderDTO {
+	d := AdminPaymentOrderDTO{
+		PaymentOrderDTO: PaymentOrderFromService(o),
+		UserID:          o.UserID,
+		PlanID:          o.PlanID,
+		CreditAmount:    o.CreditAmount,
+		ProviderOrderNo: o.ProviderOrderNo,
+		AdminNote:       o.AdminNote,
+	}
+	if o.RefundedAt != nil {
+		s := o.RefundedAt.Format(time.RFC3339)
+		d.RefundedAt = &s
+	}
+	return d
+}
