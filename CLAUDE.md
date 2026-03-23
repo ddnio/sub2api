@@ -44,9 +44,9 @@ bash deploy/deploy-server.sh prod   # 部署生产环境
 
 - 服务器当前跟踪分支不一定是 main，`git pull` 只拉当前分支
 - 部署新分支前需在服务器先 `git checkout <branch>` 再运行脚本
-- 测试域名：`https://sub.aibewinjpq.com`（→ 127.0.0.1:8081）
-- 新功能上测试环境后，需在服务器跑对应 migration SQL
-- migration 文件在 `backend/migrations/`，按编号顺序执行
+- 测试域名：`https://router-test.nanafox.com`（→ 127.0.0.1:8081）
+- 生产域名：`https://router.nanafox.com`（→ 127.0.0.1:8080）
+- 迁移**全自动**：启动时自动检测并执行 delta，无需手动跑 SQL
 
 ## 支付模块
 

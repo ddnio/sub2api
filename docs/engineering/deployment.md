@@ -10,11 +10,13 @@
 │
 ├── 测试环境
 │   └── sub2api-test（Docker 独立容器，端口 8081）
+│       ├── 域名：https://router-test.nanafox.com
 │       ├── 数据库：sub2api_test
 │       └── Redis：DB 1
 │
-└── 生产环境（待配置）
+└── 生产环境
     └── sub2api-prod（Docker 独立容器，端口 8080）
+        ├── 域名：https://router.nanafox.com
         ├── 数据库：sub2api
         └── Redis：DB 0
 
@@ -138,7 +140,7 @@ cd /data/service/sub2api
 # 部署测试环境
 bash deploy/deploy-server.sh test
 
-# 部署生产环境（配置好后使用）
+# 部署生产环境
 bash deploy/deploy-server.sh prod
 ```
 
@@ -146,33 +148,53 @@ bash deploy/deploy-server.sh prod
 1. `git pull` 拉取最新代码
 2. `docker build` 重新构建镜像（前后端一起打包进二进制）
 3. 停止旧容器
-4. 启动新容器
+4. 启动新容器（**迁移自动执行**，见第四节）
 
 ### 容器端口映射
 
 | 容器 | 宿主机端口 | 域名 |
 |------|-----------|------|
-| `sub2api-test` | 127.0.0.1:8081 | https://sub.aibewinjpq.com |
-| `sub2api-prod` | 127.0.0.1:8080 | 待配置 |
+| `sub2api-test` | 127.0.0.1:8081 | https://router-test.nanafox.com |
+| `sub2api-prod` | 127.0.0.1:8080 | https://router.nanafox.com |
 
 ---
 
-## 四、Caddy 反向代理
+## 四、数据库迁移
 
-配置文件：`/etc/caddy/Caddyfile`
+**迁移完全自动化**，无需手动执行 SQL。
 
-当前配置：`sub.aibewinjpq.com` → `127.0.0.1:8081`（测试环境）
+应用启动时自动检测 `schema_migrations` 表，对比已应用的迁移记录，只执行 delta（新增的迁移文件）。已有数据和表结构完全保留。
+
+机制特性：
+- SHA256 校验和防止迁移文件被篡改
+- PostgreSQL Advisory Lock 保证多实例并发安全
+- `_notx.sql` 后缀的迁移在事务外执行（用于 `CREATE INDEX CONCURRENTLY`）
+
+迁移文件位于 `backend/migrations/`，当前最大编号：`077_add_payment_tables.sql`。
+
+---
+
+## 五、Caddy 反向代理
+
+配置文件：`/etc/caddy/Caddyfile`（服务器），代码库模板：`deploy/Caddyfile`
+
+当前域名配置：
+
+| 域名 | 指向 | 环境 |
+|------|------|------|
+| `router-test.nanafox.com` | `127.0.0.1:8081` | 测试 |
+| `router.nanafox.com` | `127.0.0.1:8080` | 生产 |
+
+Caddy 自动申请 Let's Encrypt 证书（需 DNS 先指向服务器）。
 
 修改后重载：
 ```bash
-caddy reload --config /etc/caddy/Caddyfile
+echo <password> | sudo -S bash -c "caddy validate --config /etc/caddy/Caddyfile && systemctl restart caddy"
 ```
-
-生产环境上线时，在 Caddyfile 新增一个域名块指向 8080 即可，测试环境配置不需要改动。
 
 ---
 
-## 五、环境配置文件
+## 六、环境配置文件
 
 配置文件存放在服务器 `/etc/sub2api/`，**不提交到 git**。
 
@@ -193,14 +215,14 @@ totp:
 
 > **注意**：`jwt.secret` 和 `totp.encryption_key` 一旦设定不要更改，否则所有用户需要重新登录，2FA 全部失效。
 
-### 支付模块配置（feature/payment-module 分支起）
+### 支付模块配置
 
-支付相关密钥同样只放服务器配置文件，**不提交 git**。私钥文件也不要提交（已加入 `.gitignore`）。
+支付相关密钥同样只放服务器配置文件，**不提交 git**。
 
 ```yaml
 payment:
-  provider: "wxpay"                          # 当前支持 wxpay / easypay
-  callback_base_url: "https://sub.aibewinjpq.com"  # 测试环境；生产环境改对应域名
+  provider: "wxpay"                               # 当前支持 wxpay / easypay
+  callback_base_url: "https://router.nanafox.com" # 生产；测试改 router-test.nanafox.com
 
   # 微信支付商户信息（在微信支付商户平台获取）
   wxpay_app_id: "wxXXXXXXXXXXXXXXXX"        # 公众号/小程序 AppID
@@ -215,7 +237,6 @@ payment:
     -----END PRIVATE KEY-----
 
   # 微信支付公钥模式（2024年后新商户）
-  # 在商户平台「账户中心 → API安全 → 微信支付公钥」下载 pub_key.pem
   wxpay_public_key_id: "PUB_KEY_ID_XXXXXXXXXXXXXXXXXX"  # 注意必须保留 PUB_KEY_ID_ 前缀
   wxpay_public_key: |
     -----BEGIN PUBLIC KEY-----
@@ -223,11 +244,11 @@ payment:
     -----END PUBLIC KEY-----
 ```
 
-> **公钥模式 vs 证书模式**：2024 年后开通的商户默认使用公钥模式（回调 Header `Wechatpay-Serial` 以 `PUB_KEY_ID_` 开头）。此时必须配置 `wxpay_public_key_id` 和 `wxpay_public_key`；若不配置则回退到平台证书模式（旧商户）。
+> **公钥模式 vs 证书模式**：2024 年后开通的商户默认使用公钥模式（回调 Header `Wechatpay-Serial` 以 `PUB_KEY_ID_` 开头）。此时必须配置 `wxpay_public_key_id` 和 `wxpay_public_key`。
 
 ---
 
-## 六、迭代流程
+## 七、迭代流程
 
 ```
 本地改代码
@@ -239,17 +260,10 @@ payment:
   → bash deploy/deploy-server.sh prod   # 确认后上生产
 ```
 
-### 包含 DB Migration 时
+迁移自动执行，无需额外操作。
 
-新功能有 migration SQL（`backend/migrations/0XX_*.sql`）时，部署后需手动执行：
+---
 
-```bash
-# 在服务器上连接对应数据库执行
-psql -h localhost -U sub2api -d sub2api_test -f /data/service/sub2api/backend/migrations/0XX_feature.sql
-```
+## 历史域名说明
 
-按文件编号从小到大顺序执行，不要跳号。当前各功能对应的 migration：
-
-| 分支 / 功能 | Migration 文件 |
-|------------|----------------|
-| 支付模块 | `077_add_payment_tables.sql` |
+`sub.aibewinjpq.com`（原测试域名）已于 2026-03-23 下线，替换为 `router-test.nanafox.com`。
