@@ -50,7 +50,7 @@ bash deploy/deploy-server.sh prod   # 部署生产环境
 
 ## 支付模块
 
-- 实现在 `feature/payment-module` 分支，尚未合并 main
+- 已合并 main（2026-03-23）
 - 支付服务商：**微信支付 Native Pay v3**（官方直连）
 - Provider 实现：`backend/internal/repository/wxpay_provider.go`
 - 备用 Provider：`backend/internal/repository/easypay_provider.go`（易支付，可切换）
