@@ -2,111 +2,135 @@ export default {
   // Home Page
   home: {
     viewOnGithub: 'View on GitHub',
-    viewDocs: 'View Documentation',
+    viewDocs: 'View Docs',
     docs: 'Docs',
+    badge: 'Low latency · High availability · Full models · Direct access',
     switchToLight: 'Switch to Light Mode',
     switchToDark: 'Switch to Dark Mode',
     dashboard: 'Dashboard',
     login: 'Login',
     getStarted: 'Get Started',
     goToDashboard: 'Go to Dashboard',
-    // User-focused value proposition
-    heroSubtitle: 'One Key, All AI Models',
-    heroDescription: 'No need to manage multiple subscriptions. Access Claude, GPT, Gemini and more with a single API key',
-    tags: {
-      subscriptionToApi: 'Subscription to API',
-      stickySession: 'Session Persistence',
-      realtimeBilling: 'Pay As You Go'
+    heroSubtitle: 'An API relay designed for developers',
+    heroDescription: 'A Codex-compatible API relay for developers. Replace the base URL and API key, then connect immediately.',
+    nav: {
+      home: 'Home',
+      docs: 'Docs',
+      keyUsage: 'Usage',
+      support: 'Contact'
     },
-    // Pain points section
-    painPoints: {
-      title: 'Sound Familiar?',
-      items: {
-        expensive: {
-          title: 'High Subscription Costs',
-          desc: 'Paying for multiple AI subscriptions that add up every month'
-        },
-        complex: {
-          title: 'Account Chaos',
-          desc: 'Managing scattered accounts and API keys across different platforms'
-        },
-        unstable: {
-          title: 'Service Interruptions',
-          desc: 'Single accounts hitting rate limits and disrupting your workflow'
-        },
-        noControl: {
-          title: 'No Usage Control',
-          desc: "Can't track where your money goes or limit team member usage"
-        }
-      }
+    hero: {
+      viewDocs: 'View Docs',
+      viewPricing: 'View Pricing',
+      headingLine1: 'One line of code',
+      headingLine2Prefix: 'Connect to',
+      headingApi: 'API',
+      headingCodex: 'CodeX',
+      baseUrlHint: 'Replace the base URL and connect',
+      snippetTitle: 'Configure Codex API in one second',
+      sdkLabel: 'Generic API / SDK',
+      codexLabel: 'Codex CLI',
+      runLabel: 'Start coding at once',
+      baseUrlLabel: 'Base URL',
+      copyBaseUrl: 'Copy URL',
+      copiedBaseUrl: 'Copied'
     },
-    // Solutions section
-    solutions: {
-      title: 'We Solve These Problems',
-      subtitle: 'Three simple steps to stress-free AI access'
-    },
-    features: {
-      unifiedGateway: 'One-Click Access',
-      unifiedGatewayDesc: 'Get a single API key to call all connected AI models. No separate applications needed.',
-      multiAccount: 'Always Reliable',
-      multiAccountDesc: 'Smart routing across multiple upstream accounts with automatic failover. Say goodbye to errors.',
-      balanceQuota: 'Pay What You Use',
-      balanceQuotaDesc: 'Usage-based billing with quota limits. Full visibility into team consumption.'
-    },
-    // Comparison section
-    comparison: {
-      title: 'Why Choose Us?',
-      headers: {
-        feature: 'Comparison',
-        official: 'Official Subscriptions',
-        us: 'Our Platform'
-      },
-      items: {
-        pricing: {
-          feature: 'Pricing',
-          official: 'Fixed monthly fee, pay even if unused',
-          us: 'Pay only for what you use'
-        },
-        models: {
-          feature: 'Model Selection',
-          official: 'Single provider only',
-          us: 'Switch between models freely'
-        },
-        management: {
-          feature: 'Account Management',
-          official: 'Manage each service separately',
-          us: 'Unified key, one dashboard'
-        },
-        stability: {
-          feature: 'Stability',
-          official: 'Single account rate limits',
-          us: 'Multi-account pool, auto-failover'
-        },
-        control: {
-          feature: 'Usage Control',
-          official: 'Not available',
-          us: 'Quotas & detailed analytics'
-        }
-      }
-    },
-    providers: {
-      title: 'Supported AI Models',
-      description: 'One API, Multiple Choices',
-      supported: 'Supported',
-      soon: 'Soon',
-      claude: 'Claude',
-      gemini: 'Gemini',
-      antigravity: 'Antigravity',
-      more: 'More'
-    },
-    // CTA section
-    cta: {
-      title: 'Ready to Get Started?',
-      description: 'Sign up now and get free trial credits to experience seamless AI access',
-      button: 'Sign Up Free'
+    metrics: {
+      compatibilityTitle: 'High Availability',
+      compatibilityValue: 'A stable Codex request path',
+      routingTitle: 'Low Latency',
+      routingValue: 'Direct network access after swapping the URL',
+      billingTitle: 'Full Codex Models',
+      billingValue: 'gpt-5.4 / gpt-5.3-codex / responses'
     },
     footer: {
       allRightsReserved: 'All rights reserved.'
+    }
+  },
+
+  // Documentation Page
+  docs: {
+    title: 'Documentation',
+    backToHome: 'Back to Home',
+    copy: 'Copy',
+    copied: 'Copied',
+    mode: {
+      api: 'Generic API Access',
+      codex: 'Codex Access'
+    },
+    api: {
+      title: 'Generic API Access',
+      subtitle: 'Keep the same OpenAI SDK request shape. Replace the base URL with this site’s `/v1` endpoint and use your generated API key.',
+      baseUrlLabel: 'Recommended base URL',
+      examplesTitle: 'Request Examples',
+      authTitle: 'Authentication',
+      authDescription: 'All requests use standard Bearer token auth. Put the API key from your dashboard into the `Authorization` header.',
+      endpointsTitle: 'Supported Endpoints',
+      endpoints: {
+        chat: 'OpenAI-compatible Chat Completions endpoint for direct drop-in replacement.',
+        models: 'Lists currently available models so SDKs and frontends can render them dynamically.'
+      },
+      faqTitle: 'FAQ',
+      quickStart: {
+        registerTitle: 'Create an Account',
+        registerDesc: 'Sign up and log in first. The public page stays minimal; actual key management happens in the dashboard.',
+        keyTitle: 'Create an API Key',
+        keyDesc: 'Create a new API key in the dashboard. That key is then reused across SDKs, scripts, and local tools.',
+        baseUrlTitle: 'Replace the Base URL',
+        baseUrlDesc: 'Point your existing OpenAI client at this site’s `/v1` endpoint. In most cases the rest of the request body stays the same.'
+      },
+      faq: {
+        items: {
+          compatibilityQ: 'Do I need to change the SDK or payload format?',
+          compatibilityA: 'Usually no. If your client already speaks the OpenAI protocol, swapping `base_url` and `api_key` is enough.',
+          sdkQ: 'Which languages and frameworks are supported?',
+          sdkA: 'Python, Node.js, Go, Java, and any OpenAI-compatible SDK can connect directly.',
+          dataQ: 'Does the platform store my conversation content?',
+          dataA: 'The public docs focus on routing and metering behavior. If your deployment enables extra audit or logging policy, follow your actual site settings.'
+        }
+      }
+    },
+    codex: {
+      title: 'Codex CLI Access',
+      label: 'Codex Access',
+      subtitle: 'Follow the standard setup flow for Node.js, Codex CLI, API key, and config files, then start coding immediately.',
+      os: {
+        mac: 'macOS',
+        windows: 'Windows',
+        linux: 'Linux'
+      },
+      nodeTitle: 'Install Node.js',
+      nodeDescription: 'Codex CLI requires Node.js. Install the current LTS release before installing the CLI itself.',
+      nodeGuideMac: 'Install the current Node.js LTS release with Homebrew before moving on to Codex CLI.',
+      nodeGuideWindows: 'Install Node.js with Chocolatey or Scoop, then reopen your terminal before continuing.',
+      nodeGuideLinux: 'Install the current Node.js LTS release from NodeSource before moving on to Codex CLI.',
+      nodeVerifyTitle: 'Verify versions',
+      installTitle: 'Install Codex CLI',
+      installDescription: 'Install the Codex CLI package globally. If npm is slow in your region, you can keep the mirror registry flag.',
+      installVerifyTitle: 'Verify CLI',
+      keyTitle: 'Prepare an API Key',
+      keyDescription: 'Create an API key in the dashboard first. Codex CLI will read that key through environment-based auth.',
+      keyHint: 'Replace the placeholder value here with your own API key. The in-product usage modal will inject the real value automatically.',
+      configureTitle: 'Write the config files',
+      configureDescription: 'Place the two files below inside your local `.codex` directory. Standard mode is the default path and should be used first.',
+      startTitle: 'Start Codex',
+      startDescription: 'Enter your project directory and run `codex`. The CLI will load the config files and route requests through this site’s OpenAI-compatible endpoint.',
+      vscodeTitle: 'Use it inside your editor',
+      vscodeDescription: 'If you run Codex CLI from VS Code or other editors, reuse the same `.codex` files instead of maintaining a second config.',
+      advancedTitle: 'Optional WebSocket Mode',
+      advancedDescription: 'Only add the snippet below when you explicitly need a WebSocket response path on top of the standard setup.',
+      advancedSnippetTitle: 'Append to config.toml',
+      troubleshootTitle: 'Troubleshooting',
+      troubleshoot: {
+        items: {
+          commandTitle: 'Verify the CLI is installed',
+          commandDesc: 'Run `node --version`, `npm --version`, and `codex --version` first to confirm the environment and CLI are actually available.',
+          connectionTitle: 'Verify the base URL',
+          connectionDesc: 'If the CLI cannot connect, first confirm the base URL is correct, includes `/v1`, and the API key is still valid.',
+          updateTitle: 'Upgrade the CLI and retry',
+          updateDesc: 'If the command runs but behaves incorrectly, upgrade the Codex CLI package first and reload the config before testing again.'
+        }
+      }
     }
   },
 
@@ -4648,13 +4672,13 @@ export default {
     admin: {
       welcome: {
         title: '👋 Welcome to Sub2API',
-        description: '<div style="line-height: 1.8;"><p style="margin-bottom: 16px;">Sub2API is a powerful AI service gateway platform that helps you easily manage and distribute AI services.</p><p style="margin-bottom: 12px;"><b>🎯 Core Features:</b></p><ul style="margin-left: 20px; margin-bottom: 16px;"><li>📦 <b>Group Management</b> - Create service tiers (VIP, Free Trial, etc.)</li><li>🔗 <b>Account Pool</b> - Connect multiple upstream AI service accounts</li><li>🔑 <b>Key Distribution</b> - Generate independent API Keys for users</li><li>💰 <b>Billing Control</b> - Flexible rate and quota management</li></ul><p style="color: #10b981; font-weight: 600;">Let\'s complete the initial setup in 3 minutes →</p></div>',
+        description: '<div style="line-height: 1.8;"><p style="margin-bottom: 16px;">Sub2API is a flexible AI service gateway platform that helps you manage and distribute AI access more easily.</p><p style="margin-bottom: 12px;"><b>🎯 Core Features:</b></p><ul style="margin-left: 20px; margin-bottom: 16px;"><li>📦 <b>Group Management</b> - Create service tiers (VIP, Free Trial, etc.)</li><li>🔗 <b>Account Pool</b> - Connect multiple upstream AI service accounts</li><li>🔑 <b>Key Distribution</b> - Generate independent API Keys for users</li><li>💰 <b>Billing Control</b> - Flexible rate and quota management</li></ul><p style="color: #10b981; font-weight: 600;">Let\'s complete the initial setup in 3 minutes →</p></div>',
         nextBtn: 'Start Setup 🚀',
         prevBtn: 'Skip'
       },
       groupManage: {
         title: '📦 Step 1: Group Management',
-        description: '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;"><b>What is a Group?</b></p><p style="margin-bottom: 12px;">Groups are the core concept of Sub2API, like a "service package":</p><ul style="margin-left: 20px; margin-bottom: 12px; font-size: 13px;"><li>🎯 Each group can contain multiple upstream accounts</li><li>💰 Each group has independent billing multiplier</li><li>👥 Can be set as public or exclusive</li></ul><p style="margin-top: 12px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #10b981; border-radius: 4px; font-size: 13px;"><b>💡 Example:</b> You can create "VIP Premium" (high rate) and "Free Trial" (low rate) groups</p><p style="margin-top: 16px; color: #10b981; font-weight: 600;">👉 Click "Group Management" on the left sidebar</p></div>'
+        description: '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;"><b>What is a Group?</b></p><p style="margin-bottom: 12px;">Groups are the core concept of this platform, like a "service package":</p><ul style="margin-left: 20px; margin-bottom: 12px; font-size: 13px;"><li>🎯 Each group can contain multiple upstream accounts</li><li>💰 Each group has independent billing multiplier</li><li>👥 Can be set as public or exclusive</li></ul><p style="margin-top: 12px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #10b981; border-radius: 4px; font-size: 13px;"><b>💡 Example:</b> You can create "VIP Premium" (high rate) and "Free Trial" (low rate) groups</p><p style="margin-top: 16px; color: #10b981; font-weight: 600;">👉 Click "Group Management" on the left sidebar</p></div>'
       },
       createGroup: {
         title: '➕ Create New Group',
@@ -4748,7 +4772,7 @@ export default {
     user: {
       welcome: {
         title: '👋 Welcome to Sub2API',
-        description: '<div style="line-height: 1.8;"><p style="margin-bottom: 16px;">Hello! Welcome to the Sub2API AI service platform.</p><p style="margin-bottom: 12px;"><b>🎯 Quick Start:</b></p><ul style="margin-left: 20px; margin-bottom: 16px;"><li>🔑 Create API Key</li><li>📋 Copy key to your application</li><li>🚀 Start using AI services</li></ul><p style="color: #10b981; font-weight: 600;">Just 1 minute, let\'s get started →</p></div>',
+        description: '<div style="line-height: 1.8;"><p style="margin-bottom: 16px;">Hello! Welcome to the Sub2API AI service platform.</p><p style="margin-bottom: 12px;"><b>🎯 Quick Start:</b></p><ul style="margin-left: 20px; margin-bottom: 16px;"><li>🔑 Create API Key</li><li>📋 Copy the key into your application</li><li>🚀 Start using AI services</li></ul><p style="color: #10b981; font-weight: 600;">Just 1 minute, let\'s get started →</p></div>',
         nextBtn: 'Start 🚀',
         prevBtn: 'Skip'
       },

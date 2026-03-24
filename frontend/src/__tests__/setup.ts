@@ -12,6 +12,19 @@ if (typeof globalThis.requestIdleCallback === 'undefined') {
   }) as unknown as typeof requestIdleCallback
 }
 
+if (typeof window.matchMedia === 'undefined') {
+  window.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn()
+  })) as typeof window.matchMedia
+}
+
 if (typeof globalThis.cancelIdleCallback === 'undefined') {
   globalThis.cancelIdleCallback = ((id: number) => {
     window.clearTimeout(id)
