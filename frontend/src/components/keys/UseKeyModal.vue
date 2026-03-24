@@ -139,7 +139,9 @@ import { useI18n } from 'vue-i18n'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { useClipboard } from '@/composables/useClipboard'
+import { useAppStore } from '@/stores'
 import type { GroupPlatform } from '@/types'
+import { createCodexCliFiles } from '@/utils/codexConfig'
 
 interface Props {
   show: boolean
@@ -171,6 +173,7 @@ const emit = defineEmits<Emits>()
 
 const { t } = useI18n()
 const { copyToClipboard: clipboardCopy } = useClipboard()
+const appStore = useAppStore()
 
 const copiedIndex = ref<number | null>(null)
 const activeTab = ref<string>('unix')
@@ -418,9 +421,9 @@ const currentFiles = computed((): FileConfig[] => {
         return generateAnthropicFiles(baseUrl, apiKey)
       }
       if (activeClientTab.value === 'codex-ws') {
-        return generateOpenAIWsFiles(baseUrl, apiKey)
+        return createCodexFileConfigs(baseUrl, apiKey, true)
       }
-      return generateOpenAIFiles(baseUrl, apiKey)
+      return createCodexFileConfigs(baseUrl, apiKey, false)
     case 'gemini':
       return [generateGeminiCliContent(baseUrl, apiKey)]
     case 'antigravity':
@@ -521,85 +524,21 @@ ${keyword('$env:')}${variable('GEMINI_MODEL')}${operator('=')}${string(`"${model
   return { path, content, highlighted }
 }
 
-function generateOpenAIFiles(baseUrl: string, apiKey: string): FileConfig[] {
-  const isWindows = activeTab.value === 'windows'
-  const configDir = isWindows ? '%userprofile%\\.codex' : '~/.codex'
-
-  // config.toml content
-  const configContent = `model_provider = "OpenAI"
-model = "gpt-5.4"
-review_model = "gpt-5.4"
-model_reasoning_effort = "xhigh"
-disable_response_storage = true
-network_access = "enabled"
-windows_wsl_setup_acknowledged = true
-model_context_window = 1000000
-model_auto_compact_token_limit = 900000
-
-[model_providers.OpenAI]
-name = "OpenAI"
-base_url = "${baseUrl}"
-wire_api = "responses"
-requires_openai_auth = true`
-
-  // auth.json content
-  const authContent = `{
-  "OPENAI_API_KEY": "${apiKey}"
-}`
-
+function createCodexFileConfigs(baseUrl: string, apiKey: string, websocket: boolean): FileConfig[] {
+  const os = activeTab.value === 'windows' ? 'windows' : 'unix'
+  const files = createCodexCliFiles({
+    baseUrl,
+    apiKey,
+    os,
+    websocket,
+    providerName: appStore.cachedPublicSettings?.site_name || appStore.siteName || 'NanaFox API'
+  })
   return [
     {
-      path: `${configDir}/config.toml`,
-      content: configContent,
+      ...files[0],
       hint: t('keys.useKeyModal.openai.configTomlHint')
     },
-    {
-      path: `${configDir}/auth.json`,
-      content: authContent
-    }
-  ]
-}
-
-function generateOpenAIWsFiles(baseUrl: string, apiKey: string): FileConfig[] {
-  const isWindows = activeTab.value === 'windows'
-  const configDir = isWindows ? '%userprofile%\\.codex' : '~/.codex'
-
-  // config.toml content with WebSocket v2
-  const configContent = `model_provider = "OpenAI"
-model = "gpt-5.4"
-review_model = "gpt-5.4"
-model_reasoning_effort = "xhigh"
-disable_response_storage = true
-network_access = "enabled"
-windows_wsl_setup_acknowledged = true
-model_context_window = 1000000
-model_auto_compact_token_limit = 900000
-
-[model_providers.OpenAI]
-name = "OpenAI"
-base_url = "${baseUrl}"
-wire_api = "responses"
-supports_websockets = true
-requires_openai_auth = true
-
-[features]
-responses_websockets_v2 = true`
-
-  // auth.json content
-  const authContent = `{
-  "OPENAI_API_KEY": "${apiKey}"
-}`
-
-  return [
-    {
-      path: `${configDir}/config.toml`,
-      content: configContent,
-      hint: t('keys.useKeyModal.openai.configTomlHint')
-    },
-    {
-      path: `${configDir}/auth.json`,
-      content: authContent
-    }
+    files[1]
   ]
 }
 

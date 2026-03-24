@@ -4,109 +4,133 @@ export default {
     viewOnGithub: '在 GitHub 上查看',
     viewDocs: '查看文档',
     docs: '文档',
+    badge: '低延迟 · 高可用 · 全模型 · 国内直连',
     switchToLight: '切换到浅色模式',
     switchToDark: '切换到深色模式',
     dashboard: '控制台',
     login: '登录',
     getStarted: '立即开始',
     goToDashboard: '进入控制台',
-    // 新增：面向用户的价值主张
-    heroSubtitle: '一个密钥，畅用多个 AI 模型',
-    heroDescription: '无需管理多个订阅账号，一站式接入 Claude、GPT、Gemini 等主流 AI 服务',
-    tags: {
-      subscriptionToApi: '订阅转 API',
-      stickySession: '会话保持',
-      realtimeBilling: '按量计费'
+    heroSubtitle: '专为开发者打造的 API 中转服务',
+    heroDescription: '专为国内开发者打造的 API 中转服务。兼容 Codex 系列模型，替换基础 URL 和 API Key 即可接入。',
+    nav: {
+      home: '首页',
+      docs: '文档',
+      keyUsage: '用量查询',
+      support: '联系我们'
     },
-    // 用户痛点区块
-    painPoints: {
-      title: '你是否也遇到这些问题？',
-      items: {
-        expensive: {
-          title: '订阅费用高',
-          desc: '每个 AI 服务都要单独订阅，每月支出越来越多'
-        },
-        complex: {
-          title: '多账号难管理',
-          desc: '不同平台的账号、密钥分散各处，管理起来很麻烦'
-        },
-        unstable: {
-          title: '服务不稳定',
-          desc: '单一账号容易触发限制，影响正常使用'
-        },
-        noControl: {
-          title: '用量无法控制',
-          desc: '不知道钱花在哪了，也无法限制团队成员的使用'
-        }
-      }
+    hero: {
+      viewDocs: '查看文档',
+      viewPricing: '查看定价',
+      headingLine1: '一行代码',
+      headingLine2Prefix: '接入',
+      headingApi: 'API',
+      headingCodex: 'CodeX',
+      baseUrlHint: '替换基础 URL 即可接入',
+      snippetTitle: '1 秒配置 Codex API',
+      sdkLabel: '通用 API / SDK',
+      codexLabel: 'Codex CLI',
+      runLabel: '以光速开始编码',
+      baseUrlLabel: 'Base URL',
+      copyBaseUrl: '复制地址',
+      copiedBaseUrl: '已复制'
     },
-    // 解决方案区块
-    solutions: {
-      title: '我们帮你解决',
-      subtitle: '简单三步，开始省心使用 AI'
-    },
-    features: {
-      unifiedGateway: '一键接入',
-      unifiedGatewayDesc: '获取一个 API 密钥，即可调用所有已接入的 AI 模型，无需分别申请。',
-      multiAccount: '稳定可靠',
-      multiAccountDesc: '智能调度多个上游账号，自动切换和负载均衡，告别频繁报错。',
-      balanceQuota: '用多少付多少',
-      balanceQuotaDesc: '按实际使用量计费，支持设置配额上限，团队用量一目了然。'
-    },
-    // 优势对比
-    comparison: {
-      title: '为什么选择我们？',
-      headers: {
-        feature: '对比项',
-        official: '官方订阅',
-        us: '本平台'
-      },
-      items: {
-        pricing: {
-          feature: '付费方式',
-          official: '固定月费，用不完也付',
-          us: '按量付费，用多少付多少'
-        },
-        models: {
-          feature: '模型选择',
-          official: '单一服务商',
-          us: '多模型随意切换'
-        },
-        management: {
-          feature: '账号管理',
-          official: '每个服务单独管理',
-          us: '统一密钥，一站管理'
-        },
-        stability: {
-          feature: '服务稳定性',
-          official: '单账号易触发限制',
-          us: '多账号池，自动切换'
-        },
-        control: {
-          feature: '用量控制',
-          official: '无法限制',
-          us: '可设配额、查明细'
-        }
-      }
-    },
-    providers: {
-      title: '已支持的 AI 模型',
-      description: '一个 API，多种选择',
-      supported: '已支持',
-      soon: '即将推出',
-      claude: 'Claude',
-      gemini: 'Gemini',
-      antigravity: 'Antigravity',
-      more: '更多'
-    },
-    // CTA 区块
-    cta: {
-      title: '准备好开始了吗？',
-      description: '注册即可获得免费试用额度，体验一站式 AI 服务',
-      button: '免费注册'
+    metrics: {
+      compatibilityTitle: '高可用',
+      compatibilityValue: '稳定转发 Codex 请求链路',
+      routingTitle: '低延迟',
+      routingValue: '国内网络直连，替换 URL 即可接入',
+      billingTitle: '全 Codex 模型',
+      billingValue: 'gpt-5.4 / gpt-5.3-codex / responses'
     },
     footer: {
       allRightsReserved: '保留所有权利。'
+    }
+  },
+
+  // Documentation Page
+  docs: {
+    title: '文档',
+    backToHome: '返回首页',
+    copy: '复制',
+    copied: '已复制',
+    mode: {
+      api: '通用 API 接入',
+      codex: 'Codex 接入'
+    },
+    api: {
+      title: '通用 API 接入',
+      subtitle: '保持 OpenAI SDK 的调用方式不变，只需要把基地址替换为当前站点的 `/v1` 端点并使用你创建的 API Key。',
+      baseUrlLabel: '推荐基地址',
+      examplesTitle: '示例请求',
+      authTitle: '认证方式',
+      authDescription: '所有请求都使用标准 Bearer Token 鉴权，请把控制台生成的 Key 放入 `Authorization` 请求头。',
+      endpointsTitle: '支持的端点',
+      endpoints: {
+        chat: '兼容 OpenAI Chat Completions 协议，可直接替换现有聊天请求。',
+        models: '返回当前可用模型列表，便于 SDK 或前端动态展示。'
+      },
+      faqTitle: '常见问题',
+      quickStart: {
+        registerTitle: '创建账号',
+        registerDesc: '先注册并登录站点，公开页保持极简，真正的密钥管理在控制台完成。',
+        keyTitle: '创建 API Key',
+        keyDesc: '进入控制台创建一个新的 API Key，后续所有 SDK、脚本与客户端都使用这把 Key。',
+        baseUrlTitle: '替换 Base URL',
+        baseUrlDesc: '把原来指向 OpenAI 的 `base_url` 改成当前站点的 `/v1` 地址，其余请求参数基本保持不变。'
+      },
+      faq: {
+        items: {
+          compatibilityQ: '需要改 SDK 或请求结构吗？',
+          compatibilityA: '通常不需要。只要你的客户端本身兼容 OpenAI 协议，替换 `base_url` 和 `api_key` 即可。',
+          sdkQ: '支持哪些语言和框架？',
+          sdkA: 'Python、Node.js、Go、Java 以及任何 OpenAI 兼容 SDK 都可以直接接入。',
+          dataQ: '平台会保存我的对话内容吗？',
+          dataA: '平台重点提供转发与计量能力，默认文档不承诺保存内容；如有自定义审计或日志策略，请以你的站点实际配置为准。'
+        }
+      }
+    },
+    codex: {
+      title: 'Codex CLI 接入',
+      label: 'Codex 接入',
+      subtitle: '按标准流程完成 Node.js、Codex CLI、API Key 和配置文件后，即可直接开始使用。',
+      os: {
+        mac: 'macOS',
+        windows: 'Windows',
+        linux: 'Linux'
+      },
+      nodeTitle: '安装 Node.js',
+      nodeDescription: 'Codex CLI 依赖 Node.js 运行环境。先安装 LTS 版本，再继续安装命令行工具。',
+      nodeGuideMac: '推荐先通过 Homebrew 安装 Node.js LTS，再继续安装 Codex CLI。',
+      nodeGuideWindows: '推荐使用 Chocolatey 或 Scoop 安装 Node.js，安装完成后重新打开终端。',
+      nodeGuideLinux: '推荐先安装 NodeSource 提供的 Node.js LTS 版本，再继续安装 Codex CLI。',
+      nodeVerifyTitle: '检查版本',
+      installTitle: '安装 Codex CLI',
+      installDescription: '全局安装 Codex CLI 包。如果你的环境访问 npm 较慢，可以保留镜像源参数。',
+      installVerifyTitle: '验证 CLI',
+      keyTitle: '准备 API Key',
+      keyDescription: '先在控制台创建 API Key，后续 Codex CLI 会通过环境变量读取这把 Key。',
+      keyHint: '把这里的占位值替换成你自己的 API Key。控制台内的“如何使用”弹窗会自动写入真实值。',
+      configureTitle: '写入配置文件',
+      configureDescription: '把下面两个文件放到本机 `.codex` 目录中。标准模式是默认接入方式，直接复用即可。',
+      startTitle: '启动 Codex',
+      startDescription: '进入你的项目目录后执行 `codex`。CLI 会读取配置文件并通过当前站点的 OpenAI 兼容端点发起请求。',
+      vscodeTitle: '在编辑器中使用',
+      vscodeDescription: '如果你在 VS Code 等编辑器里调用 Codex CLI，也复用同一份 `.codex` 配置文件，无需再维护第二套接入参数。',
+      advancedTitle: '可选 WebSocket 模式',
+      advancedDescription: '只有在你明确需要 WebSocket 响应链路时，才在标准配置基础上追加下面这段配置。',
+      advancedSnippetTitle: '追加到 config.toml',
+      troubleshootTitle: '排查建议',
+      troubleshoot: {
+        items: {
+          commandTitle: '先确认 CLI 已安装',
+          commandDesc: '先执行 `node --version`、`npm --version` 和 `codex --version`，确保环境与 CLI 都已经正确安装。',
+          connectionTitle: '确认基地址可用',
+          connectionDesc: '如果 CLI 无法连接，优先检查站点基地址是否正确、是否补上了 `/v1`，以及 API Key 是否仍然有效。',
+          updateTitle: '升级 CLI 后重试',
+          updateDesc: '如果命令可执行但行为异常，先升级 Codex CLI 包到最新版本，再重新读取配置验证。'
+        }
+      }
     }
   },
 
@@ -4812,14 +4836,14 @@ export default {
       welcome: {
         title: '👋 欢迎使用 Sub2API',
         description:
-          '<div style="line-height: 1.8;"><p style="margin-bottom: 16px;">Sub2API 是一个强大的 AI 服务中转平台，让您轻松管理和分发 AI 服务。</p><p style="margin-bottom: 12px;"><b>🎯 核心功能：</b></p><ul style="margin-left: 20px; margin-bottom: 16px;"><li>📦 <b>分组管理</b> - 创建不同的服务套餐（VIP、免费试用等）</li><li>🔗 <b>账号池</b> - 连接多个上游 AI 服务商账号</li><li>🔑 <b>密钥分发</b> - 为用户生成独立的 API Key</li><li>💰 <b>计费管理</b> - 灵活的费率和配额控制</li></ul><p style="color: #10b981; font-weight: 600;">接下来，我们将用 3 分钟带您完成首次配置 →</p></div>',
+          '<div style="line-height: 1.8;"><p style="margin-bottom: 16px;">Sub2API 是一个灵活的 AI 服务中转平台，让您轻松管理和分发 AI 服务。</p><p style="margin-bottom: 12px;"><b>🎯 核心功能：</b></p><ul style="margin-left: 20px; margin-bottom: 16px;"><li>📦 <b>分组管理</b> - 创建不同的服务套餐（VIP、免费试用等）</li><li>🔗 <b>账号池</b> - 连接多个上游 AI 服务商账号</li><li>🔑 <b>密钥分发</b> - 为用户生成独立的 API Key</li><li>💰 <b>计费管理</b> - 灵活的费率和配额控制</li></ul><p style="color: #10b981; font-weight: 600;">接下来，我们将用 3 分钟带您完成首次配置 →</p></div>',
         nextBtn: '开始配置 🚀',
         prevBtn: '跳过'
       },
       groupManage: {
         title: '📦 第一步：分组管理',
         description:
-          '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;"><b>什么是分组？</b></p><p style="margin-bottom: 12px;">分组是 Sub2API 的核心概念，它就像一个"服务套餐"：</p><ul style="margin-left: 20px; margin-bottom: 12px; font-size: 13px;"><li>🎯 每个分组可以包含多个上游账号</li><li>💰 每个分组有独立的计费倍率</li><li>👥 可以设置为公开或专属分组</li></ul><p style="margin-top: 12px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #10b981; border-radius: 4px; font-size: 13px;"><b>💡 示例：</b>您可以创建"VIP专线"（高倍率）和"免费试用"（低倍率）两个分组</p><p style="margin-top: 16px; color: #10b981; font-weight: 600;">👉 点击左侧的"分组管理"开始</p></div>'
+          '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;"><b>什么是分组？</b></p><p style="margin-bottom: 12px;">分组是平台的核心概念，它就像一个"服务套餐"：</p><ul style="margin-left: 20px; margin-bottom: 12px; font-size: 13px;"><li>🎯 每个分组可以包含多个上游账号</li><li>💰 每个分组有独立的计费倍率</li><li>👥 可以设置为公开或专属分组</li></ul><p style="margin-top: 12px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #10b981; border-radius: 4px; font-size: 13px;"><b>💡 示例：</b>您可以创建"VIP专线"（高倍率）和"免费试用"（低倍率）两个分组</p><p style="margin-top: 16px; color: #10b981; font-weight: 600;">👉 点击左侧的"分组管理"开始</p></div>'
       },
       createGroup: {
         title: '➕ 创建新分组',

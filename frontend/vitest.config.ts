@@ -10,9 +10,13 @@ export default defineConfig({
       'vue-i18n': 'vue-i18n/dist/vue-i18n.runtime.esm-bundler.js'
     }
   },
+  define: {
+    __INTLIFY_JIT_COMPILATION__: true
+  },
   test: {
     globals: true,
     environment: 'jsdom',
+    setupFiles: ['src/__tests__/setup.ts'],
     include: ['src/**/*.{test,spec}.{js,ts,jsx,tsx}'],
     exclude: ['node_modules', 'dist'],
     coverage: {
