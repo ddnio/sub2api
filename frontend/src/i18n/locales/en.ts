@@ -1,18 +1,15 @@
 export default {
   // Home Page
   home: {
-    viewOnGithub: 'View on GitHub',
-    viewDocs: 'View Docs',
-    docs: 'Docs',
-    badge: 'Low latency · High availability · Full models · Direct access',
+    badge: 'AI API Relay Service',
     switchToLight: 'Switch to Light Mode',
     switchToDark: 'Switch to Dark Mode',
     dashboard: 'Dashboard',
     login: 'Login',
     getStarted: 'Get Started',
     goToDashboard: 'Go to Dashboard',
-    heroSubtitle: 'An API relay designed for developers',
-    heroDescription: 'A Codex-compatible API relay for developers. Replace the base URL and API key, then connect immediately.',
+    heroSubtitle: 'Access mainstream AI models from China',
+    heroDescription: 'Supports full GPT & Claude model lineup. OpenAI-compatible format — just change the base URL.',
     nav: {
       home: 'Home',
       docs: 'Docs',
@@ -20,28 +17,38 @@ export default {
       support: 'Contact'
     },
     hero: {
-      viewDocs: 'View Docs',
-      viewPricing: 'View Pricing',
-      headingLine1: 'One line of code',
-      headingLine2Prefix: 'Connect to',
-      headingApi: 'API',
-      headingCodex: 'CodeX',
-      baseUrlHint: 'Replace the base URL and connect',
-      snippetTitle: 'Configure Codex API in one second',
-      sdkLabel: 'Generic API / SDK',
-      codexLabel: 'Codex CLI',
-      runLabel: 'Start coding at once',
-      baseUrlLabel: 'Base URL',
-      copyBaseUrl: 'Copy URL',
-      copiedBaseUrl: 'Copied'
+      viewDocs: 'Docs',
+      baseUrlHint: 'Base URL',
+      snippetComment: 'Same as official OpenAI SDK usage',
+      copyBaseUrl: 'Copy',
+      copiedBaseUrl: 'Copied',
     },
-    metrics: {
-      compatibilityTitle: 'High Availability',
-      compatibilityValue: 'A stable Codex request path',
-      routingTitle: 'Low Latency',
-      routingValue: 'Direct network access after swapping the URL',
-      billingTitle: 'Full Codex Models',
-      billingValue: 'gpt-5.4 / gpt-5.3-codex / responses'
+    stats: {
+      gptTitle: 'Full GPT Series',
+      gptDesc: 'GPT-5.4 / 5.3 / mini',
+      claudeTitle: 'Full Claude Series',
+      claudeDesc: 'Opus / Sonnet / Haiku',
+      billingTitle: 'Pay-as-you-go',
+      billingDesc: 'WeChat Pay top-up',
+    },
+    steps: {
+      title: 'Get started in 3 steps',
+      step1Title: 'Sign up',
+      step1Desc: 'Register with email',
+      step2Title: 'Top up balance',
+      step2Desc: 'WeChat Pay, pay-as-you-go',
+      step3Title: 'Replace URL & go',
+      step3Desc: 'Change one line of base_url',
+    },
+    features: {
+      compat: 'OpenAI-compatible, no code changes needed',
+      failover: 'Auto failover across channels',
+      billing: 'Pay-as-you-go, pay only for what you use',
+      usage: 'Clear usage breakdown at a glance',
+    },
+    models: {
+      title: 'Supported Models',
+      comingSoon: 'Coming Soon',
     },
     footer: {
       allRightsReserved: 'All rights reserved.'

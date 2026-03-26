@@ -1,18 +1,15 @@
 export default {
   // Home Page
   home: {
-    viewOnGithub: '在 GitHub 上查看',
-    viewDocs: '查看文档',
-    docs: '文档',
-    badge: '低延迟 · 高可用 · 全模型 · 国内直连',
+    badge: 'AI API 中转服务',
     switchToLight: '切换到浅色模式',
     switchToDark: '切换到深色模式',
     dashboard: '控制台',
     login: '登录',
     getStarted: '立即开始',
     goToDashboard: '进入控制台',
-    heroSubtitle: '专为开发者打造的 API 中转服务',
-    heroDescription: '专为国内开发者打造的 API 中转服务。兼容 Codex 系列模型，替换基础 URL 和 API Key 即可接入。',
+    heroSubtitle: '在国内稳定调用主流 AI 模型',
+    heroDescription: '支持 GPT、Claude 全系列模型 API，兼容 OpenAI 接口格式，改一行地址就能用',
     nav: {
       home: '首页',
       docs: '文档',
@@ -20,28 +17,38 @@ export default {
       support: '联系我们'
     },
     hero: {
-      viewDocs: '查看文档',
-      viewPricing: '查看定价',
-      headingLine1: '一行代码',
-      headingLine2Prefix: '接入',
-      headingApi: 'API',
-      headingCodex: 'CodeX',
-      baseUrlHint: '替换基础 URL 即可接入',
-      snippetTitle: '1 秒配置 Codex API',
-      sdkLabel: '通用 API / SDK',
-      codexLabel: 'Codex CLI',
-      runLabel: '以光速开始编码',
-      baseUrlLabel: 'Base URL',
-      copyBaseUrl: '复制地址',
-      copiedBaseUrl: '已复制'
+      viewDocs: '接入文档',
+      baseUrlHint: 'Base URL',
+      snippetComment: '和 OpenAI 官方用法一样',
+      copyBaseUrl: '复制',
+      copiedBaseUrl: '已复制',
     },
-    metrics: {
-      compatibilityTitle: '高可用',
-      compatibilityValue: '稳定转发 Codex 请求链路',
-      routingTitle: '低延迟',
-      routingValue: '国内网络直连，替换 URL 即可接入',
-      billingTitle: '全 Codex 模型',
-      billingValue: 'gpt-5.4 / gpt-5.3-codex / responses'
+    stats: {
+      gptTitle: 'GPT 全系列',
+      gptDesc: 'GPT-5.4 / 5.3 / mini',
+      claudeTitle: 'Claude 全系列',
+      claudeDesc: 'Opus / Sonnet / Haiku',
+      billingTitle: '按量计费',
+      billingDesc: '微信支付充值',
+    },
+    steps: {
+      title: '三步开始用',
+      step1Title: '注册账号',
+      step1Desc: '邮箱注册即可',
+      step2Title: '充值余额',
+      step2Desc: '微信支付，按量扣费',
+      step3Title: '替换地址开用',
+      step3Desc: '改一行 base_url',
+    },
+    features: {
+      compat: '兼容 OpenAI 格式，不用改代码',
+      failover: '多通道自动切换，不怕掉线',
+      billing: '按量计费，用多少花多少',
+      usage: '用量明细清楚，花费一目了然',
+    },
+    models: {
+      title: '支持的模型',
+      comingSoon: '即将上线',
     },
     footer: {
       allRightsReserved: '保留所有权利。'
