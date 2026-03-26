@@ -23,24 +23,22 @@
 
     <main class="relative flex-1 px-6 pb-12 pt-8 lg:pb-16 lg:pt-10">
       <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 lg:gap-8">
+        <!-- Hero card -->
         <section class="rounded-3xl border border-gray-200/60 bg-white/72 p-6 shadow-sm backdrop-blur-sm dark:border-dark-800/60 dark:bg-dark-900/50 lg:p-7">
           <HomeHero />
         </section>
 
-        <section class="grid gap-3 sm:grid-cols-3">
-          <div
-            v-for="item in metrics"
-            :key="item.title"
-            class="rounded-2xl border border-gray-200/70 bg-white/75 px-5 py-4 shadow-sm dark:border-dark-800/70 dark:bg-dark-900/55"
-          >
-            <p class="text-sm font-medium text-gray-500 dark:text-dark-400">
-              {{ item.title }}
-            </p>
-            <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">
-              {{ item.value }}
-            </p>
-          </div>
-        </section>
+        <!-- Stats -->
+        <HomeStats />
+
+        <!-- Steps -->
+        <HomeSteps />
+
+        <!-- Features -->
+        <HomeFeatures />
+
+        <!-- Models -->
+        <HomeModels />
       </div>
     </main>
 
@@ -50,13 +48,15 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useAuthStore, useAppStore } from '@/stores'
 import HomeFooter from '@/components/home/HomeFooter.vue'
 import HomeHeader from '@/components/home/HomeHeader.vue'
 import HomeHero from '@/components/home/HomeHero.vue'
+import HomeStats from '@/components/home/HomeStats.vue'
+import HomeSteps from '@/components/home/HomeSteps.vue'
+import HomeFeatures from '@/components/home/HomeFeatures.vue'
+import HomeModels from '@/components/home/HomeModels.vue'
 
-const { t } = useI18n()
 const authStore = useAuthStore()
 const appStore = useAppStore()
 
@@ -67,20 +67,6 @@ const isHomeContentUrl = computed(() => {
 })
 
 const isDark = ref(document.documentElement.classList.contains('dark'))
-const metrics = computed(() => [
-  {
-    title: t('home.metrics.compatibilityTitle'),
-    value: t('home.metrics.compatibilityValue')
-  },
-  {
-    title: t('home.metrics.routingTitle'),
-    value: t('home.metrics.routingValue')
-  },
-  {
-    title: t('home.metrics.billingTitle'),
-    value: t('home.metrics.billingValue')
-  }
-])
 
 function toggleTheme() {
   isDark.value = !isDark.value
