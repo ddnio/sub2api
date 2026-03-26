@@ -185,3 +185,7 @@ func (p *easypayProvider) ParseCallback(r *http.Request) (*service.CallbackResul
 		Raw:             raw,
 	}, nil
 }
+
+func (p *easypayProvider) Refund(ctx context.Context, req service.RefundRequest) (*service.RefundResult, error) {
+	return nil, fmt.Errorf("easypay: refund not supported")
+}
