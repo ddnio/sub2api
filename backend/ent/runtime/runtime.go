@@ -562,12 +562,16 @@ func init() {
 	paymentorderDescProviderOrderNo := paymentorderFields[9].Descriptor()
 	// paymentorder.ProviderOrderNoValidator is a validator for the "provider_order_no" field. It is called by the builders before save.
 	paymentorder.ProviderOrderNoValidator = paymentorderDescProviderOrderNo.Validators[0].(func(string) error)
+	// paymentorderDescRefundNo is the schema descriptor for refund_no field.
+	paymentorderDescRefundNo := paymentorderFields[16].Descriptor()
+	// paymentorder.RefundNoValidator is a validator for the "refund_no" field. It is called by the builders before save.
+	paymentorder.RefundNoValidator = paymentorderDescRefundNo.Validators[0].(func(string) error)
 	// paymentorderDescCreatedAt is the schema descriptor for created_at field.
-	paymentorderDescCreatedAt := paymentorderFields[16].Descriptor()
+	paymentorderDescCreatedAt := paymentorderFields[17].Descriptor()
 	// paymentorder.DefaultCreatedAt holds the default value on creation for the created_at field.
 	paymentorder.DefaultCreatedAt = paymentorderDescCreatedAt.Default.(func() time.Time)
 	// paymentorderDescUpdatedAt is the schema descriptor for updated_at field.
-	paymentorderDescUpdatedAt := paymentorderFields[17].Descriptor()
+	paymentorderDescUpdatedAt := paymentorderFields[18].Descriptor()
 	// paymentorder.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	paymentorder.DefaultUpdatedAt = paymentorderDescUpdatedAt.Default.(func() time.Time)
 	// paymentorder.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

@@ -135,6 +135,11 @@ func AdminNote(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldAdminNote, v))
 }
 
+// RefundNo applies equality check predicate on the "refund_no" field. It's identical to RefundNoEQ.
+func RefundNo(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldRefundNo, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldCreatedAt, v))
@@ -1033,6 +1038,81 @@ func AdminNoteEqualFold(v string) predicate.PaymentOrder {
 // AdminNoteContainsFold applies the ContainsFold predicate on the "admin_note" field.
 func AdminNoteContainsFold(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldContainsFold(FieldAdminNote, v))
+}
+
+// RefundNoEQ applies the EQ predicate on the "refund_no" field.
+func RefundNoEQ(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldRefundNo, v))
+}
+
+// RefundNoNEQ applies the NEQ predicate on the "refund_no" field.
+func RefundNoNEQ(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldRefundNo, v))
+}
+
+// RefundNoIn applies the In predicate on the "refund_no" field.
+func RefundNoIn(vs ...string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldRefundNo, vs...))
+}
+
+// RefundNoNotIn applies the NotIn predicate on the "refund_no" field.
+func RefundNoNotIn(vs ...string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldRefundNo, vs...))
+}
+
+// RefundNoGT applies the GT predicate on the "refund_no" field.
+func RefundNoGT(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGT(FieldRefundNo, v))
+}
+
+// RefundNoGTE applies the GTE predicate on the "refund_no" field.
+func RefundNoGTE(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGTE(FieldRefundNo, v))
+}
+
+// RefundNoLT applies the LT predicate on the "refund_no" field.
+func RefundNoLT(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLT(FieldRefundNo, v))
+}
+
+// RefundNoLTE applies the LTE predicate on the "refund_no" field.
+func RefundNoLTE(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLTE(FieldRefundNo, v))
+}
+
+// RefundNoContains applies the Contains predicate on the "refund_no" field.
+func RefundNoContains(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldContains(FieldRefundNo, v))
+}
+
+// RefundNoHasPrefix applies the HasPrefix predicate on the "refund_no" field.
+func RefundNoHasPrefix(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldHasPrefix(FieldRefundNo, v))
+}
+
+// RefundNoHasSuffix applies the HasSuffix predicate on the "refund_no" field.
+func RefundNoHasSuffix(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldHasSuffix(FieldRefundNo, v))
+}
+
+// RefundNoIsNil applies the IsNil predicate on the "refund_no" field.
+func RefundNoIsNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIsNull(FieldRefundNo))
+}
+
+// RefundNoNotNil applies the NotNil predicate on the "refund_no" field.
+func RefundNoNotNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotNull(FieldRefundNo))
+}
+
+// RefundNoEqualFold applies the EqualFold predicate on the "refund_no" field.
+func RefundNoEqualFold(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEqualFold(FieldRefundNo, v))
+}
+
+// RefundNoContainsFold applies the ContainsFold predicate on the "refund_no" field.
+func RefundNoContainsFold(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldContainsFold(FieldRefundNo, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

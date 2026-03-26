@@ -76,6 +76,7 @@ type PaymentOrder struct {
 	ExpiredAt       time.Time
 	CallbackRaw     *string
 	AdminNote       *string
+	RefundNo        *string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	// Joined
@@ -125,6 +126,7 @@ type StatsBreakdown struct {
 type PaymentProvider interface {
 	CreatePayment(ctx context.Context, req PaymentRequest) (*PaymentResult, error)
 	ParseCallback(r *http.Request) (*CallbackResult, error)
+	Refund(ctx context.Context, req RefundRequest) (*RefundResult, error)
 }
 
 type PaymentRequest struct {
@@ -136,6 +138,19 @@ type PaymentRequest struct {
 
 type PaymentResult struct {
 	QRCodeURL string
+}
+
+type RefundRequest struct {
+	OrderNo         string  // 商户订单号（out_trade_no）
+	ProviderOrderNo string  // 微信支付订单号（transaction_id），可为空
+	RefundNo        string  // 商户退款单号（out_refund_no）
+	Amount          float64 // 退款金额（元）
+	Reason          string  // 退款原因
+}
+
+type RefundResult struct {
+	ProviderRefundNo string // 微信退款单号
+	Status           string // 退款状态（SUCCESS / PROCESSING）
 }
 
 type CallbackResult struct {
@@ -573,29 +588,65 @@ func (s *PaymentService) AdminRefundOrder(ctx context.Context, orderID int64, ad
 		return ErrPaymentInvalidStatus
 	}
 
-	// C2: Reverse benefits for completed topup orders
+	// 1. Build refund request
+	refundNo := "R" + order.OrderNo
+	providerOrderNo := ""
+	if order.ProviderOrderNo != nil {
+		providerOrderNo = *order.ProviderOrderNo
+	}
+
+	reason := "管理员退款"
+	if adminNote != "" {
+		reason = adminNote
+	}
+
+	// 2. Call payment provider refund API
+	_, err = s.provider.Refund(ctx, RefundRequest{
+		OrderNo:         order.OrderNo,
+		ProviderOrderNo: providerOrderNo,
+		RefundNo:        refundNo,
+		Amount:          order.Amount,
+		Reason:          reason,
+	})
+	if err != nil {
+		log.Printf("[Payment] Refund API failed for order %s: %v", order.OrderNo, err)
+		return ErrPaymentProviderError
+	}
+
+	// 3. Mark as refunded + store refund_no (before balance deduction — wxpay refund is irreversible)
+	refundedAt := time.Now()
+	affected, err := s.orderRepo.UpdateStatusAtomically(ctx, order.OrderNo,
+		[]string{domain.PaymentStatusCompleted, domain.PaymentStatusPaid},
+		domain.PaymentStatusRefunded,
+		map[string]any{
+			"refunded_at": refundedAt,
+			"admin_note":  adminNote,
+			"refund_no":   refundNo,
+		},
+	)
+	if err != nil {
+		log.Printf("[Payment] CRITICAL: Refund API succeeded but DB update failed for order %s: %v", order.OrderNo, err)
+		return err
+	}
+	if affected == 0 {
+		// Order status already changed (concurrent request), wxpay idempotent refund_no prevents double refund
+		return nil
+	}
+
+	// 4. Reverse benefits (after status is persisted)
 	if order.Status == domain.PaymentStatusCompleted && order.Type == domain.PaymentOrderTypeTopup {
 		creditAmount := order.Amount
 		if order.CreditAmount != nil {
 			creditAmount = *order.CreditAmount
 		}
 		if err := s.userService.UpdateBalance(ctx, order.UserID, -creditAmount); err != nil {
-			log.Printf("[Payment] Refund: failed to deduct balance for order %s: %v", order.OrderNo, err)
-			return ErrPaymentDeliveryFailed
+			log.Printf("[Payment] WARN: Refund succeeded but balance deduction failed for order %s: %v — requires manual fix", order.OrderNo, err)
+			// Don't return error — refund already committed, balance issue needs manual resolution
 		}
 		s.asyncInvalidateCache(order.UserID)
 	} else if order.Status == domain.PaymentStatusCompleted && order.Type == domain.PaymentOrderTypePlan {
 		log.Printf("[Payment] WARN: Refunding plan order %s - subscription benefits not reversed automatically, handle manually", order.OrderNo)
 	}
 
-	refundedAt := time.Now()
-	_, err = s.orderRepo.UpdateStatusAtomically(ctx, order.OrderNo,
-		[]string{domain.PaymentStatusCompleted, domain.PaymentStatusPaid},
-		domain.PaymentStatusRefunded,
-		map[string]any{
-			"refunded_at": refundedAt,
-			"admin_note":  adminNote,
-		},
-	)
-	return err
+	return nil
 }

@@ -504,6 +504,7 @@ var (
 		{Name: "expired_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "callback_raw", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
 		{Name: "admin_note", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "refund_no", Type: field.TypeString, Nullable: true, Size: 64},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "plan_id", Type: field.TypeInt64, Nullable: true},
@@ -517,13 +518,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payment_orders_payment_plans_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[17]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[18]},
 				RefColumns: []*schema.Column{PaymentPlansColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_users_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[18]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[19]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -532,12 +533,12 @@ var (
 			{
 				Name:    "paymentorder_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[18]},
+				Columns: []*schema.Column{PaymentOrdersColumns[19]},
 			},
 			{
 				Name:    "paymentorder_plan_id",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[17]},
+				Columns: []*schema.Column{PaymentOrdersColumns[18]},
 			},
 			{
 				Name:    "paymentorder_status",
