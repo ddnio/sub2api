@@ -117,6 +117,18 @@
             {{ platformNote }}
           </p>
         </div>
+
+        <!-- Full guide link -->
+        <div class="flex justify-end">
+          <router-link
+            v-if="guideHash"
+            :to="{ path: '/docs', hash: guideHash }"
+            class="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
+            @click="emit('close')"
+          >
+            {{ t('docs.shared.viewFullGuide') }} →
+          </router-link>
+        </div>
       </template>
     </div>
 
@@ -359,6 +371,17 @@ const platformNote = computed(() => {
 })
 
 const showPlatformNote = computed(() => activeClientTab.value !== 'opencode')
+
+const guideHash = computed(() => {
+  switch (activeClientTab.value) {
+    case 'claude': return '#claude-code'
+    case 'codex':
+    case 'codex-ws': return '#codex-cli'
+    case 'opencode': return '#opencode'
+    case 'gemini': return '' // No guide yet
+    default: return ''
+  }
+})
 
 const escapeHtml = (value: string) => value
   .replace(/&/g, '&amp;')
