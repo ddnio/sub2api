@@ -76,6 +76,7 @@ type PaymentOrder struct {
 	ExpiredAt       time.Time
 	CallbackRaw     *string
 	AdminNote       *string
+	RefundNo        *string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	// Joined
@@ -125,6 +126,7 @@ type StatsBreakdown struct {
 type PaymentProvider interface {
 	CreatePayment(ctx context.Context, req PaymentRequest) (*PaymentResult, error)
 	ParseCallback(r *http.Request) (*CallbackResult, error)
+	Refund(ctx context.Context, req RefundRequest) (*RefundResult, error)
 }
 
 type PaymentRequest struct {
@@ -136,6 +138,19 @@ type PaymentRequest struct {
 
 type PaymentResult struct {
 	QRCodeURL string
+}
+
+type RefundRequest struct {
+	OrderNo         string  // 商户订单号（out_trade_no）
+	ProviderOrderNo string  // 微信支付订单号（transaction_id），可为空
+	RefundNo        string  // 商户退款单号（out_refund_no）
+	Amount          float64 // 退款金额（元）
+	Reason          string  // 退款原因
+}
+
+type RefundResult struct {
+	ProviderRefundNo string // 微信退款单号
+	Status           string // 退款状态（SUCCESS / PROCESSING）
 }
 
 type CallbackResult struct {
