@@ -54,6 +54,68 @@ export default {
     backToHome: '返回首页',
     copy: '复制',
     copied: '已复制',
+    nav: {
+      quickStart: '快速开始',
+      claudeCode: 'Claude Code',
+      codexCli: 'Codex CLI',
+      opencode: 'OpenCode',
+      apiUsage: 'API 调用',
+      faq: '常见问题'
+    },
+    shared: {
+      copy: '复制',
+      copied: '已复制',
+      optional: '可选',
+      verify: '验证',
+      viewFullGuide: '查看完整教程',
+      replaceKeyHint: '将 your-api-key-here 替换为你在控制台创建的 API Key。',
+      baseUrlHint: '将下方的基地址替换为实际的站点地址。'
+    },
+    claudeCode: {
+      title: 'Claude Code 接入',
+      subtitle: '通过环境变量或 settings.json 配置 Claude Code 连接本平台。',
+      envTitle: '配置环境变量',
+      envDescription: '在终端中设置以下环境变量，或添加到 shell 配置文件中永久生效。',
+      settingsTitle: '配置 VSCode（可选）',
+      settingsDescription: '如果你使用 VSCode 中的 Claude Code 扩展，可以通过 settings.json 配置：',
+      verifyTitle: '验证连通',
+      verifyDescription: '在终端中启动 Claude Code，确认能正常连接。'
+    },
+    opencode: {
+      title: 'OpenCode 接入',
+      subtitle: '创建 opencode.json 配置文件即可连接本平台。',
+      configTitle: '创建配置文件',
+      configDescription: '在项目根目录创建 opencode.json 文件：',
+      startTitle: '启动',
+      startDescription: '在项目目录下运行 opencode 即可开始使用。'
+    },
+    quickStart: {
+      title: '快速开始',
+      subtitle: '选择你使用的工具，按教程完成配置即可接入。',
+      baseUrlLabel: '平台基地址',
+      getKeyStep: '在控制台创建 API Key',
+      getKeyDesc: '注册登录后，在控制台中创建一个新的 API Key。',
+      chooseToolStep: '选择接入工具',
+      chooseToolDesc: '根据你的使用场景，选择下方对应的工具查看接入教程。',
+      toolCards: {
+        claudeCode: '通过环境变量快速接入，适合 Claude Code 用户。',
+        codexCli: '完整的 Codex CLI 安装与配置教程。',
+        opencode: '一个 JSON 配置文件即可接入。',
+        apiUsage: '直接调用 API，支持 Python、cURL、Node.js。'
+      }
+    },
+    faq: {
+      title: '常见问题',
+      generalTitle: '通用问题',
+      items: {
+        compatibilityQ: '需要修改 SDK 或请求结构吗？',
+        compatibilityA: '通常不需要。本平台兼容 OpenAI 协议，替换 base_url 和 api_key 即可。',
+        multiToolQ: '可以同时使用多个工具吗？',
+        multiToolA: '可以。每个工具独立配置，共用同一个 API Key。',
+        modelsQ: '支持哪些模型？',
+        modelsA: '支持 GPT、Claude 全系列模型，具体可用模型以控制台显示为准。'
+      }
+    },
     mode: {
       api: '通用 API 接入',
       codex: 'Codex 接入'

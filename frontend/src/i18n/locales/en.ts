@@ -54,6 +54,68 @@ export default {
     backToHome: 'Back to Home',
     copy: 'Copy',
     copied: 'Copied',
+    nav: {
+      quickStart: 'Quick Start',
+      claudeCode: 'Claude Code',
+      codexCli: 'Codex CLI',
+      opencode: 'OpenCode',
+      apiUsage: 'API Usage',
+      faq: 'FAQ'
+    },
+    shared: {
+      copy: 'Copy',
+      copied: 'Copied',
+      optional: 'Optional',
+      verify: 'Verify',
+      viewFullGuide: 'View full guide',
+      replaceKeyHint: 'Replace your-api-key-here with the API key from your dashboard.',
+      baseUrlHint: 'Replace the base URL below with your actual site address.'
+    },
+    claudeCode: {
+      title: 'Claude Code Setup',
+      subtitle: 'Configure Claude Code to connect to this platform via environment variables or settings.json.',
+      envTitle: 'Set Environment Variables',
+      envDescription: 'Set the following environment variables in your terminal, or add them to your shell profile for persistence.',
+      settingsTitle: 'Configure VSCode (Optional)',
+      settingsDescription: 'If you use the Claude Code extension in VSCode, configure via settings.json:',
+      verifyTitle: 'Verify Connection',
+      verifyDescription: 'Launch Claude Code in your terminal and confirm it connects successfully.'
+    },
+    opencode: {
+      title: 'OpenCode Setup',
+      subtitle: 'Create an opencode.json config file to connect to this platform.',
+      configTitle: 'Create Config File',
+      configDescription: 'Create opencode.json in your project root:',
+      startTitle: 'Start',
+      startDescription: 'Run opencode in your project directory to start using it.'
+    },
+    quickStart: {
+      title: 'Quick Start',
+      subtitle: 'Choose your tool below and follow the setup guide to connect.',
+      baseUrlLabel: 'Platform Base URL',
+      getKeyStep: 'Create an API Key',
+      getKeyDesc: 'Sign up, log in, and create a new API key in the dashboard.',
+      chooseToolStep: 'Choose Your Tool',
+      chooseToolDesc: 'Select the tool you use below to see the setup instructions.',
+      toolCards: {
+        claudeCode: 'Quick setup via environment variables for Claude Code users.',
+        codexCli: 'Full Codex CLI installation and configuration guide.',
+        opencode: 'Connect with a single JSON config file.',
+        apiUsage: 'Call the API directly with Python, cURL, or Node.js.'
+      }
+    },
+    faq: {
+      title: 'FAQ',
+      generalTitle: 'General',
+      items: {
+        compatibilityQ: 'Do I need to change the SDK or request format?',
+        compatibilityA: 'Usually no. This platform is OpenAI-compatible — just swap base_url and api_key.',
+        multiToolQ: 'Can I use multiple tools at the same time?',
+        multiToolA: 'Yes. Each tool is configured independently and shares the same API key.',
+        modelsQ: 'Which models are supported?',
+        modelsA: 'GPT and Claude full model lineup. Check the dashboard for currently available models.'
+      }
+    },
     mode: {
       api: 'Generic API Access',
       codex: 'Codex Access'
