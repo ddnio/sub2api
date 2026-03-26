@@ -36,7 +36,7 @@
         </p>
 
         <div class="url-bar">
-          <code class="url-code">{{ apiBase }}</code>
+          <code class="url-code">{{ apiBase }}/v1</code>
           <button type="button" class="url-copy" @click="copyBaseUrl">
             <Icon :name="baseUrlCopied ? 'clipboard' : 'copy'" size="sm" />
             {{ baseUrlCopied ? t('home.hero.copiedBaseUrl') : t('home.hero.copyBaseUrl') }}
@@ -138,7 +138,7 @@ async function copyBaseUrl() {
     return
   }
 
-  await navigator.clipboard.writeText(apiBase.value)
+  await navigator.clipboard.writeText(`${apiBase.value}/v1`)
   baseUrlCopied.value = true
   window.setTimeout(() => {
     baseUrlCopied.value = false
