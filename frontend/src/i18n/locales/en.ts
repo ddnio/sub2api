@@ -8,6 +8,8 @@ export default {
     login: 'Login',
     getStarted: 'Get Started',
     goToDashboard: 'Go to Dashboard',
+    docs: 'Docs',
+    viewDocs: 'View Docs',
     heroSubtitle: 'Access mainstream AI models from China',
     heroDescription: 'Supports full GPT & Claude model lineup. OpenAI-compatible format — just change the base URL.',
     nav: {

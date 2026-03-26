@@ -7,7 +7,7 @@
       </div>
 
       <div class="hero-content">
-        <p class="hero-overline">{{ t('home.heroSubtitle') }}</p>
+        <p class="hero-overline">{{ siteSubtitle }}</p>
         <h1 class="hero-title">{{ siteName }}</h1>
         <p class="hero-desc">{{ t('home.heroDescription') }}</p>
       </div>
@@ -58,7 +58,7 @@
 
         <div class="terminal-body">
           <div class="code-line">
-            <span class="t-comment">// {{ t('home.hero.snippetComment') }}</span>
+            <span class="t-comment"># {{ t('home.hero.snippetComment') }}</span>
           </div>
           <div class="code-line">
             <span class="t-keyword">from</span>
@@ -113,12 +113,14 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore, useAuthStore } from '@/stores'
 import Icon from '@/components/icons/Icon.vue'
+import { resolveSiteSubtitle } from '@/utils/siteBranding'
 
 const { t } = useI18n()
 const appStore = useAppStore()
 const authStore = useAuthStore()
 
 const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'NanaFox API')
+const siteSubtitle = computed(() => resolveSiteSubtitle(appStore.cachedPublicSettings?.site_subtitle, t('home.heroSubtitle')))
 // apiBase: root URL without /v1 — used for both the URL bar display and the terminal snippet
 const apiBase = computed(() =>
   (appStore.apiBaseUrl || window.location.origin).replace(/\/v1\/?$/, '').replace(/\/+$/, '')
@@ -414,10 +416,6 @@ async function copyBaseUrl() {
 
 .dark .code-line {
   color: #cbd5e1;
-}
-
-.line-wrap {
-  word-break: break-all;
 }
 
 .t-keyword { color: #1d4ed8; }

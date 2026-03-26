@@ -8,6 +8,8 @@ export default {
     login: '登录',
     getStarted: '立即开始',
     goToDashboard: '进入控制台',
+    docs: '文档',
+    viewDocs: '查看文档',
     heroSubtitle: '在国内稳定调用主流 AI 模型',
     heroDescription: '支持 GPT、Claude 全系列模型 API，兼容 OpenAI 接口格式，改一行地址就能用',
     nav: {
