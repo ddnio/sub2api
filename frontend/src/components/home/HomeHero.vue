@@ -7,7 +7,7 @@
       </div>
 
       <div class="hero-content">
-        <p class="hero-overline">{{ siteSubtitle }}</p>
+        <p class="hero-overline">{{ t('home.heroSubtitle') }}</p>
         <h1 class="hero-title">{{ siteName }}</h1>
         <p class="hero-desc">{{ t('home.heroDescription') }}</p>
       </div>
@@ -53,32 +53,55 @@
             <span class="dot dot-yellow"></span>
             <span class="dot dot-green"></span>
           </div>
-          <span class="terminal-tab">Terminal</span>
+          <span class="terminal-tab">Python</span>
         </div>
 
         <div class="terminal-body">
           <div class="code-line">
-            <span class="t-comment">// {{ t('home.hero.snippetTitle') }}</span>
+            <span class="t-comment">// {{ t('home.hero.snippetComment') }}</span>
           </div>
           <div class="code-line">
-            <span class="t-keyword">export</span>
-            <span class="t-plain"> OPENAI_BASE_URL=</span>
-            <span class="t-string">"{{ apiBase }}"</span>
+            <span class="t-keyword">from</span>
+            <span class="t-plain"> openai </span>
+            <span class="t-keyword">import</span>
+            <span class="t-plain"> OpenAI</span>
+          </div>
+          <div class="code-line"><span class="t-plain">&nbsp;</span></div>
+          <div class="code-line">
+            <span class="t-plain">client = OpenAI(</span>
           </div>
           <div class="code-line">
-            <span class="t-keyword">export</span>
-            <span class="t-plain"> OPENAI_API_KEY=</span>
-            <span class="t-string">"your-api-key-here"</span>
+            <span class="t-plain">&nbsp;&nbsp;base_url=</span>
+            <span class="t-string">"{{ apiBase }}/v1"</span>
+            <span class="t-plain">,</span>
           </div>
           <div class="code-line">
-            <span class="t-plain">&nbsp;</span>
+            <span class="t-plain">&nbsp;&nbsp;api_key=</span>
+            <span class="t-string">"sk-..."</span>
+            <span class="t-plain">,</span>
+          </div>
+          <div class="code-line"><span class="t-plain">)</span></div>
+          <div class="code-line"><span class="t-plain">&nbsp;</span></div>
+          <div class="code-line">
+            <span class="t-plain">resp = client.chat.completions.create(</span>
           </div>
           <div class="code-line">
-            <span class="t-comment"># {{ t('home.hero.runLabel') }}</span>
+            <span class="t-plain">&nbsp;&nbsp;model=</span>
+            <span class="t-string">"gpt-5.4"</span>
+            <span class="t-plain">,</span>
           </div>
           <div class="code-line">
-            <span class="t-plain">$ python app.py</span>
+            <span class="t-plain">&nbsp;&nbsp;messages=[{</span>
+            <span class="t-string">"role"</span>
+            <span class="t-plain">: </span>
+            <span class="t-string">"user"</span>
+            <span class="t-plain">, </span>
+            <span class="t-string">"content"</span>
+            <span class="t-plain">: </span>
+            <span class="t-string">"你好"</span>
+            <span class="t-plain">}]</span>
           </div>
+          <div class="code-line"><span class="t-plain">)</span></div>
         </div>
       </div>
     </div>
@@ -90,14 +113,12 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore, useAuthStore } from '@/stores'
 import Icon from '@/components/icons/Icon.vue'
-import { resolveSiteSubtitle } from '@/utils/siteBranding'
 
 const { t } = useI18n()
 const appStore = useAppStore()
 const authStore = useAuthStore()
 
 const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'NanaFox API')
-const siteSubtitle = computed(() => resolveSiteSubtitle(appStore.cachedPublicSettings?.site_subtitle, t('home.heroSubtitle')))
 // apiBase: root URL without /v1 — used for both the URL bar display and the terminal snippet
 const apiBase = computed(() =>
   (appStore.apiBaseUrl || window.location.origin).replace(/\/v1\/?$/, '').replace(/\/+$/, '')
