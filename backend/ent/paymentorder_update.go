@@ -322,6 +322,26 @@ func (_u *PaymentOrderUpdate) ClearAdminNote() *PaymentOrderUpdate {
 	return _u
 }
 
+// SetRefundNo sets the "refund_no" field.
+func (_u *PaymentOrderUpdate) SetRefundNo(v string) *PaymentOrderUpdate {
+	_u.mutation.SetRefundNo(v)
+	return _u
+}
+
+// SetNillableRefundNo sets the "refund_no" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableRefundNo(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetRefundNo(*v)
+	}
+	return _u
+}
+
+// ClearRefundNo clears the value of the "refund_no" field.
+func (_u *PaymentOrderUpdate) ClearRefundNo() *PaymentOrderUpdate {
+	_u.mutation.ClearRefundNo()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *PaymentOrderUpdate) SetUpdatedAt(v time.Time) *PaymentOrderUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -423,6 +443,11 @@ func (_u *PaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "provider_order_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_order_no": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.RefundNo(); ok {
+		if err := paymentorder.RefundNoValidator(v); err != nil {
+			return &ValidationError{Name: "refund_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.refund_no": %w`, err)}
+		}
+	}
 	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PaymentOrder.user"`)
 	}
@@ -512,6 +537,12 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if _u.mutation.AdminNoteCleared() {
 		_spec.ClearField(paymentorder.FieldAdminNote, field.TypeString)
+	}
+	if value, ok := _u.mutation.RefundNo(); ok {
+		_spec.SetField(paymentorder.FieldRefundNo, field.TypeString, value)
+	}
+	if _u.mutation.RefundNoCleared() {
+		_spec.ClearField(paymentorder.FieldRefundNo, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentorder.FieldUpdatedAt, field.TypeTime, value)
@@ -886,6 +917,26 @@ func (_u *PaymentOrderUpdateOne) ClearAdminNote() *PaymentOrderUpdateOne {
 	return _u
 }
 
+// SetRefundNo sets the "refund_no" field.
+func (_u *PaymentOrderUpdateOne) SetRefundNo(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetRefundNo(v)
+	return _u
+}
+
+// SetNillableRefundNo sets the "refund_no" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableRefundNo(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetRefundNo(*v)
+	}
+	return _u
+}
+
+// ClearRefundNo clears the value of the "refund_no" field.
+func (_u *PaymentOrderUpdateOne) ClearRefundNo() *PaymentOrderUpdateOne {
+	_u.mutation.ClearRefundNo()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *PaymentOrderUpdateOne) SetUpdatedAt(v time.Time) *PaymentOrderUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -1000,6 +1051,11 @@ func (_u *PaymentOrderUpdateOne) check() error {
 			return &ValidationError{Name: "provider_order_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_order_no": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.RefundNo(); ok {
+		if err := paymentorder.RefundNoValidator(v); err != nil {
+			return &ValidationError{Name: "refund_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.refund_no": %w`, err)}
+		}
+	}
 	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PaymentOrder.user"`)
 	}
@@ -1106,6 +1162,12 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	}
 	if _u.mutation.AdminNoteCleared() {
 		_spec.ClearField(paymentorder.FieldAdminNote, field.TypeString)
+	}
+	if value, ok := _u.mutation.RefundNo(); ok {
+		_spec.SetField(paymentorder.FieldRefundNo, field.TypeString, value)
+	}
+	if _u.mutation.RefundNoCleared() {
+		_spec.ClearField(paymentorder.FieldRefundNo, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentorder.FieldUpdatedAt, field.TypeTime, value)

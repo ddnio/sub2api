@@ -51,6 +51,8 @@ type PaymentOrder struct {
 	CallbackRaw *string `json:"callback_raw,omitempty"`
 	// AdminNote holds the value of the "admin_note" field.
 	AdminNote *string `json:"admin_note,omitempty"`
+	// RefundNo holds the value of the "refund_no" field.
+	RefundNo *string `json:"refund_no,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -103,7 +105,7 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case paymentorder.FieldID, paymentorder.FieldUserID, paymentorder.FieldPlanID:
 			values[i] = new(sql.NullInt64)
-		case paymentorder.FieldOrderNo, paymentorder.FieldType, paymentorder.FieldCurrency, paymentorder.FieldStatus, paymentorder.FieldProvider, paymentorder.FieldProviderOrderNo, paymentorder.FieldCallbackRaw, paymentorder.FieldAdminNote:
+		case paymentorder.FieldOrderNo, paymentorder.FieldType, paymentorder.FieldCurrency, paymentorder.FieldStatus, paymentorder.FieldProvider, paymentorder.FieldProviderOrderNo, paymentorder.FieldCallbackRaw, paymentorder.FieldAdminNote, paymentorder.FieldRefundNo:
 			values[i] = new(sql.NullString)
 		case paymentorder.FieldPaidAt, paymentorder.FieldCompletedAt, paymentorder.FieldRefundedAt, paymentorder.FieldExpiredAt, paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -233,6 +235,13 @@ func (_m *PaymentOrder) assignValues(columns []string, values []any) error {
 				_m.AdminNote = new(string)
 				*_m.AdminNote = value.String
 			}
+		case paymentorder.FieldRefundNo:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field refund_no", values[i])
+			} else if value.Valid {
+				_m.RefundNo = new(string)
+				*_m.RefundNo = value.String
+			}
 		case paymentorder.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -354,6 +363,11 @@ func (_m *PaymentOrder) String() string {
 	builder.WriteString(", ")
 	if v := _m.AdminNote; v != nil {
 		builder.WriteString("admin_note=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.RefundNo; v != nil {
+		builder.WriteString("refund_no=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")

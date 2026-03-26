@@ -83,6 +83,10 @@ func (PaymentOrder) Fields() []ent.Field {
 			SchemaType(map[string]string{dialect.Postgres: "text"}).
 			Optional().
 			Nillable(),
+		field.String("refund_no").
+			MaxLen(64).
+			Optional().
+			Nillable(),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now).

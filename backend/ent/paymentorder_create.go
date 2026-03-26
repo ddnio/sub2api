@@ -216,6 +216,20 @@ func (_c *PaymentOrderCreate) SetNillableAdminNote(v *string) *PaymentOrderCreat
 	return _c
 }
 
+// SetRefundNo sets the "refund_no" field.
+func (_c *PaymentOrderCreate) SetRefundNo(v string) *PaymentOrderCreate {
+	_c.mutation.SetRefundNo(v)
+	return _c
+}
+
+// SetNillableRefundNo sets the "refund_no" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableRefundNo(v *string) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetRefundNo(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *PaymentOrderCreate) SetCreatedAt(v time.Time) *PaymentOrderCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -364,6 +378,11 @@ func (_c *PaymentOrderCreate) check() error {
 	if _, ok := _c.mutation.ExpiredAt(); !ok {
 		return &ValidationError{Name: "expired_at", err: errors.New(`ent: missing required field "PaymentOrder.expired_at"`)}
 	}
+	if v, ok := _c.mutation.RefundNo(); ok {
+		if err := paymentorder.RefundNoValidator(v); err != nil {
+			return &ValidationError{Name: "refund_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.refund_no": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "PaymentOrder.created_at"`)}
 	}
@@ -455,6 +474,10 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.AdminNote(); ok {
 		_spec.SetField(paymentorder.FieldAdminNote, field.TypeString, value)
 		_node.AdminNote = &value
+	}
+	if value, ok := _c.mutation.RefundNo(); ok {
+		_spec.SetField(paymentorder.FieldRefundNo, field.TypeString, value)
+		_node.RefundNo = &value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(paymentorder.FieldCreatedAt, field.TypeTime, value)
@@ -805,6 +828,24 @@ func (u *PaymentOrderUpsert) UpdateAdminNote() *PaymentOrderUpsert {
 // ClearAdminNote clears the value of the "admin_note" field.
 func (u *PaymentOrderUpsert) ClearAdminNote() *PaymentOrderUpsert {
 	u.SetNull(paymentorder.FieldAdminNote)
+	return u
+}
+
+// SetRefundNo sets the "refund_no" field.
+func (u *PaymentOrderUpsert) SetRefundNo(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldRefundNo, v)
+	return u
+}
+
+// UpdateRefundNo sets the "refund_no" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateRefundNo() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldRefundNo)
+	return u
+}
+
+// ClearRefundNo clears the value of the "refund_no" field.
+func (u *PaymentOrderUpsert) ClearRefundNo() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldRefundNo)
 	return u
 }
 
@@ -1163,6 +1204,27 @@ func (u *PaymentOrderUpsertOne) UpdateAdminNote() *PaymentOrderUpsertOne {
 func (u *PaymentOrderUpsertOne) ClearAdminNote() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearAdminNote()
+	})
+}
+
+// SetRefundNo sets the "refund_no" field.
+func (u *PaymentOrderUpsertOne) SetRefundNo(v string) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetRefundNo(v)
+	})
+}
+
+// UpdateRefundNo sets the "refund_no" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateRefundNo() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateRefundNo()
+	})
+}
+
+// ClearRefundNo clears the value of the "refund_no" field.
+func (u *PaymentOrderUpsertOne) ClearRefundNo() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearRefundNo()
 	})
 }
 
@@ -1689,6 +1751,27 @@ func (u *PaymentOrderUpsertBulk) UpdateAdminNote() *PaymentOrderUpsertBulk {
 func (u *PaymentOrderUpsertBulk) ClearAdminNote() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearAdminNote()
+	})
+}
+
+// SetRefundNo sets the "refund_no" field.
+func (u *PaymentOrderUpsertBulk) SetRefundNo(v string) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetRefundNo(v)
+	})
+}
+
+// UpdateRefundNo sets the "refund_no" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateRefundNo() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateRefundNo()
+	})
+}
+
+// ClearRefundNo clears the value of the "refund_no" field.
+func (u *PaymentOrderUpsertBulk) ClearRefundNo() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearRefundNo()
 	})
 }
 

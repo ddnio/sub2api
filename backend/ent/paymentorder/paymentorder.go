@@ -46,6 +46,8 @@ const (
 	FieldCallbackRaw = "callback_raw"
 	// FieldAdminNote holds the string denoting the admin_note field in the database.
 	FieldAdminNote = "admin_note"
+	// FieldRefundNo holds the string denoting the refund_no field in the database.
+	FieldRefundNo = "refund_no"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -91,6 +93,7 @@ var Columns = []string{
 	FieldExpiredAt,
 	FieldCallbackRaw,
 	FieldAdminNote,
+	FieldRefundNo,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -124,6 +127,8 @@ var (
 	ProviderValidator func(string) error
 	// ProviderOrderNoValidator is a validator for the "provider_order_no" field. It is called by the builders before save.
 	ProviderOrderNoValidator func(string) error
+	// RefundNoValidator is a validator for the "refund_no" field. It is called by the builders before save.
+	RefundNoValidator func(string) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -218,6 +223,11 @@ func ByCallbackRaw(opts ...sql.OrderTermOption) OrderOption {
 // ByAdminNote orders the results by the admin_note field.
 func ByAdminNote(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAdminNote, opts...).ToFunc()
+}
+
+// ByRefundNo orders the results by the refund_no field.
+func ByRefundNo(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRefundNo, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.
