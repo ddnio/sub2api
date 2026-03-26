@@ -111,6 +111,10 @@ func (r *paymentOrderRepository) UpdateStatusAtomically(ctx context.Context, ord
 			if f, ok := v.(float64); ok {
 				up.SetCreditAmount(f)
 			}
+		case "refund_no":
+			if s, ok := v.(string); ok {
+				up.SetRefundNo(s)
+			}
 		}
 	}
 
@@ -261,6 +265,7 @@ func toPaymentOrder(e *dbent.PaymentOrder) *service.PaymentOrder {
 		ExpiredAt:       e.ExpiredAt,
 		CallbackRaw:     e.CallbackRaw,
 		AdminNote:       e.AdminNote,
+		RefundNo:        e.RefundNo,
 		CreatedAt:       e.CreatedAt,
 		UpdatedAt:       e.UpdatedAt,
 	}
