@@ -13,6 +13,7 @@ import (
 	"github.com/wechatpay-apiv3/wechatpay-go/core/option"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/native"
+	"github.com/wechatpay-apiv3/wechatpay-go/services/refunddomestic"
 	"github.com/wechatpay-apiv3/wechatpay-go/utils"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -167,6 +168,45 @@ func (p *wxpayProvider) ParseCallback(r *http.Request) (*service.CallbackResult,
 		Amount:          amount,
 		Raw:             raw,
 	}, nil
+}
+
+// Refund 调用微信支付退款 API（国内退款）。
+// 微信退款为异步处理，Create 成功（返回 SUCCESS 或 PROCESSING）表示退款已受理。
+func (p *wxpayProvider) Refund(ctx context.Context, req service.RefundRequest) (*service.RefundResult, error) {
+	svc := refunddomestic.RefundsApiService{Client: p.client}
+
+	amountFen := yuanToFen(req.Amount)
+
+	createReq := refunddomestic.CreateRequest{
+		OutTradeNo:  core.String(req.OrderNo),
+		OutRefundNo: core.String(req.RefundNo),
+		Reason:      core.String(req.Reason),
+		Amount: &refunddomestic.AmountReq{
+			Refund:   core.Int64(amountFen),
+			Total:    core.Int64(amountFen), // 全额退款：refund == total
+			Currency: core.String("CNY"),
+		},
+	}
+
+	// 优先使用微信支付订单号（更精确）
+	if req.ProviderOrderNo != "" {
+		createReq.TransactionId = core.String(req.ProviderOrderNo)
+	}
+
+	resp, _, err := svc.Create(ctx, createReq)
+	if err != nil {
+		return nil, fmt.Errorf("wxpay: refund: %w", err)
+	}
+
+	result := &service.RefundResult{}
+	if resp.RefundId != nil {
+		result.ProviderRefundNo = *resp.RefundId
+	}
+	if resp.Status != nil {
+		result.Status = string(*resp.Status) // Status 是 refunddomestic.Status 枚举类型，转为 string
+	}
+
+	return result, nil
 }
 
 // yuanToFen 将元转换为分（微信支付金额单位为分）。
