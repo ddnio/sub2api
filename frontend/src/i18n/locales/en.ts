@@ -73,21 +73,43 @@ export default {
     },
     claudeCode: {
       title: 'Claude Code Setup',
-      subtitle: 'Configure Claude Code to connect to this platform via environment variables or settings.json.',
+      subtitle: 'Install Claude Code and configure it to connect to this platform. Supports both CLI and VSCode extension.',
+      installTitle: 'Install Claude Code',
+      installDescription: 'Choose the installation method for your system. Once installed, Claude Code is available directly in your terminal.',
+      vscodeExtNote: 'For VSCode users, you can also search for "Claude Code" in the Extensions marketplace for an integrated IDE experience.',
       envTitle: 'Set Environment Variables',
-      envDescription: 'Set the following environment variables in your terminal, or add them to your shell profile for persistence.',
-      settingsTitle: 'Configure VSCode (Optional)',
-      settingsDescription: 'If you use the Claude Code extension in VSCode, configure via settings.json:',
+      envDescription: 'Set the following environment variables in your terminal to point Claude Code at this platform. Add them to your shell profile (~/.zshrc or ~/.bashrc) for persistence.',
+      envNote: 'Important: Do not include /v1/messages in the base URL — Claude Code appends the API path automatically.',
+      settingsTitle: 'Configure settings.json (Optional)',
+      settingsDescription: 'If you use the Claude Code extension in VSCode, you can also configure via ~/.claude/settings.json. Environment variables take precedence over settings.json.',
       verifyTitle: 'Verify Connection',
-      verifyDescription: 'Launch Claude Code in your terminal and confirm it connects successfully.'
+      verifyDescription: 'Run the following commands to check that Claude Code is connected to this platform. The /status command shows current auth status and API endpoint info.',
+      troubleshootTitle: 'Troubleshooting',
+      troubleshoot: {
+        baseUrlQ: 'Wrong Base URL format?',
+        baseUrlA: 'Make sure the URL does not include /v1/messages. Claude Code appends the API path automatically. Correct format example: https://api.example.com',
+        restartQ: 'Config changes not taking effect?',
+        restartA: 'Reopen your terminal after changing environment variables. Restart VSCode after editing settings.json. Environment variables take precedence over settings.json.',
+        priorityQ: 'Both env vars and settings.json configured?',
+        priorityA: 'Environment variables win. If both are set, env var values override settings.json. We recommend picking one method to avoid confusion.'
+      }
     },
     opencode: {
       title: 'OpenCode Setup',
-      subtitle: 'Create an opencode.json config file to connect to this platform.',
+      subtitle: 'Install OpenCode and connect to this platform via an opencode.json config file.',
+      installTitle: 'Install OpenCode',
+      installDescription: 'Install the OpenCode CLI via npm, Homebrew, or curl.',
       configTitle: 'Create Config File',
-      configDescription: 'Create opencode.json in your project root:',
-      startTitle: 'Start',
-      startDescription: 'Run opencode in your project directory to start using it.'
+      configDescription: 'Create opencode.json in your project root. The config includes provider info, model list, and API connection parameters.',
+      configNote: 'Change the model field to the model you want to use (format: provider_id/model_id). List available model names in the models object.',
+      verifyTitle: 'Verify & Start',
+      verifyDescription: 'Check that the installation succeeded, then start OpenCode in your project directory.',
+      tipsTitle: 'Configuration Tips',
+      tips: {
+        envVar: 'API keys support env var references: set apiKey to "{env:YOUR_API_KEY}" to read from environment variables instead of hardcoding secrets in config.',
+        hierarchy: 'Config precedence: project opencode.json > OPENCODE_CONFIG env var > global ~/.config/opencode/opencode.json.',
+        models: 'Run opencode /models to see the list of currently available models.'
+      }
     },
     quickStart: {
       title: 'Quick Start',
@@ -132,6 +154,10 @@ export default {
         chat: 'OpenAI-compatible Chat Completions endpoint for direct drop-in replacement.',
         models: 'Lists currently available models so SDKs and frontends can render them dynamically.'
       },
+      sdkTitle: 'Install SDK',
+      sdkDescription: 'The OpenAI official SDK is the easiest way to call the API. Install the package for your language.',
+      streamingTitle: 'Streaming Responses',
+      streamingDescription: 'Enable stream mode to receive model output in real time — ideal for chat UIs and other scenarios that benefit from instant feedback.',
       faqTitle: 'FAQ',
       quickStart: {
         registerTitle: 'Create an Account',

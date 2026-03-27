@@ -73,21 +73,43 @@ export default {
     },
     claudeCode: {
       title: 'Claude Code 接入',
-      subtitle: '通过环境变量或 settings.json 配置 Claude Code 连接本平台。',
+      subtitle: '安装 Claude Code 并配置连接本平台，支持 CLI 和 VSCode 扩展两种方式。',
+      installTitle: '安装 Claude Code',
+      installDescription: '选择适合你系统的方式安装 Claude Code CLI。安装完成后可直接在终端使用。',
+      vscodeExtNote: '如果使用 VSCode，也可以在扩展商店搜索 "Claude Code" 安装扩展，获得 IDE 内的集成体验。',
       envTitle: '配置环境变量',
-      envDescription: '在终端中设置以下环境变量，或添加到 shell 配置文件中永久生效。',
-      settingsTitle: '配置 VSCode（可选）',
-      settingsDescription: '如果你使用 VSCode 中的 Claude Code 扩展，可以通过 settings.json 配置：',
+      envDescription: '在终端中设置以下环境变量，将 Claude Code 指向本平台。可添加到 shell 配置文件（~/.zshrc 或 ~/.bashrc）中永久生效。',
+      envNote: '注意：Base URL 不要包含 /v1/messages 路径后缀，Claude Code 会自动拼接。',
+      settingsTitle: '配置 settings.json（可选）',
+      settingsDescription: '如果你使用 VSCode 中的 Claude Code 扩展，也可以通过 ~/.claude/settings.json 配置。环境变量优先级高于 settings.json。',
       verifyTitle: '验证连通',
-      verifyDescription: '在终端中启动 Claude Code，确认能正常连接。'
+      verifyDescription: '运行以下命令检查 Claude Code 是否正确连接到本平台。/status 命令会显示当前的认证状态和 API 端点信息。',
+      troubleshootTitle: '常见问题排查',
+      troubleshoot: {
+        baseUrlQ: 'Base URL 格式不对？',
+        baseUrlA: '确保 URL 不包含 /v1/messages 后缀。Claude Code 会自动拼接 API 路径。正确格式示例：https://api.example.com',
+        restartQ: '修改配置后不生效？',
+        restartA: '环境变量修改后需要重新打开终端。如果修改了 settings.json，需要重启 VSCode。环境变量的优先级高于 settings.json。',
+        priorityQ: '同时设置了环境变量和 settings.json？',
+        priorityA: '环境变量优先。如果两处都配置了，环境变量的值会覆盖 settings.json 中的设置。建议只选择一种方式配置，避免混淆。'
+      }
     },
     opencode: {
       title: 'OpenCode 接入',
-      subtitle: '创建 opencode.json 配置文件即可连接本平台。',
+      subtitle: '安装 OpenCode 并通过 opencode.json 配置文件连接本平台。',
+      installTitle: '安装 OpenCode',
+      installDescription: '通过 npm、Homebrew 或 curl 安装 OpenCode CLI。',
       configTitle: '创建配置文件',
-      configDescription: '在项目根目录创建 opencode.json 文件：',
-      startTitle: '启动',
-      startDescription: '在项目目录下运行 opencode 即可开始使用。'
+      configDescription: '在项目根目录创建 opencode.json 文件。配置中包含 provider 信息、模型列表和 API 连接参数。',
+      configNote: '将 model 字段改为你需要使用的模型（格式：provider_id/model_id）。models 对象中列出可用的模型名称。',
+      verifyTitle: '验证并启动',
+      verifyDescription: '检查安装是否成功，然后在项目目录下启动 OpenCode。',
+      tipsTitle: '配置提示',
+      tips: {
+        envVar: 'API Key 支持环境变量引用：将 apiKey 值设为 "{env:YOUR_API_KEY}" 可从环境变量读取，避免在配置文件中硬编码密钥。',
+        hierarchy: '配置优先级：项目级 opencode.json > 环境变量 OPENCODE_CONFIG > 全局 ~/.config/opencode/opencode.json。',
+        models: '使用 opencode /models 命令可查看当前可用的模型列表。'
+      }
     },
     quickStart: {
       title: '快速开始',
@@ -132,6 +154,10 @@ export default {
         chat: '兼容 OpenAI Chat Completions 协议，可直接替换现有聊天请求。',
         models: '返回当前可用模型列表，便于 SDK 或前端动态展示。'
       },
+      sdkTitle: '安装 SDK',
+      sdkDescription: '使用 OpenAI 官方 SDK 可以最方便地调用 API。选择你使用的语言安装对应的包。',
+      streamingTitle: '流式响应',
+      streamingDescription: '启用 stream 模式可以实时接收模型的输出，适合聊天界面等需要即时反馈的场景。',
       faqTitle: '常见问题',
       quickStart: {
         registerTitle: '创建账号',
