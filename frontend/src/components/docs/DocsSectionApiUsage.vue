@@ -18,11 +18,33 @@
       <code class="mt-2 block text-sm font-mono text-primary-600 dark:text-primary-400">{{ apiBase }}/v1</code>
     </div>
 
+    <!-- SDK Installation -->
+    <section class="space-y-3">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t('docs.api.sdkTitle') }}</h2>
+      <p class="text-sm text-gray-600 dark:text-dark-400">{{ t('docs.api.sdkDescription') }}</p>
+      <DocsCodeBlock
+        :tabs="sdkInstallTabs"
+        sync-group="lang"
+        default-tab="python"
+      />
+    </section>
+
     <!-- Chat Completions example -->
     <section class="space-y-3">
       <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t('docs.api.examplesTitle') }}</h2>
       <DocsCodeBlock
         :tabs="exampleTabs"
+        sync-group="lang"
+        default-tab="python"
+      />
+    </section>
+
+    <!-- Streaming example -->
+    <section class="space-y-3">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t('docs.api.streamingTitle') }}</h2>
+      <p class="text-sm text-gray-600 dark:text-dark-400">{{ t('docs.api.streamingDescription') }}</p>
+      <DocsCodeBlock
+        :tabs="streamingTabs"
         sync-group="lang"
         default-tab="python"
       />
@@ -57,7 +79,7 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores'
 import DocsCodeBlock from './DocsCodeBlock.vue'
 import type { CodeTab } from './DocsCodeBlock.vue'
-import { generateApiExample, type ApiLanguage } from '@/utils/docsSnippets'
+import { generateApiExample, generateApiStreamingExample, type ApiLanguage } from '@/utils/docsSnippets'
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -72,9 +94,22 @@ const languages: { id: ApiLanguage; label: string }[] = [
   { id: 'nodejs', label: 'Node.js' }
 ]
 
+const sdkInstallTabs = computed<CodeTab[]>(() => [
+  { id: 'python', label: 'Python', path: 'pip', content: 'pip install openai' },
+  { id: 'curl', label: 'cURL', path: 'cURL', content: '# cURL is pre-installed on most systems\ncurl --version' },
+  { id: 'nodejs', label: 'Node.js', path: 'npm', content: 'npm install openai' }
+])
+
 const exampleTabs = computed<CodeTab[]>(() =>
   languages.map(lang => {
     const snippet = generateApiExample(apiBase.value, 'your-api-key-here', lang.id)
+    return { id: lang.id, label: lang.label, path: snippet.path, content: snippet.content }
+  })
+)
+
+const streamingTabs = computed<CodeTab[]>(() =>
+  languages.map(lang => {
+    const snippet = generateApiStreamingExample(apiBase.value, 'your-api-key-here', lang.id)
     return { id: lang.id, label: lang.label, path: snippet.path, content: snippet.content }
   })
 )

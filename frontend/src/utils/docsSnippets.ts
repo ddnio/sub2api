@@ -86,6 +86,166 @@ export function generateOpenCodeSnippet(
   }
 }
 
+// ---------- Claude Code Install ----------
+
+export function generateClaudeCodeInstallSnippet(shell: ShellType): SnippetFile {
+  switch (shell) {
+    case 'unix':
+      return {
+        path: 'Terminal',
+        content: `# Install Claude Code CLI
+curl -fsSL https://claude.ai/install.sh | bash
+
+# Or via Homebrew
+brew install --cask claude-code`
+      }
+    case 'cmd':
+      return {
+        path: 'Command Prompt',
+        content: `@rem Install Claude Code CLI
+curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del install.cmd`
+      }
+    case 'powershell':
+      return {
+        path: 'PowerShell',
+        content: `# Install Claude Code CLI
+irm https://claude.ai/install.ps1 | iex
+
+# Or via WinGet
+winget install Anthropic.ClaudeCode`
+      }
+  }
+}
+
+// ---------- OpenCode Install ----------
+
+export function generateOpenCodeInstallSnippet(shell: ShellType): SnippetFile {
+  switch (shell) {
+    case 'unix':
+      return {
+        path: 'Terminal',
+        content: `# Via npm (recommended)
+npm install -g opencode-ai@latest
+
+# Or via Homebrew
+brew install anomalyco/tap/opencode
+
+# Or via curl
+curl -fsSL https://opencode.ai/install | bash`
+      }
+    case 'cmd':
+      return {
+        path: 'Command Prompt',
+        content: `@rem Via npm (recommended)
+npm install -g opencode-ai@latest`
+      }
+    case 'powershell':
+      return {
+        path: 'PowerShell',
+        content: `# Via npm (recommended)
+npm install -g opencode-ai@latest
+
+# Or via WinGet
+winget install opencode`
+      }
+  }
+}
+
+// ---------- OpenCode Enhanced Config ----------
+
+export function generateOpenCodeEnhancedSnippet(
+  baseUrl: string,
+  apiKey: string
+): SnippetFile {
+  const config = {
+    $schema: 'https://opencode.ai/config.json',
+    model: 'openai/gpt-4o',
+    provider: {
+      openai: {
+        npm: '@ai-sdk/openai-compatible',
+        name: 'Custom Provider',
+        options: {
+          baseURL: baseUrl,
+          apiKey: apiKey
+        },
+        models: {
+          'gpt-4o': { name: 'GPT-4o' },
+          'claude-sonnet-4-6': { name: 'Claude Sonnet 4.6' }
+        }
+      }
+    }
+  }
+  return {
+    path: 'opencode.json',
+    content: JSON.stringify(config, null, 2)
+  }
+}
+
+// ---------- API Streaming Examples ----------
+
+export function generateApiStreamingExample(
+  baseUrl: string,
+  apiKey: string,
+  language: ApiLanguage
+): SnippetFile {
+  const base = baseUrl.replace(/\/+$/, '')
+  const baseV1 = base.endsWith('/v1') ? base : `${base}/v1`
+
+  switch (language) {
+    case 'python':
+      return {
+        path: 'Python (Streaming)',
+        content: `from openai import OpenAI
+
+client = OpenAI(
+    base_url="${baseV1}",
+    api_key="${apiKey}",
+)
+
+stream = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello"}],
+    stream=True,
+)
+for chunk in stream:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)`
+      }
+    case 'curl':
+      return {
+        path: 'cURL (Streaming)',
+        content: `curl ${baseV1}/chat/completions \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${apiKey}" \\
+  -d '{
+    "model": "gpt-4o",
+    "messages": [{"role": "user", "content": "Hello"}],
+    "stream": true
+  }'`
+      }
+    case 'nodejs':
+      return {
+        path: 'Node.js (Streaming)',
+        content: `import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "${baseV1}",
+  apiKey: "${apiKey}",
+});
+
+const stream = await client.chat.completions.create({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Hello" }],
+  stream: true,
+});
+for await (const chunk of stream) {
+  const content = chunk.choices[0]?.delta?.content;
+  if (content) process.stdout.write(content);
+}`
+      }
+  }
+}
+
 // ---------- API Examples ----------
 
 export function generateApiExample(
