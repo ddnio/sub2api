@@ -106,7 +106,7 @@ export default {
       verifyDescription: '检查安装是否成功，然后在项目目录下启动 OpenCode。',
       tipsTitle: '配置提示',
       tips: {
-        envVar: 'API Key 支持环境变量引用：将 apiKey 值设为 "{env:YOUR_API_KEY}" 可从环境变量读取，避免在配置文件中硬编码密钥。',
+        envVar: "API Key 支持环境变量引用：将 apiKey 值设为 \"{'{'}env:YOUR_API_KEY{'}'}\" 可从环境变量读取，避免在配置文件中硬编码密钥。",
         hierarchy: '配置优先级：项目级 opencode.json > 环境变量 OPENCODE_CONFIG > 全局 ~/.config/opencode/opencode.json。',
         models: '使用 opencode /models 命令可查看当前可用的模型列表。'
       }

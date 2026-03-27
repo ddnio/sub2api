@@ -106,7 +106,7 @@ export default {
       verifyDescription: 'Check that the installation succeeded, then start OpenCode in your project directory.',
       tipsTitle: 'Configuration Tips',
       tips: {
-        envVar: 'API keys support env var references: set apiKey to "{env:YOUR_API_KEY}" to read from environment variables instead of hardcoding secrets in config.',
+        envVar: "API keys support env var references: set apiKey to \"{'{'}env:YOUR_API_KEY{'}'}\" to read from environment variables instead of hardcoding secrets in config.",
         hierarchy: 'Config precedence: project opencode.json > OPENCODE_CONFIG env var > global ~/.config/opencode/opencode.json.',
         models: 'Run opencode /models to see the list of currently available models.'
       }
