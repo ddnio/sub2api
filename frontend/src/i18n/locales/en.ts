@@ -637,7 +637,9 @@ export default {
     viewUsage: 'View Usage',
     checkDetailedLogs: 'Check detailed usage logs',
     redeemCode: 'Redeem Code',
-    addBalanceWithCode: 'Add balance with a code'
+    addBalanceWithCode: 'Add balance with a code',
+    failedToLoad: 'Failed to load dashboard data',
+    retry: 'Retry'
   },
 
   // Groups (shared)

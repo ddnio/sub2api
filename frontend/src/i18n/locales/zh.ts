@@ -637,7 +637,9 @@ export default {
     viewUsage: '查看使用记录',
     checkDetailedLogs: '查看详细的使用日志',
     redeemCode: '兑换码',
-    addBalanceWithCode: '使用兑换码充值'
+    addBalanceWithCode: '使用兑换码充值',
+    failedToLoad: '加载仪表盘数据失败',
+    retry: '重试'
   },
 
   // Groups (shared)
