@@ -171,7 +171,6 @@ type PaymentOrderRepository interface {
 	Create(ctx context.Context, order *PaymentOrder) error
 	GetByOrderNo(ctx context.Context, orderNo string) (*PaymentOrder, error)
 	GetByID(ctx context.Context, id int64) (*PaymentOrder, error)
-	FindPendingOrder(ctx context.Context, userID int64, orderType string, planID *int64) (*PaymentOrder, error)
 	UpdateStatusAtomically(ctx context.Context, orderNo string, fromStatuses []string, toStatus string, updates map[string]any) (int, error)
 	ListByUser(ctx context.Context, userID int64, filter OrderFilter, params pagination.PaginationParams) ([]PaymentOrder, *pagination.PaginationResult, error)
 	ListAll(ctx context.Context, filter OrderFilter, params pagination.PaginationParams) ([]PaymentOrder, *pagination.PaginationResult, error)
@@ -329,22 +328,6 @@ func (s *PaymentService) CreateOrder(ctx context.Context, input CreateOrderInput
 
 	default:
 		return nil, nil, infraerrors.BadRequest("PAYMENT_INVALID_TYPE", "invalid order type")
-	}
-
-	// Reuse existing pending order if one exists for the same user/type/plan
-	existing, _ := s.orderRepo.FindPendingOrder(ctx, input.UserID, input.Type, planID)
-	if existing != nil && existing.Amount == amount {
-		result, err := s.provider.CreatePayment(ctx, PaymentRequest{
-			OrderNo:  existing.OrderNo,
-			Amount:   existing.Amount,
-			Provider: input.Provider,
-			Subject:  subject,
-		})
-		if err != nil {
-			log.Printf("[Payment] Provider error reusing order %s: %v", existing.OrderNo, err)
-			return nil, nil, ErrPaymentProviderError
-		}
-		return existing, result, nil
 	}
 
 	orderNo := generateOrderNo()
