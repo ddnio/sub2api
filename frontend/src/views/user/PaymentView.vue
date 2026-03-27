@@ -53,9 +53,10 @@
           <div v-else class="mb-4"></div>
           <button
             class="btn btn-primary w-full"
+            :disabled="creatingOrder"
             @click="openPlanPayment(plan)"
           >
-            {{ t('payment.payNow') }}
+            {{ creatingOrder ? t('payment.paying') : t('payment.payNow') }}
           </button>
         </div>
       </div>

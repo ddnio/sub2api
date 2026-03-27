@@ -73,6 +73,29 @@ func (r *paymentOrderRepository) GetByID(ctx context.Context, id int64) (*servic
 	return toPaymentOrder(m), nil
 }
 
+func (r *paymentOrderRepository) FindPendingOrder(ctx context.Context, userID int64, orderType string, planID *int64) (*service.PaymentOrder, error) {
+	q := r.client.PaymentOrder.Query().
+		Where(
+			paymentorder.UserIDEQ(userID),
+			paymentorder.TypeEQ(orderType),
+			paymentorder.StatusEQ(domain.PaymentStatusPending),
+			paymentorder.ExpiredAtGT(time.Now()),
+		)
+	if planID != nil {
+		q = q.Where(paymentorder.PlanIDEQ(*planID))
+	} else {
+		q = q.Where(paymentorder.PlanIDIsNil())
+	}
+	m, err := q.Order(dbent.Desc(paymentorder.FieldCreatedAt)).First(ctx)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return toPaymentOrder(m), nil
+}
+
 func (r *paymentOrderRepository) UpdateStatusAtomically(ctx context.Context, orderNo string, fromStatuses []string, toStatus string, updates map[string]any) (int, error) {
 	up := r.client.PaymentOrder.Update().
 		Where(

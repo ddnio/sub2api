@@ -60,11 +60,15 @@ func (r *paymentPlanRepository) Update(ctx context.Context, id int64, updates ma
 				up.ClearBadge()
 			}
 		case "group_id":
-			if i, ok := v.(int64); ok {
+			if f, ok := v.(float64); ok {
+				up.SetGroupID(int64(f))
+			} else if i, ok := v.(int64); ok {
 				up.SetGroupID(i)
 			}
 		case "duration_days":
-			if i, ok := v.(int); ok {
+			if f, ok := v.(float64); ok {
+				up.SetDurationDays(int(f))
+			} else if i, ok := v.(int); ok {
 				up.SetDurationDays(i)
 			}
 		case "price":
@@ -78,7 +82,9 @@ func (r *paymentPlanRepository) Update(ctx context.Context, id int64, updates ma
 				up.ClearOriginalPrice()
 			}
 		case "sort_order":
-			if i, ok := v.(int); ok {
+			if f, ok := v.(float64); ok {
+				up.SetSortOrder(int(f))
+			} else if i, ok := v.(int); ok {
 				up.SetSortOrder(i)
 			}
 		case "is_active":
