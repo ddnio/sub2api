@@ -156,6 +156,7 @@ func (r *paymentOrderRepository) ListAll(ctx context.Context, filter service.Ord
 	}
 
 	orders, err := q.
+		WithUser().
 		Offset(params.Offset()).
 		Limit(params.Limit()).
 		Order(dbent.Desc(paymentorder.FieldCreatedAt)).
@@ -248,7 +249,7 @@ func toPaymentOrder(e *dbent.PaymentOrder) *service.PaymentOrder {
 	if e == nil {
 		return nil
 	}
-	return &service.PaymentOrder{
+	o := &service.PaymentOrder{
 		ID:              e.ID,
 		OrderNo:         e.OrderNo,
 		UserID:          e.UserID,
@@ -270,6 +271,14 @@ func toPaymentOrder(e *dbent.PaymentOrder) *service.PaymentOrder {
 		CreatedAt:       e.CreatedAt,
 		UpdatedAt:       e.UpdatedAt,
 	}
+	if e.Edges.User != nil {
+		o.User = &service.User{
+			ID:       e.Edges.User.ID,
+			Email:    e.Edges.User.Email,
+			Username: e.Edges.User.Username,
+		}
+	}
+	return o
 }
 
 func toPaymentOrders(models []*dbent.PaymentOrder) []service.PaymentOrder {

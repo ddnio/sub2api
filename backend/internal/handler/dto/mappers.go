@@ -800,5 +800,8 @@ func AdminPaymentOrderFromService(o *service.PaymentOrder) AdminPaymentOrderDTO 
 		s := o.RefundedAt.Format(time.RFC3339)
 		d.RefundedAt = &s
 	}
+	if o.User != nil {
+		d.Email = o.User.Email
+	}
 	return d
 }

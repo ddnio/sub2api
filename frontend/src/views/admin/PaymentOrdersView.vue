@@ -152,7 +152,7 @@ const appStore = useAppStore()
 
 const columns = [
   { key: 'order_no', label: t('payment.orderNo') },
-  { key: 'username', label: t('adminPayment.orderUser') },
+  { key: 'email', label: t('adminPayment.orderUser') },
   { key: 'type', label: t('payment.type') },
   { key: 'plan_name', label: t('adminPayment.orderPlan') },
   { key: 'amount', label: t('payment.amount') },

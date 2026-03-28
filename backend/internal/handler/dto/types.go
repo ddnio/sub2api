@@ -560,6 +560,7 @@ type PaymentOrderDTO struct {
 type AdminPaymentOrderDTO struct {
 	PaymentOrderDTO
 	UserID          int64    `json:"user_id"`
+	Email           string   `json:"email"`
 	PlanID          *int64   `json:"plan_id,omitempty"`
 	CreditAmount    *float64 `json:"credit_amount,omitempty"`
 	ProviderOrderNo *string  `json:"provider_order_no,omitempty"`

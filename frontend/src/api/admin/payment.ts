@@ -8,7 +8,7 @@ export interface AdminPaymentPlan extends PaymentPlan {
 
 export interface AdminPaymentOrder extends PaymentOrder {
   user_id: number
-  username: string
+  email: string
   admin_note: string | null
   refunded_at: string | null
   callback_raw: string | null
