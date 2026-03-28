@@ -63,7 +63,20 @@ bash deploy/deploy-server.sh prod   # 部署生产环境
 ## Wire DI
 
 项目使用 Wire 做依赖注入，但 **Go 1.26.1 与 `wire` 生成工具不兼容**，无法运行 `wire gen`。
-`backend/internal/repository/wire_gen.go` 需要**手动维护**：新增或修改 Provider 后直接编辑 `wire_gen.go`，不要尝试跑 `wire` 命令。
+`backend/cmd/server/wire_gen.go` 需要**手动维护**：新增或修改 Provider 后直接编辑 `wire_gen.go`，不要尝试跑 `wire` 命令。
+
+`ent` 代码生成工具**可以正常运行**（与 wire 不同）：
+```bash
+cd backend && go generate ./ent/...
+```
+修改 `backend/ent/schema/` 后需运行此命令重新生成。
+
+## 上游同步
+
+- 上游仓库：`upstream` remote → `https://github.com/Wei-Shaw/sub2api.git`
+- 上次同步：2026-03-28，cherry-pick 了 10 个 bug fix（v0.1.104→v0.1.105 阶段）
+- 待执行：阶段二完整 merge（`feature/upstream-sync-2026q1`），见规划文档
+- **migration 编号说明**：`schema_migrations` 以 filename 为主键，077/078 号存在同号不同内容（我们的 payment + 上游的 requested_model），字典序排列，可安全并存
 
 ## 关键文件
 
@@ -75,7 +88,7 @@ bash deploy/deploy-server.sh prod   # 部署生产环境
 | `docs/engineering/deployment.md` | 完整部署文档 |
 | `docs/engineering/git-workflow.md` | Git 工作流 |
 | `backend/config.yaml` | 本地配置（不提交） |
-| `backend/internal/repository/wire_gen.go` | 手动维护的 Wire 注入文件 |
+| `backend/cmd/server/wire_gen.go` | 手动维护的 Wire 注入文件 |
 | `backend/internal/repository/wxpay_provider.go` | 微信支付 Native Pay v3 Provider |
 | `backend/internal/service/payment_service.go` | 支付业务逻辑（创单、回调、发放权益） |
 | `backend/migrations/077_add_payment_tables.sql` | 支付模块 DB migration |
