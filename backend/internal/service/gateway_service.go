@@ -3753,10 +3753,10 @@ func filterSystemBlocksByPrefix(body []byte) []byte {
 // 处理 null、字符串、数组三种格式
 func injectClaudeCodePrompt(body []byte, system any) []byte {
 	system = normalizeSystemParam(system)
-	claudeCodeBlock, err := marshalAnthropicSystemTextBlock(claudeCodeSystemPrompt, true)
-	if err != nil {
-		logger.LegacyPrintf("service.gateway", "Warning: failed to build Claude Code prompt block: %v", err)
-		return body
+	claudeCodeBlock := map[string]any{
+		"type":          "text",
+		"text":          claudeCodeSystemPrompt,
+		"cache_control": map[string]string{"type": "ephemeral"},
 	}
 	// Opencode plugin applies an extra safeguard: it not only prepends the Claude Code
 	// banner, it also prefixes the next system instruction with the same banner plus
