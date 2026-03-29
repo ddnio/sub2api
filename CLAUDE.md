@@ -74,9 +74,9 @@ cd backend && go generate ./ent/...
 ## 上游同步
 
 - 上游仓库：`upstream` remote → `https://github.com/Wei-Shaw/sub2api.git`
-- 上次同步：2026-03-28，cherry-pick 了 10 个 bug fix（v0.1.104→v0.1.105 阶段）
-- 待执行：阶段二完整 merge（`feature/upstream-sync-2026q1`），见规划文档
+- 上次同步：2026-03-29，完整 merge upstream/main（v0.1.105），含 TLS 指纹、Privacy 模式、requested_model、Responses↔Anthropic 双向转换等
 - **migration 编号说明**：`schema_migrations` 以 filename 为主键，077/078 号存在同号不同内容（我们的 payment + 上游的 requested_model），字典序排列，可安全并存
+- **ent 冲突策略**：merge 时接受 upstream 所有 ent 非 schema 生成文件，手工合并 `ent/schema/`，然后运行 `go generate ./ent/...` 重新生成全部
 
 ## 关键文件
 
