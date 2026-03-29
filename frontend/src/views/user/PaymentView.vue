@@ -53,10 +53,10 @@
           <div v-else class="mb-4"></div>
           <button
             class="btn btn-primary w-full"
-            :disabled="creatingOrder"
+            :disabled="creatingPlanId === plan.id"
             @click="openPlanPayment(plan)"
           >
-            {{ creatingOrder ? t('payment.paying') : t('payment.payNow') }}
+            {{ creatingPlanId === plan.id ? t('payment.paying') : t('payment.payNow') }}
           </button>
         </div>
       </div>
@@ -292,6 +292,7 @@ const handleOrderPageChange = (page: number) => loadOrders(page)
 // 创建订单 & 支付弹窗
 const showPayDialog = ref(false)
 const creatingOrder = ref(false)
+const creatingPlanId = ref<number | null>(null)
 const currentOrder = ref<PaymentOrder | null>(null)
 const qrCodeURL = ref('')
 const payStatus = ref<'waiting' | 'completed' | 'timeout'>('waiting')
@@ -301,6 +302,7 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 let countdownTimer: ReturnType<typeof setInterval> | null = null
 
 const openPlanPayment = async (plan: PaymentPlan) => {
+  creatingPlanId.value = plan.id
   creatingOrder.value = true
   try {
     const res = await paymentAPI.createOrder({
@@ -315,6 +317,7 @@ const openPlanPayment = async (plan: PaymentPlan) => {
     appStore.showError(e?.response?.data?.message || t('common.error'))
   } finally {
     creatingOrder.value = false
+    creatingPlanId.value = null
   }
 }
 
