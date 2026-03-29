@@ -1,5 +1,5 @@
 <template>
-  <footer class="border-t border-gray-200/70 px-6 py-5 dark:border-dark-800/70">
+  <footer class="border-t border-gray-200/70 px-6 py-5 dark:border-dark-700/50">
     <div class="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 text-center text-sm sm:flex-row sm:text-left">
       <p class="text-sm text-gray-500 dark:text-dark-400">
         &copy; {{ currentYear }} {{ siteName }}. {{ t('home.footer.allRightsReserved') }}
