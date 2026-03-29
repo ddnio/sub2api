@@ -25,6 +25,7 @@ import apiKeysAPI from './apiKeys'
 import scheduledTestsAPI from './scheduledTests'
 import backupAPI from './backup'
 import adminPaymentAPI from './payment'
+import tlsFingerprintProfileAPI from './tlsFingerprintProfile'
 
 /**
  * Unified admin API object for convenient access
@@ -51,7 +52,8 @@ export const adminAPI = {
   apiKeys: apiKeysAPI,
   scheduledTests: scheduledTestsAPI,
   backup: backupAPI,
-  payment: adminPaymentAPI
+  payment: adminPaymentAPI,
+  tlsFingerprintProfiles: tlsFingerprintProfileAPI
 }
 
 export {
@@ -76,7 +78,8 @@ export {
   apiKeysAPI,
   scheduledTestsAPI,
   backupAPI,
-  adminPaymentAPI
+  adminPaymentAPI,
+  tlsFingerprintProfileAPI
 }
 
 export default adminAPI
@@ -86,3 +89,4 @@ export type { BalanceHistoryItem } from './users'
 export type { ErrorPassthroughRule, CreateRuleRequest, UpdateRuleRequest } from './errorPassthrough'
 export type { BackupAgentHealth, DataManagementConfig } from './dataManagement'
 export type { AdminPaymentPlan, AdminPaymentOrder, OrderStats, StatsBreakdown } from './payment'
+export type { TLSFingerprintProfile, CreateProfileRequest, UpdateProfileRequest } from './tlsFingerprintProfile'
