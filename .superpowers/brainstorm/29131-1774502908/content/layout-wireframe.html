@@ -1,0 +1,143 @@
+<h2>主页整体布局线框</h2>
+<p class="subtitle">单页滚动式，从上到下四个模块 + Header/Footer</p>
+
+<div class="mockup" style="max-width:700px;margin:0 auto;">
+  <div class="mockup-header">Desktop Layout · 1280px</div>
+  <div class="mockup-body" style="padding:0;background:#0f172a;font-family:system-ui;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#14b8a6,#0d9488);"></div>
+        <span style="color:#f0fdfa;font-weight:700;font-size:15px;">Sub2API</span>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <span style="color:#94a3b8;font-size:12px;">文档</span>
+        <span style="color:#94a3b8;font-size:12px;">🌙</span>
+        <div style="background:linear-gradient(135deg,#14b8a6,#0d9488);padding:4px 14px;border-radius:8px;color:#fff;font-size:11px;">登录</div>
+      </div>
+    </div>
+
+    <!-- Section 1: Hero -->
+    <div style="padding:60px 32px;text-align:center;position:relative;">
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(20,184,166,0.08),transparent 60%);"></div>
+      <div style="position:relative;">
+        <div style="color:rgba(20,184,166,0.8);font-size:11px;font-weight:600;letter-spacing:2px;margin-bottom:12px;">AI API GATEWAY</div>
+        <div style="color:#f0fdfa;font-size:28px;font-weight:800;line-height:1.3;">统一接入，智能路由<br/>一个 Base URL 搞定所有 AI 模型</div>
+        <div style="color:#94a3b8;font-size:13px;margin-top:12px;">兼容 OpenAI 格式 · 多账户负载均衡 · 精细用量管理</div>
+        <div style="margin-top:24px;display:flex;gap:10px;justify-content:center;">
+          <div style="background:linear-gradient(135deg,#14b8a6,#0d9488);padding:8px 20px;border-radius:10px;color:#fff;font-size:12px;font-weight:600;box-shadow:0 0 20px rgba(20,184,166,0.3);">开始使用</div>
+          <div style="border:1px solid rgba(255,255,255,0.1);padding:8px 20px;border-radius:10px;color:#94a3b8;font-size:12px;">查看文档</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(20,184,166,0.15),transparent);margin:0 32px;"></div>
+
+    <!-- Section 2: Code Example -->
+    <div style="padding:40px 32px;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="color:#f0fdfa;font-size:18px;font-weight:700;">快速接入</div>
+        <div style="color:#64748b;font-size:12px;margin-top:4px;">只需替换 Base URL，无需改动任何代码</div>
+      </div>
+      <div style="background:#1e293b;border-radius:12px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;max-width:500px;margin:0 auto;">
+        <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:#eab308;"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;"></div>
+          <span style="color:#64748b;font-size:10px;margin-left:8px;">Python</span>
+        </div>
+        <div style="padding:14px;font-family:monospace;font-size:11px;line-height:1.7;">
+          <div><span style="color:#c084fc;">from</span> <span style="color:#38bdf8;">openai</span> <span style="color:#c084fc;">import</span> OpenAI</div>
+          <div style="margin-top:8px;"><span style="color:#94a3b8;">client</span> = OpenAI(</div>
+          <div style="padding-left:16px;"><span style="color:#94a3b8;">base_url</span>=<span style="color:#4ade80;">"https://api.sub2api.com/v1"</span>,</div>
+          <div style="padding-left:16px;"><span style="color:#94a3b8;">api_key</span>=<span style="color:#4ade80;">"sk-..."</span></div>
+          <div>)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(20,184,166,0.15),transparent);margin:0 32px;"></div>
+
+    <!-- Section 3: Features -->
+    <div style="padding:40px 32px;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="color:#f0fdfa;font-size:18px;font-weight:700;">核心能力</div>
+        <div style="color:#64748b;font-size:12px;margin-top:4px;">为开发者打造的 AI 基础设施</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:500px;margin:0 auto;">
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;">
+          <div style="font-size:20px;margin-bottom:8px;">🔄</div>
+          <div style="color:#f0fdfa;font-size:13px;font-weight:600;">OpenAI 兼容</div>
+          <div style="color:#64748b;font-size:11px;margin-top:4px;">标准 API 格式，零成本迁移</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;">
+          <div style="font-size:20px;margin-bottom:8px;">⚡</div>
+          <div style="color:#f0fdfa;font-size:13px;font-weight:600;">智能路由</div>
+          <div style="color:#64748b;font-size:11px;margin-top:4px;">多账户负载均衡，自动故障转移</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;">
+          <div style="font-size:20px;margin-bottom:8px;">📊</div>
+          <div style="color:#f0fdfa;font-size:13px;font-weight:600;">用量管理</div>
+          <div style="color:#64748b;font-size:11px;margin-top:4px;">Token 级计量，分组配额控制</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;">
+          <div style="font-size:20px;margin-bottom:8px;">🔑</div>
+          <div style="color:#f0fdfa;font-size:13px;font-weight:600;">密钥分发</div>
+          <div style="color:#64748b;font-size:11px;margin-top:4px;">多级 API Key，精细权限管理</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(20,184,166,0.15),transparent);margin:0 32px;"></div>
+
+    <!-- Section 4: Models -->
+    <div style="padding:40px 32px;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="color:#f0fdfa;font-size:18px;font-weight:700;">支持的模型</div>
+        <div style="color:#64748b;font-size:12px;margin-top:4px;">主流 AI 模型一站接入</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:500px;margin:0 auto;">
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:8px;">
+          <div style="width:20px;height:20px;border-radius:6px;background:#10a37f;"></div>
+          <span style="color:#e2e8f0;font-size:12px;font-weight:500;">GPT-4o</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:8px;">
+          <div style="width:20px;height:20px;border-radius:6px;background:#d97706;"></div>
+          <span style="color:#e2e8f0;font-size:12px;font-weight:500;">Claude 4</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:8px;">
+          <div style="width:20px;height:20px;border-radius:6px;background:#4285f4;"></div>
+          <span style="color:#e2e8f0;font-size:12px;font-weight:500;">Gemini 2.5</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:8px;">
+          <div style="width:20px;height:20px;border-radius:6px;background:#0066ff;"></div>
+          <span style="color:#e2e8f0;font-size:12px;font-weight:500;">DeepSeek R1</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:8px;">
+          <div style="width:20px;height:20px;border-radius:6px;background:#6366f1;"></div>
+          <span style="color:#e2e8f0;font-size:12px;font-weight:500;">Llama 4</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:8px;">
+          <div style="width:20px;height:20px;border-radius:6px;background:#64748b;"></div>
+          <span style="color:#94a3b8;font-size:12px;">更多模型...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="border-top:1px solid rgba(255,255,255,0.06);padding:20px 32px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="color:#475569;font-size:11px;">© 2026 Sub2API</span>
+      <div style="display:flex;gap:16px;">
+        <span style="color:#475569;font-size:11px;">文档</span>
+        <span style="color:#475569;font-size:11px;">GitHub</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:24px;text-align:center;">这是深色模式下的整体布局预览。每个模块我们可以逐个细调。</p>

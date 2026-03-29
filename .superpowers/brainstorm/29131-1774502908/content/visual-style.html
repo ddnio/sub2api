@@ -1,0 +1,55 @@
+<h2>你偏好哪种视觉风格？</h2>
+<p class="subtitle">点击选择最接近你期望的方向</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="height:200px;background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:20px;left:20px;right:20px;bottom:20px;border:1px solid rgba(56,189,248,0.2);border-radius:12px;"></div>
+      <div style="position:absolute;top:40px;left:40px;">
+        <div style="color:#38bdf8;font-size:24px;font-weight:700;">Sub2API</div>
+        <div style="color:#94a3b8;font-size:12px;margin-top:8px;">Unified AI Gateway</div>
+      </div>
+      <div style="position:absolute;bottom:30px;right:30px;background:linear-gradient(135deg,#38bdf8,#818cf8);padding:6px 16px;border-radius:6px;color:#fff;font-size:11px;">Get Started →</div>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;border-radius:50%;background:radial-gradient(circle,rgba(56,189,248,0.15),transparent);"></div>
+    </div>
+    <div class="card-body">
+      <h3>A. 深色科技感</h3>
+      <p>深色背景 + 蓝紫渐变高亮，代码终端风格，极客氛围。参考：Vercel、Linear</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="height:200px;background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:20px;left:20px;right:20px;bottom:20px;border:1px solid #e2e8f0;border-radius:12px;background:white;box-shadow:0 1px 3px rgba(0,0,0,0.05);"></div>
+      <div style="position:absolute;top:40px;left:40px;">
+        <div style="color:#0f172a;font-size:24px;font-weight:700;">Sub2API</div>
+        <div style="color:#64748b;font-size:12px;margin-top:8px;">Unified AI Gateway</div>
+      </div>
+      <div style="position:absolute;bottom:30px;right:30px;background:#0f172a;padding:6px 16px;border-radius:6px;color:#fff;font-size:11px;">Get Started →</div>
+      <div style="position:absolute;bottom:30px;left:40px;display:flex;gap:6px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;"></div>
+        <div style="color:#64748b;font-size:11px;">All systems operational</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. 干净明亮</h3>
+      <p>白色为主，大量留白，精致排版，专业商务感。参考：Stripe、Notion</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="height:200px;background:linear-gradient(135deg,#0f172a 0%,#1a1a2e 100%);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(20,184,166,0.12),transparent 60%),radial-gradient(ellipse at 70% 50%,rgba(129,140,248,0.1),transparent 60%);"></div>
+      <div style="position:absolute;top:20px;left:20px;right:20px;bottom:20px;border:1px solid rgba(255,255,255,0.06);border-radius:16px;backdrop-filter:blur(8px);background:rgba(255,255,255,0.03);"></div>
+      <div style="position:absolute;top:40px;left:40px;">
+        <div style="color:#f0fdfa;font-size:24px;font-weight:700;">Sub2API</div>
+        <div style="color:rgba(255,255,255,0.5);font-size:12px;margin-top:8px;">Unified AI Gateway</div>
+      </div>
+      <div style="position:absolute;bottom:30px;right:30px;background:linear-gradient(135deg,#14b8a6,#0d9488);padding:6px 16px;border-radius:8px;color:#fff;font-size:11px;box-shadow:0 0 20px rgba(20,184,166,0.3);">Get Started →</div>
+    </div>
+    <div class="card-body">
+      <h3>C. 毛玻璃 + 微光</h3>
+      <p>深色底 + 毛玻璃卡片 + 柔和辉光效果，精致且有层次。参考：Arc、Raycast</p>
+    </div>
+  </div>
+</div>

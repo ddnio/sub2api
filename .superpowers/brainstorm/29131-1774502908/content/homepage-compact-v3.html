@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sub2API Homepage v3</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background:#eef1f5; display:flex; justify-content:center; padding:24px; }
+  .page { max-width:760px; width:100%; border-radius:16px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.08); }
+
+  .header { display:flex; align-items:center; justify-content:space-between; padding:12px 28px; background:#fff; border-bottom:1px solid #eef0f2; }
+  .logo { display:flex; align-items:center; gap:8px; }
+  .logo-icon { width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,#14b8a6,#0d9488); }
+  .logo-text { color:#0f172a; font-weight:700; font-size:15px; }
+  .nav { display:flex; gap:16px; align-items:center; }
+  .nav-link { color:#64748b; font-size:13px; text-decoration:none; }
+  .nav-btn { background:#0f172a; color:#fff; padding:5px 14px; border-radius:8px; font-size:12px; }
+
+  .hero {
+    background:linear-gradient(160deg,#0c1425,#162032,#0f1b2d);
+    padding:40px 28px 36px; position:relative; overflow:hidden;
+  }
+  .hero::before {
+    content:''; position:absolute; inset:0;
+    background: radial-gradient(ellipse at 25% 0%,rgba(20,184,166,0.1),transparent 50%),
+                radial-gradient(ellipse at 75% 100%,rgba(56,189,248,0.05),transparent 50%);
+  }
+  .hero-inner { position:relative; text-align:center; }
+  .hero-title { color:#f0fdfa; font-size:28px; font-weight:800; line-height:1.5; }
+  .hero-desc { color:#7c8ba1; font-size:13px; margin-top:10px; line-height:1.8; }
+
+  .hero-stats {
+    display:flex; margin:24px auto 0; max-width:340px;
+    background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);
+    border-radius:12px; overflow:hidden;
+  }
+  .stat { flex:1; padding:14px 0; text-align:center; border-right:1px solid rgba(255,255,255,0.06); }
+  .stat:last-child { border-right:none; }
+  .stat-val { color:#2dd4bf; font-size:20px; font-weight:800; }
+  .stat-lbl { color:#546178; font-size:10px; margin-top:3px; }
+
+  /* Inline action - codexcn style */
+  .hero-action {
+    margin:24px auto 0; max-width:440px;
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
+    border-radius:12px; padding:16px 18px;
+  }
+  .action-url {
+    display:flex; align-items:center; justify-content:space-between;
+    background:rgba(0,0,0,0.2); border-radius:8px; padding:8px 12px; margin-bottom:14px;
+  }
+  .action-url-text { color:#cbd5e1; font-size:12px; font-family:ui-monospace,SFMono-Regular,monospace; }
+  .action-url-copy { background:rgba(20,184,166,0.15); color:#2dd4bf; padding:4px 10px; border-radius:6px; font-size:10px; cursor:pointer; }
+  .action-btns { display:flex; gap:10px; }
+  .action-btn-main {
+    flex:1; text-align:center;
+    background:linear-gradient(135deg,#14b8a6,#0d9488); color:#fff;
+    padding:10px 0; border-radius:10px; font-size:13px; font-weight:600;
+    box-shadow:0 4px 16px rgba(20,184,166,0.3);
+  }
+  .action-btn-sub {
+    flex:1; text-align:center;
+    border:1px solid rgba(255,255,255,0.1); color:#94a3b8;
+    padding:10px 0; border-radius:10px; font-size:13px;
+  }
+
+  /* Steps */
+  .steps { padding:20px 28px; background:#f8fafb; }
+  .steps-title { color:#0f172a; font-size:14px; font-weight:700; text-align:center; margin-bottom:14px; }
+  .steps-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .step { background:#fff; border:1px solid #eef0f2; border-radius:12px; padding:16px 14px; text-align:center; }
+  .step-n { width:30px; height:30px; border-radius:8px; background:#f0fdfa; color:#0d9488; font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center; margin:0 auto; }
+  .step-t { color:#0f172a; font-size:13px; font-weight:600; margin-top:8px; }
+  .step-d { color:#94a3b8; font-size:11px; margin-top:2px; }
+
+  /* Code */
+  .code-section { padding:20px 28px; background:#fff; border-top:1px solid #eef0f2; }
+  .code-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .code-title { color:#0f172a; font-size:14px; font-weight:700; }
+  .code-hint { color:#94a3b8; font-size:11px; }
+  .code-block {
+    background:#1e293b; border-radius:10px; padding:14px 16px;
+    font-family:ui-monospace,SFMono-Regular,monospace; font-size:11.5px; line-height:1.7; overflow-x:auto;
+  }
+  .ck { color:#c084fc; } .cm { color:#38bdf8; } .cs { color:#4ade80; } .cv { color:#94a3b8; } .cc { color:#475569; }
+
+  /* Features - user perspective */
+  .features { padding:20px 28px; background:#f8fafb; border-top:1px solid #eef0f2; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .feat { background:#fff; border:1px solid #eef0f2; border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:10px; }
+  .feat-icon { font-size:16px; flex-shrink:0; }
+  .feat-text { color:#0f172a; font-size:12px; font-weight:500; line-height:1.4; }
+
+  /* Models */
+  .models { padding:20px 28px; background:#fff; border-top:1px solid #eef0f2; }
+  .models-title { color:#0f172a; font-size:14px; font-weight:700; margin-bottom:12px; text-align:center; }
+  .model-grid { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+  .mtag { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:6px 12px; font-size:11.5px; color:#334155; display:flex; align-items:center; gap:6px; font-weight:500; }
+  .mdot { width:14px; height:14px; border-radius:4px; }
+  .mtag-soon { background:#fefce8; border-color:#fde68a; color:#92400e; font-size:10px; }
+
+  .footer { display:flex; justify-content:space-between; align-items:center; padding:14px 28px; background:#fff; border-top:1px solid #eef0f2; }
+  .footer span { color:#94a3b8; font-size:11px; }
+  .footer-links { display:flex; gap:16px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="logo"><div class="logo-icon"></div><div class="logo-text">Sub2API</div></div>
+    <div class="nav">
+      <a class="nav-link" href="#">文档</a>
+      <div class="nav-btn">登录</div>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="hero-title">AI API 中转服务</div>
+      <div class="hero-desc">在国内稳定调用 GPT、Claude 系列模型 API<br/>兼容 OpenAI 格式，改一行地址就能用</div>
+
+      <div class="hero-stats">
+        <div class="stat"><div class="stat-val">GPT</div><div class="stat-lbl">全系列</div></div>
+        <div class="stat"><div class="stat-val">Claude</div><div class="stat-lbl">全系列</div></div>
+        <div class="stat"><div class="stat-val">按量</div><div class="stat-lbl">计费</div></div>
+      </div>
+
+      <div class="hero-action">
+        <div class="action-url">
+          <div class="action-url-text">https://api.sub2api.com/v1</div>
+          <div class="action-url-copy">复制</div>
+        </div>
+        <div class="action-btns">
+          <div class="action-btn-main">注册使用</div>
+          <div class="action-btn-sub">接入文档</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="steps-title">三步开始用</div>
+    <div class="steps-grid">
+      <div class="step"><div class="step-n">1</div><div class="step-t">注册账号</div><div class="step-d">邮箱注册即可</div></div>
+      <div class="step"><div class="step-n">2</div><div class="step-t">充值余额</div><div class="step-d">微信支付，按量扣费</div></div>
+      <div class="step"><div class="step-n">3</div><div class="step-t">替换地址开用</div><div class="step-d">改一行 base_url</div></div>
+    </div>
+  </div>
+
+  <div class="code-section">
+    <div class="code-header">
+      <div class="code-title">快速接入</div>
+      <div class="code-hint">和 OpenAI 官方用法一样</div>
+    </div>
+    <div class="code-block">
+<span class="ck">from</span> <span class="cm">openai</span> <span class="ck">import</span> OpenAI<br><br><span class="cv">client</span> = OpenAI(<br>&nbsp;&nbsp;base_url=<span class="cs">"https://api.sub2api.com/v1"</span>,  <span class="cc"># ← 只改这里</span><br>&nbsp;&nbsp;api_key=<span class="cs">"sk-your-key"</span>,<br>)<br><span class="cv">resp</span> = client.chat.completions.create(<br>&nbsp;&nbsp;model=<span class="cs">"gpt-4o"</span>,<br>&nbsp;&nbsp;messages=[{<span class="cs">"role"</span>: <span class="cs">"user"</span>, <span class="cs">"content"</span>: <span class="cs">"你好"</span>}]<br>)
+    </div>
+  </div>
+
+  <div class="features">
+    <div class="feat"><div class="feat-icon">🔌</div><div class="feat-text">兼容 OpenAI 格式，不用改代码</div></div>
+    <div class="feat"><div class="feat-icon">⚡</div><div class="feat-text">多通道自动切换，不怕掉线</div></div>
+    <div class="feat"><div class="feat-icon">💰</div><div class="feat-text">按量计费，用多少花多少</div></div>
+    <div class="feat"><div class="feat-icon">📊</div><div class="feat-text">用量明细清楚，花费一目了然</div></div>
+  </div>
+
+  <div class="models">
+    <div class="models-title">支持的模型</div>
+    <div class="model-grid">
+      <div class="mtag"><div class="mdot" style="background:#10a37f;"></div>GPT-4o</div>
+      <div class="mtag"><div class="mdot" style="background:#10a37f;"></div>GPT-4o mini</div>
+      <div class="mtag"><div class="mdot" style="background:#10a37f;"></div>o3</div>
+      <div class="mtag"><div class="mdot" style="background:#10a37f;"></div>o4-mini</div>
+      <div class="mtag"><div class="mdot" style="background:#d97706;"></div>Claude 4 Sonnet</div>
+      <div class="mtag"><div class="mdot" style="background:#d97706;"></div>Claude 4 Opus</div>
+      <div class="mtag"><div class="mdot" style="background:#d97706;"></div>Claude 3.5 Haiku</div>
+      <div class="mtag mtag-soon">Gemini · 即将上线</div>
+      <div class="mtag mtag-soon">DeepSeek · 即将上线</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>© 2026 Sub2API</span>
+    <div class="footer-links"><span>文档</span><span>联系我们</span></div>
+  </div>
+
+</div>
+</body>
+</html>

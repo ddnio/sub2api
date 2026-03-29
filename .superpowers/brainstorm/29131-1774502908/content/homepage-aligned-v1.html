@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sub2API Homepage - Aligned</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background:#eef1f5; display:flex; justify-content:center; padding:24px;
+  }
+  .page { max-width:800px; width:100%; border-radius:20px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.06); }
+
+  /* === Page background === */
+  .page-bg {
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 45%, #f8fafc 100%);
+    position:relative;
+  }
+  /* Decorative blurred orbs - matching HomeView */
+  .page-bg::before {
+    content:''; position:absolute; top:0; right:-40px;
+    width:280px; height:280px; border-radius:50%;
+    background:rgba(20,184,166,0.06); filter:blur(60px);
+  }
+  .page-bg::after {
+    content:''; position:absolute; bottom:100px; left:-20px;
+    width:280px; height:280px; border-radius:50%;
+    background:rgba(20,184,166,0.06); filter:blur(60px);
+  }
+  /* Subtle grid overlay */
+  .grid-overlay {
+    position:absolute; inset:0; pointer-events:none;
+    background: linear-gradient(rgba(20,184,166,0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(20,184,166,0.015) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+
+  /* === Header - matching HomeHeader style === */
+  .header {
+    position:relative; z-index:10;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 24px;
+  }
+  .logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
+  .logo-icon {
+    width:36px; height:36px; border-radius:12px;
+    border:1px solid #e2e8f0; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.04);
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+  }
+  .logo-icon-inner {
+    width:24px; height:24px; border-radius:6px;
+    background:linear-gradient(135deg,#14b8a6,#0d9488);
+  }
+  .logo-text { color:#0f172a; font-size:15px; font-weight:600; }
+  .header-right { display:flex; align-items:center; gap:8px; }
+  .header-link { color:#64748b; font-size:13px; text-decoration:none; margin-right:4px; }
+  .header-theme {
+    width:32px; height:32px; border-radius:8px; border:none; background:transparent;
+    color:#64748b; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .header-btn {
+    display:inline-flex; align-items:center;
+    background:#111827; color:#fff; padding:5px 14px; border-radius:999px;
+    font-size:12px; font-weight:500; text-decoration:none;
+  }
+
+  /* === Hero card - glass style matching HomeView === */
+  .hero-section {
+    position:relative; z-index:5;
+    padding:8px 24px 0;
+  }
+  .hero-card {
+    border-radius:24px;
+    border:1px solid rgba(229,231,235,0.6);
+    background:rgba(255,255,255,0.72);
+    backdrop-filter:blur(8px);
+    box-shadow:0 1px 3px rgba(0,0,0,0.03);
+    padding:32px 28px;
+  }
+
+  /* Hero layout - two columns like current */
+  .hero-inner { display:grid; grid-template-columns:1fr 1fr; gap:28px; align-items:center; }
+
+  /* Left: copy */
+  .hero-tag {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 12px; border-radius:999px;
+    border:1px solid rgba(16,185,129,0.16);
+    background:rgba(236,253,245,0.72);
+    font-size:12px; font-weight:600; color:#047857;
+  }
+  .hero-tag-dot {
+    width:10px; height:10px; border-radius:999px;
+    background:linear-gradient(135deg,#10b981,#34d399);
+  }
+  .hero-overline { font-size:13px; font-weight:600; color:#0f766e; margin-top:14px; }
+  .hero-title {
+    font-size:36px; font-weight:800; line-height:1.1;
+    letter-spacing:-0.03em; color:#0f172a; margin-top:8px;
+  }
+  .hero-desc { font-size:14px; line-height:1.8; color:#64748b; margin-top:10px; max-width:380px; }
+
+  /* CTA buttons - matching btn-cta / btn-docs */
+  .hero-actions { display:flex; gap:10px; margin-top:20px; }
+  .btn-cta {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:10px 18px; border-radius:14px;
+    background:linear-gradient(135deg,#34d399,#10b981);
+    color:#fff; font-size:13px; font-weight:600;
+    box-shadow:0 8px 20px rgba(16,185,129,0.16);
+    text-decoration:none;
+  }
+  .btn-cta svg { width:14px; height:14px; }
+  .btn-docs {
+    display:inline-flex; align-items:center;
+    padding:10px 16px; border-radius:14px;
+    border:1px solid rgba(148,163,184,0.22);
+    background:rgba(255,255,255,0.75);
+    color:#0f172a; font-size:13px; font-weight:600;
+    text-decoration:none;
+  }
+
+  /* URL bar - pill style matching current */
+  .url-section { margin-top:18px; }
+  .url-hint { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:#64748b; }
+  .url-hint-dot {
+    width:8px; height:8px; border-radius:999px;
+    background:linear-gradient(135deg,#10b981,#34d399);
+    box-shadow:0 0 0 3px rgba(52,211,153,0.14);
+  }
+  .url-bar {
+    display:inline-flex; align-items:center; gap:10px; margin-top:8px;
+    padding:8px 10px 8px 14px; border-radius:999px;
+    background:#0f172a; box-shadow:0 6px 16px rgba(15,23,42,0.08);
+  }
+  .url-code { font-family:ui-monospace,SFMono-Regular,monospace; font-size:12px; color:#a7f3d0; }
+  .url-copy {
+    display:inline-flex; align-items:center; gap:4px;
+    background:rgba(255,255,255,0.08); color:#e2e8f0;
+    padding:5px 10px; border-radius:999px; font-size:11px; font-weight:600;
+    border:none; cursor:pointer;
+  }
+
+  /* Right: terminal - matching current terminal-window style */
+  .terminal {
+    border:1px solid rgba(226,232,240,0.95);
+    border-radius:20px; overflow:hidden;
+    background:rgba(255,255,255,0.92);
+    box-shadow:0 16px 36px rgba(15,23,42,0.05);
+  }
+  .terminal-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; border-bottom:1px solid rgba(226,232,240,0.9);
+  }
+  .terminal-dots { display:flex; gap:8px; }
+  .dot { width:12px; height:12px; border-radius:999px; }
+  .dot-r { background:#fb7185; } .dot-y { background:#fbbf24; } .dot-g { background:#4ade80; }
+  .terminal-tab { font-size:10px; font-weight:800; letter-spacing:0.18em; text-transform:uppercase; color:#94a3b8; }
+  .terminal-body {
+    padding:16px; font-family:ui-monospace,SFMono-Regular,monospace;
+    font-size:12px; line-height:1.75; color:#334155;
+  }
+  .t-kw { color:#1d4ed8; } .t-str { color:#059669; } .t-cmt { color:#94a3b8; }
+
+  /* === Below hero === */
+  .content-area { position:relative; z-index:5; }
+
+  /* Stats row */
+  .stats {
+    display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;
+    padding:16px 24px 0;
+  }
+  .stat-card {
+    border-radius:16px;
+    border:1px solid rgba(229,231,235,0.7);
+    background:rgba(255,255,255,0.75);
+    padding:14px 16px; text-align:center;
+  }
+  .stat-val { color:#0f172a; font-size:18px; font-weight:800; }
+  .stat-lbl { color:#64748b; font-size:11px; margin-top:2px; }
+
+  /* Steps */
+  .steps {
+    display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;
+    padding:16px 24px 0;
+  }
+  .step {
+    border-radius:16px;
+    border:1px solid rgba(229,231,235,0.7);
+    background:rgba(255,255,255,0.75);
+    padding:16px 14px; text-align:center;
+  }
+  .step-n {
+    width:28px; height:28px; border-radius:8px;
+    background:rgba(236,253,245,0.8); color:#047857;
+    font-weight:700; font-size:13px;
+    display:flex; align-items:center; justify-content:center; margin:0 auto;
+  }
+  .step-t { color:#0f172a; font-size:13px; font-weight:600; margin-top:8px; }
+  .step-d { color:#94a3b8; font-size:11px; margin-top:2px; }
+
+  /* Features */
+  .features {
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+    padding:16px 24px 0;
+  }
+  .feat {
+    border-radius:16px;
+    border:1px solid rgba(229,231,235,0.7);
+    background:rgba(255,255,255,0.75);
+    padding:12px 16px; display:flex; align-items:center; gap:10px;
+  }
+  .feat-icon { font-size:15px; }
+  .feat-text { color:#334155; font-size:12px; font-weight:500; }
+
+  /* Models */
+  .models { padding:16px 24px 0; }
+  .models-header { text-align:center; margin-bottom:12px; }
+  .models-title { color:#0f172a; font-size:14px; font-weight:700; }
+  .model-grid { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+  .mtag {
+    border-radius:10px;
+    border:1px solid rgba(229,231,235,0.8);
+    background:rgba(255,255,255,0.8);
+    padding:6px 12px; font-size:11.5px; color:#334155;
+    display:flex; align-items:center; gap:6px; font-weight:500;
+  }
+  .mdot { width:12px; height:12px; border-radius:4px; }
+  .mtag-soon {
+    background:rgba(254,252,232,0.8); border-color:rgba(253,230,138,0.6);
+    color:#92400e; font-size:10px;
+  }
+
+  /* Footer */
+  .footer {
+    position:relative; z-index:5;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:20px 24px; margin-top:16px;
+  }
+  .footer span { color:#94a3b8; font-size:11px; }
+  .footer-links { display:flex; gap:16px; }
+</style>
+</head>
+<body>
+<div class="page">
+<div class="page-bg">
+  <div class="grid-overlay"></div>
+
+  <!-- Header -->
+  <div class="header">
+    <a class="logo" href="#">
+      <div class="logo-icon"><div class="logo-icon-inner"></div></div>
+      <div class="logo-text">Sub2API</div>
+    </a>
+    <div class="header-right">
+      <a class="header-link" href="#">文档</a>
+      <div class="header-theme">🌙</div>
+      <a class="header-btn" href="#">登录</a>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero-section">
+    <div class="hero-card">
+      <div class="hero-inner">
+        <!-- Left -->
+        <div>
+          <div class="hero-tag">
+            <span class="hero-tag-dot"></span>
+            AI API 中转服务
+          </div>
+          <p class="hero-overline">在国内稳定调用主流 AI 模型</p>
+          <h1 class="hero-title">Sub2API</h1>
+          <p class="hero-desc">支持 GPT、Claude 全系列模型 API，兼容 OpenAI 接口格式，改一行地址就能用</p>
+
+          <div class="hero-actions">
+            <a class="btn-cta" href="#">
+              注册使用
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+              </svg>
+            </a>
+            <a class="btn-docs" href="#">接入文档</a>
+          </div>
+
+          <div class="url-section">
+            <div class="url-hint">
+              <span class="url-hint-dot"></span>
+              Base URL
+            </div>
+            <div class="url-bar">
+              <code class="url-code">https://api.sub2api.com/v1</code>
+              <button class="url-copy">复制</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Terminal -->
+        <div class="terminal">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="dot dot-r"></span>
+              <span class="dot dot-y"></span>
+              <span class="dot dot-g"></span>
+            </div>
+            <span class="terminal-tab">Python</span>
+          </div>
+          <div class="terminal-body">
+            <span class="t-cmt"># 和 OpenAI 官方用法一样</span><br>
+            <span class="t-kw">from</span> openai <span class="t-kw">import</span> OpenAI<br><br>
+            client = OpenAI(<br>
+            &nbsp;&nbsp;base_url=<span class="t-str">"https://api.sub2api.com/v1"</span>,<br>
+            &nbsp;&nbsp;api_key=<span class="t-str">"sk-..."</span>,<br>
+            )<br><br>
+            resp = client.chat.completions.create(<br>
+            &nbsp;&nbsp;model=<span class="t-str">"gpt-5.4"</span>,<br>
+            &nbsp;&nbsp;messages=[{<span class="t-str">"role"</span>: <span class="t-str">"user"</span>,<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span class="t-str">"content"</span>: <span class="t-str">"你好"</span>}]<br>
+            )
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-area">
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card"><div class="stat-val">GPT 全系列</div><div class="stat-lbl">GPT-5.4 / 5.3 / mini</div></div>
+      <div class="stat-card"><div class="stat-val">Claude 全系列</div><div class="stat-lbl">Opus / Sonnet / Haiku</div></div>
+      <div class="stat-card"><div class="stat-val">按量计费</div><div class="stat-lbl">微信支付充值</div></div>
+    </div>
+
+    <!-- Steps -->
+    <div class="steps">
+      <div class="step"><div class="step-n">1</div><div class="step-t">注册账号</div><div class="step-d">邮箱注册即可</div></div>
+      <div class="step"><div class="step-n">2</div><div class="step-t">充值余额</div><div class="step-d">微信支付，按量扣费</div></div>
+      <div class="step"><div class="step-n">3</div><div class="step-t">替换地址开用</div><div class="step-d">改一行 base_url</div></div>
+    </div>
+
+    <!-- Features -->
+    <div class="features">
+      <div class="feat"><div class="feat-icon">🔌</div><div class="feat-text">兼容 OpenAI 格式，不用改代码</div></div>
+      <div class="feat"><div class="feat-icon">⚡</div><div class="feat-text">多通道自动切换，不怕掉线</div></div>
+      <div class="feat"><div class="feat-icon">💰</div><div class="feat-text">按量计费，用多少花多少</div></div>
+      <div class="feat"><div class="feat-icon">📊</div><div class="feat-text">用量明细清楚，花费一目了然</div></div>
+    </div>
+
+    <!-- Models -->
+    <div class="models">
+      <div class="models-header"><div class="models-title">支持的模型</div></div>
+      <div class="model-grid">
+        <div class="mtag"><div class="mdot" style="background:#10a37f;"></div>GPT-5.4</div>
+        <div class="mtag"><div class="mdot" style="background:#10a37f;"></div>GPT-5.4 mini</div>
+        <div class="mtag"><div class="mdot" style="background:#10a37f;"></div>GPT-5.3</div>
+        <div class="mtag"><div class="mdot" style="background:#d97706;"></div>Claude Opus 4.6</div>
+        <div class="mtag"><div class="mdot" style="background:#d97706;"></div>Claude Sonnet 4.6</div>
+        <div class="mtag"><div class="mdot" style="background:#d97706;"></div>Claude Haiku 4.5</div>
+        <div class="mtag mtag-soon">Gemini · 即将上线</div>
+        <div class="mtag mtag-soon">DeepSeek · 即将上线</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span>© 2026 Sub2API</span>
+    <div class="footer-links"><span>文档</span><span>联系我们</span></div>
+  </div>
+
+</div>
+</div>
+</body>
+</html>

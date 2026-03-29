@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sub2API Homepage Design</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background:#f4f6f8; }
+  .page { max-width:800px; margin:24px auto; border-radius:16px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.08); }
+
+  /* === Header === */
+  .header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 32px; background:#fff; border-bottom:1px solid #eef0f2;
+  }
+  .header-logo { display:flex; align-items:center; gap:10px; }
+  .header-logo-icon {
+    width:30px; height:30px; border-radius:9px;
+    background:linear-gradient(135deg,#14b8a6,#0d9488);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:14px;
+  }
+  .header-logo-text { color:#0f172a; font-weight:700; font-size:16px; }
+  .header-nav { display:flex; gap:20px; align-items:center; }
+  .header-nav a { color:#64748b; font-size:13px; text-decoration:none; }
+  .header-btn {
+    background:#0f172a; color:#fff; padding:6px 16px; border-radius:8px;
+    font-size:12px; font-weight:500;
+  }
+
+  /* === Hero === */
+  .hero {
+    background:linear-gradient(160deg,#0c1425 0%,#162032 50%,#0f1b2d 100%);
+    padding:48px 32px 40px; position:relative; overflow:hidden;
+  }
+  .hero::before {
+    content:''; position:absolute; inset:0;
+    background:
+      radial-gradient(ellipse at 25% 0%, rgba(20,184,166,0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 75% 100%, rgba(56,189,248,0.06) 0%, transparent 50%);
+  }
+  .hero-inner { position:relative; text-align:center; }
+  .hero-badge {
+    display:inline-block; background:rgba(20,184,166,0.1); border:1px solid rgba(20,184,166,0.2);
+    color:#2dd4bf; font-size:11px; font-weight:600; padding:4px 14px; border-radius:20px;
+    letter-spacing:0.5px; margin-bottom:20px;
+  }
+  .hero-title { color:#f0fdfa; font-size:32px; font-weight:800; line-height:1.4; }
+  .hero-desc { color:#7c8ba1; font-size:14px; margin-top:12px; line-height:1.8; }
+
+  /* Stats */
+  .hero-stats {
+    display:flex; justify-content:center; gap:0; margin-top:28px;
+    background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);
+    border-radius:14px; overflow:hidden; max-width:420px; margin-left:auto; margin-right:auto;
+  }
+  .hero-stat {
+    flex:1; padding:16px 0; text-align:center;
+    border-right:1px solid rgba(255,255,255,0.06);
+  }
+  .hero-stat:last-child { border-right:none; }
+  .hero-stat-value { color:#2dd4bf; font-size:22px; font-weight:800; }
+  .hero-stat-label { color:#546178; font-size:11px; margin-top:4px; }
+
+  /* URL Box */
+  .hero-url {
+    margin:24px auto 0; max-width:460px;
+    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+    border-radius:12px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .hero-url-label { color:#546178; font-size:10px; }
+  .hero-url-value { color:#cbd5e1; font-size:13px; font-family:ui-monospace,SFMono-Regular,monospace; margin-top:2px; }
+  .hero-url-copy {
+    background:rgba(20,184,166,0.12); color:#2dd4bf; padding:6px 12px; border-radius:8px;
+    font-size:11px; font-weight:500; white-space:nowrap; cursor:pointer;
+  }
+
+  /* CTA */
+  .hero-cta { margin-top:28px; display:flex; gap:12px; justify-content:center; }
+  .btn-primary {
+    background:linear-gradient(135deg,#14b8a6,#0d9488); color:#fff;
+    padding:11px 28px; border-radius:12px; font-size:14px; font-weight:600;
+    box-shadow:0 4px 20px rgba(20,184,166,0.3);
+  }
+  .btn-secondary {
+    border:1px solid rgba(255,255,255,0.1); color:#94a3b8;
+    padding:11px 28px; border-radius:12px; font-size:14px;
+  }
+
+  /* === Steps === */
+  .steps { padding:28px 32px; background:#f8fafb; }
+  .steps-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+  .step-card {
+    background:#fff; border:1px solid #eef0f2; border-radius:14px; padding:20px 18px;
+    text-align:center; position:relative;
+  }
+  .step-num {
+    width:36px; height:36px; border-radius:10px; background:#f0fdfa; color:#0d9488;
+    font-weight:700; font-size:15px; display:flex; align-items:center; justify-content:center;
+    margin:0 auto;
+  }
+  .step-title { color:#0f172a; font-size:14px; font-weight:600; margin-top:12px; }
+  .step-desc { color:#94a3b8; font-size:12px; margin-top:4px; line-height:1.5; }
+  .step-arrow {
+    position:absolute; right:-18px; top:50%; transform:translateY(-50%);
+    color:#cbd5e1; font-size:16px;
+  }
+
+  /* === Code Example === */
+  .code-section { padding:28px 32px; background:#fff; border-top:1px solid #eef0f2; }
+  .section-header { text-align:center; margin-bottom:20px; }
+  .section-title { color:#0f172a; font-size:18px; font-weight:700; }
+  .section-desc { color:#94a3b8; font-size:13px; margin-top:4px; }
+
+  .code-tabs { display:flex; gap:0; margin-bottom:0; }
+  .code-tab {
+    padding:8px 16px; font-size:12px; font-weight:500; cursor:pointer;
+    border-radius:8px 8px 0 0;
+  }
+  .code-tab-active { background:#1e293b; color:#e2e8f0; }
+  .code-tab-inactive { background:#f1f5f9; color:#64748b; }
+  .code-block {
+    background:#1e293b; border-radius:0 12px 12px 12px; padding:20px;
+    font-family:ui-monospace,SFMono-Regular,monospace; font-size:12.5px; line-height:1.8;
+    position:relative; overflow-x:auto;
+  }
+  .code-copy {
+    position:absolute; top:12px; right:12px; background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.1); color:#94a3b8; padding:4px 10px;
+    border-radius:6px; font-size:10px; cursor:pointer;
+  }
+  .c-keyword { color:#c084fc; }
+  .c-module { color:#38bdf8; }
+  .c-string { color:#4ade80; }
+  .c-var { color:#94a3b8; }
+  .c-comment { color:#475569; }
+
+  /* === Features === */
+  .features { padding:28px 32px; background:#f8fafb; border-top:1px solid #eef0f2; }
+  .features-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .feature-card {
+    background:#fff; border:1px solid #eef0f2; border-radius:14px; padding:20px;
+    display:flex; gap:14px; align-items:flex-start;
+  }
+  .feature-icon {
+    width:40px; height:40px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:18px;
+  }
+  .feature-icon-teal { background:#f0fdfa; }
+  .feature-icon-blue { background:#eff6ff; }
+  .feature-icon-purple { background:#faf5ff; }
+  .feature-icon-amber { background:#fffbeb; }
+  .feature-title { color:#0f172a; font-size:14px; font-weight:600; }
+  .feature-desc { color:#94a3b8; font-size:12px; margin-top:3px; line-height:1.5; }
+
+  /* === Models === */
+  .models { padding:28px 32px; background:#fff; border-top:1px solid #eef0f2; }
+  .model-grid { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+  .model-tag {
+    background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;
+    padding:8px 14px; font-size:12px; color:#334155;
+    display:flex; align-items:center; gap:8px; font-weight:500;
+  }
+  .model-dot { width:16px; height:16px; border-radius:5px; flex-shrink:0; }
+  .model-more { color:#94a3b8; font-weight:400; }
+
+  /* === Footer === */
+  .footer {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:18px 32px; background:#fff; border-top:1px solid #eef0f2;
+  }
+  .footer-copy { color:#94a3b8; font-size:11px; }
+  .footer-links { display:flex; gap:20px; }
+  .footer-links a { color:#94a3b8; font-size:11px; text-decoration:none; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo">
+      <div class="header-logo-icon">S</div>
+      <div class="header-logo-text">Sub2API</div>
+    </div>
+    <div class="header-nav">
+      <a href="#">文档</a>
+      <a href="#">价格</a>
+      <div class="header-btn">登录 / 注册</div>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="hero-badge">AI API 中转服务</div>
+      <div class="hero-title">在国内方便地调用<br/>各家 AI 模型 API</div>
+      <div class="hero-desc">
+        支持 ChatGPT、Claude、Gemini、DeepSeek 等主流模型<br/>
+        兼容 OpenAI 接口格式，改一行 base_url 就能用
+      </div>
+
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-value">50+</div>
+          <div class="hero-stat-label">可用模型</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">99.9%</div>
+          <div class="hero-stat-label">服务可用率</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">按量</div>
+          <div class="hero-stat-label">灵活计费</div>
+        </div>
+      </div>
+
+      <div class="hero-url">
+        <div>
+          <div class="hero-url-label">Base URL</div>
+          <div class="hero-url-value">https://api.sub2api.com/v1</div>
+        </div>
+        <div class="hero-url-copy">复制</div>
+      </div>
+
+      <div class="hero-cta">
+        <div class="btn-primary">注册使用</div>
+        <div class="btn-secondary">接入文档</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Steps -->
+  <div class="steps">
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <div class="step-title">注册账号</div>
+        <div class="step-desc">支持微信扫码登录</div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <div class="step-title">获取 API Key</div>
+        <div class="step-desc">后台一键创建密钥</div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <div class="step-title">替换地址开用</div>
+        <div class="step-desc">改一行 base_url 即可</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Code Example -->
+  <div class="code-section">
+    <div class="section-header">
+      <div class="section-title">快速接入</div>
+      <div class="section-desc">和调用 OpenAI 官方 API 一模一样，只改地址和密钥</div>
+    </div>
+    <div class="code-tabs">
+      <div class="code-tab code-tab-active">Python</div>
+      <div class="code-tab code-tab-inactive">Node.js</div>
+      <div class="code-tab code-tab-inactive">cURL</div>
+    </div>
+    <div class="code-block">
+      <div class="code-copy">复制</div>
+      <span class="c-keyword">from</span> <span class="c-module">openai</span> <span class="c-keyword">import</span> OpenAI<br><br>
+      <span class="c-var">client</span> = OpenAI(<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;base_url=<span class="c-string">"https://api.sub2api.com/v1"</span>,&nbsp;&nbsp;<span class="c-comment"># ← 只改这里</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;api_key=<span class="c-string">"sk-your-key"</span>,<br>
+      )<br><br>
+      <span class="c-var">response</span> = client.chat.completions.create(<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;model=<span class="c-string">"gpt-4o"</span>,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;messages=[{<span class="c-string">"role"</span>: <span class="c-string">"user"</span>, <span class="c-string">"content"</span>: <span class="c-string">"你好"</span>}]<br>
+      )<br>
+      <span class="c-keyword">print</span>(response.choices[<span class="c-module">0</span>].message.content)
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div class="features">
+    <div class="section-header">
+      <div class="section-title">为什么用 Sub2API</div>
+      <div class="section-desc">帮你省掉和 AI API 打交道中的麻烦事</div>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-teal">🔌</div>
+        <div>
+          <div class="feature-title">兼容 OpenAI 格式</div>
+          <div class="feature-desc">用 OpenAI SDK 就能调所有模型，已有代码不用改</div>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-blue">⚡</div>
+        <div>
+          <div class="feature-title">多通道自动切换</div>
+          <div class="feature-desc">一个通道挂了自动换下一个，你的业务不受影响</div>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-amber">📊</div>
+        <div>
+          <div class="feature-title">用量一目了然</div>
+          <div class="feature-desc">每个 Key 花了多少 Token 一清二楚，支持配额控制</div>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-purple">🔑</div>
+        <div>
+          <div class="feature-title">多级密钥管理</div>
+          <div class="feature-desc">给不同项目或成员分配独立 API Key，权限分开管</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Models -->
+  <div class="models">
+    <div class="section-header">
+      <div class="section-title">支持的模型</div>
+      <div class="section-desc">主流 AI 模型都能用，持续更新中</div>
+    </div>
+    <div class="model-grid">
+      <div class="model-tag"><div class="model-dot" style="background:#10a37f;"></div>GPT-4o</div>
+      <div class="model-tag"><div class="model-dot" style="background:#10a37f;"></div>GPT-4o mini</div>
+      <div class="model-tag"><div class="model-dot" style="background:#10a37f;"></div>o3</div>
+      <div class="model-tag"><div class="model-dot" style="background:#d97706;"></div>Claude 4 Sonnet</div>
+      <div class="model-tag"><div class="model-dot" style="background:#d97706;"></div>Claude 4 Opus</div>
+      <div class="model-tag"><div class="model-dot" style="background:#4285f4;"></div>Gemini 2.5 Pro</div>
+      <div class="model-tag"><div class="model-dot" style="background:#4285f4;"></div>Gemini 2.5 Flash</div>
+      <div class="model-tag"><div class="model-dot" style="background:#0066ff;"></div>DeepSeek R1</div>
+      <div class="model-tag"><div class="model-dot" style="background:#0066ff;"></div>DeepSeek V3</div>
+      <div class="model-tag"><div class="model-dot" style="background:#6366f1;"></div>Llama 4</div>
+      <div class="model-tag"><div class="model-dot" style="background:#6366f1;"></div>Qwen 3</div>
+      <div class="model-tag model-more"><div class="model-dot" style="background:#cbd5e1;"></div>更多模型...</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-copy">© 2026 Sub2API</div>
+    <div class="footer-links">
+      <a href="#">接入文档</a>
+      <a href="#">联系我们</a>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
