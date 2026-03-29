@@ -1,5 +1,5 @@
 <template>
-  <header class="px-6 py-4">
+  <header class="px-6 py-4 backdrop-blur-sm dark:bg-dark-950/80">
     <nav class="mx-auto flex max-w-5xl items-center justify-between gap-6">
       <router-link to="/home" class="flex items-center gap-2.5">
         <div class="h-9 w-9 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-dark-700 dark:bg-dark-900">
