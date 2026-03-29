@@ -11,7 +11,7 @@
 
   <div
     v-else
-    class="relative flex min-h-screen flex-col overflow-hidden bg-[linear-gradient(180deg,_#f8fafc_0%,_#ffffff_45%,_#f8fafc_100%)] dark:bg-dark-950"
+    class="relative flex min-h-screen flex-col overflow-hidden bg-[linear-gradient(180deg,_#f8fafc_0%,_#ffffff_45%,_#f8fafc_100%)] dark:bg-none dark:bg-dark-950"
   >
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
       <div class="absolute -right-40 top-0 h-72 w-72 rounded-full bg-primary-400/8 blur-3xl dark:bg-primary-400/[0.12]"></div>
