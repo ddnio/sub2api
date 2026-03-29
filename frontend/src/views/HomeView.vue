@@ -21,7 +21,7 @@
 
     <HomeHeader :is-dark="isDark" @toggle-theme="toggleTheme" />
 
-    <main class="relative flex-1 px-6 pb-12 pt-8 lg:pb-16 lg:pt-10">
+    <main class="relative flex-1 px-4 pb-12 pt-6 sm:px-6 sm:pt-8 lg:pb-16 lg:pt-10">
       <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 lg:gap-8">
         <section class="rounded-3xl border border-gray-200/60 bg-white/72 p-6 shadow-sm backdrop-blur-sm dark:border-dark-800/60 dark:bg-dark-900/50 lg:p-7">
           <HomeHero />
