@@ -174,7 +174,29 @@ bash deploy/deploy-server.sh prod
 
 ---
 
-## 五、Caddy 反向代理
+## 五、Cloudflare + Caddy 反向代理
+
+### Cloudflare CDN（2026-03-30 接入）
+
+域名 `nanafox.com` 的 DNS 已迁移到 Cloudflare（NS: `eugene.ns.cloudflare.com` / `suzanne.ns.cloudflare.com`），用于优化中国大陆用户访问日本服务器的延迟。
+
+架构：
+```
+用户 ──HTTPS──> Cloudflare 边缘节点 ──HTTPS──> Caddy(日本服务器) ──> Go 应用
+```
+
+Cloudflare 配置要点：
+- SSL/TLS 模式：**Full (Strict)**（Caddy 有 Let's Encrypt 真实证书）
+- `router` 和 `router-test` 的 A 记录均为 **Proxied**（橙色云）
+- 缓存策略：使用默认规则（自动缓存静态资源，API 不缓存）
+- 管理入口：https://dash.cloudflare.com（账号 Ddnio@outlook.com）
+
+注意事项：
+- 真实服务器 IP（108.160.133.141）已被 Cloudflare 隐藏，不要在公开渠道泄露
+- Caddy 日志中看到的客户端 IP 是 Cloudflare 节点 IP，非用户真实 IP
+- DNS 记录变更需在 Cloudflare Dashboard 操作，不再在阿里云万网管理
+
+### Caddy 反向代理
 
 配置文件：`/etc/caddy/Caddyfile`（服务器），代码库模板：`deploy/Caddyfile`
 
@@ -185,7 +207,7 @@ bash deploy/deploy-server.sh prod
 | `router-test.nanafox.com` | `127.0.0.1:8081` | 测试 |
 | `router.nanafox.com` | `127.0.0.1:8080` | 生产 |
 
-Caddy 自动申请 Let's Encrypt 证书（需 DNS 先指向服务器）。
+Caddy 自动申请 Let's Encrypt 证书（Cloudflare 回源时会验证此证书）。
 
 修改后重载：
 ```bash
