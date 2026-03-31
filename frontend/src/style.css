@@ -414,10 +414,7 @@
     @apply flex-shrink-0;
   }
 
-  /* 防止body滚动的工具类 */
-  body.modal-open {
-    overflow: hidden;
-  }
+  /* scroll-lock 由 useScrollLock composable 通过 position: fixed 实现，不再使用 overflow: hidden */
 
   .modal-enter-active {
     transition: opacity 250ms ease-out;
