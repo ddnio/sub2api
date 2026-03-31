@@ -322,6 +322,7 @@ import { useAnnouncementStore } from '@/stores/announcements'
 import { formatRelativeTime, formatRelativeWithDateTime } from '@/utils/format'
 import type { UserAnnouncement } from '@/types'
 import Icon from '@/components/icons/Icon.vue'
+import { useScrollLock } from '@/composables/useScrollLock'
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -407,17 +408,24 @@ onMounted(() => {
   document.addEventListener('keydown', handleEscape)
 })
 
+const { lock, unlock } = useScrollLock()
+let modalLocked = false
+let detailLocked = false
+
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleEscape)
-  document.body.style.overflow = ''
+  if (modalLocked) { unlock(); modalLocked = false }
+  if (detailLocked) { unlock(); detailLocked = false }
 })
 
-watch(
-  [isModalOpen, detailModalOpen, () => announcementStore.currentPopup],
-  ([modal, detail, popup]) => {
-    document.body.style.overflow = (modal || detail || popup) ? 'hidden' : ''
-  }
-)
+watch(isModalOpen, (open) => {
+  if (open && !modalLocked) { lock(); modalLocked = true }
+  if (!open && modalLocked) { unlock(); modalLocked = false }
+})
+watch(detailModalOpen, (open) => {
+  if (open && !detailLocked) { lock(); detailLocked = true }
+  if (!open && detailLocked) { unlock(); detailLocked = false }
+})
 </script>
 
 <style scoped>

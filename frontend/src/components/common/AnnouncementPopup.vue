@@ -90,6 +90,7 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { useAnnouncementStore } from '@/stores/announcements'
 import { formatRelativeWithDateTime } from '@/utils/format'
+import { useScrollLock } from '@/composables/useScrollLock'
 
 const { t } = useI18n()
 const announcementStore = useAnnouncementStore()
@@ -110,13 +111,14 @@ function handleDismiss() {
   announcementStore.dismissPopup()
 }
 
-// Manage body overflow — only set, never unset (bell component handles restore)
+const { lock, unlock } = useScrollLock()
+let lockedByMe = false
+
 watch(
   () => announcementStore.currentPopup,
   (popup) => {
-    if (popup) {
-      document.body.style.overflow = 'hidden'
-    }
+    if (popup && !lockedByMe) { lock(); lockedByMe = true }
+    if (!popup && lockedByMe) { unlock(); lockedByMe = false }
   }
 )
 </script>
