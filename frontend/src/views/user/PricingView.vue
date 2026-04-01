@@ -35,31 +35,10 @@
             />
           </div>
 
-          <!-- Unit Toggle -->
-          <div class="flex items-center rounded-xl border border-gray-200 dark:border-dark-600">
-            <button
-              :class="[
-                'rounded-l-xl px-3 py-2 text-xs font-medium transition-colors',
-                unit === 'million'
-                  ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-              ]"
-              @click="unit = 'million'"
-            >
-              {{ t('pricing.unitPerMillion') }}
-            </button>
-            <button
-              :class="[
-                'rounded-r-xl px-3 py-2 text-xs font-medium transition-colors',
-                unit === 'thousand'
-                  ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-              ]"
-              @click="unit = 'thousand'"
-            >
-              {{ t('pricing.unitPerThousand') }}
-            </button>
-          </div>
+          <!-- Unit Label -->
+          <span class="rounded-xl border border-gray-200 px-3 py-2 text-xs font-medium text-gray-500 dark:border-dark-600 dark:text-gray-400">
+            {{ t('pricing.unitPerMillion') }}
+          </span>
 
           <!-- Rate Badge -->
           <span
@@ -294,7 +273,6 @@ const models = ref<ModelPricingItem[]>([])
 const groups = ref<Group[]>([])
 const selectedGroupId = ref<number | undefined>(undefined)
 const searchQuery = ref('')
-const unit = ref<'million' | 'thousand'>('million')
 const currentRate = ref(1.0)
 const notice = ref('')
 const loadError = ref(false)
@@ -361,7 +339,7 @@ async function loadPricing(groupId?: number) {
 
 function formatPrice(value: number | null | undefined): string {
   if (value == null) return '—'
-  const v = unit.value === 'thousand' ? value / 1000 : value
+  const v = value
   if (v === 0) return '$0'
   if (Math.abs(v) < 0.01) return `$${v.toFixed(4)}`
   if (Math.abs(v) < 1) return `$${v.toFixed(3)}`
