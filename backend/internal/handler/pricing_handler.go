@@ -121,7 +121,7 @@ func (h *PricingHandler) GetModelPricing(c *gin.Context) {
 				effectiveRate = userRate
 			}
 		}
-		if effectiveRate <= 0 {
+		if effectiveRate < 0 {
 			effectiveRate = 1.0
 		}
 	}
@@ -242,16 +242,22 @@ func addDefaultModelsForPlatform(modelSet map[string]struct{}, platform string) 
 			modelSet[id] = struct{}{}
 		}
 	case service.PlatformGemini:
-		// Gemini defaults handled by geminicli package; for now add common ones.
 		for _, id := range []string{"gemini-2.5-pro", "gemini-2.5-flash"} {
 			modelSet[id] = struct{}{}
 		}
-	default:
-		// Antigravity or unknown: add both Claude and OpenAI defaults.
+	case service.PlatformAntigravity:
+		// Antigravity supports Claude + Gemini models (not OpenAI).
 		for _, id := range claude.DefaultModelIDs() {
 			modelSet[id] = struct{}{}
 		}
-		for _, id := range openai.DefaultModelIDs() {
+		for _, id := range []string{"gemini-2.5-pro", "gemini-2.5-flash"} {
+			modelSet[id] = struct{}{}
+		}
+	case service.PlatformSora:
+		// Sora models are per-request priced (not token-based); skip for pricing page.
+	default:
+		// Unknown platform: add Claude defaults as safe fallback.
+		for _, id := range claude.DefaultModelIDs() {
 			modelSet[id] = struct{}{}
 		}
 	}
