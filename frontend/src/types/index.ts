@@ -1623,3 +1623,37 @@ export interface UpdateScheduledTestPlanRequest {
   max_results?: number
   auto_recover?: boolean
 }
+
+// ==================== Model Pricing Types ====================
+
+export interface PriceSet {
+  input_per_million: number
+  output_per_million: number
+  cache_read_per_million: number | null
+  cache_creation_per_million: number | null
+}
+
+export interface EffectivePriceSet extends PriceSet {
+  rate_multiplier: number
+}
+
+export interface ModelPricingItem {
+  id: string
+  display_name: string
+  owned_by: string
+  category: string
+  pricing: PriceSet
+  effective_pricing: EffectivePriceSet | null
+}
+
+export interface PricingGroupInfo {
+  id: number
+  name: string
+  rate_multiplier: number
+}
+
+export interface ModelPricingResponse {
+  models: ModelPricingItem[]
+  group: PricingGroupInfo | null
+  notice?: string
+}
