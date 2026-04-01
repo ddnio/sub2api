@@ -143,7 +143,6 @@
                     <template v-for="model in catModels" :key="model.id">
                       <tr
                         class="transition-colors hover:bg-gray-50/50 dark:hover:bg-dark-800/30"
-                        :class="{ 'bg-gray-50/30 dark:bg-dark-800/20': expandedModels.has(model.id) }"
                       >
                         <!-- Model Name -->
                         <td class="px-4 py-3">
@@ -254,7 +253,7 @@
                   <div v-else class="text-sm text-gray-900 dark:text-white">{{ formatPrice(model.pricing.cache_read_per_million) }}</div>
                 </div>
                 <!-- Cache Creation -->
-                <div v-if="hasCacheCreation(model)">
+                <div>
                   <div class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">{{ t('pricing.cacheCreation') }}</div>
                   <template v-if="model.pricing.cache_creation_per_million == null">
                     <span class="text-sm text-gray-300 dark:text-gray-600">—</span>
@@ -296,7 +295,6 @@ const groups = ref<Group[]>([])
 const selectedGroupId = ref<number | undefined>(undefined)
 const searchQuery = ref('')
 const unit = ref<'million' | 'thousand'>('million')
-const expandedModels = ref<Set<string>>(new Set())
 const currentRate = ref(1.0)
 const notice = ref('')
 const loadError = ref(false)
@@ -370,19 +368,8 @@ function formatPrice(value: number | null | undefined): string {
   return `$${v.toFixed(2)}`
 }
 
-function hasCacheCreation(model: ModelPricingItem): boolean {
-  return model.pricing.cache_creation_per_million != null
-}
-
-function toggleExpand(modelId: string) {
-  const s = new Set(expandedModels.value)
-  if (s.has(modelId)) s.delete(modelId)
-  else s.add(modelId)
-  expandedModels.value = s
-}
 
 function onGroupChange() {
-  expandedModels.value = new Set()
   loadPricing(selectedGroupId.value)
 }
 
