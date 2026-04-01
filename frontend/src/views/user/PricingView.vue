@@ -143,33 +143,32 @@
                       >
                         <!-- Model Name -->
                         <td class="px-4 py-3">
-                          <div class="text-sm font-medium text-gray-900 dark:text-white">{{ model.display_name }}</div>
-                          <div class="text-xs text-gray-400 dark:text-gray-500">{{ model.id }}</div>
+                          <div class="text-sm font-medium text-gray-900 dark:text-white">{{ model.id }}</div>
                         </td>
                         <!-- Input Price -->
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-4 py-3 text-right whitespace-nowrap">
                           <template v-if="hasGroup && model.effective_pricing">
-                            <div class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.input_per_million) }}</div>
-                            <div class="text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.input_per_million) }}</div>
+                            <span class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.input_per_million) }}</span>
+                            <span class="ml-1.5 text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.input_per_million) }}</span>
                           </template>
                           <span v-else class="text-sm text-gray-900 dark:text-white">{{ formatPrice(model.pricing.input_per_million) }}</span>
                         </td>
                         <!-- Output Price -->
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-4 py-3 text-right whitespace-nowrap">
                           <template v-if="hasGroup && model.effective_pricing">
-                            <div class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.output_per_million) }}</div>
-                            <div class="text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.output_per_million) }}</div>
+                            <span class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.output_per_million) }}</span>
+                            <span class="ml-1.5 text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.output_per_million) }}</span>
                           </template>
                           <span v-else class="text-sm text-gray-900 dark:text-white">{{ formatPrice(model.pricing.output_per_million) }}</span>
                         </td>
                         <!-- Cache Read Price -->
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-4 py-3 text-right whitespace-nowrap">
                           <template v-if="model.pricing.cache_read_per_million == null">
                             <span class="text-sm text-gray-300 dark:text-gray-600">—</span>
                           </template>
                           <template v-else-if="hasGroup && model.effective_pricing">
-                            <div class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.cache_read_per_million) }}</div>
-                            <div class="text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.cache_read_per_million) }}</div>
+                            <span class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.cache_read_per_million) }}</span>
+                            <span class="ml-1.5 text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.cache_read_per_million) }}</span>
                           </template>
                           <span v-else class="text-sm text-gray-900 dark:text-white">{{ formatPrice(model.pricing.cache_read_per_million) }}</span>
                         </td>
@@ -237,11 +236,8 @@
               :key="model.id"
               class="card p-4"
             >
-              <div class="mb-3 flex items-start justify-between">
-                <div>
-                  <div class="text-sm font-medium text-gray-900 dark:text-white">{{ model.display_name }}</div>
-                  <div class="text-xs text-gray-400 dark:text-gray-500">{{ model.id }}</div>
-                </div>
+              <div class="mb-3 flex items-center justify-between">
+                <div class="text-sm font-medium text-gray-900 dark:text-white">{{ model.id }}</div>
                 <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-dark-700 dark:text-gray-400">
                   {{ model.owned_by }}
                 </span>
@@ -251,8 +247,8 @@
                 <div>
                   <div class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">{{ t('pricing.input') }}</div>
                   <template v-if="hasGroup && model.effective_pricing">
-                    <div class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.input_per_million) }}</div>
-                    <div class="text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.input_per_million) }}</div>
+                    <span class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.input_per_million) }}</span>
+                    <span class="ml-1 text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.input_per_million) }}</span>
                   </template>
                   <div v-else class="text-sm text-gray-900 dark:text-white">{{ formatPrice(model.pricing.input_per_million) }}</div>
                 </div>
@@ -260,8 +256,8 @@
                 <div>
                   <div class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">{{ t('pricing.output') }}</div>
                   <template v-if="hasGroup && model.effective_pricing">
-                    <div class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.output_per_million) }}</div>
-                    <div class="text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.output_per_million) }}</div>
+                    <span class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.output_per_million) }}</span>
+                    <span class="ml-1 text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.output_per_million) }}</span>
                   </template>
                   <div v-else class="text-sm text-gray-900 dark:text-white">{{ formatPrice(model.pricing.output_per_million) }}</div>
                 </div>
@@ -272,8 +268,8 @@
                     <span class="text-sm text-gray-300 dark:text-gray-600">—</span>
                   </template>
                   <template v-else-if="hasGroup && model.effective_pricing">
-                    <div class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.cache_read_per_million) }}</div>
-                    <div class="text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.cache_read_per_million) }}</div>
+                    <span class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.cache_read_per_million) }}</span>
+                    <span class="ml-1 text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.cache_read_per_million) }}</span>
                   </template>
                   <div v-else class="text-sm text-gray-900 dark:text-white">{{ formatPrice(model.pricing.cache_read_per_million) }}</div>
                 </div>
@@ -284,8 +280,8 @@
                     <span class="text-sm text-gray-300 dark:text-gray-600">—</span>
                   </template>
                   <template v-else-if="hasGroup && model.effective_pricing">
-                    <div class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.cache_creation_per_million) }}</div>
-                    <div class="text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.cache_creation_per_million) }}</div>
+                    <span class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.cache_creation_per_million) }}</span>
+                    <span class="ml-1 text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.cache_creation_per_million) }}</span>
                   </template>
                   <div v-else class="text-sm text-gray-900 dark:text-white">{{ formatPrice(model.pricing.cache_creation_per_million) }}</div>
                 </div>
