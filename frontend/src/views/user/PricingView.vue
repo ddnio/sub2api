@@ -122,7 +122,11 @@
                     <th class="sticky top-0 bg-gray-50 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:bg-dark-800 dark:text-gray-400">
                       {{ t('pricing.cacheRead') }}
                     </th>
-                    <th class="sticky top-0 w-10 bg-gray-50 px-4 py-3 dark:bg-dark-800">
+                    <th class="sticky top-0 bg-gray-50 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:bg-dark-800 dark:text-gray-400">
+                      {{ t('pricing.cacheCreation') }}
+                    </th>
+                    <th class="sticky top-0 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:bg-dark-800 dark:text-gray-400">
+                      {{ t('pricing.provider') }}
                     </th>
                   </tr>
                 </thead>
@@ -130,7 +134,7 @@
                   <template v-for="(catModels, category) in groupedModels" :key="category">
                     <!-- Category Header -->
                     <tr>
-                      <td colspan="5" class="bg-gray-50/80 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:bg-dark-800/80 dark:text-gray-400">
+                      <td colspan="7" class="bg-gray-50/80 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:bg-dark-800/80 dark:text-gray-400">
                         {{ formatCategory(category as string) }}
                         <span class="ml-1 text-gray-400 dark:text-gray-500">({{ catModels.length }})</span>
                       </td>
@@ -172,44 +176,20 @@
                           </template>
                           <span v-else class="text-sm text-gray-900 dark:text-white">{{ formatPrice(model.pricing.cache_read_per_million) }}</span>
                         </td>
-                        <!-- Expand Arrow -->
-                        <td class="px-4 py-3 text-center">
-                          <button
-                            v-if="hasCacheCreation(model)"
-                            class="inline-flex items-center justify-center rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-dark-700 dark:hover:text-gray-300"
-                            :title="expandedModels.has(model.id) ? t('pricing.collapse') : t('pricing.expand')"
-                            @click="toggleExpand(model.id)"
-                          >
-                            <svg
-                              class="h-4 w-4 transition-transform duration-200"
-                              :class="{ 'rotate-180': expandedModels.has(model.id) }"
-                              fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"
-                            >
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </button>
+                        <!-- Cache Creation Price -->
+                        <td class="px-4 py-3 text-right whitespace-nowrap">
+                          <template v-if="model.pricing.cache_creation_per_million == null">
+                            <span class="text-sm text-gray-300 dark:text-gray-600">—</span>
+                          </template>
+                          <template v-else-if="hasGroup && model.effective_pricing">
+                            <span class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.cache_creation_per_million) }}</span>
+                            <span class="ml-1.5 text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.cache_creation_per_million) }}</span>
+                          </template>
+                          <span v-else class="text-sm text-gray-900 dark:text-white">{{ formatPrice(model.pricing.cache_creation_per_million) }}</span>
                         </td>
-                      </tr>
-                      <!-- Expanded Detail Row -->
-                      <tr v-if="expandedModels.has(model.id)" class="bg-gray-50/50 dark:bg-dark-800/50">
-                        <td colspan="5" class="px-4 py-3">
-                          <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-                            <div class="flex items-center gap-2">
-                              <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('pricing.cacheCreation') }}:</span>
-                              <template v-if="model.pricing.cache_creation_per_million == null">
-                                <span class="text-sm text-gray-300 dark:text-gray-600">—</span>
-                              </template>
-                              <template v-else-if="hasGroup && model.effective_pricing">
-                                <span class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ formatPrice(model.effective_pricing.cache_creation_per_million) }}</span>
-                                <span class="ml-1 text-xs text-gray-400 dark:text-gray-500">{{ formatPrice(model.pricing.cache_creation_per_million) }}</span>
-                              </template>
-                              <span v-else class="text-sm text-gray-900 dark:text-white">{{ formatPrice(model.pricing.cache_creation_per_million) }}</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                              <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('pricing.provider') }}:</span>
-                              <span class="text-sm text-gray-700 dark:text-gray-300">{{ model.owned_by }}</span>
-                            </div>
-                          </div>
+                        <!-- Provider -->
+                        <td class="px-4 py-3 whitespace-nowrap">
+                          <span class="text-sm text-gray-500 dark:text-gray-400">{{ model.owned_by }}</span>
                         </td>
                       </tr>
                     </template>
