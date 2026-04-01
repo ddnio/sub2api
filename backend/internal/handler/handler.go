@@ -52,6 +52,7 @@ type Handlers struct {
 	Totp            *TotpHandler
 	Payment         *PaymentHandler
 	PaymentCallback *PaymentCallbackHandler
+	Pricing         *PricingHandler
 }
 
 // BuildInfo contains build-time information

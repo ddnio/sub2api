@@ -96,6 +96,7 @@ func ProvideHandlers(
 	_ *service.IdempotencyCleanupService,
 	paymentHandler *PaymentHandler,
 	paymentCallbackHandler *PaymentCallbackHandler,
+	pricingHandler *PricingHandler,
 ) *Handlers {
 	return &Handlers{
 		Auth:            authHandler,
@@ -114,6 +115,7 @@ func ProvideHandlers(
 		Totp:            totpHandler,
 		Payment:         paymentHandler,
 		PaymentCallback: paymentCallbackHandler,
+		Pricing:         pricingHandler,
 	}
 }
 
@@ -164,6 +166,7 @@ var ProviderSet = wire.NewSet(
 	// User-facing payment handlers
 	NewPaymentHandler,
 	NewPaymentCallbackHandler,
+	NewPricingHandler,
 
 	// AdminHandlers and Handlers constructors
 	ProvideAdminHandlers,
