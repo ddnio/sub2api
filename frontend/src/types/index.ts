@@ -1627,8 +1627,8 @@ export interface UpdateScheduledTestPlanRequest {
 // ==================== Model Pricing Types ====================
 
 export interface PriceSet {
-  input_per_million: number
-  output_per_million: number
+  input_per_million: number | null
+  output_per_million: number | null
   cache_read_per_million: number | null
   cache_creation_per_million: number | null
 }

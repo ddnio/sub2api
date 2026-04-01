@@ -85,6 +85,15 @@
         </div>
       </div>
 
+      <!-- Error State -->
+      <div v-else-if="loadError" class="card p-12 text-center">
+        <svg class="mx-auto mb-4 h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+        </svg>
+        <p class="text-gray-500 dark:text-gray-400">{{ t('pricing.loadError') || 'Failed to load pricing data' }}</p>
+        <button @click="loadPricing(selectedGroupId)" class="btn btn-primary mt-4">{{ t('common.retry') || 'Retry' }}</button>
+      </div>
+
       <!-- Empty State -->
       <div v-else-if="filteredModels.length === 0" class="card p-12 text-center">
         <svg class="mx-auto mb-4 h-12 w-12 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
@@ -314,9 +323,10 @@ const unit = ref<'million' | 'thousand'>('million')
 const expandedModels = ref<Set<string>>(new Set())
 const currentRate = ref(1.0)
 const notice = ref('')
+const loadError = ref(false)
 
 // --------------- Computed ---------------
-const hasGroup = computed(() => selectedGroupId.value !== undefined && currentRate.value !== 1.0)
+const hasGroup = computed(() => selectedGroupId.value !== undefined)
 
 const filteredModels = computed(() => {
   const q = searchQuery.value.toLowerCase().trim()
@@ -360,6 +370,7 @@ async function loadGroups() {
 
 async function loadPricing(groupId?: number) {
   loading.value = true
+  loadError.value = false
   try {
     const res = await pricingAPI.getModelPricing(groupId)
     models.value = res.models || []
@@ -368,6 +379,7 @@ async function loadPricing(groupId?: number) {
   } catch (e) {
     console.error('Failed to load pricing:', e)
     models.value = []
+    loadError.value = true
   } finally {
     loading.value = false
   }

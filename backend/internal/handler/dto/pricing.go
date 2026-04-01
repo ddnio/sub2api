@@ -12,18 +12,20 @@ type ModelPricingItem struct {
 }
 
 // PriceSet holds base prices in USD per million tokens.
-// nil means "not supported" (render as "—"), 0 means "free" (render as "$0").
+// nil means "not supported / pricing unavailable" (render as "—").
+// Explicit 0 means "free" (render as "$0").
 type PriceSet struct {
-	InputPerMillion         float64  `json:"input_per_million"`
-	OutputPerMillion        float64  `json:"output_per_million"`
+	InputPerMillion         *float64 `json:"input_per_million"`
+	OutputPerMillion        *float64 `json:"output_per_million"`
 	CacheReadPerMillion     *float64 `json:"cache_read_per_million"`
 	CacheCreationPerMillion *float64 `json:"cache_creation_per_million"`
 }
 
 // EffectivePriceSet holds prices after applying group/user rate multiplier.
+// nil fields inherit nil from base PriceSet (pricing unavailable).
 type EffectivePriceSet struct {
-	InputPerMillion         float64  `json:"input_per_million"`
-	OutputPerMillion        float64  `json:"output_per_million"`
+	InputPerMillion         *float64 `json:"input_per_million"`
+	OutputPerMillion        *float64 `json:"output_per_million"`
 	CacheReadPerMillion     *float64 `json:"cache_read_per_million"`
 	CacheCreationPerMillion *float64 `json:"cache_creation_per_million"`
 	RateMultiplier          float64  `json:"rate_multiplier"`
