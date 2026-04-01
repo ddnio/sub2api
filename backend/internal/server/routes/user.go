@@ -91,6 +91,12 @@ func RegisterUserRoutes(
 			subscriptions.GET("/summary", h.Subscription.GetSummary)
 		}
 
+		// 模型定价
+		pricing := authenticated.Group("/pricing")
+		{
+			pricing.GET("/models", h.Pricing.GetModelPricing)
+		}
+
 		// 支付
 		registerPaymentRoutes(authenticated, h)
 	}

@@ -469,7 +469,8 @@ export default {
     docs: 'Docs',
     sora: 'Sora Studio',
     payment: 'Recharge / Plans',
-    paymentManagement: 'Payment Management'
+    paymentManagement: 'Payment Management',
+    pricing: 'Model Pricing',
   },
 
   // Auth
@@ -5180,6 +5181,33 @@ export default {
     checkingStatus: 'Checking...',
     recommended: 'Recommended',
     badge: 'Badge'
+  },
+
+  // Pricing
+  pricing: {
+    title: 'Model Pricing',
+    description: 'View input/output prices for available AI models',
+    searchPlaceholder: 'Search models...',
+    groupFilter: 'Group',
+    groupAll: 'All (Base Price)',
+    currentRate: 'Current rate',
+    unitPerMillion: '$/M tokens',
+    unitPerThousand: '$/1K tokens',
+    modelName: 'Model',
+    input: 'Input',
+    output: 'Output',
+    cacheRead: 'Cache Read',
+    cacheCreation: 'Cache Write',
+    effectivePrice: 'Effective',
+    basePrice: 'Base',
+    details: 'Details',
+    provider: 'Provider',
+    noModels: 'No models available',
+    noPricing: 'Pricing not available',
+    loadError: 'Failed to load pricing data',
+    notice: 'Prices are standard-tier estimates. Actual costs may vary with service tier and context length.',
+    expand: 'Show details',
+    collapse: 'Hide details',
   },
 
   // Admin Payment

@@ -469,7 +469,8 @@ export default {
     docs: '文档',
     sora: 'Sora 创作',
     payment: '充值 / 订阅',
-    paymentManagement: '支付管理'
+    paymentManagement: '支付管理',
+    pricing: '模型定价',
   },
 
   // Auth
@@ -5369,6 +5370,33 @@ export default {
     checkingStatus: '查询中...',
     recommended: '推荐',
     badge: '标签'
+  },
+
+  // Pricing
+  pricing: {
+    title: '模型定价',
+    description: '查看各 AI 模型的输入输出价格',
+    searchPlaceholder: '搜索模型...',
+    groupFilter: '分组',
+    groupAll: '全部（基础价）',
+    currentRate: '当前倍率',
+    unitPerMillion: '$/百万 tokens',
+    unitPerThousand: '$/千 tokens',
+    modelName: '模型',
+    input: '输入',
+    output: '输出',
+    cacheRead: '缓存读取',
+    cacheCreation: '缓存写入',
+    effectivePrice: '有效价格',
+    basePrice: '基础价',
+    details: '详情',
+    provider: '提供商',
+    noModels: '暂无可用模型',
+    noPricing: '暂无价格信息',
+    loadError: '加载价格数据失败',
+    notice: '价格为标准层级估算，实际费用可能因 service tier 和上下文长度有所不同。',
+    expand: '展开详情',
+    collapse: '收起详情',
   },
 
   // Admin Payment
