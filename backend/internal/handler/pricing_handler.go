@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -108,7 +109,11 @@ func (h *PricingHandler) GetModelPricing(c *gin.Context) {
 	sort.Strings(modelIDs)
 
 	// Load user-specific group rate overrides (C2 fix: use per-user rates).
-	userGroupRates, _ := h.apiKeyService.GetUserGroupRates(c.Request.Context(), subject.UserID)
+	// F2: log error but fallback to group default rate (non-blocking).
+	userGroupRates, userRateErr := h.apiKeyService.GetUserGroupRates(c.Request.Context(), subject.UserID)
+	if userRateErr != nil {
+		log.Printf("[Pricing] failed to load user group rates for user %d, falling back to group defaults: %v", subject.UserID, userRateErr)
+	}
 
 	// Resolve effective rate multiplier for the selected group.
 	var effectiveRate float64 = 1.0

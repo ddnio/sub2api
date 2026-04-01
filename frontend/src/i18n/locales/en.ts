@@ -5204,6 +5204,7 @@ export default {
     provider: 'Provider',
     noModels: 'No models available',
     noPricing: 'Pricing not available',
+    loadError: 'Failed to load pricing data',
     notice: 'Prices are standard-tier estimates. Actual costs may vary with service tier and context length.',
     expand: 'Show details',
     collapse: 'Hide details',

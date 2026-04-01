@@ -5393,6 +5393,7 @@ export default {
     provider: '提供商',
     noModels: '暂无可用模型',
     noPricing: '暂无价格信息',
+    loadError: '加载价格数据失败',
     notice: '价格为标准层级估算，实际费用可能因 service tier 和上下文长度有所不同。',
     expand: '展开详情',
     collapse: '收起详情',
