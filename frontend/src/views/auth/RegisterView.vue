@@ -284,7 +284,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { AuthLayout } from '@/components/layout'
@@ -292,7 +292,7 @@ import LinuxDoOAuthSection from '@/components/auth/LinuxDoOAuthSection.vue'
 import Icon from '@/components/icons/Icon.vue'
 import TurnstileWidget from '@/components/TurnstileWidget.vue'
 import { useAuthStore, useAppStore } from '@/stores'
-import { getPublicSettings, validatePromoCode, validateInvitationCode } from '@/api/auth'
+import { validatePromoCode, validateInvitationCode } from '@/api/auth'
 import { buildAuthErrorMessage } from '@/utils/authError'
 import {
   isRegistrationEmailSuffixAllowed,
@@ -322,7 +322,7 @@ const promoCodeEnabled = ref<boolean>(true)
 const invitationCodeEnabled = ref<boolean>(false)
 const turnstileEnabled = ref<boolean>(false)
 const turnstileSiteKey = ref<string>('')
-const siteName = ref<string>('Sub2API')
+const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'NanaFox API')
 const linuxdoOAuthEnabled = ref<boolean>(false)
 const registrationEmailSuffixWhitelist = ref<string[]>([])
 
@@ -367,14 +367,16 @@ const errors = reactive({
 
 onMounted(async () => {
   try {
-    const settings = await getPublicSettings()
+    await appStore.fetchPublicSettings()
+    const settings = appStore.cachedPublicSettings
+    if (!settings) return
     registrationEnabled.value = settings.registration_enabled
     emailVerifyEnabled.value = settings.email_verify_enabled
     promoCodeEnabled.value = settings.promo_code_enabled
     invitationCodeEnabled.value = settings.invitation_code_enabled
     turnstileEnabled.value = settings.turnstile_enabled
     turnstileSiteKey.value = settings.turnstile_site_key || ''
-    siteName.value = settings.site_name || 'Sub2API'
+
     linuxdoOAuthEnabled.value = settings.linuxdo_oauth_enabled
     registrationEmailSuffixWhitelist.value = normalizeRegistrationEmailSuffixWhitelist(
       settings.registration_email_suffix_whitelist || []
