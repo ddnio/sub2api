@@ -787,7 +787,7 @@
                   {{ t('admin.settings.registration.invitationCodeHint') }}
                 </p>
               </div>
-              <Toggle v-model="form.invitation_code_enabled" />
+              <Toggle v-model="form.invitation_code_enabled" @update:model-value="(val: boolean) => { if (val) form.referral_enabled = false }" />
             </div>
             <!-- Referral -->
             <div
@@ -800,8 +800,11 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400">
                   {{ t('admin.settings.registration.referralEnabledHint') }}
                 </p>
+                <p v-if="form.invitation_code_enabled && form.referral_enabled" class="mt-1 text-sm text-amber-600 dark:text-amber-400">
+                  {{ t('admin.settings.registration.referralInvitationConflict') }}
+                </p>
               </div>
-              <Toggle v-model="form.referral_enabled" />
+              <Toggle v-model="form.referral_enabled" @update:model-value="(val: boolean) => { if (val) form.invitation_code_enabled = false }" />
             </div>
             <!-- Referral Reward Amounts (when enabled) -->
             <div

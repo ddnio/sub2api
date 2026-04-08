@@ -26,7 +26,7 @@
         <div class="rounded-lg border border-gray-200 px-4 py-3 dark:border-dark-600">
           <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.users.referralInvitedBy') }}</p>
           <p class="mt-1 text-sm font-medium text-gray-900 dark:text-white">
-            {{ referralData?.invited_by?.invitee_email || '-' }}
+            {{ referralData?.invited_by?.inviter_email || '-' }}
           </p>
         </div>
       </div>

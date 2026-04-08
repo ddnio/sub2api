@@ -55,6 +55,7 @@ type ReferralRecord struct {
 	ID              int64     `json:"id"`
 	InviterID       int64     `json:"inviter_id"`
 	InviteeID       int64     `json:"invitee_id"`
+	InviterEmail    string    `json:"inviter_email"`
 	InviteeEmail    string    `json:"invitee_email"`
 	Code            string    `json:"code"`
 	InviterRewarded float64   `json:"inviter_rewarded"`
@@ -343,7 +344,7 @@ func (s *ReferralService) GetReferralByInvitee(ctx context.Context, inviteeID in
 		ID:              r.ID,
 		InviterID:       r.InviterID,
 		InviteeID:       r.InviteeID,
-		InviteeEmail:    inviterEmail, // admin 看到的是邀请人邮箱
+		InviterEmail:    inviterEmail,
 		Code:            r.Code,
 		InviterRewarded: r.InviterRewarded,
 		InviteeRewarded: r.InviteeRewarded,

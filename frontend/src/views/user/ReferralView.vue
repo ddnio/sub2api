@@ -117,11 +117,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useAppStore } from '@/stores/app'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { getReferralInfo, getReferralList } from '@/api/referral'
 import type { ReferralInfo, ReferralRecord } from '@/api/referral'
 
 const { t } = useI18n()
+const appStore = useAppStore()
 
 const loading = ref(true)
 const referralInfo = ref<ReferralInfo | null>(null)
@@ -131,7 +133,8 @@ const showCopyToast = ref(false)
 
 const referralLink = computed(() => {
   if (!referralInfo.value?.referral_code) return ''
-  const base = window.location.origin
+  const apiBaseUrl = appStore.cachedPublicSettings?.api_base_url
+  const base = apiBaseUrl || window.location.origin
   return `${base}/register?ref=${referralInfo.value.referral_code}`
 })
 

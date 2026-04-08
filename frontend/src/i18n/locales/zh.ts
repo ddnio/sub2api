@@ -4419,6 +4419,7 @@ export default {
         invitationCodeHint: '开启后，用户注册时需要填写有效的邀请码',
         referralEnabled: '推荐码功能',
         referralEnabledHint: '开启后，用户可通过推荐码邀请好友注册并获得奖励',
+        referralInvitationConflict: '推荐码与邀请码注册互斥，开启推荐码将自动关闭邀请码注册',
         referralInviterAmount: '邀请人奖励（$）',
         referralInviteeAmount: '被邀请人奖励（$）',
         passwordReset: '忘记密码',

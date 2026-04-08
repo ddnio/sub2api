@@ -4253,6 +4253,7 @@ export default {
         invitationCodeHint: 'When enabled, users must enter a valid invitation code to register',
         referralEnabled: 'Referral System',
         referralEnabledHint: 'When enabled, users can invite friends via referral code and earn rewards',
+        referralInvitationConflict: 'Referral and invitation code registration are mutually exclusive. Enabling referral will disable invitation code.',
         referralInviterAmount: 'Inviter Reward ($)',
         referralInviteeAmount: 'Invitee Reward ($)',
         passwordReset: 'Password Reset',
