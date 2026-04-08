@@ -148,16 +148,30 @@
           </transition>
         </div>
 
-        <!-- Referral Code: 通过 ?ref= URL 参数静默传递 -->
-        <div v-if="formData.referral_code" class="flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2 dark:bg-green-900/20">
-          <Icon name="checkCircle" size="sm" class="text-green-600 dark:text-green-400" />
-          <span class="text-sm text-green-700 dark:text-green-400">
+        <!-- Referral Code Input (当有 ?ref= 时替代优惠码输入框) -->
+        <div v-if="formData.referral_code">
+          <label for="referral_code" class="input-label">
+            {{ t('auth.referralCodeLabel') }}
+          </label>
+          <div class="relative">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+              <Icon name="checkCircle" size="md" class="text-green-500" />
+            </div>
+            <input
+              id="referral_code"
+              v-model="formData.referral_code"
+              type="text"
+              readonly
+              class="input pl-11 border-green-500 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+            />
+          </div>
+          <p class="mt-1 text-sm text-green-600 dark:text-green-400">
             {{ t('auth.referralCodeApplied', { code: formData.referral_code }) }}
-          </span>
+          </p>
         </div>
 
-        <!-- Promo Code Input (Optional) -->
-        <div v-if="promoCodeEnabled">
+        <!-- Promo Code Input (Optional, 有推荐码时隐藏) -->
+        <div v-else-if="promoCodeEnabled">
           <label for="promo_code" class="input-label">
             {{ t('auth.promoCodeLabel') }}
             <span class="ml-1 text-xs font-normal text-gray-400 dark:text-dark-500">({{ t('common.optional') }})</span>
