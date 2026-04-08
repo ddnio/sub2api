@@ -26,5 +26,6 @@ CREATE INDEX IF NOT EXISTS idx_user_referrals_inviter_id ON user_referrals(invit
 CREATE INDEX IF NOT EXISTS idx_user_referrals_code ON user_referrals(code);
 
 -- 3. Backfill existing users with referral codes
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 UPDATE users SET referral_code = UPPER(ENCODE(gen_random_bytes(8), 'hex'))
 WHERE referral_code IS NULL AND deleted_at IS NULL;
