@@ -21,6 +21,7 @@ func UserFromServiceShallow(u *service.User) *User {
 		Concurrency:   u.Concurrency,
 		Status:        u.Status,
 		AllowedGroups: u.AllowedGroups,
+		ReferralCode:  u.ReferralCode,
 		CreatedAt:     u.CreatedAt,
 		UpdatedAt:     u.UpdatedAt,
 	}
@@ -64,7 +65,6 @@ func UserFromServiceAdmin(u *service.User) *AdminUser {
 		GroupRates:            u.GroupRates,
 		SoraStorageQuotaBytes: u.SoraStorageQuotaBytes,
 		SoraStorageUsedBytes:  u.SoraStorageUsedBytes,
-		ReferralCode:          u.ReferralCode,
 	}
 }
 

@@ -67,7 +67,7 @@ func (s *ReferralService) GenerateReferralCode(ctx context.Context, userID int64
 	const maxRetries = 3
 
 	for i := 0; i < maxRetries; i++ {
-		code, err := generateRandomCode(8) // 8 bytes = 16 hex chars
+		code, err := generateRandomCode(4) // 4 bytes = 8 hex chars
 		if err != nil {
 			return "", fmt.Errorf("generate random code: %w", err)
 		}

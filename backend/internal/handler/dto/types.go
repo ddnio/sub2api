@@ -11,6 +11,7 @@ type User struct {
 	Concurrency   int       `json:"concurrency"`
 	Status        string    `json:"status"`
 	AllowedGroups []int64   `json:"allowed_groups"`
+	ReferralCode  *string  `json:"referral_code,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 
@@ -29,7 +30,6 @@ type AdminUser struct {
 	GroupRates            map[int64]float64 `json:"group_rates,omitempty"`
 	SoraStorageQuotaBytes int64             `json:"sora_storage_quota_bytes"`
 	SoraStorageUsedBytes  int64             `json:"sora_storage_used_bytes"`
-	ReferralCode          *string           `json:"referral_code,omitempty"`
 }
 
 type APIKey struct {
