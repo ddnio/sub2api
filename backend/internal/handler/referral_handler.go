@@ -67,8 +67,13 @@ func (h *ReferralHandler) ListReferrals(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data":       records,
-		"pagination": paginationResult,
+		"data": records,
+		"pagination": gin.H{
+			"total":     paginationResult.Total,
+			"page":      paginationResult.Page,
+			"page_size": paginationResult.PageSize,
+			"pages":     paginationResult.Pages,
+		},
 	})
 }
 

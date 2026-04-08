@@ -34,12 +34,12 @@ export interface ReferralListResponse {
 }
 
 export async function getReferralInfo(): Promise<ReferralInfo> {
-  const { data } = await apiClient.get<ReferralInfo>('/user/referral')
+  const { data } = await apiClient.get<ReferralInfo>('/referral')
   return data
 }
 
 export async function getReferralList(page = 1, pageSize = 20): Promise<ReferralListResponse> {
-  const { data } = await apiClient.get<ReferralListResponse>('/user/referral/list', {
+  const { data } = await apiClient.get<ReferralListResponse>('/referral/list', {
     params: { page, page_size: pageSize }
   })
   return data
