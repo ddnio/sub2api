@@ -148,26 +148,7 @@
           </transition>
         </div>
 
-        <!-- Referral Code Input (Optional, when referral enabled and invitation code disabled) -->
-        <div v-if="referralEnabled && !invitationCodeEnabled">
-          <label for="referral_code" class="input-label">
-            {{ t('auth.referralCodeLabel') }}
-            <span class="ml-1 text-xs font-normal text-gray-400">({{ t('common.optional') }})</span>
-          </label>
-          <div class="relative">
-            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-              <Icon name="userPlus" size="md" class="text-gray-400 dark:text-dark-500" />
-            </div>
-            <input
-              id="referral_code"
-              v-model="formData.referral_code"
-              type="text"
-              :disabled="isLoading"
-              class="input pl-11"
-              :placeholder="t('auth.referralCodePlaceholder')"
-            />
-          </div>
-        </div>
+        <!-- Referral Code: 通过 ?ref= URL 参数静默传递，不显示输入框 -->
 
         <!-- Promo Code Input (Optional) -->
         <div v-if="promoCodeEnabled">

@@ -64,6 +64,7 @@ func UserFromServiceAdmin(u *service.User) *AdminUser {
 		GroupRates:            u.GroupRates,
 		SoraStorageQuotaBytes: u.SoraStorageQuotaBytes,
 		SoraStorageUsedBytes:  u.SoraStorageUsedBytes,
+		ReferralCode:          u.ReferralCode,
 	}
 }
 

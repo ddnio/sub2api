@@ -29,6 +29,7 @@ type AdminUser struct {
 	GroupRates            map[int64]float64 `json:"group_rates,omitempty"`
 	SoraStorageQuotaBytes int64             `json:"sora_storage_quota_bytes"`
 	SoraStorageUsedBytes  int64             `json:"sora_storage_used_bytes"`
+	ReferralCode          *string           `json:"referral_code,omitempty"`
 }
 
 type APIKey struct {

@@ -1,5 +1,6 @@
 <template>
-  <div class="mx-auto max-w-4xl space-y-6 p-4 sm:p-6">
+  <AppLayout>
+  <div class="mx-auto max-w-4xl space-y-6">
     <!-- Page Header -->
     <div>
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ t('referral.title') }}</h1>
@@ -110,11 +111,13 @@
       </div>
     </transition>
   </div>
+  </AppLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import AppLayout from '@/components/layout/AppLayout.vue'
 import { getReferralInfo, getReferralList } from '@/api/referral'
 import type { ReferralInfo, ReferralRecord } from '@/api/referral'
 

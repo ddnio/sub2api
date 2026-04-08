@@ -46,6 +46,17 @@
         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('admin.users.soraStorageQuotaHint') }}</p>
       </div>
       <UserAttributeForm v-model="form.customAttributes" :user-id="user?.id" />
+
+      <!-- Referral Info (Read-only) -->
+      <div class="border-t border-gray-200 pt-4 dark:border-dark-700">
+        <label class="input-label text-gray-500">{{ t('admin.users.referralInfo') }}</label>
+        <div class="mt-2 space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-500 dark:text-gray-400">{{ t('admin.users.referralCode') }}</span>
+            <span class="font-mono text-gray-900 dark:text-white">{{ user?.referral_code || '-' }}</span>
+          </div>
+        </div>
+      </div>
     </form>
     <template #footer>
       <div class="flex justify-end gap-3">
