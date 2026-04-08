@@ -157,15 +157,18 @@ func (s *ReferralService) ProcessRegistrationReferral(ctx context.Context, invit
 		}
 		now := time.Now()
 		inviterCode, _ := generateRandomCode(4)
-		_ = s.redeemRepo.Create(txCtx, &RedeemCode{
-			Code:   inviterCode,
-			Type:   AdjustmentTypeReferralInviter,
-			Value:  inviterAmount,
-			Status: StatusUsed,
-			UsedBy: &inviter.ID,
-			UsedAt: &now,
-			Notes:  fmt.Sprintf("邀请用户注册奖励 (推荐码: %s)", referralCode),
-		})
+		_, err = tx.RedeemCode.Create().
+			SetCode(inviterCode).
+			SetType(AdjustmentTypeReferralInviter).
+			SetValue(inviterAmount).
+			SetStatus(StatusUsed).
+			SetUsedBy(inviter.ID).
+			SetUsedAt(now).
+			SetNotes(fmt.Sprintf("邀请用户注册奖励 (推荐码: %s)", referralCode)).
+			Save(txCtx)
+		if err != nil {
+			logger.LegacyPrintf("service.referral", "[Referral] Failed to create inviter reward record: %v", err)
+		}
 	}
 
 	// 给被邀请人加额外余额 + 写充值记录
@@ -175,15 +178,18 @@ func (s *ReferralService) ProcessRegistrationReferral(ctx context.Context, invit
 		}
 		now := time.Now()
 		inviteeCode, _ := generateRandomCode(4)
-		_ = s.redeemRepo.Create(txCtx, &RedeemCode{
-			Code:   inviteeCode,
-			Type:   AdjustmentTypeReferralInvitee,
-			Value:  inviteeAmount,
-			Status: StatusUsed,
-			UsedBy: &inviteeID,
-			UsedAt: &now,
-			Notes:  fmt.Sprintf("通过推荐码 %s 注册奖励", referralCode),
-		})
+		_, err = tx.RedeemCode.Create().
+			SetCode(inviteeCode).
+			SetType(AdjustmentTypeReferralInvitee).
+			SetValue(inviteeAmount).
+			SetStatus(StatusUsed).
+			SetUsedBy(inviteeID).
+			SetUsedAt(now).
+			SetNotes(fmt.Sprintf("通过推荐码 %s 注册奖励", referralCode)).
+			Save(txCtx)
+		if err != nil {
+			logger.LegacyPrintf("service.referral", "[Referral] Failed to create invitee reward record: %v", err)
+		}
 	}
 
 	// 提交事务
