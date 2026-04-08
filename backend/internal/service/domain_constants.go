@@ -52,8 +52,10 @@ const (
 
 // Admin adjustment type constants
 const (
-	AdjustmentTypeAdminBalance     = domain.AdjustmentTypeAdminBalance     // 管理员调整余额
-	AdjustmentTypeAdminConcurrency = domain.AdjustmentTypeAdminConcurrency // 管理员调整并发数
+	AdjustmentTypeAdminBalance        = domain.AdjustmentTypeAdminBalance     // 管理员调整余额
+	AdjustmentTypeAdminConcurrency    = domain.AdjustmentTypeAdminConcurrency // 管理员调整并发数
+	AdjustmentTypeReferralInviter     = "referral_inviter_reward"             // 邀请人奖励
+	AdjustmentTypeReferralInvitee     = "referral_invitee_reward"             // 被邀请人奖励
 )
 
 // Group subscription type constants

@@ -19,6 +19,7 @@ import (
 type ReferralService struct {
 	entClient            *dbent.Client
 	userRepo             UserRepository
+	redeemRepo           RedeemCodeRepository
 	settingService       *SettingService
 	billingCacheService  *BillingCacheService
 	authCacheInvalidator APIKeyAuthCacheInvalidator
@@ -28,6 +29,7 @@ type ReferralService struct {
 func NewReferralService(
 	entClient *dbent.Client,
 	userRepo UserRepository,
+	redeemRepo RedeemCodeRepository,
 	settingService *SettingService,
 	billingCacheService *BillingCacheService,
 	authCacheInvalidator APIKeyAuthCacheInvalidator,
@@ -35,6 +37,7 @@ func NewReferralService(
 	return &ReferralService{
 		entClient:            entClient,
 		userRepo:             userRepo,
+		redeemRepo:           redeemRepo,
 		settingService:       settingService,
 		billingCacheService:  billingCacheService,
 		authCacheInvalidator: authCacheInvalidator,
@@ -147,18 +150,40 @@ func (s *ReferralService) ProcessRegistrationReferral(ctx context.Context, invit
 		return fmt.Errorf("create referral record: %w", err)
 	}
 
-	// 给邀请人加余额
+	// 给邀请人加余额 + 写充值记录
 	if inviterAmount > 0 {
 		if err := s.userRepo.UpdateBalance(txCtx, inviter.ID, inviterAmount); err != nil {
 			return fmt.Errorf("update inviter balance: %w", err)
 		}
+		now := time.Now()
+		inviterCode, _ := generateRandomCode(4)
+		_ = s.redeemRepo.Create(txCtx, &RedeemCode{
+			Code:   inviterCode,
+			Type:   AdjustmentTypeReferralInviter,
+			Value:  inviterAmount,
+			Status: StatusUsed,
+			UsedBy: &inviter.ID,
+			UsedAt: &now,
+			Notes:  fmt.Sprintf("邀请用户注册奖励 (推荐码: %s)", referralCode),
+		})
 	}
 
-	// 给被邀请人加额外余额
+	// 给被邀请人加额外余额 + 写充值记录
 	if inviteeAmount > 0 {
 		if err := s.userRepo.UpdateBalance(txCtx, inviteeID, inviteeAmount); err != nil {
 			return fmt.Errorf("update invitee balance: %w", err)
 		}
+		now := time.Now()
+		inviteeCode, _ := generateRandomCode(4)
+		_ = s.redeemRepo.Create(txCtx, &RedeemCode{
+			Code:   inviteeCode,
+			Type:   AdjustmentTypeReferralInvitee,
+			Value:  inviteeAmount,
+			Status: StatusUsed,
+			UsedBy: &inviteeID,
+			UsedAt: &now,
+			Notes:  fmt.Sprintf("通过推荐码 %s 注册奖励", referralCode),
+		})
 	}
 
 	// 提交事务
