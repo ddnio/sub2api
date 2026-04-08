@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
+	middleware "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -22,13 +23,13 @@ func NewReferralHandler(referralService *service.ReferralService) *ReferralHandl
 
 // GetReferralInfo 获取当前用户的推荐码信息
 func (h *ReferralHandler) GetReferralInfo(c *gin.Context) {
-	userID := c.GetInt64("user_id")
-	if userID == 0 {
+	subject, ok := middleware.GetAuthSubjectFromContext(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	info, err := h.referralService.GetReferralInfo(c.Request.Context(), userID)
+	info, err := h.referralService.GetReferralInfo(c.Request.Context(), subject.UserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get referral info"})
 		return
@@ -39,8 +40,8 @@ func (h *ReferralHandler) GetReferralInfo(c *gin.Context) {
 
 // ListReferrals 获取当前用户的邀请列表（分页）
 func (h *ReferralHandler) ListReferrals(c *gin.Context) {
-	userID := c.GetInt64("user_id")
-	if userID == 0 {
+	subject, ok := middleware.GetAuthSubjectFromContext(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
@@ -59,7 +60,7 @@ func (h *ReferralHandler) ListReferrals(c *gin.Context) {
 		PageSize: pageSize,
 	}
 
-	records, paginationResult, err := h.referralService.ListReferrals(c.Request.Context(), userID, params)
+	records, paginationResult, err := h.referralService.ListReferrals(c.Request.Context(), subject.UserID, params)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list referrals"})
 		return
@@ -80,20 +81,17 @@ func (h *ReferralHandler) GetUserReferralInfo(c *gin.Context) {
 		return
 	}
 
-	// 获取被邀请关系
 	referral, err := h.referralService.GetReferralByInvitee(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get referral info"})
 		return
 	}
 
-	// 获取邀请人数
 	inviteCount, err := h.referralService.GetInviteCount(c.Request.Context(), userID)
 	if err != nil {
 		inviteCount = 0
 	}
 
-	// 获取用户的推荐码
 	info, err := h.referralService.GetReferralInfo(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get referral info"})
@@ -103,6 +101,6 @@ func (h *ReferralHandler) GetUserReferralInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"referral_code": info.ReferralCode,
 		"invite_count":  inviteCount,
-		"invited_by":    referral, // nil if not invited by anyone
+		"invited_by":    referral,
 	})
 }
