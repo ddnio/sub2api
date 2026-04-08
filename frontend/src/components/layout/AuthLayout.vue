@@ -5,6 +5,11 @@
       class="absolute inset-0 bg-gradient-to-br from-gray-50 via-primary-50/30 to-gray-100 dark:from-dark-950 dark:via-dark-900 dark:to-dark-950"
     ></div>
 
+    <!-- Locale Switcher -->
+    <div class="absolute right-4 top-4 z-20">
+      <LocaleSwitcher />
+    </div>
+
     <!-- Decorative Elements -->
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
       <!-- Gradient Orbs -->
@@ -67,6 +72,7 @@ import { computed, onMounted } from 'vue'
 import { useAppStore } from '@/stores'
 import { sanitizeUrl } from '@/utils/url'
 import { resolveSiteSubtitle } from '@/utils/siteBranding'
+import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 
 const appStore = useAppStore()
 
