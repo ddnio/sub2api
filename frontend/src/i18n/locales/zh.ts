@@ -958,6 +958,8 @@ export default {
     codeRedeemSuccess: '兑换成功！',
     failedToRedeem: '兑换失败，请检查兑换码后重试。',
     subscriptionRefreshFailed: '兑换成功，但订阅状态刷新失败。',
+    referralInviterReward: '邀请奖励',
+    referralInviteeReward: '注册奖励（被邀请）',
     pleaseEnterCode: '请输入兑换码'
   },
 
@@ -966,8 +968,6 @@ export default {
     title: '个人设置',
     description: '管理您的账户信息和设置',
     accountBalance: '账户余额',
-    referralInviterReward: '邀请奖励',
-    referralInviteeReward: '注册奖励（被邀请）',
     concurrencyLimit: '并发限制',
     memberSince: '注册时间',
     administrator: '管理员',

@@ -953,6 +953,8 @@ export default {
     codeRedeemSuccess: 'Code redeemed successfully!',
     failedToRedeem: 'Failed to redeem code. Please check the code and try again.',
     subscriptionRefreshFailed: 'Redeemed successfully, but failed to refresh subscription status.',
+    referralInviterReward: 'Referral Reward',
+    referralInviteeReward: 'Registration Reward (Referred)',
     pleaseEnterCode: 'Please enter a redeem code'
   },
 
@@ -961,8 +963,6 @@ export default {
     title: 'Profile Settings',
     description: 'Manage your account information and settings',
     accountBalance: 'Account Balance',
-    referralInviterReward: 'Referral Reward',
-    referralInviteeReward: 'Registration Reward (Referred)',
     concurrencyLimit: 'Concurrency Limit',
     memberSince: 'Member Since',
     administrator: 'Administrator',
