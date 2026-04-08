@@ -97,6 +97,7 @@ func ProvideHandlers(
 	paymentHandler *PaymentHandler,
 	paymentCallbackHandler *PaymentCallbackHandler,
 	pricingHandler *PricingHandler,
+	referralHandler *ReferralHandler,
 ) *Handlers {
 	return &Handlers{
 		Auth:            authHandler,
@@ -116,6 +117,7 @@ func ProvideHandlers(
 		Payment:         paymentHandler,
 		PaymentCallback: paymentCallbackHandler,
 		Pricing:         pricingHandler,
+		Referral:        referralHandler,
 	}
 }
 

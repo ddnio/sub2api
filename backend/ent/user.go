@@ -49,6 +49,8 @@ type User struct {
 	SoraStorageQuotaBytes int64 `json:"sora_storage_quota_bytes,omitempty"`
 	// SoraStorageUsedBytes holds the value of the "sora_storage_used_bytes" field.
 	SoraStorageUsedBytes int64 `json:"sora_storage_used_bytes,omitempty"`
+	// ReferralCode holds the value of the "referral_code" field.
+	ReferralCode *string `json:"referral_code,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
 	Edges        UserEdges `json:"edges"`
@@ -77,11 +79,15 @@ type UserEdges struct {
 	PromoCodeUsages []*PromoCodeUsage `json:"promo_code_usages,omitempty"`
 	// PaymentOrders holds the value of the payment_orders edge.
 	PaymentOrders []*PaymentOrder `json:"payment_orders,omitempty"`
+	// ReferralsAsInviter holds the value of the referrals_as_inviter edge.
+	ReferralsAsInviter []*UserReferral `json:"referrals_as_inviter,omitempty"`
+	// ReferralsAsInvitee holds the value of the referrals_as_invitee edge.
+	ReferralsAsInvitee []*UserReferral `json:"referrals_as_invitee,omitempty"`
 	// UserAllowedGroups holds the value of the user_allowed_groups edge.
 	UserAllowedGroups []*UserAllowedGroup `json:"user_allowed_groups,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [11]bool
+	loadedTypes [13]bool
 }
 
 // APIKeysOrErr returns the APIKeys value or an error if the edge
@@ -174,10 +180,28 @@ func (e UserEdges) PaymentOrdersOrErr() ([]*PaymentOrder, error) {
 	return nil, &NotLoadedError{edge: "payment_orders"}
 }
 
+// ReferralsAsInviterOrErr returns the ReferralsAsInviter value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ReferralsAsInviterOrErr() ([]*UserReferral, error) {
+	if e.loadedTypes[10] {
+		return e.ReferralsAsInviter, nil
+	}
+	return nil, &NotLoadedError{edge: "referrals_as_inviter"}
+}
+
+// ReferralsAsInviteeOrErr returns the ReferralsAsInvitee value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ReferralsAsInviteeOrErr() ([]*UserReferral, error) {
+	if e.loadedTypes[11] {
+		return e.ReferralsAsInvitee, nil
+	}
+	return nil, &NotLoadedError{edge: "referrals_as_invitee"}
+}
+
 // UserAllowedGroupsOrErr returns the UserAllowedGroups value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) UserAllowedGroupsOrErr() ([]*UserAllowedGroup, error) {
-	if e.loadedTypes[10] {
+	if e.loadedTypes[12] {
 		return e.UserAllowedGroups, nil
 	}
 	return nil, &NotLoadedError{edge: "user_allowed_groups"}
@@ -194,7 +218,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case user.FieldID, user.FieldConcurrency, user.FieldSoraStorageQuotaBytes, user.FieldSoraStorageUsedBytes:
 			values[i] = new(sql.NullInt64)
-		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldStatus, user.FieldUsername, user.FieldNotes, user.FieldTotpSecretEncrypted:
+		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldStatus, user.FieldUsername, user.FieldNotes, user.FieldTotpSecretEncrypted, user.FieldReferralCode:
 			values[i] = new(sql.NullString)
 		case user.FieldCreatedAt, user.FieldUpdatedAt, user.FieldDeletedAt, user.FieldTotpEnabledAt:
 			values[i] = new(sql.NullTime)
@@ -318,6 +342,13 @@ func (_m *User) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.SoraStorageUsedBytes = value.Int64
 			}
+		case user.FieldReferralCode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field referral_code", values[i])
+			} else if value.Valid {
+				_m.ReferralCode = new(string)
+				*_m.ReferralCode = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -379,6 +410,16 @@ func (_m *User) QueryPromoCodeUsages() *PromoCodeUsageQuery {
 // QueryPaymentOrders queries the "payment_orders" edge of the User entity.
 func (_m *User) QueryPaymentOrders() *PaymentOrderQuery {
 	return NewUserClient(_m.config).QueryPaymentOrders(_m)
+}
+
+// QueryReferralsAsInviter queries the "referrals_as_inviter" edge of the User entity.
+func (_m *User) QueryReferralsAsInviter() *UserReferralQuery {
+	return NewUserClient(_m.config).QueryReferralsAsInviter(_m)
+}
+
+// QueryReferralsAsInvitee queries the "referrals_as_invitee" edge of the User entity.
+func (_m *User) QueryReferralsAsInvitee() *UserReferralQuery {
+	return NewUserClient(_m.config).QueryReferralsAsInvitee(_m)
 }
 
 // QueryUserAllowedGroups queries the "user_allowed_groups" edge of the User entity.
@@ -462,6 +503,11 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("sora_storage_used_bytes=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SoraStorageUsedBytes))
+	builder.WriteString(", ")
+	if v := _m.ReferralCode; v != nil {
+		builder.WriteString("referral_code=")
+		builder.WriteString(*v)
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

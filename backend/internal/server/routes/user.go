@@ -97,6 +97,13 @@ func RegisterUserRoutes(
 			pricing.GET("/models", h.Pricing.GetModelPricing)
 		}
 
+		// 推荐码
+		referral := authenticated.Group("/referral")
+		{
+			referral.GET("", h.Referral.GetReferralInfo)
+			referral.GET("/list", h.Referral.ListReferrals)
+		}
+
 		// 支付
 		registerPaymentRoutes(authenticated, h)
 	}

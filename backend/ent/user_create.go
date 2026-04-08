@@ -20,6 +20,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
+	"github.com/Wei-Shaw/sub2api/ent/userreferral"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 )
 
@@ -239,6 +240,20 @@ func (_c *UserCreate) SetNillableSoraStorageUsedBytes(v *int64) *UserCreate {
 	return _c
 }
 
+// SetReferralCode sets the "referral_code" field.
+func (_c *UserCreate) SetReferralCode(v string) *UserCreate {
+	_c.mutation.SetReferralCode(v)
+	return _c
+}
+
+// SetNillableReferralCode sets the "referral_code" field if the given value is not nil.
+func (_c *UserCreate) SetNillableReferralCode(v *string) *UserCreate {
+	if v != nil {
+		_c.SetReferralCode(*v)
+	}
+	return _c
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_c *UserCreate) AddAPIKeyIDs(ids ...int64) *UserCreate {
 	_c.mutation.AddAPIKeyIDs(ids...)
@@ -387,6 +402,36 @@ func (_c *UserCreate) AddPaymentOrders(v ...*PaymentOrder) *UserCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddPaymentOrderIDs(ids...)
+}
+
+// AddReferralsAsInviterIDs adds the "referrals_as_inviter" edge to the UserReferral entity by IDs.
+func (_c *UserCreate) AddReferralsAsInviterIDs(ids ...int64) *UserCreate {
+	_c.mutation.AddReferralsAsInviterIDs(ids...)
+	return _c
+}
+
+// AddReferralsAsInviter adds the "referrals_as_inviter" edges to the UserReferral entity.
+func (_c *UserCreate) AddReferralsAsInviter(v ...*UserReferral) *UserCreate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddReferralsAsInviterIDs(ids...)
+}
+
+// AddReferralsAsInviteeIDs adds the "referrals_as_invitee" edge to the UserReferral entity by IDs.
+func (_c *UserCreate) AddReferralsAsInviteeIDs(ids ...int64) *UserCreate {
+	_c.mutation.AddReferralsAsInviteeIDs(ids...)
+	return _c
+}
+
+// AddReferralsAsInvitee adds the "referrals_as_invitee" edges to the UserReferral entity.
+func (_c *UserCreate) AddReferralsAsInvitee(v ...*UserReferral) *UserCreate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddReferralsAsInviteeIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -545,6 +590,11 @@ func (_c *UserCreate) check() error {
 	if _, ok := _c.mutation.SoraStorageUsedBytes(); !ok {
 		return &ValidationError{Name: "sora_storage_used_bytes", err: errors.New(`ent: missing required field "User.sora_storage_used_bytes"`)}
 	}
+	if v, ok := _c.mutation.ReferralCode(); ok {
+		if err := user.ReferralCodeValidator(v); err != nil {
+			return &ValidationError{Name: "referral_code", err: fmt.Errorf(`ent: validator failed for field "User.referral_code": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -635,6 +685,10 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.SoraStorageUsedBytes(); ok {
 		_spec.SetField(user.FieldSoraStorageUsedBytes, field.TypeInt64, value)
 		_node.SoraStorageUsedBytes = value
+	}
+	if value, ok := _c.mutation.ReferralCode(); ok {
+		_spec.SetField(user.FieldReferralCode, field.TypeString, value)
+		_node.ReferralCode = &value
 	}
 	if nodes := _c.mutation.APIKeysIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -793,6 +847,38 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ReferralsAsInviterIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviterTable,
+			Columns: []string{user.ReferralsAsInviterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ReferralsAsInviteeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviteeTable,
+			Columns: []string{user.ReferralsAsInviteeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {
@@ -1071,6 +1157,24 @@ func (u *UserUpsert) UpdateSoraStorageUsedBytes() *UserUpsert {
 // AddSoraStorageUsedBytes adds v to the "sora_storage_used_bytes" field.
 func (u *UserUpsert) AddSoraStorageUsedBytes(v int64) *UserUpsert {
 	u.Add(user.FieldSoraStorageUsedBytes, v)
+	return u
+}
+
+// SetReferralCode sets the "referral_code" field.
+func (u *UserUpsert) SetReferralCode(v string) *UserUpsert {
+	u.Set(user.FieldReferralCode, v)
+	return u
+}
+
+// UpdateReferralCode sets the "referral_code" field to the value that was provided on create.
+func (u *UserUpsert) UpdateReferralCode() *UserUpsert {
+	u.SetExcluded(user.FieldReferralCode)
+	return u
+}
+
+// ClearReferralCode clears the value of the "referral_code" field.
+func (u *UserUpsert) ClearReferralCode() *UserUpsert {
+	u.SetNull(user.FieldReferralCode)
 	return u
 }
 
@@ -1375,6 +1479,27 @@ func (u *UserUpsertOne) AddSoraStorageUsedBytes(v int64) *UserUpsertOne {
 func (u *UserUpsertOne) UpdateSoraStorageUsedBytes() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateSoraStorageUsedBytes()
+	})
+}
+
+// SetReferralCode sets the "referral_code" field.
+func (u *UserUpsertOne) SetReferralCode(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetReferralCode(v)
+	})
+}
+
+// UpdateReferralCode sets the "referral_code" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateReferralCode() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateReferralCode()
+	})
+}
+
+// ClearReferralCode clears the value of the "referral_code" field.
+func (u *UserUpsertOne) ClearReferralCode() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearReferralCode()
 	})
 }
 
@@ -1845,6 +1970,27 @@ func (u *UserUpsertBulk) AddSoraStorageUsedBytes(v int64) *UserUpsertBulk {
 func (u *UserUpsertBulk) UpdateSoraStorageUsedBytes() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateSoraStorageUsedBytes()
+	})
+}
+
+// SetReferralCode sets the "referral_code" field.
+func (u *UserUpsertBulk) SetReferralCode(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetReferralCode(v)
+	})
+}
+
+// UpdateReferralCode sets the "referral_code" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateReferralCode() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateReferralCode()
+	})
+}
+
+// ClearReferralCode clears the value of the "referral_code" field.
+func (u *UserUpsertBulk) ClearReferralCode() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearReferralCode()
 	})
 }
 

@@ -76,6 +76,11 @@ type SystemSettings struct {
 	// Backend 模式：禁用用户注册和自助服务，仅管理员可登录
 	BackendModeEnabled bool
 
+	// 推荐码
+	ReferralEnabled       bool    `json:"referral_enabled"`
+	ReferralInviterAmount float64 `json:"referral_inviter_amount"`
+	ReferralInviteeAmount float64 `json:"referral_invitee_amount"`
+
 	// Gateway forwarding behavior
 	EnableFingerprintUnification bool // 是否统一 OAuth 账号的指纹头（默认 true）
 	EnableMetadataPassthrough    bool // 是否透传客户端原始 metadata（默认 false）
@@ -113,6 +118,7 @@ type PublicSettings struct {
 
 	LinuxDoOAuthEnabled bool
 	BackendModeEnabled  bool
+	ReferralEnabled     bool
 	Version             string
 }
 

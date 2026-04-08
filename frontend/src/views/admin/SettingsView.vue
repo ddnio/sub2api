@@ -789,6 +789,52 @@
               </div>
               <Toggle v-model="form.invitation_code_enabled" />
             </div>
+            <!-- Referral -->
+            <div
+              class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
+            >
+              <div>
+                <label class="font-medium text-gray-900 dark:text-white">{{
+                  t('admin.settings.registration.referralEnabled')
+                }}</label>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  {{ t('admin.settings.registration.referralEnabledHint') }}
+                </p>
+              </div>
+              <Toggle v-model="form.referral_enabled" />
+            </div>
+            <!-- Referral Reward Amounts (when enabled) -->
+            <div
+              v-if="form.referral_enabled"
+              class="space-y-3 border-t border-gray-100 pt-4 dark:border-dark-700"
+            >
+              <div class="flex items-center gap-4">
+                <label class="w-40 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ t('admin.settings.registration.referralInviterAmount') }}
+                </label>
+                <input
+                  v-model.number="form.referral_inviter_amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="input w-32"
+                  placeholder="0"
+                />
+              </div>
+              <div class="flex items-center gap-4">
+                <label class="w-40 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ t('admin.settings.registration.referralInviteeAmount') }}
+                </label>
+                <input
+                  v-model.number="form.referral_invitee_amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="input w-32"
+                  placeholder="0"
+                />
+              </div>
+            </div>
             <!-- Password Reset - Only show when email verification is enabled -->
             <div
               v-if="form.email_verify_enabled"
@@ -2115,6 +2161,9 @@ const form = reactive<SettingsForm>({
   registration_email_suffix_whitelist: [],
   promo_code_enabled: true,
   invitation_code_enabled: false,
+  referral_enabled: false,
+  referral_inviter_amount: 0,
+  referral_invitee_amount: 0,
   password_reset_enabled: false,
   totp_enabled: false,
   totp_encryption_key_configured: false,

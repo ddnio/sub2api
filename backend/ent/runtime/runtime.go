@@ -29,6 +29,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/userallowedgroup"
 	"github.com/Wei-Shaw/sub2api/ent/userattributedefinition"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
+	"github.com/Wei-Shaw/sub2api/ent/userreferral"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 )
 
@@ -1193,6 +1194,10 @@ func init() {
 	userDescSoraStorageUsedBytes := userFields[12].Descriptor()
 	// user.DefaultSoraStorageUsedBytes holds the default value on creation for the sora_storage_used_bytes field.
 	user.DefaultSoraStorageUsedBytes = userDescSoraStorageUsedBytes.Default.(int64)
+	// userDescReferralCode is the schema descriptor for referral_code field.
+	userDescReferralCode := userFields[13].Descriptor()
+	// user.ReferralCodeValidator is a validator for the "referral_code" field. It is called by the builders before save.
+	user.ReferralCodeValidator = userDescReferralCode.Validators[0].(func(string) error)
 	userallowedgroupFields := schema.UserAllowedGroup{}.Fields()
 	_ = userallowedgroupFields
 	// userallowedgroupDescCreatedAt is the schema descriptor for created_at field.
@@ -1321,6 +1326,38 @@ func init() {
 	userattributevalueDescValue := userattributevalueFields[2].Descriptor()
 	// userattributevalue.DefaultValue holds the default value on creation for the value field.
 	userattributevalue.DefaultValue = userattributevalueDescValue.Default.(string)
+	userreferralFields := schema.UserReferral{}.Fields()
+	_ = userreferralFields
+	// userreferralDescCode is the schema descriptor for code field.
+	userreferralDescCode := userreferralFields[2].Descriptor()
+	// userreferral.CodeValidator is a validator for the "code" field. It is called by the builders before save.
+	userreferral.CodeValidator = func() func(string) error {
+		validators := userreferralDescCode.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(code string) error {
+			for _, fn := range fns {
+				if err := fn(code); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// userreferralDescInviterRewarded is the schema descriptor for inviter_rewarded field.
+	userreferralDescInviterRewarded := userreferralFields[3].Descriptor()
+	// userreferral.DefaultInviterRewarded holds the default value on creation for the inviter_rewarded field.
+	userreferral.DefaultInviterRewarded = userreferralDescInviterRewarded.Default.(float64)
+	// userreferralDescInviteeRewarded is the schema descriptor for invitee_rewarded field.
+	userreferralDescInviteeRewarded := userreferralFields[4].Descriptor()
+	// userreferral.DefaultInviteeRewarded holds the default value on creation for the invitee_rewarded field.
+	userreferral.DefaultInviteeRewarded = userreferralDescInviteeRewarded.Default.(float64)
+	// userreferralDescCreatedAt is the schema descriptor for created_at field.
+	userreferralDescCreatedAt := userreferralFields[5].Descriptor()
+	// userreferral.DefaultCreatedAt holds the default value on creation for the created_at field.
+	userreferral.DefaultCreatedAt = userreferralDescCreatedAt.Default.(func() time.Time)
 	usersubscriptionMixin := schema.UserSubscription{}.Mixin()
 	usersubscriptionMixinHooks1 := usersubscriptionMixin[1].Hooks()
 	usersubscription.Hooks[0] = usersubscriptionMixinHooks1[0]

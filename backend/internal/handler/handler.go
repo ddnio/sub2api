@@ -53,6 +53,7 @@ type Handlers struct {
 	Payment         *PaymentHandler
 	PaymentCallback *PaymentCallbackHandler
 	Pricing         *PricingHandler
+	Referral        *ReferralHandler
 }
 
 // BuildInfo contains build-time information

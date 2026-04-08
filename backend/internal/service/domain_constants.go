@@ -129,6 +129,11 @@ const (
 	// 管理员 API Key
 	SettingKeyAdminAPIKey = "admin_api_key" // 全局管理员 API Key（用于外部系统集成）
 
+	// 推荐码
+	SettingKeyReferralEnabled       = "referral_enabled"        // 推荐码功能总开关
+	SettingKeyReferralInviterAmount = "referral_inviter_amount"  // 邀请人奖励金额
+	SettingKeyReferralInviteeAmount = "referral_invitee_amount"  // 被邀请人额外奖励金额
+
 	// Gemini 配额策略（JSON）
 	SettingKeyGeminiQuotaPolicy = "gemini_quota_policy"
 

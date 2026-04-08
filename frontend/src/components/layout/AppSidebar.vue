@@ -525,6 +525,9 @@ const userNavItems = computed((): NavItem[] => {
       : []),
     { path: '/payment', label: t('nav.payment'), icon: CreditCardIcon, hideInSimpleMode: true },
     { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
+    ...(appStore.cachedPublicSettings?.referral_enabled
+      ? [{ path: '/referral', label: t('nav.referral'), icon: UsersIcon, hideInSimpleMode: true }]
+      : []),
     { path: '/profile', label: t('nav.profile'), icon: UserIcon },
     ...customMenuItemsForUser.value.map((item): NavItem => ({
       path: `/custom/${item.id}`,
@@ -558,6 +561,9 @@ const personalNavItems = computed((): NavItem[] => {
       : []),
     { path: '/payment', label: t('nav.payment'), icon: CreditCardIcon, hideInSimpleMode: true },
     { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
+    ...(appStore.cachedPublicSettings?.referral_enabled
+      ? [{ path: '/referral', label: t('nav.referral'), icon: UsersIcon, hideInSimpleMode: true }]
+      : []),
     { path: '/profile', label: t('nav.profile'), icon: UserIcon },
     ...customMenuItemsForUser.value.map((item): NavItem => ({
       path: `/custom/${item.id}`,

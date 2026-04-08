@@ -31,6 +31,9 @@ type SystemSettings struct {
 	PasswordResetEnabled             bool     `json:"password_reset_enabled"`
 	FrontendURL                      string   `json:"frontend_url"`
 	InvitationCodeEnabled            bool     `json:"invitation_code_enabled"`
+	ReferralEnabled                  bool     `json:"referral_enabled"`
+	ReferralInviterAmount            float64  `json:"referral_inviter_amount"`
+	ReferralInviteeAmount            float64  `json:"referral_invitee_amount"`
 	TotpEnabled                      bool     `json:"totp_enabled"`                   // TOTP 双因素认证
 	TotpEncryptionKeyConfigured      bool     `json:"totp_encryption_key_configured"` // TOTP 加密密钥是否已配置
 
@@ -130,6 +133,7 @@ type PublicSettings struct {
 	LinuxDoOAuthEnabled              bool             `json:"linuxdo_oauth_enabled"`
 	SoraClientEnabled                bool             `json:"sora_client_enabled"`
 	BackendModeEnabled               bool             `json:"backend_mode_enabled"`
+	ReferralEnabled                  bool             `json:"referral_enabled"`
 	Version                          string           `json:"version"`
 }
 

@@ -47,6 +47,8 @@ const (
 	FieldSoraStorageQuotaBytes = "sora_storage_quota_bytes"
 	// FieldSoraStorageUsedBytes holds the string denoting the sora_storage_used_bytes field in the database.
 	FieldSoraStorageUsedBytes = "sora_storage_used_bytes"
+	// FieldReferralCode holds the string denoting the referral_code field in the database.
+	FieldReferralCode = "referral_code"
 	// EdgeAPIKeys holds the string denoting the api_keys edge name in mutations.
 	EdgeAPIKeys = "api_keys"
 	// EdgeRedeemCodes holds the string denoting the redeem_codes edge name in mutations.
@@ -67,6 +69,10 @@ const (
 	EdgePromoCodeUsages = "promo_code_usages"
 	// EdgePaymentOrders holds the string denoting the payment_orders edge name in mutations.
 	EdgePaymentOrders = "payment_orders"
+	// EdgeReferralsAsInviter holds the string denoting the referrals_as_inviter edge name in mutations.
+	EdgeReferralsAsInviter = "referrals_as_inviter"
+	// EdgeReferralsAsInvitee holds the string denoting the referrals_as_invitee edge name in mutations.
+	EdgeReferralsAsInvitee = "referrals_as_invitee"
 	// EdgeUserAllowedGroups holds the string denoting the user_allowed_groups edge name in mutations.
 	EdgeUserAllowedGroups = "user_allowed_groups"
 	// Table holds the table name of the user in the database.
@@ -139,6 +145,20 @@ const (
 	PaymentOrdersInverseTable = "payment_orders"
 	// PaymentOrdersColumn is the table column denoting the payment_orders relation/edge.
 	PaymentOrdersColumn = "user_id"
+	// ReferralsAsInviterTable is the table that holds the referrals_as_inviter relation/edge.
+	ReferralsAsInviterTable = "user_referrals"
+	// ReferralsAsInviterInverseTable is the table name for the UserReferral entity.
+	// It exists in this package in order to avoid circular dependency with the "userreferral" package.
+	ReferralsAsInviterInverseTable = "user_referrals"
+	// ReferralsAsInviterColumn is the table column denoting the referrals_as_inviter relation/edge.
+	ReferralsAsInviterColumn = "inviter_id"
+	// ReferralsAsInviteeTable is the table that holds the referrals_as_invitee relation/edge.
+	ReferralsAsInviteeTable = "user_referrals"
+	// ReferralsAsInviteeInverseTable is the table name for the UserReferral entity.
+	// It exists in this package in order to avoid circular dependency with the "userreferral" package.
+	ReferralsAsInviteeInverseTable = "user_referrals"
+	// ReferralsAsInviteeColumn is the table column denoting the referrals_as_invitee relation/edge.
+	ReferralsAsInviteeColumn = "invitee_id"
 	// UserAllowedGroupsTable is the table that holds the user_allowed_groups relation/edge.
 	UserAllowedGroupsTable = "user_allowed_groups"
 	// UserAllowedGroupsInverseTable is the table name for the UserAllowedGroup entity.
@@ -167,6 +187,7 @@ var Columns = []string{
 	FieldTotpEnabledAt,
 	FieldSoraStorageQuotaBytes,
 	FieldSoraStorageUsedBytes,
+	FieldReferralCode,
 }
 
 var (
@@ -227,6 +248,8 @@ var (
 	DefaultSoraStorageQuotaBytes int64
 	// DefaultSoraStorageUsedBytes holds the default value on creation for the "sora_storage_used_bytes" field.
 	DefaultSoraStorageUsedBytes int64
+	// ReferralCodeValidator is a validator for the "referral_code" field. It is called by the builders before save.
+	ReferralCodeValidator func(string) error
 )
 
 // OrderOption defines the ordering options for the User queries.
@@ -315,6 +338,11 @@ func BySoraStorageQuotaBytes(opts ...sql.OrderTermOption) OrderOption {
 // BySoraStorageUsedBytes orders the results by the sora_storage_used_bytes field.
 func BySoraStorageUsedBytes(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSoraStorageUsedBytes, opts...).ToFunc()
+}
+
+// ByReferralCode orders the results by the referral_code field.
+func ByReferralCode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReferralCode, opts...).ToFunc()
 }
 
 // ByAPIKeysCount orders the results by api_keys count.
@@ -457,6 +485,34 @@ func ByPaymentOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByReferralsAsInviterCount orders the results by referrals_as_inviter count.
+func ByReferralsAsInviterCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newReferralsAsInviterStep(), opts...)
+	}
+}
+
+// ByReferralsAsInviter orders the results by referrals_as_inviter terms.
+func ByReferralsAsInviter(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newReferralsAsInviterStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByReferralsAsInviteeCount orders the results by referrals_as_invitee count.
+func ByReferralsAsInviteeCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newReferralsAsInviteeStep(), opts...)
+	}
+}
+
+// ByReferralsAsInvitee orders the results by referrals_as_invitee terms.
+func ByReferralsAsInvitee(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newReferralsAsInviteeStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByUserAllowedGroupsCount orders the results by user_allowed_groups count.
 func ByUserAllowedGroupsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -538,6 +594,20 @@ func newPaymentOrdersStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PaymentOrdersInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, PaymentOrdersTable, PaymentOrdersColumn),
+	)
+}
+func newReferralsAsInviterStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ReferralsAsInviterInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ReferralsAsInviterTable, ReferralsAsInviterColumn),
+	)
+}
+func newReferralsAsInviteeStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ReferralsAsInviteeInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ReferralsAsInviteeTable, ReferralsAsInviteeColumn),
 	)
 }
 func newUserAllowedGroupsStep() *sqlgraph.Step {

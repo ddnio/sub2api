@@ -21,6 +21,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
+	"github.com/Wei-Shaw/sub2api/ent/userreferral"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 )
 
@@ -285,6 +286,26 @@ func (_u *UserUpdate) AddSoraStorageUsedBytes(v int64) *UserUpdate {
 	return _u
 }
 
+// SetReferralCode sets the "referral_code" field.
+func (_u *UserUpdate) SetReferralCode(v string) *UserUpdate {
+	_u.mutation.SetReferralCode(v)
+	return _u
+}
+
+// SetNillableReferralCode sets the "referral_code" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableReferralCode(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetReferralCode(*v)
+	}
+	return _u
+}
+
+// ClearReferralCode clears the value of the "referral_code" field.
+func (_u *UserUpdate) ClearReferralCode() *UserUpdate {
+	_u.mutation.ClearReferralCode()
+	return _u
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_u *UserUpdate) AddAPIKeyIDs(ids ...int64) *UserUpdate {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -433,6 +454,36 @@ func (_u *UserUpdate) AddPaymentOrders(v ...*PaymentOrder) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddPaymentOrderIDs(ids...)
+}
+
+// AddReferralsAsInviterIDs adds the "referrals_as_inviter" edge to the UserReferral entity by IDs.
+func (_u *UserUpdate) AddReferralsAsInviterIDs(ids ...int64) *UserUpdate {
+	_u.mutation.AddReferralsAsInviterIDs(ids...)
+	return _u
+}
+
+// AddReferralsAsInviter adds the "referrals_as_inviter" edges to the UserReferral entity.
+func (_u *UserUpdate) AddReferralsAsInviter(v ...*UserReferral) *UserUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReferralsAsInviterIDs(ids...)
+}
+
+// AddReferralsAsInviteeIDs adds the "referrals_as_invitee" edge to the UserReferral entity by IDs.
+func (_u *UserUpdate) AddReferralsAsInviteeIDs(ids ...int64) *UserUpdate {
+	_u.mutation.AddReferralsAsInviteeIDs(ids...)
+	return _u
+}
+
+// AddReferralsAsInvitee adds the "referrals_as_invitee" edges to the UserReferral entity.
+func (_u *UserUpdate) AddReferralsAsInvitee(v ...*UserReferral) *UserUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReferralsAsInviteeIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -650,6 +701,48 @@ func (_u *UserUpdate) RemovePaymentOrders(v ...*PaymentOrder) *UserUpdate {
 	return _u.RemovePaymentOrderIDs(ids...)
 }
 
+// ClearReferralsAsInviter clears all "referrals_as_inviter" edges to the UserReferral entity.
+func (_u *UserUpdate) ClearReferralsAsInviter() *UserUpdate {
+	_u.mutation.ClearReferralsAsInviter()
+	return _u
+}
+
+// RemoveReferralsAsInviterIDs removes the "referrals_as_inviter" edge to UserReferral entities by IDs.
+func (_u *UserUpdate) RemoveReferralsAsInviterIDs(ids ...int64) *UserUpdate {
+	_u.mutation.RemoveReferralsAsInviterIDs(ids...)
+	return _u
+}
+
+// RemoveReferralsAsInviter removes "referrals_as_inviter" edges to UserReferral entities.
+func (_u *UserUpdate) RemoveReferralsAsInviter(v ...*UserReferral) *UserUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReferralsAsInviterIDs(ids...)
+}
+
+// ClearReferralsAsInvitee clears all "referrals_as_invitee" edges to the UserReferral entity.
+func (_u *UserUpdate) ClearReferralsAsInvitee() *UserUpdate {
+	_u.mutation.ClearReferralsAsInvitee()
+	return _u
+}
+
+// RemoveReferralsAsInviteeIDs removes the "referrals_as_invitee" edge to UserReferral entities by IDs.
+func (_u *UserUpdate) RemoveReferralsAsInviteeIDs(ids ...int64) *UserUpdate {
+	_u.mutation.RemoveReferralsAsInviteeIDs(ids...)
+	return _u
+}
+
+// RemoveReferralsAsInvitee removes "referrals_as_invitee" edges to UserReferral entities.
+func (_u *UserUpdate) RemoveReferralsAsInvitee(v ...*UserReferral) *UserUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReferralsAsInviteeIDs(ids...)
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *UserUpdate) Save(ctx context.Context) (int, error) {
 	if err := _u.defaults(); err != nil {
@@ -717,6 +810,11 @@ func (_u *UserUpdate) check() error {
 	if v, ok := _u.mutation.Username(); ok {
 		if err := user.UsernameValidator(v); err != nil {
 			return &ValidationError{Name: "username", err: fmt.Errorf(`ent: validator failed for field "User.username": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ReferralCode(); ok {
+		if err := user.ReferralCodeValidator(v); err != nil {
+			return &ValidationError{Name: "referral_code", err: fmt.Errorf(`ent: validator failed for field "User.referral_code": %w`, err)}
 		}
 	}
 	return nil
@@ -799,6 +897,12 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedSoraStorageUsedBytes(); ok {
 		_spec.AddField(user.FieldSoraStorageUsedBytes, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.ReferralCode(); ok {
+		_spec.SetField(user.FieldReferralCode, field.TypeString, value)
+	}
+	if _u.mutation.ReferralCodeCleared() {
+		_spec.ClearField(user.FieldReferralCode, field.TypeString)
 	}
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1255,6 +1359,96 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReferralsAsInviterCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviterTable,
+			Columns: []string{user.ReferralsAsInviterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReferralsAsInviterIDs(); len(nodes) > 0 && !_u.mutation.ReferralsAsInviterCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviterTable,
+			Columns: []string{user.ReferralsAsInviterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReferralsAsInviterIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviterTable,
+			Columns: []string{user.ReferralsAsInviterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReferralsAsInviteeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviteeTable,
+			Columns: []string{user.ReferralsAsInviteeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReferralsAsInviteeIDs(); len(nodes) > 0 && !_u.mutation.ReferralsAsInviteeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviteeTable,
+			Columns: []string{user.ReferralsAsInviteeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReferralsAsInviteeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviteeTable,
+			Columns: []string{user.ReferralsAsInviteeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {
@@ -1530,6 +1724,26 @@ func (_u *UserUpdateOne) AddSoraStorageUsedBytes(v int64) *UserUpdateOne {
 	return _u
 }
 
+// SetReferralCode sets the "referral_code" field.
+func (_u *UserUpdateOne) SetReferralCode(v string) *UserUpdateOne {
+	_u.mutation.SetReferralCode(v)
+	return _u
+}
+
+// SetNillableReferralCode sets the "referral_code" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableReferralCode(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetReferralCode(*v)
+	}
+	return _u
+}
+
+// ClearReferralCode clears the value of the "referral_code" field.
+func (_u *UserUpdateOne) ClearReferralCode() *UserUpdateOne {
+	_u.mutation.ClearReferralCode()
+	return _u
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_u *UserUpdateOne) AddAPIKeyIDs(ids ...int64) *UserUpdateOne {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -1678,6 +1892,36 @@ func (_u *UserUpdateOne) AddPaymentOrders(v ...*PaymentOrder) *UserUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.AddPaymentOrderIDs(ids...)
+}
+
+// AddReferralsAsInviterIDs adds the "referrals_as_inviter" edge to the UserReferral entity by IDs.
+func (_u *UserUpdateOne) AddReferralsAsInviterIDs(ids ...int64) *UserUpdateOne {
+	_u.mutation.AddReferralsAsInviterIDs(ids...)
+	return _u
+}
+
+// AddReferralsAsInviter adds the "referrals_as_inviter" edges to the UserReferral entity.
+func (_u *UserUpdateOne) AddReferralsAsInviter(v ...*UserReferral) *UserUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReferralsAsInviterIDs(ids...)
+}
+
+// AddReferralsAsInviteeIDs adds the "referrals_as_invitee" edge to the UserReferral entity by IDs.
+func (_u *UserUpdateOne) AddReferralsAsInviteeIDs(ids ...int64) *UserUpdateOne {
+	_u.mutation.AddReferralsAsInviteeIDs(ids...)
+	return _u
+}
+
+// AddReferralsAsInvitee adds the "referrals_as_invitee" edges to the UserReferral entity.
+func (_u *UserUpdateOne) AddReferralsAsInvitee(v ...*UserReferral) *UserUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReferralsAsInviteeIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -1895,6 +2139,48 @@ func (_u *UserUpdateOne) RemovePaymentOrders(v ...*PaymentOrder) *UserUpdateOne 
 	return _u.RemovePaymentOrderIDs(ids...)
 }
 
+// ClearReferralsAsInviter clears all "referrals_as_inviter" edges to the UserReferral entity.
+func (_u *UserUpdateOne) ClearReferralsAsInviter() *UserUpdateOne {
+	_u.mutation.ClearReferralsAsInviter()
+	return _u
+}
+
+// RemoveReferralsAsInviterIDs removes the "referrals_as_inviter" edge to UserReferral entities by IDs.
+func (_u *UserUpdateOne) RemoveReferralsAsInviterIDs(ids ...int64) *UserUpdateOne {
+	_u.mutation.RemoveReferralsAsInviterIDs(ids...)
+	return _u
+}
+
+// RemoveReferralsAsInviter removes "referrals_as_inviter" edges to UserReferral entities.
+func (_u *UserUpdateOne) RemoveReferralsAsInviter(v ...*UserReferral) *UserUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReferralsAsInviterIDs(ids...)
+}
+
+// ClearReferralsAsInvitee clears all "referrals_as_invitee" edges to the UserReferral entity.
+func (_u *UserUpdateOne) ClearReferralsAsInvitee() *UserUpdateOne {
+	_u.mutation.ClearReferralsAsInvitee()
+	return _u
+}
+
+// RemoveReferralsAsInviteeIDs removes the "referrals_as_invitee" edge to UserReferral entities by IDs.
+func (_u *UserUpdateOne) RemoveReferralsAsInviteeIDs(ids ...int64) *UserUpdateOne {
+	_u.mutation.RemoveReferralsAsInviteeIDs(ids...)
+	return _u
+}
+
+// RemoveReferralsAsInvitee removes "referrals_as_invitee" edges to UserReferral entities.
+func (_u *UserUpdateOne) RemoveReferralsAsInvitee(v ...*UserReferral) *UserUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReferralsAsInviteeIDs(ids...)
+}
+
 // Where appends a list predicates to the UserUpdate builder.
 func (_u *UserUpdateOne) Where(ps ...predicate.User) *UserUpdateOne {
 	_u.mutation.Where(ps...)
@@ -1975,6 +2261,11 @@ func (_u *UserUpdateOne) check() error {
 	if v, ok := _u.mutation.Username(); ok {
 		if err := user.UsernameValidator(v); err != nil {
 			return &ValidationError{Name: "username", err: fmt.Errorf(`ent: validator failed for field "User.username": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ReferralCode(); ok {
+		if err := user.ReferralCodeValidator(v); err != nil {
+			return &ValidationError{Name: "referral_code", err: fmt.Errorf(`ent: validator failed for field "User.referral_code": %w`, err)}
 		}
 	}
 	return nil
@@ -2074,6 +2365,12 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if value, ok := _u.mutation.AddedSoraStorageUsedBytes(); ok {
 		_spec.AddField(user.FieldSoraStorageUsedBytes, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.ReferralCode(); ok {
+		_spec.SetField(user.FieldReferralCode, field.TypeString, value)
+	}
+	if _u.mutation.ReferralCodeCleared() {
+		_spec.ClearField(user.FieldReferralCode, field.TypeString)
 	}
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -2530,6 +2827,96 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReferralsAsInviterCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviterTable,
+			Columns: []string{user.ReferralsAsInviterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReferralsAsInviterIDs(); len(nodes) > 0 && !_u.mutation.ReferralsAsInviterCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviterTable,
+			Columns: []string{user.ReferralsAsInviterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReferralsAsInviterIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviterTable,
+			Columns: []string{user.ReferralsAsInviterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReferralsAsInviteeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviteeTable,
+			Columns: []string{user.ReferralsAsInviteeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReferralsAsInviteeIDs(); len(nodes) > 0 && !_u.mutation.ReferralsAsInviteeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviteeTable,
+			Columns: []string{user.ReferralsAsInviteeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReferralsAsInviteeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviteeTable,
+			Columns: []string{user.ReferralsAsInviteeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

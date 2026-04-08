@@ -78,6 +78,12 @@ func (User) Fields() []ent.Field {
 			Default(0),
 		field.Int64("sora_storage_used_bytes").
 			Default(0),
+
+		// 推荐码（邀请归因）
+		field.String("referral_code").
+			MaxLen(16).
+			Optional().
+			Nillable(),
 	}
 }
 
@@ -94,6 +100,8 @@ func (User) Edges() []ent.Edge {
 		edge.To("attribute_values", UserAttributeValue.Type),
 		edge.To("promo_code_usages", PromoCodeUsage.Type),
 		edge.To("payment_orders", PaymentOrder.Type),
+		edge.To("referrals_as_inviter", UserReferral.Type),
+		edge.To("referrals_as_invitee", UserReferral.Type),
 	}
 }
 

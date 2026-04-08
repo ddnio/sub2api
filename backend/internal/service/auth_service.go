@@ -70,6 +70,7 @@ type AuthService struct {
 	turnstileService   *TurnstileService
 	emailQueueService  *EmailQueueService
 	promoService       *PromoService
+	referralService    *ReferralService
 	defaultSubAssigner DefaultSubscriptionAssigner
 }
 
@@ -89,6 +90,7 @@ func NewAuthService(
 	turnstileService *TurnstileService,
 	emailQueueService *EmailQueueService,
 	promoService *PromoService,
+	referralService *ReferralService,
 	defaultSubAssigner DefaultSubscriptionAssigner,
 ) *AuthService {
 	return &AuthService{
@@ -102,6 +104,7 @@ func NewAuthService(
 		turnstileService:   turnstileService,
 		emailQueueService:  emailQueueService,
 		promoService:       promoService,
+		referralService:    referralService,
 		defaultSubAssigner: defaultSubAssigner,
 	}
 }
@@ -219,6 +222,27 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		if err := s.promoService.ApplyPromoCode(ctx, user.ID, promoCode); err != nil {
 			// 优惠码应用失败不影响注册，只记录日志
 			logger.LegacyPrintf("service.auth", "[Auth] Failed to apply promo code for user %d: %v", user.ID, err)
+		} else {
+			// 重新获取用户信息以获取更新后的余额
+			if updatedUser, err := s.userRepo.GetByID(ctx, user.ID); err == nil {
+				user = updatedUser
+			}
+		}
+	}
+
+	// 生成推荐码（无条件，每个新用户都有）
+	if s.referralService != nil {
+		if _, err := s.referralService.GenerateReferralCode(ctx, user.ID); err != nil {
+			logger.LegacyPrintf("service.auth", "[Auth] Failed to generate referral code for user %d: %v", user.ID, err)
+		}
+	}
+
+	// 处理推荐码归因和奖励（当准入码模式关闭时，invitationCode 字段作为推荐码）
+	if s.referralService != nil && s.settingService != nil &&
+		!s.settingService.IsInvitationCodeEnabled(ctx) && s.settingService.IsReferralEnabled(ctx) &&
+		invitationCode != "" {
+		if err := s.referralService.ProcessRegistrationReferral(ctx, user.ID, invitationCode); err != nil {
+			logger.LegacyPrintf("service.auth", "[Auth] Failed to process referral for user %d: %v", user.ID, err)
 		} else {
 			// 重新获取用户信息以获取更新后的余额
 			if updatedUser, err := s.userRepo.GetByID(ctx, user.ID); err == nil {

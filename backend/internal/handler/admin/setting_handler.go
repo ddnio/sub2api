@@ -82,6 +82,9 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		PasswordResetEnabled:                 settings.PasswordResetEnabled,
 		FrontendURL:                          settings.FrontendURL,
 		InvitationCodeEnabled:                settings.InvitationCodeEnabled,
+		ReferralEnabled:                      settings.ReferralEnabled,
+		ReferralInviterAmount:                settings.ReferralInviterAmount,
+		ReferralInviteeAmount:                settings.ReferralInviteeAmount,
 		TotpEnabled:                          settings.TotpEnabled,
 		TotpEncryptionKeyConfigured:          h.settingService.IsTotpEncryptionKeyConfigured(),
 		SMTPHost:                             settings.SMTPHost,
@@ -144,6 +147,9 @@ type UpdateSettingsRequest struct {
 	PasswordResetEnabled             bool     `json:"password_reset_enabled"`
 	FrontendURL                      string   `json:"frontend_url"`
 	InvitationCodeEnabled            bool     `json:"invitation_code_enabled"`
+	ReferralEnabled                  bool     `json:"referral_enabled"`
+	ReferralInviterAmount            float64  `json:"referral_inviter_amount"`
+	ReferralInviteeAmount            float64  `json:"referral_invitee_amount"`
 	TotpEnabled                      bool     `json:"totp_enabled"` // TOTP 双因素认证
 
 	// 邮件服务设置
@@ -238,6 +244,12 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 	}
 	if req.DefaultBalance < 0 {
 		req.DefaultBalance = 0
+	}
+	if req.ReferralInviterAmount < 0 {
+		req.ReferralInviterAmount = 0
+	}
+	if req.ReferralInviteeAmount < 0 {
+		req.ReferralInviteeAmount = 0
 	}
 	req.SMTPHost = strings.TrimSpace(req.SMTPHost)
 	req.SMTPUsername = strings.TrimSpace(req.SMTPUsername)
@@ -541,6 +553,9 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		PasswordResetEnabled:             req.PasswordResetEnabled,
 		FrontendURL:                      req.FrontendURL,
 		InvitationCodeEnabled:            req.InvitationCodeEnabled,
+		ReferralEnabled:                  req.ReferralEnabled,
+		ReferralInviterAmount:            req.ReferralInviterAmount,
+		ReferralInviteeAmount:            req.ReferralInviteeAmount,
 		TotpEnabled:                      req.TotpEnabled,
 		SMTPHost:                         req.SMTPHost,
 		SMTPPort:                         req.SMTPPort,
@@ -650,6 +665,9 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		PasswordResetEnabled:                 updatedSettings.PasswordResetEnabled,
 		FrontendURL:                          updatedSettings.FrontendURL,
 		InvitationCodeEnabled:                updatedSettings.InvitationCodeEnabled,
+		ReferralEnabled:                      updatedSettings.ReferralEnabled,
+		ReferralInviterAmount:                updatedSettings.ReferralInviterAmount,
+		ReferralInviteeAmount:                updatedSettings.ReferralInviteeAmount,
 		TotpEnabled:                          updatedSettings.TotpEnabled,
 		TotpEncryptionKeyConfigured:          h.settingService.IsTotpEncryptionKeyConfigured(),
 		SMTPHost:                             updatedSettings.SMTPHost,

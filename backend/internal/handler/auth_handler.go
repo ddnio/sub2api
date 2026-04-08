@@ -45,7 +45,8 @@ type RegisterRequest struct {
 	VerifyCode     string `json:"verify_code"`
 	TurnstileToken string `json:"turnstile_token"`
 	PromoCode      string `json:"promo_code"`      // 注册优惠码
-	InvitationCode string `json:"invitation_code"` // 邀请码
+	InvitationCode string `json:"invitation_code"` // 邀请码（准入码模式）
+	ReferralCode   string `json:"referral_code"`   // 推荐码（邀请归因模式）
 }
 
 // SendVerifyCodeRequest 发送验证码请求
@@ -119,7 +120,12 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	_, user, err := h.authService.RegisterWithVerification(c.Request.Context(), req.Email, req.Password, req.VerifyCode, req.PromoCode, req.InvitationCode)
+	// 合并推荐码：当 invitation_code 为空时，用 referral_code 替代（后端 auth_service 按 settings 路由）
+	invitationCode := req.InvitationCode
+	if invitationCode == "" && req.ReferralCode != "" {
+		invitationCode = req.ReferralCode
+	}
+	_, user, err := h.authService.RegisterWithVerification(c.Request.Context(), req.Email, req.Password, req.VerifyCode, req.PromoCode, invitationCode)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return

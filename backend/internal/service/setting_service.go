@@ -195,6 +195,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		PromoCodeEnabled:                 settings[SettingKeyPromoCodeEnabled] != "false", // 默认启用
 		PasswordResetEnabled:             passwordResetEnabled,
 		InvitationCodeEnabled:            settings[SettingKeyInvitationCodeEnabled] == "true",
+		ReferralEnabled:                  settings[SettingKeyReferralEnabled] == "true",
 		TotpEnabled:                      settings[SettingKeyTotpEnabled] == "true",
 		TurnstileEnabled:                 settings[SettingKeyTurnstileEnabled] == "true",
 		TurnstileSiteKey:                 settings[SettingKeyTurnstileSiteKey],
@@ -266,6 +267,7 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		CustomEndpoints                  json.RawMessage `json:"custom_endpoints"`
 		LinuxDoOAuthEnabled              bool            `json:"linuxdo_oauth_enabled"`
 		BackendModeEnabled               bool            `json:"backend_mode_enabled"`
+		ReferralEnabled                  bool            `json:"referral_enabled"`
 		Version                          string          `json:"version,omitempty"`
 	}{
 		RegistrationEnabled:              settings.RegistrationEnabled,
@@ -292,6 +294,7 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		CustomEndpoints:                  safeRawJSONArray(settings.CustomEndpoints),
 		LinuxDoOAuthEnabled:              settings.LinuxDoOAuthEnabled,
 		BackendModeEnabled:               settings.BackendModeEnabled,
+		ReferralEnabled:                  settings.ReferralEnabled,
 		Version:                          s.version,
 	}, nil
 }
@@ -523,6 +526,11 @@ func (s *SettingService) UpdateSettings(ctx context.Context, settings *SystemSet
 
 	// Backend Mode
 	updates[SettingKeyBackendModeEnabled] = strconv.FormatBool(settings.BackendModeEnabled)
+
+	// 推荐码
+	updates[SettingKeyReferralEnabled] = strconv.FormatBool(settings.ReferralEnabled)
+	updates[SettingKeyReferralInviterAmount] = strconv.FormatFloat(settings.ReferralInviterAmount, 'f', 8, 64)
+	updates[SettingKeyReferralInviteeAmount] = strconv.FormatFloat(settings.ReferralInviteeAmount, 'f', 8, 64)
 
 	// Gateway forwarding behavior
 	updates[SettingKeyEnableFingerprintUnification] = strconv.FormatBool(settings.EnableFingerprintUnification)
@@ -799,6 +807,39 @@ func (s *SettingService) GetDefaultBalance(ctx context.Context) float64 {
 	return s.cfg.Default.UserBalance
 }
 
+// IsReferralEnabled 检查是否启用推荐码功能
+func (s *SettingService) IsReferralEnabled(ctx context.Context) bool {
+	value, err := s.settingRepo.GetValue(ctx, SettingKeyReferralEnabled)
+	if err != nil {
+		return false // 默认关闭
+	}
+	return value == "true"
+}
+
+// GetReferralInviterAmount 获取邀请人奖励金额
+func (s *SettingService) GetReferralInviterAmount(ctx context.Context) float64 {
+	value, err := s.settingRepo.GetValue(ctx, SettingKeyReferralInviterAmount)
+	if err != nil {
+		return 0
+	}
+	if v, err := strconv.ParseFloat(value, 64); err == nil && v >= 0 {
+		return v
+	}
+	return 0
+}
+
+// GetReferralInviteeAmount 获取被邀请人额外奖励金额
+func (s *SettingService) GetReferralInviteeAmount(ctx context.Context) float64 {
+	value, err := s.settingRepo.GetValue(ctx, SettingKeyReferralInviteeAmount)
+	if err != nil {
+		return 0
+	}
+	if v, err := strconv.ParseFloat(value, 64); err == nil && v >= 0 {
+		return v
+	}
+	return 0
+}
+
 // GetDefaultSubscriptions 获取新用户默认订阅配置列表。
 func (s *SettingService) GetDefaultSubscriptions(ctx context.Context) []DefaultSubscriptionSetting {
 	value, err := s.settingRepo.GetValue(ctx, SettingKeyDefaultSubscriptions)
@@ -860,6 +901,11 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 
 		// 分组隔离（默认不允许未分组 Key 调度）
 		SettingKeyAllowUngroupedKeyScheduling: "false",
+
+		// 推荐码（默认关闭）
+		SettingKeyReferralEnabled:       "false",
+		SettingKeyReferralInviterAmount: "0",
+		SettingKeyReferralInviteeAmount: "0",
 	}
 
 	return s.settingRepo.SetMultiple(ctx, defaults)
@@ -876,6 +922,7 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 		PasswordResetEnabled:             emailVerifyEnabled && settings[SettingKeyPasswordResetEnabled] == "true",
 		FrontendURL:                      settings[SettingKeyFrontendURL],
 		InvitationCodeEnabled:            settings[SettingKeyInvitationCodeEnabled] == "true",
+		ReferralEnabled:                  settings[SettingKeyReferralEnabled] == "true",
 		TotpEnabled:                      settings[SettingKeyTotpEnabled] == "true",
 		SMTPHost:                         settings[SettingKeySMTPHost],
 		SMTPUsername:                     settings[SettingKeySMTPUsername],
@@ -922,6 +969,14 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 		result.DefaultBalance = s.cfg.Default.UserBalance
 	}
 	result.DefaultSubscriptions = parseDefaultSubscriptions(settings[SettingKeyDefaultSubscriptions])
+
+	// 推荐码奖励金额
+	if v, err := strconv.ParseFloat(settings[SettingKeyReferralInviterAmount], 64); err == nil {
+		result.ReferralInviterAmount = v
+	}
+	if v, err := strconv.ParseFloat(settings[SettingKeyReferralInviteeAmount], 64); err == nil {
+		result.ReferralInviteeAmount = v
+	}
 
 	// 敏感信息直接返回，方便测试连接时使用
 	result.SMTPPassword = settings[SettingKeySMTPPassword]
