@@ -961,6 +961,8 @@ export default {
     title: 'Profile Settings',
     description: 'Manage your account information and settings',
     accountBalance: 'Account Balance',
+    referralInviterReward: 'Referral Reward',
+    referralInviteeReward: 'Registration Reward (Referred)',
     concurrencyLimit: 'Concurrency Limit',
     memberSince: 'Member Since',
     administrator: 'Administrator',

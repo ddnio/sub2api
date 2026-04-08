@@ -966,6 +966,8 @@ export default {
     title: '个人设置',
     description: '管理您的账户信息和设置',
     accountBalance: '账户余额',
+    referralInviterReward: '邀请奖励',
+    referralInviteeReward: '注册奖励（被邀请）',
     concurrencyLimit: '并发限制',
     memberSince: '注册时间',
     administrator: '管理员',

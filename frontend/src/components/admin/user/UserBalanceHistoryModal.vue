@@ -235,7 +235,7 @@ const loadHistory = async (page: number) => {
 const isAdminType = (type: string) => type === 'admin_balance' || type === 'admin_concurrency'
 
 // Helper: check if balance type (includes admin_balance)
-const isBalanceType = (type: string) => type === 'balance' || type === 'admin_balance'
+const isBalanceType = (type: string) => type === 'balance' || type === 'admin_balance' || type === 'ref_inviter' || type === 'ref_invitee'
 
 // Helper: check if subscription type
 const isSubscriptionType = (type: string) => type === 'subscription'
@@ -299,6 +299,10 @@ const getItemTitle = (item: BalanceHistoryItem) => {
       return item.value >= 0 ? t('redeem.concurrencyAddedAdmin') : t('redeem.concurrencyReducedAdmin')
     case 'subscription':
       return t('redeem.subscriptionAssigned')
+    case 'ref_inviter':
+      return t('redeem.referralInviterReward')
+    case 'ref_invitee':
+      return t('redeem.referralInviteeReward')
     default:
       return t('common.unknown')
   }
