@@ -1470,6 +1470,7 @@ export default {
         balance: 'Balance',
         usage: 'Usage',
         concurrency: 'Concurrency',
+        referralCode: 'Referral Code',
         status: 'Status',
         created: 'Created',
         actions: 'Actions'

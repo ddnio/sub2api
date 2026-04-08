@@ -427,6 +427,10 @@
             />
           </template>
 
+          <template #cell-referral_code="{ value }">
+            <span class="font-mono text-xs text-gray-600 dark:text-gray-400">{{ value || '-' }}</span>
+          </template>
+
           <template #cell-status="{ value }">
             <div class="flex items-center gap-1.5">
               <span
@@ -689,6 +693,7 @@ const allColumns = computed<Column[]>(() => [
   { key: 'balance', label: t('admin.users.columns.balance'), sortable: true },
   { key: 'usage', label: t('admin.users.columns.usage'), sortable: false },
   { key: 'concurrency', label: t('admin.users.columns.concurrency'), sortable: true },
+  { key: 'referral_code', label: t('admin.users.columns.referralCode'), sortable: false },
   { key: 'status', label: t('admin.users.columns.status'), sortable: true },
   { key: 'created_at', label: t('admin.users.columns.created'), sortable: true },
   { key: 'actions', label: t('admin.users.columns.actions'), sortable: false }
