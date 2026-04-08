@@ -148,7 +148,13 @@
           </transition>
         </div>
 
-        <!-- Referral Code: 通过 ?ref= URL 参数静默传递，不显示输入框 -->
+        <!-- Referral Code: 通过 ?ref= URL 参数静默传递 -->
+        <div v-if="formData.referral_code" class="flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2 dark:bg-green-900/20">
+          <Icon name="checkCircle" size="sm" class="text-green-600 dark:text-green-400" />
+          <span class="text-sm text-green-700 dark:text-green-400">
+            {{ t('auth.referralCodeApplied', { code: formData.referral_code }) }}
+          </span>
+        </div>
 
         <!-- Promo Code Input (Optional) -->
         <div v-if="promoCodeEnabled">

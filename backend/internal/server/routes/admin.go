@@ -508,6 +508,9 @@ func registerSubscriptionRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 	// 分组下的订阅列表
 	admin.GET("/groups/:id/subscriptions", h.Admin.Subscription.ListByGroup)
 
+	// 用户邀请信息
+	admin.GET("/users/:id/referral", h.Referral.GetUserReferralInfo)
+
 	// 用户下的订阅列表
 	admin.GET("/users/:id/subscriptions", h.Admin.Subscription.ListByUser)
 }
