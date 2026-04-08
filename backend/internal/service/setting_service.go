@@ -167,6 +167,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyCustomEndpoints,
 		SettingKeyLinuxDoConnectEnabled,
 		SettingKeyBackendModeEnabled,
+		SettingKeyReferralEnabled,
 	}
 
 	settings, err := s.settingRepo.GetMultiple(ctx, keys)
