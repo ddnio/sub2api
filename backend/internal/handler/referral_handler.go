@@ -103,9 +103,17 @@ func (h *ReferralHandler) GetUserReferralInfo(c *gin.Context) {
 		return
 	}
 
+	// 获取邀请列表
+	records, _, err := h.referralService.ListReferrals(c.Request.Context(), userID, pagination.PaginationParams{Page: 1, PageSize: 100})
+	if err != nil {
+		records = nil
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"referral_code": info.ReferralCode,
-		"invite_count":  inviteCount,
-		"invited_by":    referral,
+		"referral_code":   info.ReferralCode,
+		"invite_count":    inviteCount,
+		"total_rewarded":  info.TotalRewarded,
+		"invited_by":      referral,
+		"invite_records":  records,
 	})
 }

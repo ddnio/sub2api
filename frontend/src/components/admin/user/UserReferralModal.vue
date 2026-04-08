@@ -14,10 +14,14 @@
       </div>
 
       <!-- Stats -->
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-3 gap-3">
         <div class="rounded-lg border border-gray-200 px-4 py-3 dark:border-dark-600">
           <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.users.referralInviteCount') }}</p>
           <p class="mt-1 text-lg font-bold text-gray-900 dark:text-white">{{ referralData?.invite_count ?? 0 }}</p>
+        </div>
+        <div class="rounded-lg border border-gray-200 px-4 py-3 dark:border-dark-600">
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('referral.totalRewarded') }}</p>
+          <p class="mt-1 text-lg font-bold text-green-600 dark:text-green-400">${{ (referralData?.total_rewarded ?? 0).toFixed(2) }}</p>
         </div>
         <div class="rounded-lg border border-gray-200 px-4 py-3 dark:border-dark-600">
           <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.users.referralInvitedBy') }}</p>
@@ -25,6 +29,34 @@
             {{ referralData?.invited_by?.invitee_email || '-' }}
           </p>
         </div>
+      </div>
+
+      <!-- Invite Records -->
+      <div class="rounded-lg border border-gray-200 dark:border-dark-600">
+        <div class="border-b border-gray-200 px-4 py-3 dark:border-dark-600">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('referral.inviteeList') }}</h3>
+        </div>
+        <div v-if="!referralData?.invite_records?.length" class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          {{ t('referral.noInvitees') }}
+        </div>
+        <table v-else class="w-full">
+          <thead>
+            <tr class="border-b border-gray-100 dark:border-dark-700">
+              <th class="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ t('referral.email') }}</th>
+              <th class="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ t('referral.date') }}</th>
+              <th class="px-4 py-2 text-right text-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ t('referral.reward') }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-dark-700">
+            <tr v-for="record in referralData.invite_records" :key="record.id">
+              <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-200">{{ record.invitee_email }}</td>
+              <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{{ formatDate(record.created_at) }}</td>
+              <td class="px-4 py-2 text-right text-sm font-medium text-green-600 dark:text-green-400">
+                +${{ record.inviter_rewarded.toFixed(2) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
     <template #footer>
@@ -53,6 +85,10 @@ defineEmits<{ close: [] }>()
 
 const loading = ref(false)
 const referralData = ref<any>(null)
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString()
+}
 
 watch(() => props.show, async (val) => {
   if (val && props.user) {
