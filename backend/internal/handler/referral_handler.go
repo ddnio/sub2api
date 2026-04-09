@@ -21,12 +21,17 @@ func NewReferralHandler(referralService *service.ReferralService) *ReferralHandl
 	return &ReferralHandler{referralService: referralService}
 }
 
-// GetReferralInfo 获取当前用户的推荐码信息
+// GetReferralInfo 获取当前用户的推荐码信息（用户端：确保有推荐码）
 func (h *ReferralHandler) GetReferralInfo(c *gin.Context) {
 	subject, ok := middleware.GetAuthSubjectFromContext(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
+	}
+
+	// 用户主动访问邀请页，确保有推荐码（惰性生成）
+	if _, err := h.referralService.EnsureReferralCode(c.Request.Context(), subject.UserID); err != nil {
+		// 非关键，不阻断
 	}
 
 	info, err := h.referralService.GetReferralInfo(c.Request.Context(), subject.UserID)
@@ -77,7 +82,7 @@ func (h *ReferralHandler) ListReferrals(c *gin.Context) {
 	})
 }
 
-// GetUserReferralInfo 管理员查看用户邀请信息
+// GetUserReferralInfo 管理员查看用户邀请信息（纯查询，无副作用）
 func (h *ReferralHandler) GetUserReferralInfo(c *gin.Context) {
 	userIDStr := c.Param("id")
 	userID, err := strconv.ParseInt(userIDStr, 10, 64)
@@ -92,28 +97,44 @@ func (h *ReferralHandler) GetUserReferralInfo(c *gin.Context) {
 		return
 	}
 
-	inviteCount, err := h.referralService.GetInviteCount(c.Request.Context(), userID)
-	if err != nil {
-		inviteCount = 0
-	}
-
+	// 纯查询，不触发惰性生成推荐码
 	info, err := h.referralService.GetReferralInfo(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get referral info"})
 		return
 	}
 
-	// 获取邀请列表
-	records, _, err := h.referralService.ListReferrals(c.Request.Context(), userID, pagination.PaginationParams{Page: 1, PageSize: 100})
+	// 支持前端分页参数
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	records, paginationResult, err := h.referralService.ListReferrals(c.Request.Context(), userID, pagination.PaginationParams{Page: page, PageSize: pageSize})
 	if err != nil {
 		records = nil
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"referral_code":   info.ReferralCode,
-		"invite_count":    inviteCount,
-		"total_rewarded":  info.TotalRewarded,
-		"invited_by":      referral,
-		"invite_records":  records,
-	})
+	resp := gin.H{
+		"referral_code":  info.ReferralCode,
+		"invite_count":   info.TotalInvited,
+		"total_rewarded": info.TotalRewarded,
+		"pending_count":  info.PendingCount,
+		"invited_by":     referral,
+		"invite_records": records,
+	}
+	if paginationResult != nil {
+		resp["pagination"] = gin.H{
+			"total":     paginationResult.Total,
+			"page":      paginationResult.Page,
+			"page_size": paginationResult.PageSize,
+			"pages":     paginationResult.Pages,
+		}
+	}
+
+	c.JSON(http.StatusOK, resp)
 }

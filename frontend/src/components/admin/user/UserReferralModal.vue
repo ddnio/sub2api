@@ -14,7 +14,7 @@
       </div>
 
       <!-- Stats -->
-      <div class="grid grid-cols-3 gap-3">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div class="rounded-lg border border-gray-200 px-4 py-3 dark:border-dark-600">
           <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.users.referralInviteCount') }}</p>
           <p class="mt-1 text-lg font-bold text-gray-900 dark:text-white">{{ referralData?.invite_count ?? 0 }}</p>
@@ -22,6 +22,10 @@
         <div class="rounded-lg border border-gray-200 px-4 py-3 dark:border-dark-600">
           <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('referral.totalRewarded') }}</p>
           <p class="mt-1 text-lg font-bold text-green-600 dark:text-green-400">${{ (referralData?.total_rewarded ?? 0).toFixed(2) }}</p>
+        </div>
+        <div class="rounded-lg border border-gray-200 px-4 py-3 dark:border-dark-600">
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('referral.pendingCount') }}</p>
+          <p class="mt-1 text-lg font-bold text-amber-500 dark:text-amber-400">{{ referralData?.pending_count ?? 0 }}</p>
         </div>
         <div class="rounded-lg border border-gray-200 px-4 py-3 dark:border-dark-600">
           <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.users.referralInvitedBy') }}</p>
@@ -44,6 +48,7 @@
             <tr class="border-b border-gray-100 dark:border-dark-700">
               <th class="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ t('referral.email') }}</th>
               <th class="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ t('referral.date') }}</th>
+              <th class="px-4 py-2 text-center text-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ t('referral.status') }}</th>
               <th class="px-4 py-2 text-right text-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ t('referral.reward') }}</th>
             </tr>
           </thead>
@@ -51,8 +56,19 @@
             <tr v-for="record in referralData.invite_records" :key="record.id">
               <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-200">{{ record.invitee_email }}</td>
               <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{{ formatDate(record.created_at) }}</td>
-              <td class="px-4 py-2 text-right text-sm font-medium text-green-600 dark:text-green-400">
-                +${{ record.inviter_rewarded.toFixed(2) }}
+              <td class="px-4 py-2 text-center text-sm">
+                <span v-if="record.reward_granted_at" class="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/20 dark:text-green-400">
+                  {{ t('referral.statusGranted') }}
+                </span>
+                <span v-else class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                  {{ t('referral.statusPending') }}
+                </span>
+              </td>
+              <td class="px-4 py-2 text-right text-sm font-medium">
+                <span v-if="record.reward_granted_at" class="text-green-600 dark:text-green-400">
+                  +${{ record.inviter_rewarded.toFixed(2) }}
+                </span>
+                <span v-else class="text-gray-400 dark:text-gray-500">—</span>
               </td>
             </tr>
           </tbody>
@@ -94,7 +110,7 @@ watch(() => props.show, async (val) => {
   if (val && props.user) {
     loading.value = true
     try {
-      const { data } = await apiClient.get(`/admin/users/${props.user.id}/referral`)
+      const { data } = await apiClient.get(`/admin/users/${props.user.id}/referral`, { params: { page_size: 100 } })
       referralData.value = data
     } catch {
       referralData.value = null

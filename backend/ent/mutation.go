@@ -30399,23 +30399,28 @@ func (m *UserAttributeValueMutation) ResetEdge(name string) error {
 // UserReferralMutation represents an operation that mutates the UserReferral nodes in the graph.
 type UserReferralMutation struct {
 	config
-	op                  Op
-	typ                 string
-	id                  *int64
-	code                *string
-	inviter_rewarded    *float64
-	addinviter_rewarded *float64
-	invitee_rewarded    *float64
-	addinvitee_rewarded *float64
-	created_at          *time.Time
-	clearedFields       map[string]struct{}
-	inviter             *int64
-	clearedinviter      bool
-	invitee             *int64
-	clearedinvitee      bool
-	done                bool
-	oldValue            func(context.Context) (*UserReferral, error)
-	predicates          []predicate.UserReferral
+	op                         Op
+	typ                        string
+	id                         *int64
+	code                       *string
+	inviter_rewarded           *float64
+	addinviter_rewarded        *float64
+	invitee_rewarded           *float64
+	addinvitee_rewarded        *float64
+	inviter_reward_snapshot    *float64
+	addinviter_reward_snapshot *float64
+	invitee_reward_snapshot    *float64
+	addinvitee_reward_snapshot *float64
+	reward_granted_at          *time.Time
+	created_at                 *time.Time
+	clearedFields              map[string]struct{}
+	inviter                    *int64
+	clearedinviter             bool
+	invitee                    *int64
+	clearedinvitee             bool
+	done                       bool
+	oldValue                   func(context.Context) (*UserReferral, error)
+	predicates                 []predicate.UserReferral
 }
 
 var _ ent.Mutation = (*UserReferralMutation)(nil)
@@ -30736,6 +30741,167 @@ func (m *UserReferralMutation) ResetInviteeRewarded() {
 	m.addinvitee_rewarded = nil
 }
 
+// SetInviterRewardSnapshot sets the "inviter_reward_snapshot" field.
+func (m *UserReferralMutation) SetInviterRewardSnapshot(f float64) {
+	m.inviter_reward_snapshot = &f
+	m.addinviter_reward_snapshot = nil
+}
+
+// InviterRewardSnapshot returns the value of the "inviter_reward_snapshot" field in the mutation.
+func (m *UserReferralMutation) InviterRewardSnapshot() (r float64, exists bool) {
+	v := m.inviter_reward_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInviterRewardSnapshot returns the old "inviter_reward_snapshot" field's value of the UserReferral entity.
+// If the UserReferral object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserReferralMutation) OldInviterRewardSnapshot(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInviterRewardSnapshot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInviterRewardSnapshot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInviterRewardSnapshot: %w", err)
+	}
+	return oldValue.InviterRewardSnapshot, nil
+}
+
+// AddInviterRewardSnapshot adds f to the "inviter_reward_snapshot" field.
+func (m *UserReferralMutation) AddInviterRewardSnapshot(f float64) {
+	if m.addinviter_reward_snapshot != nil {
+		*m.addinviter_reward_snapshot += f
+	} else {
+		m.addinviter_reward_snapshot = &f
+	}
+}
+
+// AddedInviterRewardSnapshot returns the value that was added to the "inviter_reward_snapshot" field in this mutation.
+func (m *UserReferralMutation) AddedInviterRewardSnapshot() (r float64, exists bool) {
+	v := m.addinviter_reward_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetInviterRewardSnapshot resets all changes to the "inviter_reward_snapshot" field.
+func (m *UserReferralMutation) ResetInviterRewardSnapshot() {
+	m.inviter_reward_snapshot = nil
+	m.addinviter_reward_snapshot = nil
+}
+
+// SetInviteeRewardSnapshot sets the "invitee_reward_snapshot" field.
+func (m *UserReferralMutation) SetInviteeRewardSnapshot(f float64) {
+	m.invitee_reward_snapshot = &f
+	m.addinvitee_reward_snapshot = nil
+}
+
+// InviteeRewardSnapshot returns the value of the "invitee_reward_snapshot" field in the mutation.
+func (m *UserReferralMutation) InviteeRewardSnapshot() (r float64, exists bool) {
+	v := m.invitee_reward_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInviteeRewardSnapshot returns the old "invitee_reward_snapshot" field's value of the UserReferral entity.
+// If the UserReferral object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserReferralMutation) OldInviteeRewardSnapshot(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInviteeRewardSnapshot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInviteeRewardSnapshot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInviteeRewardSnapshot: %w", err)
+	}
+	return oldValue.InviteeRewardSnapshot, nil
+}
+
+// AddInviteeRewardSnapshot adds f to the "invitee_reward_snapshot" field.
+func (m *UserReferralMutation) AddInviteeRewardSnapshot(f float64) {
+	if m.addinvitee_reward_snapshot != nil {
+		*m.addinvitee_reward_snapshot += f
+	} else {
+		m.addinvitee_reward_snapshot = &f
+	}
+}
+
+// AddedInviteeRewardSnapshot returns the value that was added to the "invitee_reward_snapshot" field in this mutation.
+func (m *UserReferralMutation) AddedInviteeRewardSnapshot() (r float64, exists bool) {
+	v := m.addinvitee_reward_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetInviteeRewardSnapshot resets all changes to the "invitee_reward_snapshot" field.
+func (m *UserReferralMutation) ResetInviteeRewardSnapshot() {
+	m.invitee_reward_snapshot = nil
+	m.addinvitee_reward_snapshot = nil
+}
+
+// SetRewardGrantedAt sets the "reward_granted_at" field.
+func (m *UserReferralMutation) SetRewardGrantedAt(t time.Time) {
+	m.reward_granted_at = &t
+}
+
+// RewardGrantedAt returns the value of the "reward_granted_at" field in the mutation.
+func (m *UserReferralMutation) RewardGrantedAt() (r time.Time, exists bool) {
+	v := m.reward_granted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRewardGrantedAt returns the old "reward_granted_at" field's value of the UserReferral entity.
+// If the UserReferral object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserReferralMutation) OldRewardGrantedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRewardGrantedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRewardGrantedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRewardGrantedAt: %w", err)
+	}
+	return oldValue.RewardGrantedAt, nil
+}
+
+// ClearRewardGrantedAt clears the value of the "reward_granted_at" field.
+func (m *UserReferralMutation) ClearRewardGrantedAt() {
+	m.reward_granted_at = nil
+	m.clearedFields[userreferral.FieldRewardGrantedAt] = struct{}{}
+}
+
+// RewardGrantedAtCleared returns if the "reward_granted_at" field was cleared in this mutation.
+func (m *UserReferralMutation) RewardGrantedAtCleared() bool {
+	_, ok := m.clearedFields[userreferral.FieldRewardGrantedAt]
+	return ok
+}
+
+// ResetRewardGrantedAt resets all changes to the "reward_granted_at" field.
+func (m *UserReferralMutation) ResetRewardGrantedAt() {
+	m.reward_granted_at = nil
+	delete(m.clearedFields, userreferral.FieldRewardGrantedAt)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *UserReferralMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -30860,7 +31026,7 @@ func (m *UserReferralMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserReferralMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 9)
 	if m.inviter != nil {
 		fields = append(fields, userreferral.FieldInviterID)
 	}
@@ -30875,6 +31041,15 @@ func (m *UserReferralMutation) Fields() []string {
 	}
 	if m.invitee_rewarded != nil {
 		fields = append(fields, userreferral.FieldInviteeRewarded)
+	}
+	if m.inviter_reward_snapshot != nil {
+		fields = append(fields, userreferral.FieldInviterRewardSnapshot)
+	}
+	if m.invitee_reward_snapshot != nil {
+		fields = append(fields, userreferral.FieldInviteeRewardSnapshot)
+	}
+	if m.reward_granted_at != nil {
+		fields = append(fields, userreferral.FieldRewardGrantedAt)
 	}
 	if m.created_at != nil {
 		fields = append(fields, userreferral.FieldCreatedAt)
@@ -30897,6 +31072,12 @@ func (m *UserReferralMutation) Field(name string) (ent.Value, bool) {
 		return m.InviterRewarded()
 	case userreferral.FieldInviteeRewarded:
 		return m.InviteeRewarded()
+	case userreferral.FieldInviterRewardSnapshot:
+		return m.InviterRewardSnapshot()
+	case userreferral.FieldInviteeRewardSnapshot:
+		return m.InviteeRewardSnapshot()
+	case userreferral.FieldRewardGrantedAt:
+		return m.RewardGrantedAt()
 	case userreferral.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -30918,6 +31099,12 @@ func (m *UserReferralMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldInviterRewarded(ctx)
 	case userreferral.FieldInviteeRewarded:
 		return m.OldInviteeRewarded(ctx)
+	case userreferral.FieldInviterRewardSnapshot:
+		return m.OldInviterRewardSnapshot(ctx)
+	case userreferral.FieldInviteeRewardSnapshot:
+		return m.OldInviteeRewardSnapshot(ctx)
+	case userreferral.FieldRewardGrantedAt:
+		return m.OldRewardGrantedAt(ctx)
 	case userreferral.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -30964,6 +31151,27 @@ func (m *UserReferralMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetInviteeRewarded(v)
 		return nil
+	case userreferral.FieldInviterRewardSnapshot:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInviterRewardSnapshot(v)
+		return nil
+	case userreferral.FieldInviteeRewardSnapshot:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInviteeRewardSnapshot(v)
+		return nil
+	case userreferral.FieldRewardGrantedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRewardGrantedAt(v)
+		return nil
 	case userreferral.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -30985,6 +31193,12 @@ func (m *UserReferralMutation) AddedFields() []string {
 	if m.addinvitee_rewarded != nil {
 		fields = append(fields, userreferral.FieldInviteeRewarded)
 	}
+	if m.addinviter_reward_snapshot != nil {
+		fields = append(fields, userreferral.FieldInviterRewardSnapshot)
+	}
+	if m.addinvitee_reward_snapshot != nil {
+		fields = append(fields, userreferral.FieldInviteeRewardSnapshot)
+	}
 	return fields
 }
 
@@ -30997,6 +31211,10 @@ func (m *UserReferralMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedInviterRewarded()
 	case userreferral.FieldInviteeRewarded:
 		return m.AddedInviteeRewarded()
+	case userreferral.FieldInviterRewardSnapshot:
+		return m.AddedInviterRewardSnapshot()
+	case userreferral.FieldInviteeRewardSnapshot:
+		return m.AddedInviteeRewardSnapshot()
 	}
 	return nil, false
 }
@@ -31020,6 +31238,20 @@ func (m *UserReferralMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddInviteeRewarded(v)
 		return nil
+	case userreferral.FieldInviterRewardSnapshot:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddInviterRewardSnapshot(v)
+		return nil
+	case userreferral.FieldInviteeRewardSnapshot:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddInviteeRewardSnapshot(v)
+		return nil
 	}
 	return fmt.Errorf("unknown UserReferral numeric field %s", name)
 }
@@ -31027,7 +31259,11 @@ func (m *UserReferralMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *UserReferralMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(userreferral.FieldRewardGrantedAt) {
+		fields = append(fields, userreferral.FieldRewardGrantedAt)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -31040,6 +31276,11 @@ func (m *UserReferralMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *UserReferralMutation) ClearField(name string) error {
+	switch name {
+	case userreferral.FieldRewardGrantedAt:
+		m.ClearRewardGrantedAt()
+		return nil
+	}
 	return fmt.Errorf("unknown UserReferral nullable field %s", name)
 }
 
@@ -31061,6 +31302,15 @@ func (m *UserReferralMutation) ResetField(name string) error {
 		return nil
 	case userreferral.FieldInviteeRewarded:
 		m.ResetInviteeRewarded()
+		return nil
+	case userreferral.FieldInviterRewardSnapshot:
+		m.ResetInviterRewardSnapshot()
+		return nil
+	case userreferral.FieldInviteeRewardSnapshot:
+		m.ResetInviteeRewardSnapshot()
+		return nil
+	case userreferral.FieldRewardGrantedAt:
+		m.ResetRewardGrantedAt()
 		return nil
 	case userreferral.FieldCreatedAt:
 		m.ResetCreatedAt()

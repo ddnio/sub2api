@@ -918,7 +918,12 @@ export default {
     noInvitees: '暂无邀请记录',
     email: '邮箱',
     date: '注册日期',
+    status: '状态',
     reward: '奖励',
+    pendingCount: '待激活',
+    statusGranted: '已奖励',
+    statusPending: '待激活',
+    pendingTooltip: '好友首次使用后奖励自动到账',
   },
   redeem: {
     title: '兑换码',

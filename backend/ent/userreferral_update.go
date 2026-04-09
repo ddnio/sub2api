@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -112,6 +113,68 @@ func (_u *UserReferralUpdate) AddInviteeRewarded(v float64) *UserReferralUpdate 
 	return _u
 }
 
+// SetInviterRewardSnapshot sets the "inviter_reward_snapshot" field.
+func (_u *UserReferralUpdate) SetInviterRewardSnapshot(v float64) *UserReferralUpdate {
+	_u.mutation.ResetInviterRewardSnapshot()
+	_u.mutation.SetInviterRewardSnapshot(v)
+	return _u
+}
+
+// SetNillableInviterRewardSnapshot sets the "inviter_reward_snapshot" field if the given value is not nil.
+func (_u *UserReferralUpdate) SetNillableInviterRewardSnapshot(v *float64) *UserReferralUpdate {
+	if v != nil {
+		_u.SetInviterRewardSnapshot(*v)
+	}
+	return _u
+}
+
+// AddInviterRewardSnapshot adds value to the "inviter_reward_snapshot" field.
+func (_u *UserReferralUpdate) AddInviterRewardSnapshot(v float64) *UserReferralUpdate {
+	_u.mutation.AddInviterRewardSnapshot(v)
+	return _u
+}
+
+// SetInviteeRewardSnapshot sets the "invitee_reward_snapshot" field.
+func (_u *UserReferralUpdate) SetInviteeRewardSnapshot(v float64) *UserReferralUpdate {
+	_u.mutation.ResetInviteeRewardSnapshot()
+	_u.mutation.SetInviteeRewardSnapshot(v)
+	return _u
+}
+
+// SetNillableInviteeRewardSnapshot sets the "invitee_reward_snapshot" field if the given value is not nil.
+func (_u *UserReferralUpdate) SetNillableInviteeRewardSnapshot(v *float64) *UserReferralUpdate {
+	if v != nil {
+		_u.SetInviteeRewardSnapshot(*v)
+	}
+	return _u
+}
+
+// AddInviteeRewardSnapshot adds value to the "invitee_reward_snapshot" field.
+func (_u *UserReferralUpdate) AddInviteeRewardSnapshot(v float64) *UserReferralUpdate {
+	_u.mutation.AddInviteeRewardSnapshot(v)
+	return _u
+}
+
+// SetRewardGrantedAt sets the "reward_granted_at" field.
+func (_u *UserReferralUpdate) SetRewardGrantedAt(v time.Time) *UserReferralUpdate {
+	_u.mutation.SetRewardGrantedAt(v)
+	return _u
+}
+
+// SetNillableRewardGrantedAt sets the "reward_granted_at" field if the given value is not nil.
+func (_u *UserReferralUpdate) SetNillableRewardGrantedAt(v *time.Time) *UserReferralUpdate {
+	if v != nil {
+		_u.SetRewardGrantedAt(*v)
+	}
+	return _u
+}
+
+// ClearRewardGrantedAt clears the value of the "reward_granted_at" field.
+func (_u *UserReferralUpdate) ClearRewardGrantedAt() *UserReferralUpdate {
+	_u.mutation.ClearRewardGrantedAt()
+	return _u
+}
+
 // SetInviter sets the "inviter" edge to the User entity.
 func (_u *UserReferralUpdate) SetInviter(v *User) *UserReferralUpdate {
 	return _u.SetInviterID(v.ID)
@@ -208,6 +271,24 @@ func (_u *UserReferralUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.AddedInviteeRewarded(); ok {
 		_spec.AddField(userreferral.FieldInviteeRewarded, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.InviterRewardSnapshot(); ok {
+		_spec.SetField(userreferral.FieldInviterRewardSnapshot, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedInviterRewardSnapshot(); ok {
+		_spec.AddField(userreferral.FieldInviterRewardSnapshot, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.InviteeRewardSnapshot(); ok {
+		_spec.SetField(userreferral.FieldInviteeRewardSnapshot, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedInviteeRewardSnapshot(); ok {
+		_spec.AddField(userreferral.FieldInviteeRewardSnapshot, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.RewardGrantedAt(); ok {
+		_spec.SetField(userreferral.FieldRewardGrantedAt, field.TypeTime, value)
+	}
+	if _u.mutation.RewardGrantedAtCleared() {
+		_spec.ClearField(userreferral.FieldRewardGrantedAt, field.TypeTime)
 	}
 	if _u.mutation.InviterCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -371,6 +452,68 @@ func (_u *UserReferralUpdateOne) AddInviteeRewarded(v float64) *UserReferralUpda
 	return _u
 }
 
+// SetInviterRewardSnapshot sets the "inviter_reward_snapshot" field.
+func (_u *UserReferralUpdateOne) SetInviterRewardSnapshot(v float64) *UserReferralUpdateOne {
+	_u.mutation.ResetInviterRewardSnapshot()
+	_u.mutation.SetInviterRewardSnapshot(v)
+	return _u
+}
+
+// SetNillableInviterRewardSnapshot sets the "inviter_reward_snapshot" field if the given value is not nil.
+func (_u *UserReferralUpdateOne) SetNillableInviterRewardSnapshot(v *float64) *UserReferralUpdateOne {
+	if v != nil {
+		_u.SetInviterRewardSnapshot(*v)
+	}
+	return _u
+}
+
+// AddInviterRewardSnapshot adds value to the "inviter_reward_snapshot" field.
+func (_u *UserReferralUpdateOne) AddInviterRewardSnapshot(v float64) *UserReferralUpdateOne {
+	_u.mutation.AddInviterRewardSnapshot(v)
+	return _u
+}
+
+// SetInviteeRewardSnapshot sets the "invitee_reward_snapshot" field.
+func (_u *UserReferralUpdateOne) SetInviteeRewardSnapshot(v float64) *UserReferralUpdateOne {
+	_u.mutation.ResetInviteeRewardSnapshot()
+	_u.mutation.SetInviteeRewardSnapshot(v)
+	return _u
+}
+
+// SetNillableInviteeRewardSnapshot sets the "invitee_reward_snapshot" field if the given value is not nil.
+func (_u *UserReferralUpdateOne) SetNillableInviteeRewardSnapshot(v *float64) *UserReferralUpdateOne {
+	if v != nil {
+		_u.SetInviteeRewardSnapshot(*v)
+	}
+	return _u
+}
+
+// AddInviteeRewardSnapshot adds value to the "invitee_reward_snapshot" field.
+func (_u *UserReferralUpdateOne) AddInviteeRewardSnapshot(v float64) *UserReferralUpdateOne {
+	_u.mutation.AddInviteeRewardSnapshot(v)
+	return _u
+}
+
+// SetRewardGrantedAt sets the "reward_granted_at" field.
+func (_u *UserReferralUpdateOne) SetRewardGrantedAt(v time.Time) *UserReferralUpdateOne {
+	_u.mutation.SetRewardGrantedAt(v)
+	return _u
+}
+
+// SetNillableRewardGrantedAt sets the "reward_granted_at" field if the given value is not nil.
+func (_u *UserReferralUpdateOne) SetNillableRewardGrantedAt(v *time.Time) *UserReferralUpdateOne {
+	if v != nil {
+		_u.SetRewardGrantedAt(*v)
+	}
+	return _u
+}
+
+// ClearRewardGrantedAt clears the value of the "reward_granted_at" field.
+func (_u *UserReferralUpdateOne) ClearRewardGrantedAt() *UserReferralUpdateOne {
+	_u.mutation.ClearRewardGrantedAt()
+	return _u
+}
+
 // SetInviter sets the "inviter" edge to the User entity.
 func (_u *UserReferralUpdateOne) SetInviter(v *User) *UserReferralUpdateOne {
 	return _u.SetInviterID(v.ID)
@@ -497,6 +640,24 @@ func (_u *UserReferralUpdateOne) sqlSave(ctx context.Context) (_node *UserReferr
 	}
 	if value, ok := _u.mutation.AddedInviteeRewarded(); ok {
 		_spec.AddField(userreferral.FieldInviteeRewarded, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.InviterRewardSnapshot(); ok {
+		_spec.SetField(userreferral.FieldInviterRewardSnapshot, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedInviterRewardSnapshot(); ok {
+		_spec.AddField(userreferral.FieldInviterRewardSnapshot, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.InviteeRewardSnapshot(); ok {
+		_spec.SetField(userreferral.FieldInviteeRewardSnapshot, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedInviteeRewardSnapshot(); ok {
+		_spec.AddField(userreferral.FieldInviteeRewardSnapshot, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.RewardGrantedAt(); ok {
+		_spec.SetField(userreferral.FieldRewardGrantedAt, field.TypeTime, value)
+	}
+	if _u.mutation.RewardGrantedAtCleared() {
+		_spec.ClearField(userreferral.FieldRewardGrantedAt, field.TypeTime)
 	}
 	if _u.mutation.InviterCleared() {
 		edge := &sqlgraph.EdgeSpec{

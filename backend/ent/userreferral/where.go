@@ -80,6 +80,21 @@ func InviteeRewarded(v float64) predicate.UserReferral {
 	return predicate.UserReferral(sql.FieldEQ(FieldInviteeRewarded, v))
 }
 
+// InviterRewardSnapshot applies equality check predicate on the "inviter_reward_snapshot" field. It's identical to InviterRewardSnapshotEQ.
+func InviterRewardSnapshot(v float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldEQ(FieldInviterRewardSnapshot, v))
+}
+
+// InviteeRewardSnapshot applies equality check predicate on the "invitee_reward_snapshot" field. It's identical to InviteeRewardSnapshotEQ.
+func InviteeRewardSnapshot(v float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldEQ(FieldInviteeRewardSnapshot, v))
+}
+
+// RewardGrantedAt applies equality check predicate on the "reward_granted_at" field. It's identical to RewardGrantedAtEQ.
+func RewardGrantedAt(v time.Time) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldEQ(FieldRewardGrantedAt, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.UserReferral {
 	return predicate.UserReferral(sql.FieldEQ(FieldCreatedAt, v))
@@ -268,6 +283,136 @@ func InviteeRewardedLT(v float64) predicate.UserReferral {
 // InviteeRewardedLTE applies the LTE predicate on the "invitee_rewarded" field.
 func InviteeRewardedLTE(v float64) predicate.UserReferral {
 	return predicate.UserReferral(sql.FieldLTE(FieldInviteeRewarded, v))
+}
+
+// InviterRewardSnapshotEQ applies the EQ predicate on the "inviter_reward_snapshot" field.
+func InviterRewardSnapshotEQ(v float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldEQ(FieldInviterRewardSnapshot, v))
+}
+
+// InviterRewardSnapshotNEQ applies the NEQ predicate on the "inviter_reward_snapshot" field.
+func InviterRewardSnapshotNEQ(v float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldNEQ(FieldInviterRewardSnapshot, v))
+}
+
+// InviterRewardSnapshotIn applies the In predicate on the "inviter_reward_snapshot" field.
+func InviterRewardSnapshotIn(vs ...float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldIn(FieldInviterRewardSnapshot, vs...))
+}
+
+// InviterRewardSnapshotNotIn applies the NotIn predicate on the "inviter_reward_snapshot" field.
+func InviterRewardSnapshotNotIn(vs ...float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldNotIn(FieldInviterRewardSnapshot, vs...))
+}
+
+// InviterRewardSnapshotGT applies the GT predicate on the "inviter_reward_snapshot" field.
+func InviterRewardSnapshotGT(v float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldGT(FieldInviterRewardSnapshot, v))
+}
+
+// InviterRewardSnapshotGTE applies the GTE predicate on the "inviter_reward_snapshot" field.
+func InviterRewardSnapshotGTE(v float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldGTE(FieldInviterRewardSnapshot, v))
+}
+
+// InviterRewardSnapshotLT applies the LT predicate on the "inviter_reward_snapshot" field.
+func InviterRewardSnapshotLT(v float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldLT(FieldInviterRewardSnapshot, v))
+}
+
+// InviterRewardSnapshotLTE applies the LTE predicate on the "inviter_reward_snapshot" field.
+func InviterRewardSnapshotLTE(v float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldLTE(FieldInviterRewardSnapshot, v))
+}
+
+// InviteeRewardSnapshotEQ applies the EQ predicate on the "invitee_reward_snapshot" field.
+func InviteeRewardSnapshotEQ(v float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldEQ(FieldInviteeRewardSnapshot, v))
+}
+
+// InviteeRewardSnapshotNEQ applies the NEQ predicate on the "invitee_reward_snapshot" field.
+func InviteeRewardSnapshotNEQ(v float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldNEQ(FieldInviteeRewardSnapshot, v))
+}
+
+// InviteeRewardSnapshotIn applies the In predicate on the "invitee_reward_snapshot" field.
+func InviteeRewardSnapshotIn(vs ...float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldIn(FieldInviteeRewardSnapshot, vs...))
+}
+
+// InviteeRewardSnapshotNotIn applies the NotIn predicate on the "invitee_reward_snapshot" field.
+func InviteeRewardSnapshotNotIn(vs ...float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldNotIn(FieldInviteeRewardSnapshot, vs...))
+}
+
+// InviteeRewardSnapshotGT applies the GT predicate on the "invitee_reward_snapshot" field.
+func InviteeRewardSnapshotGT(v float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldGT(FieldInviteeRewardSnapshot, v))
+}
+
+// InviteeRewardSnapshotGTE applies the GTE predicate on the "invitee_reward_snapshot" field.
+func InviteeRewardSnapshotGTE(v float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldGTE(FieldInviteeRewardSnapshot, v))
+}
+
+// InviteeRewardSnapshotLT applies the LT predicate on the "invitee_reward_snapshot" field.
+func InviteeRewardSnapshotLT(v float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldLT(FieldInviteeRewardSnapshot, v))
+}
+
+// InviteeRewardSnapshotLTE applies the LTE predicate on the "invitee_reward_snapshot" field.
+func InviteeRewardSnapshotLTE(v float64) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldLTE(FieldInviteeRewardSnapshot, v))
+}
+
+// RewardGrantedAtEQ applies the EQ predicate on the "reward_granted_at" field.
+func RewardGrantedAtEQ(v time.Time) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldEQ(FieldRewardGrantedAt, v))
+}
+
+// RewardGrantedAtNEQ applies the NEQ predicate on the "reward_granted_at" field.
+func RewardGrantedAtNEQ(v time.Time) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldNEQ(FieldRewardGrantedAt, v))
+}
+
+// RewardGrantedAtIn applies the In predicate on the "reward_granted_at" field.
+func RewardGrantedAtIn(vs ...time.Time) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldIn(FieldRewardGrantedAt, vs...))
+}
+
+// RewardGrantedAtNotIn applies the NotIn predicate on the "reward_granted_at" field.
+func RewardGrantedAtNotIn(vs ...time.Time) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldNotIn(FieldRewardGrantedAt, vs...))
+}
+
+// RewardGrantedAtGT applies the GT predicate on the "reward_granted_at" field.
+func RewardGrantedAtGT(v time.Time) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldGT(FieldRewardGrantedAt, v))
+}
+
+// RewardGrantedAtGTE applies the GTE predicate on the "reward_granted_at" field.
+func RewardGrantedAtGTE(v time.Time) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldGTE(FieldRewardGrantedAt, v))
+}
+
+// RewardGrantedAtLT applies the LT predicate on the "reward_granted_at" field.
+func RewardGrantedAtLT(v time.Time) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldLT(FieldRewardGrantedAt, v))
+}
+
+// RewardGrantedAtLTE applies the LTE predicate on the "reward_granted_at" field.
+func RewardGrantedAtLTE(v time.Time) predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldLTE(FieldRewardGrantedAt, v))
+}
+
+// RewardGrantedAtIsNil applies the IsNil predicate on the "reward_granted_at" field.
+func RewardGrantedAtIsNil() predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldIsNull(FieldRewardGrantedAt))
+}
+
+// RewardGrantedAtNotNil applies the NotNil predicate on the "reward_granted_at" field.
+func RewardGrantedAtNotNil() predicate.UserReferral {
+	return predicate.UserReferral(sql.FieldNotNull(FieldRewardGrantedAt))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

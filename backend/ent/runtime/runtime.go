@@ -1354,8 +1354,16 @@ func init() {
 	userreferralDescInviteeRewarded := userreferralFields[4].Descriptor()
 	// userreferral.DefaultInviteeRewarded holds the default value on creation for the invitee_rewarded field.
 	userreferral.DefaultInviteeRewarded = userreferralDescInviteeRewarded.Default.(float64)
+	// userreferralDescInviterRewardSnapshot is the schema descriptor for inviter_reward_snapshot field.
+	userreferralDescInviterRewardSnapshot := userreferralFields[5].Descriptor()
+	// userreferral.DefaultInviterRewardSnapshot holds the default value on creation for the inviter_reward_snapshot field.
+	userreferral.DefaultInviterRewardSnapshot = userreferralDescInviterRewardSnapshot.Default.(float64)
+	// userreferralDescInviteeRewardSnapshot is the schema descriptor for invitee_reward_snapshot field.
+	userreferralDescInviteeRewardSnapshot := userreferralFields[6].Descriptor()
+	// userreferral.DefaultInviteeRewardSnapshot holds the default value on creation for the invitee_reward_snapshot field.
+	userreferral.DefaultInviteeRewardSnapshot = userreferralDescInviteeRewardSnapshot.Default.(float64)
 	// userreferralDescCreatedAt is the schema descriptor for created_at field.
-	userreferralDescCreatedAt := userreferralFields[5].Descriptor()
+	userreferralDescCreatedAt := userreferralFields[8].Descriptor()
 	// userreferral.DefaultCreatedAt holds the default value on creation for the created_at field.
 	userreferral.DefaultCreatedAt = userreferralDescCreatedAt.Default.(func() time.Time)
 	usersubscriptionMixin := schema.UserSubscription{}.Mixin()

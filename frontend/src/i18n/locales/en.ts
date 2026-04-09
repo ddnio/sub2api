@@ -913,7 +913,12 @@ export default {
     noInvitees: 'No invitations yet',
     email: 'Email',
     date: 'Date',
+    status: 'Status',
     reward: 'Reward',
+    pendingCount: 'Pending',
+    statusGranted: 'Rewarded',
+    statusPending: 'Pending',
+    pendingTooltip: 'Reward will be granted after your friend makes their first purchase',
   },
   redeem: {
     title: 'Redeem Code',

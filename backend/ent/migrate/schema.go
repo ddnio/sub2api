@@ -1144,6 +1144,9 @@ var (
 		{Name: "code", Type: field.TypeString, Size: 16},
 		{Name: "inviter_rewarded", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
 		{Name: "invitee_rewarded", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "inviter_reward_snapshot", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "invitee_reward_snapshot", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "reward_granted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "inviter_id", Type: field.TypeInt64},
 		{Name: "invitee_id", Type: field.TypeInt64},
@@ -1156,13 +1159,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "user_referrals_users_referrals_as_inviter",
-				Columns:    []*schema.Column{UserReferralsColumns[5]},
+				Columns:    []*schema.Column{UserReferralsColumns[8]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "user_referrals_users_referrals_as_invitee",
-				Columns:    []*schema.Column{UserReferralsColumns[6]},
+				Columns:    []*schema.Column{UserReferralsColumns[9]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -1171,12 +1174,12 @@ var (
 			{
 				Name:    "userreferral_inviter_id",
 				Unique:  false,
-				Columns: []*schema.Column{UserReferralsColumns[5]},
+				Columns: []*schema.Column{UserReferralsColumns[8]},
 			},
 			{
 				Name:    "userreferral_invitee_id",
 				Unique:  true,
-				Columns: []*schema.Column{UserReferralsColumns[6]},
+				Columns: []*schema.Column{UserReferralsColumns[9]},
 			},
 			{
 				Name:    "userreferral_code",

@@ -8,6 +8,7 @@ export interface ReferralInfo {
   referral_code: string
   total_invited: number
   total_rewarded: number
+  pending_count: number
   inviter_reward_amount: number
   invitee_reward_amount: number
 }
@@ -20,6 +21,9 @@ export interface ReferralRecord {
   code: string
   inviter_rewarded: number
   invitee_rewarded: number
+  inviter_reward_snapshot: number
+  invitee_reward_snapshot: number
+  reward_granted_at: string | null
   created_at: string
 }
 

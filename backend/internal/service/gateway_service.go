@@ -7521,6 +7521,24 @@ func applyUsageBilling(ctx context.Context, requestID string, usageLog *UsageLog
 		}
 	}
 
+	// 首次余额扣费触发邀请奖励后，异步失效双方缓存
+	if result.ReferralRewardGranted {
+		inviterID := result.ReferralInviterID
+		inviteeID := result.ReferralInviteeID
+		go func() {
+			cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if deps.billingCacheService != nil {
+				_ = deps.billingCacheService.InvalidateUserBalance(cacheCtx, inviterID)
+				_ = deps.billingCacheService.InvalidateUserBalance(cacheCtx, inviteeID)
+			}
+			if deps.authCacheInvalidator != nil {
+				deps.authCacheInvalidator.InvalidateAuthCacheByUserID(cacheCtx, inviterID)
+				deps.authCacheInvalidator.InvalidateAuthCacheByUserID(cacheCtx, inviteeID)
+			}
+		}()
+	}
+
 	finalizePostUsageBilling(p, deps)
 	return true, nil
 }
@@ -7565,20 +7583,27 @@ func detachStreamUpstreamContext(ctx context.Context, stream bool) (context.Cont
 
 // billingDeps 扣费逻辑依赖的服务（由各 gateway service 提供）
 type billingDeps struct {
-	accountRepo         AccountRepository
-	userRepo            UserRepository
-	userSubRepo         UserSubscriptionRepository
-	billingCacheService *BillingCacheService
-	deferredService     *DeferredService
+	accountRepo          AccountRepository
+	userRepo             UserRepository
+	userSubRepo          UserSubscriptionRepository
+	billingCacheService  *BillingCacheService
+	deferredService      *DeferredService
+	authCacheInvalidator APIKeyAuthCacheInvalidator // 用于邀请奖励后失效缓存（可为 nil）
 }
 
 func (s *GatewayService) billingDeps() *billingDeps {
+	// authCacheInvalidator: safe type assertion, nil if cache doesn't implement it
+	var authInv APIKeyAuthCacheInvalidator
+	if inv, ok := s.cache.(APIKeyAuthCacheInvalidator); ok {
+		authInv = inv
+	}
 	return &billingDeps{
-		accountRepo:         s.accountRepo,
-		userRepo:            s.userRepo,
-		userSubRepo:         s.userSubRepo,
-		billingCacheService: s.billingCacheService,
-		deferredService:     s.deferredService,
+		accountRepo:          s.accountRepo,
+		userRepo:             s.userRepo,
+		userSubRepo:          s.userSubRepo,
+		billingCacheService:  s.billingCacheService,
+		deferredService:      s.deferredService,
+		authCacheInvalidator: authInv,
 	}
 }
 

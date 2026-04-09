@@ -49,21 +49,25 @@ type ReferralInfo struct {
 	ReferralCode     string  `json:"referral_code"`
 	TotalInvited     int     `json:"total_invited"`
 	TotalRewarded    float64 `json:"total_rewarded"`
-	InviterRewardAmt float64 `json:"inviter_reward_amount"` // 当前配置的邀请人奖励
-	InviteeRewardAmt float64 `json:"invitee_reward_amount"` // 当前配置的被邀请人奖励
+	PendingCount     int     `json:"pending_count"`          // 待激活人数
+	InviterRewardAmt float64 `json:"inviter_reward_amount"`  // 当前配置的邀请人奖励
+	InviteeRewardAmt float64 `json:"invitee_reward_amount"`  // 当前配置的被邀请人奖励
 }
 
 // ReferralRecord 邀请记录
 type ReferralRecord struct {
-	ID              int64     `json:"id"`
-	InviterID       int64     `json:"inviter_id"`
-	InviteeID       int64     `json:"invitee_id"`
-	InviterEmail    string    `json:"inviter_email"`
-	InviteeEmail    string    `json:"invitee_email"`
-	Code            string    `json:"code"`
-	InviterRewarded float64   `json:"inviter_rewarded"`
-	InviteeRewarded float64   `json:"invitee_rewarded"`
-	CreatedAt       time.Time `json:"created_at"`
+	ID                    int64      `json:"id"`
+	InviterID             int64      `json:"inviter_id"`
+	InviteeID             int64      `json:"invitee_id"`
+	InviterEmail          string     `json:"inviter_email"`
+	InviteeEmail          string     `json:"invitee_email"`
+	Code                  string     `json:"code"`
+	InviterRewarded       float64    `json:"inviter_rewarded"`
+	InviteeRewarded       float64    `json:"invitee_rewarded"`
+	InviterRewardSnapshot float64    `json:"inviter_reward_snapshot"`
+	InviteeRewardSnapshot float64    `json:"invitee_reward_snapshot"`
+	RewardGrantedAt       *time.Time `json:"reward_granted_at"`
+	CreatedAt             time.Time  `json:"created_at"`
 }
 
 // GenerateReferralCode 为用户生成唯一推荐码（带重试）
@@ -92,8 +96,9 @@ func (s *ReferralService) GenerateReferralCode(ctx context.Context, userID int64
 	return "", fmt.Errorf("failed to generate unique referral code after %d retries", maxRetries)
 }
 
-// ProcessRegistrationReferral 处理注册时的推荐码归因和奖励
-// 此方法为非关键操作：失败不影响注册，只记录日志并返回 error
+// ProcessRegistrationReferral 处理注册时的推荐码归因（仅记录，不发奖励）。
+// 奖励在被邀请人首次消费时由 usage_billing_repo 触发发放。
+// 此方法为非关键操作：失败不影响注册，只记录日志并返回 error。
 func (s *ReferralService) ProcessRegistrationReferral(ctx context.Context, inviteeID int64, referralCode string) error {
 	referralCode = strings.TrimSpace(strings.ToUpper(referralCode))
 	if referralCode == "" {
@@ -123,85 +128,28 @@ func (s *ReferralService) ProcessRegistrationReferral(ctx context.Context, invit
 		return nil
 	}
 
-	// 获取奖励金额配置
+	// 快照当前奖励金额配置
 	inviterAmount := s.settingService.GetReferralInviterAmount(ctx)
 	inviteeAmount := s.settingService.GetReferralInviteeAmount(ctx)
 
-	// 使用事务：INSERT referral + UPDATE 双方余额
-	tx, err := s.entClient.Tx(ctx)
-	if err != nil {
-		return fmt.Errorf("begin referral transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	txCtx := dbent.NewTxContext(ctx, tx)
-
-	// 创建邀请关系记录
-	_, err = tx.UserReferral.Create().
+	// 只创建归因记录，不发放奖励（reward_granted_at 为 NULL 表示待激活）
+	_, err = s.entClient.UserReferral.Create().
 		SetInviterID(inviter.ID).
 		SetInviteeID(inviteeID).
 		SetCode(referralCode).
-		SetInviterRewarded(inviterAmount).
-		SetInviteeRewarded(inviteeAmount).
-		Save(txCtx)
+		SetInviterRewardSnapshot(inviterAmount).
+		SetInviteeRewardSnapshot(inviteeAmount).
+		SetInviterRewarded(0).
+		SetInviteeRewarded(0).
+		Save(ctx)
 	if err != nil {
 		// 可能是 UNIQUE(invitee_id) 冲突——已被邀请过
 		logger.LegacyPrintf("service.referral", "[Referral] Failed to create referral record: inviter=%d invitee=%d error=%v", inviter.ID, inviteeID, err)
 		return fmt.Errorf("create referral record: %w", err)
 	}
 
-	// 给邀请人加余额 + 写充值记录
-	if inviterAmount > 0 {
-		if err := s.userRepo.UpdateBalance(txCtx, inviter.ID, inviterAmount); err != nil {
-			return fmt.Errorf("update inviter balance: %w", err)
-		}
-		now := time.Now()
-		inviterCode, _ := generateRandomCode(4)
-		_, err = tx.RedeemCode.Create().
-			SetCode(inviterCode).
-			SetType(AdjustmentTypeReferralInviter).
-			SetValue(inviterAmount).
-			SetStatus(StatusUsed).
-			SetUsedBy(inviter.ID).
-			SetUsedAt(now).
-			SetNotes(fmt.Sprintf("邀请用户注册奖励 (推荐码: %s)", referralCode)).
-			Save(txCtx)
-		if err != nil {
-			logger.LegacyPrintf("service.referral", "[Referral] Failed to create inviter reward record: %v", err)
-		}
-	}
-
-	// 给被邀请人加额外余额 + 写充值记录
-	if inviteeAmount > 0 {
-		if err := s.userRepo.UpdateBalance(txCtx, inviteeID, inviteeAmount); err != nil {
-			return fmt.Errorf("update invitee balance: %w", err)
-		}
-		now := time.Now()
-		inviteeCode, _ := generateRandomCode(4)
-		_, err = tx.RedeemCode.Create().
-			SetCode(inviteeCode).
-			SetType(AdjustmentTypeReferralInvitee).
-			SetValue(inviteeAmount).
-			SetStatus(StatusUsed).
-			SetUsedBy(inviteeID).
-			SetUsedAt(now).
-			SetNotes(fmt.Sprintf("通过推荐码 %s 注册奖励", referralCode)).
-			Save(txCtx)
-		if err != nil {
-			logger.LegacyPrintf("service.referral", "[Referral] Failed to create invitee reward record: %v", err)
-		}
-	}
-
-	// 提交事务
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit referral transaction: %w", err)
-	}
-
-	// Post-commit: 失效缓存（非关键，失败不影响）
-	s.invalidateReferralCaches(ctx, inviter.ID, inviteeID, inviterAmount, inviteeAmount)
-
 	logger.LegacyPrintf("service.referral",
-		"[Referral] Success: inviter=%d invitee=%d code=%s reward_inviter=%.2f reward_invitee=%.2f",
+		"[Referral] Attribution recorded: inviter=%d invitee=%d code=%s snapshot_inviter=%.2f snapshot_invitee=%.2f (pending first consumption)",
 		inviter.ID, inviteeID, referralCode, inviterAmount, inviteeAmount)
 
 	return nil
@@ -241,44 +189,34 @@ func (s *ReferralService) invalidateReferralCaches(ctx context.Context, inviterI
 	}
 }
 
-// GetReferralInfo 获取用户的推荐码信息和统计
+// GetReferralInfo 获取用户的推荐码信息和统计（纯查询，无副作用）
 func (s *ReferralService) GetReferralInfo(ctx context.Context, userID int64) (*ReferralInfo, error) {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
 	}
 
-	// 如果用户还没有推荐码，惰性生成
 	referralCode := ""
 	if user.ReferralCode != nil {
 		referralCode = *user.ReferralCode
 	}
-	if referralCode == "" {
-		code, err := s.GenerateReferralCode(ctx, userID)
-		if err != nil {
-			logger.LegacyPrintf("service.referral", "[Referral] Lazy generate code failed for user %d: %v", userID, err)
-			// 不阻断，返回空码
-		} else {
-			referralCode = code
-		}
-	}
 
-	// 统计邀请人数和奖励总额
-	totalInvited, err := s.entClient.UserReferral.Query().
-		Where(userreferral.InviterID(userID)).
-		Count(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("count referrals: %w", err)
-	}
-
-	// 汇总奖励金额
-	var totalRewarded float64
+	// 聚合查询：拿到总邀请数、已发放奖励总额、待激活人数
 	referrals, err := s.entClient.UserReferral.Query().
 		Where(userreferral.InviterID(userID)).
 		All(ctx)
-	if err == nil {
-		for _, r := range referrals {
+	if err != nil {
+		return nil, fmt.Errorf("query referrals: %w", err)
+	}
+
+	var totalInvited, pendingCount int
+	var totalRewarded float64
+	totalInvited = len(referrals)
+	for _, r := range referrals {
+		if r.RewardGrantedAt != nil {
 			totalRewarded += r.InviterRewarded
+		} else {
+			pendingCount++
 		}
 	}
 
@@ -293,9 +231,22 @@ func (s *ReferralService) GetReferralInfo(ctx context.Context, userID int64) (*R
 		ReferralCode:     referralCode,
 		TotalInvited:     totalInvited,
 		TotalRewarded:    totalRewarded,
+		PendingCount:     pendingCount,
 		InviterRewardAmt: inviterAmt,
 		InviteeRewardAmt: inviteeAmt,
 	}, nil
+}
+
+// EnsureReferralCode 确保用户有推荐码（惰性生成，仅用户主动访问邀请页时调用）
+func (s *ReferralService) EnsureReferralCode(ctx context.Context, userID int64) (string, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return "", fmt.Errorf("get user: %w", err)
+	}
+	if user.ReferralCode != nil && *user.ReferralCode != "" {
+		return *user.ReferralCode, nil
+	}
+	return s.GenerateReferralCode(ctx, userID)
 }
 
 // ListReferrals 获取用户的邀请列表（分页）
@@ -339,14 +290,17 @@ func (s *ReferralService) ListReferrals(ctx context.Context, userID int64, param
 			email = maskEmail(r.Edges.Invitee.Email)
 		}
 		records = append(records, ReferralRecord{
-			ID:              r.ID,
-			InviterID:       r.InviterID,
-			InviteeID:       r.InviteeID,
-			InviteeEmail:    email,
-			Code:            r.Code,
-			InviterRewarded: r.InviterRewarded,
-			InviteeRewarded: r.InviteeRewarded,
-			CreatedAt:       r.CreatedAt,
+			ID:                    r.ID,
+			InviterID:             r.InviterID,
+			InviteeID:             r.InviteeID,
+			InviteeEmail:          email,
+			Code:                  r.Code,
+			InviterRewarded:       r.InviterRewarded,
+			InviteeRewarded:       r.InviteeRewarded,
+			InviterRewardSnapshot: r.InviterRewardSnapshot,
+			InviteeRewardSnapshot: r.InviteeRewardSnapshot,
+			RewardGrantedAt:       r.RewardGrantedAt,
+			CreatedAt:             r.CreatedAt,
 		})
 	}
 
@@ -372,14 +326,17 @@ func (s *ReferralService) GetReferralByInvitee(ctx context.Context, inviteeID in
 	}
 
 	return &ReferralRecord{
-		ID:              r.ID,
-		InviterID:       r.InviterID,
-		InviteeID:       r.InviteeID,
-		InviterEmail:    inviterEmail,
-		Code:            r.Code,
-		InviterRewarded: r.InviterRewarded,
-		InviteeRewarded: r.InviteeRewarded,
-		CreatedAt:       r.CreatedAt,
+		ID:                    r.ID,
+		InviterID:             r.InviterID,
+		InviteeID:             r.InviteeID,
+		InviterEmail:          inviterEmail,
+		Code:                  r.Code,
+		InviterRewarded:       r.InviterRewarded,
+		InviteeRewarded:       r.InviteeRewarded,
+		InviterRewardSnapshot: r.InviterRewardSnapshot,
+		InviteeRewardSnapshot: r.InviteeRewardSnapshot,
+		RewardGrantedAt:       r.RewardGrantedAt,
+		CreatedAt:             r.CreatedAt,
 	}, nil
 }
 

@@ -28,6 +28,12 @@ type UserReferral struct {
 	InviterRewarded float64 `json:"inviter_rewarded,omitempty"`
 	// 被邀请人额外获得奖励金额
 	InviteeRewarded float64 `json:"invitee_rewarded,omitempty"`
+	// 注册时邀请人奖励金额快照
+	InviterRewardSnapshot float64 `json:"inviter_reward_snapshot,omitempty"`
+	// 注册时被邀请人奖励金额快照
+	InviteeRewardSnapshot float64 `json:"invitee_reward_snapshot,omitempty"`
+	// 奖励发放时间，NULL 表示待激活
+	RewardGrantedAt *time.Time `json:"reward_granted_at,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -74,13 +80,13 @@ func (*UserReferral) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case userreferral.FieldInviterRewarded, userreferral.FieldInviteeRewarded:
+		case userreferral.FieldInviterRewarded, userreferral.FieldInviteeRewarded, userreferral.FieldInviterRewardSnapshot, userreferral.FieldInviteeRewardSnapshot:
 			values[i] = new(sql.NullFloat64)
 		case userreferral.FieldID, userreferral.FieldInviterID, userreferral.FieldInviteeID:
 			values[i] = new(sql.NullInt64)
 		case userreferral.FieldCode:
 			values[i] = new(sql.NullString)
-		case userreferral.FieldCreatedAt:
+		case userreferral.FieldRewardGrantedAt, userreferral.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -132,6 +138,25 @@ func (_m *UserReferral) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field invitee_rewarded", values[i])
 			} else if value.Valid {
 				_m.InviteeRewarded = value.Float64
+			}
+		case userreferral.FieldInviterRewardSnapshot:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field inviter_reward_snapshot", values[i])
+			} else if value.Valid {
+				_m.InviterRewardSnapshot = value.Float64
+			}
+		case userreferral.FieldInviteeRewardSnapshot:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field invitee_reward_snapshot", values[i])
+			} else if value.Valid {
+				_m.InviteeRewardSnapshot = value.Float64
+			}
+		case userreferral.FieldRewardGrantedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field reward_granted_at", values[i])
+			} else if value.Valid {
+				_m.RewardGrantedAt = new(time.Time)
+				*_m.RewardGrantedAt = value.Time
 			}
 		case userreferral.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -199,6 +224,17 @@ func (_m *UserReferral) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("invitee_rewarded=")
 	builder.WriteString(fmt.Sprintf("%v", _m.InviteeRewarded))
+	builder.WriteString(", ")
+	builder.WriteString("inviter_reward_snapshot=")
+	builder.WriteString(fmt.Sprintf("%v", _m.InviterRewardSnapshot))
+	builder.WriteString(", ")
+	builder.WriteString("invitee_reward_snapshot=")
+	builder.WriteString(fmt.Sprintf("%v", _m.InviteeRewardSnapshot))
+	builder.WriteString(", ")
+	if v := _m.RewardGrantedAt; v != nil {
+		builder.WriteString("reward_granted_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

@@ -24,6 +24,12 @@ const (
 	FieldInviterRewarded = "inviter_rewarded"
 	// FieldInviteeRewarded holds the string denoting the invitee_rewarded field in the database.
 	FieldInviteeRewarded = "invitee_rewarded"
+	// FieldInviterRewardSnapshot holds the string denoting the inviter_reward_snapshot field in the database.
+	FieldInviterRewardSnapshot = "inviter_reward_snapshot"
+	// FieldInviteeRewardSnapshot holds the string denoting the invitee_reward_snapshot field in the database.
+	FieldInviteeRewardSnapshot = "invitee_reward_snapshot"
+	// FieldRewardGrantedAt holds the string denoting the reward_granted_at field in the database.
+	FieldRewardGrantedAt = "reward_granted_at"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// EdgeInviter holds the string denoting the inviter edge name in mutations.
@@ -56,6 +62,9 @@ var Columns = []string{
 	FieldCode,
 	FieldInviterRewarded,
 	FieldInviteeRewarded,
+	FieldInviterRewardSnapshot,
+	FieldInviteeRewardSnapshot,
+	FieldRewardGrantedAt,
 	FieldCreatedAt,
 }
 
@@ -76,6 +85,10 @@ var (
 	DefaultInviterRewarded float64
 	// DefaultInviteeRewarded holds the default value on creation for the "invitee_rewarded" field.
 	DefaultInviteeRewarded float64
+	// DefaultInviterRewardSnapshot holds the default value on creation for the "inviter_reward_snapshot" field.
+	DefaultInviterRewardSnapshot float64
+	// DefaultInviteeRewardSnapshot holds the default value on creation for the "invitee_reward_snapshot" field.
+	DefaultInviteeRewardSnapshot float64
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 )
@@ -111,6 +124,21 @@ func ByInviterRewarded(opts ...sql.OrderTermOption) OrderOption {
 // ByInviteeRewarded orders the results by the invitee_rewarded field.
 func ByInviteeRewarded(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldInviteeRewarded, opts...).ToFunc()
+}
+
+// ByInviterRewardSnapshot orders the results by the inviter_reward_snapshot field.
+func ByInviterRewardSnapshot(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInviterRewardSnapshot, opts...).ToFunc()
+}
+
+// ByInviteeRewardSnapshot orders the results by the invitee_reward_snapshot field.
+func ByInviteeRewardSnapshot(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInviteeRewardSnapshot, opts...).ToFunc()
+}
+
+// ByRewardGrantedAt orders the results by the reward_granted_at field.
+func ByRewardGrantedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRewardGrantedAt, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

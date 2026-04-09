@@ -237,17 +237,13 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		}
 	}
 
-	// 处理推荐码归因和奖励（当准入码模式关闭时，invitationCode 字段作为推荐码）
+	// 处理推荐码归因（当准入码模式关闭时，invitationCode 字段作为推荐码）
+	// 仅记录归因关系，奖励在被邀请人首次消费时由 usage_billing_repo 触发发放
 	if s.referralService != nil && s.settingService != nil &&
 		!s.settingService.IsInvitationCodeEnabled(ctx) && s.settingService.IsReferralEnabled(ctx) &&
 		invitationCode != "" {
 		if err := s.referralService.ProcessRegistrationReferral(ctx, user.ID, invitationCode); err != nil {
 			logger.LegacyPrintf("service.auth", "[Auth] Failed to process referral for user %d: %v", user.ID, err)
-		} else {
-			// 重新获取用户信息以获取更新后的余额
-			if updatedUser, err := s.userRepo.GetByID(ctx, user.ID); err == nil {
-				user = updatedUser
-			}
 		}
 	}
 

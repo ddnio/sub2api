@@ -45,6 +45,19 @@ func (UserReferral) Fields() []ent.Field {
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
 			Default(0).
 			Comment("被邀请人额外获得奖励金额"),
+		field.Float("inviter_reward_snapshot").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
+			Default(0).
+			Comment("注册时邀请人奖励金额快照"),
+		field.Float("invitee_reward_snapshot").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
+			Default(0).
+			Comment("注册时被邀请人奖励金额快照"),
+		field.Time("reward_granted_at").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "timestamptz"}).
+			Comment("奖励发放时间，NULL 表示待激活"),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now).

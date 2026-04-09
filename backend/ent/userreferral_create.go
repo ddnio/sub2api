@@ -69,6 +69,48 @@ func (_c *UserReferralCreate) SetNillableInviteeRewarded(v *float64) *UserReferr
 	return _c
 }
 
+// SetInviterRewardSnapshot sets the "inviter_reward_snapshot" field.
+func (_c *UserReferralCreate) SetInviterRewardSnapshot(v float64) *UserReferralCreate {
+	_c.mutation.SetInviterRewardSnapshot(v)
+	return _c
+}
+
+// SetNillableInviterRewardSnapshot sets the "inviter_reward_snapshot" field if the given value is not nil.
+func (_c *UserReferralCreate) SetNillableInviterRewardSnapshot(v *float64) *UserReferralCreate {
+	if v != nil {
+		_c.SetInviterRewardSnapshot(*v)
+	}
+	return _c
+}
+
+// SetInviteeRewardSnapshot sets the "invitee_reward_snapshot" field.
+func (_c *UserReferralCreate) SetInviteeRewardSnapshot(v float64) *UserReferralCreate {
+	_c.mutation.SetInviteeRewardSnapshot(v)
+	return _c
+}
+
+// SetNillableInviteeRewardSnapshot sets the "invitee_reward_snapshot" field if the given value is not nil.
+func (_c *UserReferralCreate) SetNillableInviteeRewardSnapshot(v *float64) *UserReferralCreate {
+	if v != nil {
+		_c.SetInviteeRewardSnapshot(*v)
+	}
+	return _c
+}
+
+// SetRewardGrantedAt sets the "reward_granted_at" field.
+func (_c *UserReferralCreate) SetRewardGrantedAt(v time.Time) *UserReferralCreate {
+	_c.mutation.SetRewardGrantedAt(v)
+	return _c
+}
+
+// SetNillableRewardGrantedAt sets the "reward_granted_at" field if the given value is not nil.
+func (_c *UserReferralCreate) SetNillableRewardGrantedAt(v *time.Time) *UserReferralCreate {
+	if v != nil {
+		_c.SetRewardGrantedAt(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *UserReferralCreate) SetCreatedAt(v time.Time) *UserReferralCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -136,6 +178,14 @@ func (_c *UserReferralCreate) defaults() {
 		v := userreferral.DefaultInviteeRewarded
 		_c.mutation.SetInviteeRewarded(v)
 	}
+	if _, ok := _c.mutation.InviterRewardSnapshot(); !ok {
+		v := userreferral.DefaultInviterRewardSnapshot
+		_c.mutation.SetInviterRewardSnapshot(v)
+	}
+	if _, ok := _c.mutation.InviteeRewardSnapshot(); !ok {
+		v := userreferral.DefaultInviteeRewardSnapshot
+		_c.mutation.SetInviteeRewardSnapshot(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := userreferral.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -163,6 +213,12 @@ func (_c *UserReferralCreate) check() error {
 	}
 	if _, ok := _c.mutation.InviteeRewarded(); !ok {
 		return &ValidationError{Name: "invitee_rewarded", err: errors.New(`ent: missing required field "UserReferral.invitee_rewarded"`)}
+	}
+	if _, ok := _c.mutation.InviterRewardSnapshot(); !ok {
+		return &ValidationError{Name: "inviter_reward_snapshot", err: errors.New(`ent: missing required field "UserReferral.inviter_reward_snapshot"`)}
+	}
+	if _, ok := _c.mutation.InviteeRewardSnapshot(); !ok {
+		return &ValidationError{Name: "invitee_reward_snapshot", err: errors.New(`ent: missing required field "UserReferral.invitee_reward_snapshot"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "UserReferral.created_at"`)}
@@ -211,6 +267,18 @@ func (_c *UserReferralCreate) createSpec() (*UserReferral, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.InviteeRewarded(); ok {
 		_spec.SetField(userreferral.FieldInviteeRewarded, field.TypeFloat64, value)
 		_node.InviteeRewarded = value
+	}
+	if value, ok := _c.mutation.InviterRewardSnapshot(); ok {
+		_spec.SetField(userreferral.FieldInviterRewardSnapshot, field.TypeFloat64, value)
+		_node.InviterRewardSnapshot = value
+	}
+	if value, ok := _c.mutation.InviteeRewardSnapshot(); ok {
+		_spec.SetField(userreferral.FieldInviteeRewardSnapshot, field.TypeFloat64, value)
+		_node.InviteeRewardSnapshot = value
+	}
+	if value, ok := _c.mutation.RewardGrantedAt(); ok {
+		_spec.SetField(userreferral.FieldRewardGrantedAt, field.TypeTime, value)
+		_node.RewardGrantedAt = &value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(userreferral.FieldCreatedAt, field.TypeTime, value)
@@ -374,6 +442,60 @@ func (u *UserReferralUpsert) AddInviteeRewarded(v float64) *UserReferralUpsert {
 	return u
 }
 
+// SetInviterRewardSnapshot sets the "inviter_reward_snapshot" field.
+func (u *UserReferralUpsert) SetInviterRewardSnapshot(v float64) *UserReferralUpsert {
+	u.Set(userreferral.FieldInviterRewardSnapshot, v)
+	return u
+}
+
+// UpdateInviterRewardSnapshot sets the "inviter_reward_snapshot" field to the value that was provided on create.
+func (u *UserReferralUpsert) UpdateInviterRewardSnapshot() *UserReferralUpsert {
+	u.SetExcluded(userreferral.FieldInviterRewardSnapshot)
+	return u
+}
+
+// AddInviterRewardSnapshot adds v to the "inviter_reward_snapshot" field.
+func (u *UserReferralUpsert) AddInviterRewardSnapshot(v float64) *UserReferralUpsert {
+	u.Add(userreferral.FieldInviterRewardSnapshot, v)
+	return u
+}
+
+// SetInviteeRewardSnapshot sets the "invitee_reward_snapshot" field.
+func (u *UserReferralUpsert) SetInviteeRewardSnapshot(v float64) *UserReferralUpsert {
+	u.Set(userreferral.FieldInviteeRewardSnapshot, v)
+	return u
+}
+
+// UpdateInviteeRewardSnapshot sets the "invitee_reward_snapshot" field to the value that was provided on create.
+func (u *UserReferralUpsert) UpdateInviteeRewardSnapshot() *UserReferralUpsert {
+	u.SetExcluded(userreferral.FieldInviteeRewardSnapshot)
+	return u
+}
+
+// AddInviteeRewardSnapshot adds v to the "invitee_reward_snapshot" field.
+func (u *UserReferralUpsert) AddInviteeRewardSnapshot(v float64) *UserReferralUpsert {
+	u.Add(userreferral.FieldInviteeRewardSnapshot, v)
+	return u
+}
+
+// SetRewardGrantedAt sets the "reward_granted_at" field.
+func (u *UserReferralUpsert) SetRewardGrantedAt(v time.Time) *UserReferralUpsert {
+	u.Set(userreferral.FieldRewardGrantedAt, v)
+	return u
+}
+
+// UpdateRewardGrantedAt sets the "reward_granted_at" field to the value that was provided on create.
+func (u *UserReferralUpsert) UpdateRewardGrantedAt() *UserReferralUpsert {
+	u.SetExcluded(userreferral.FieldRewardGrantedAt)
+	return u
+}
+
+// ClearRewardGrantedAt clears the value of the "reward_granted_at" field.
+func (u *UserReferralUpsert) ClearRewardGrantedAt() *UserReferralUpsert {
+	u.SetNull(userreferral.FieldRewardGrantedAt)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -500,6 +622,69 @@ func (u *UserReferralUpsertOne) AddInviteeRewarded(v float64) *UserReferralUpser
 func (u *UserReferralUpsertOne) UpdateInviteeRewarded() *UserReferralUpsertOne {
 	return u.Update(func(s *UserReferralUpsert) {
 		s.UpdateInviteeRewarded()
+	})
+}
+
+// SetInviterRewardSnapshot sets the "inviter_reward_snapshot" field.
+func (u *UserReferralUpsertOne) SetInviterRewardSnapshot(v float64) *UserReferralUpsertOne {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.SetInviterRewardSnapshot(v)
+	})
+}
+
+// AddInviterRewardSnapshot adds v to the "inviter_reward_snapshot" field.
+func (u *UserReferralUpsertOne) AddInviterRewardSnapshot(v float64) *UserReferralUpsertOne {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.AddInviterRewardSnapshot(v)
+	})
+}
+
+// UpdateInviterRewardSnapshot sets the "inviter_reward_snapshot" field to the value that was provided on create.
+func (u *UserReferralUpsertOne) UpdateInviterRewardSnapshot() *UserReferralUpsertOne {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.UpdateInviterRewardSnapshot()
+	})
+}
+
+// SetInviteeRewardSnapshot sets the "invitee_reward_snapshot" field.
+func (u *UserReferralUpsertOne) SetInviteeRewardSnapshot(v float64) *UserReferralUpsertOne {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.SetInviteeRewardSnapshot(v)
+	})
+}
+
+// AddInviteeRewardSnapshot adds v to the "invitee_reward_snapshot" field.
+func (u *UserReferralUpsertOne) AddInviteeRewardSnapshot(v float64) *UserReferralUpsertOne {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.AddInviteeRewardSnapshot(v)
+	})
+}
+
+// UpdateInviteeRewardSnapshot sets the "invitee_reward_snapshot" field to the value that was provided on create.
+func (u *UserReferralUpsertOne) UpdateInviteeRewardSnapshot() *UserReferralUpsertOne {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.UpdateInviteeRewardSnapshot()
+	})
+}
+
+// SetRewardGrantedAt sets the "reward_granted_at" field.
+func (u *UserReferralUpsertOne) SetRewardGrantedAt(v time.Time) *UserReferralUpsertOne {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.SetRewardGrantedAt(v)
+	})
+}
+
+// UpdateRewardGrantedAt sets the "reward_granted_at" field to the value that was provided on create.
+func (u *UserReferralUpsertOne) UpdateRewardGrantedAt() *UserReferralUpsertOne {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.UpdateRewardGrantedAt()
+	})
+}
+
+// ClearRewardGrantedAt clears the value of the "reward_granted_at" field.
+func (u *UserReferralUpsertOne) ClearRewardGrantedAt() *UserReferralUpsertOne {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.ClearRewardGrantedAt()
 	})
 }
 
@@ -795,6 +980,69 @@ func (u *UserReferralUpsertBulk) AddInviteeRewarded(v float64) *UserReferralUpse
 func (u *UserReferralUpsertBulk) UpdateInviteeRewarded() *UserReferralUpsertBulk {
 	return u.Update(func(s *UserReferralUpsert) {
 		s.UpdateInviteeRewarded()
+	})
+}
+
+// SetInviterRewardSnapshot sets the "inviter_reward_snapshot" field.
+func (u *UserReferralUpsertBulk) SetInviterRewardSnapshot(v float64) *UserReferralUpsertBulk {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.SetInviterRewardSnapshot(v)
+	})
+}
+
+// AddInviterRewardSnapshot adds v to the "inviter_reward_snapshot" field.
+func (u *UserReferralUpsertBulk) AddInviterRewardSnapshot(v float64) *UserReferralUpsertBulk {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.AddInviterRewardSnapshot(v)
+	})
+}
+
+// UpdateInviterRewardSnapshot sets the "inviter_reward_snapshot" field to the value that was provided on create.
+func (u *UserReferralUpsertBulk) UpdateInviterRewardSnapshot() *UserReferralUpsertBulk {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.UpdateInviterRewardSnapshot()
+	})
+}
+
+// SetInviteeRewardSnapshot sets the "invitee_reward_snapshot" field.
+func (u *UserReferralUpsertBulk) SetInviteeRewardSnapshot(v float64) *UserReferralUpsertBulk {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.SetInviteeRewardSnapshot(v)
+	})
+}
+
+// AddInviteeRewardSnapshot adds v to the "invitee_reward_snapshot" field.
+func (u *UserReferralUpsertBulk) AddInviteeRewardSnapshot(v float64) *UserReferralUpsertBulk {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.AddInviteeRewardSnapshot(v)
+	})
+}
+
+// UpdateInviteeRewardSnapshot sets the "invitee_reward_snapshot" field to the value that was provided on create.
+func (u *UserReferralUpsertBulk) UpdateInviteeRewardSnapshot() *UserReferralUpsertBulk {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.UpdateInviteeRewardSnapshot()
+	})
+}
+
+// SetRewardGrantedAt sets the "reward_granted_at" field.
+func (u *UserReferralUpsertBulk) SetRewardGrantedAt(v time.Time) *UserReferralUpsertBulk {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.SetRewardGrantedAt(v)
+	})
+}
+
+// UpdateRewardGrantedAt sets the "reward_granted_at" field to the value that was provided on create.
+func (u *UserReferralUpsertBulk) UpdateRewardGrantedAt() *UserReferralUpsertBulk {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.UpdateRewardGrantedAt()
+	})
+}
+
+// ClearRewardGrantedAt clears the value of the "reward_granted_at" field.
+func (u *UserReferralUpsertBulk) ClearRewardGrantedAt() *UserReferralUpsertBulk {
+	return u.Update(func(s *UserReferralUpsert) {
+		s.ClearRewardGrantedAt()
 	})
 }
 
