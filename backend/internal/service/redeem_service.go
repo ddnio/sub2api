@@ -324,12 +324,6 @@ func (s *RedeemService) Redeem(ctx context.Context, userID int64, code string) (
 		if err := s.userRepo.UpdateBalance(txCtx, userID, redeemCode.Value); err != nil {
 			return nil, fmt.Errorf("update user balance: %w", err)
 		}
-		// 首次充值触发邀请奖励（同一事务内，通过 txCtx 复用事务）
-		if s.referralService != nil {
-			if err := s.referralService.GrantFirstRechargeReward(txCtx, userID); err != nil {
-				log.Printf("[Redeem] Failed to grant referral reward for user %d: %v", userID, err)
-			}
-		}
 
 	case RedeemTypeConcurrency:
 		// 增加用户并发数
@@ -364,6 +358,13 @@ func (s *RedeemService) Redeem(ctx context.Context, userID int64, code string) (
 
 	// 事务提交成功后失效缓存
 	s.invalidateRedeemCaches(ctx, userID, redeemCode)
+
+	// 首次充值触发邀请奖励（事务提交后，自建事务，失败不影响兑换，下次充值重试）
+	if s.referralService != nil && redeemCode.Type == RedeemTypeBalance {
+		if err := s.referralService.GrantFirstRechargeReward(ctx, userID); err != nil {
+			log.Printf("[Redeem] Failed to grant referral reward for user %d: %v", userID, err)
+		}
+	}
 
 	// 重新获取更新后的兑换码
 	redeemCode, err = s.redeemRepo.GetByID(ctx, redeemCode.ID)
