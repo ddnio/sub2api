@@ -3,20 +3,20 @@
 ## 整体架构
 
 ```
-服务器（108.160.133.141）
-├── 基础设施（docker-compose，一直运行）
-│   ├── sub2api-postgres（PostgreSQL 18，端口 5432）
-│   └── sub2api-redis（Redis 8，端口 6379）
-│
-├── 测试环境
-│   └── sub2api-test（Docker 独立容器，端口 8081）
-│       ├── 域名：https://router-test.nanafox.com
-│       ├── 数据库：sub2api_test
-│       └── Redis：DB 1
+ToC 服务器（108.160.133.141）                ToB 服务器（43.106.8.109）
+├── 基础设施（docker-compose）               ├── 基础设施（docker-compose）
+│   ├── sub2api-postgres（PostgreSQL 18）    │   ├── sub2api-postgres（PostgreSQL 18）
+│   └── sub2api-redis（Redis 8）            │   └── sub2api-redis（Redis 8）
+│                                            │
+├── 测试环境                                 └── 生产环境
+│   └── sub2api-test（端口 8081）                └── sub2api-prod（端口 8080）
+│       ├── 域名：router-test.nanafox.com            ├── 域名：fx.nanafox.com
+│       ├── 数据库：sub2api_test                     ├── 数据库：sub2api_tob
+│       └── Redis：DB 1                             └── Redis：DB 0
 │
 └── 生产环境
-    └── sub2api-prod（Docker 独立容器，端口 8080）
-        ├── 域名：https://router.nanafox.com
+    └── sub2api-prod（端口 8080）
+        ├── 域名：router.nanafox.com
         ├── 数据库：sub2api
         └── Redis：DB 0
 
@@ -283,6 +283,64 @@ payment:
 ```
 
 迁移自动执行，无需额外操作。
+
+---
+
+## 八、ToB 服务器（43.106.8.109）
+
+独立部署，与 ToC 服务器完全隔离，数据库独立。
+
+### 服务器信息
+
+| 项目 | 值 |
+|------|---|
+| IP | 43.106.8.109 |
+| 用户 | nio |
+| 域名 | https://fx.nanafox.com |
+| 数据库 | sub2api_tob |
+| Redis DB | 0 |
+| 应用端口 | 8080 |
+
+### 目录结构
+
+```
+/data/service/sub2api/    # 代码仓库（跟踪 main 分支）
+/etc/sub2api/prod.yaml    # 生产配置（含 DB、Redis、JWT、支付密钥）
+/opt/sub2api/deploy/      # docker-compose（postgres + redis 基础设施）
+```
+
+### 部署
+
+```bash
+ssh nio@43.106.8.109
+cd /data/service/sub2api
+git pull                              # 或 git checkout <branch> 后再 pull
+bash deploy/deploy-server.sh prod
+```
+
+### 基础设施管理
+
+```bash
+cd /opt/sub2api/deploy
+docker compose ps       # 查看状态
+docker compose restart  # 重启
+```
+
+### 配置文件关键项
+
+```yaml
+database:
+  host: "sub2api-postgres"
+  dbname: "sub2api_tob"       # 与 ToC 区分
+
+server:
+  frontend_url: "https://fx.nanafox.com"
+
+payment:
+  callback_base_url: "https://fx.nanafox.com"
+```
+
+> 完整密钥（DB 密码、JWT secret、TOTP key、微信支付）只在服务器 `/etc/sub2api/prod.yaml` 中，不提交 git。
 
 ---
 
