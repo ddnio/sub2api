@@ -71,7 +71,7 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	authService := service.NewAuthService(client, userRepository, redeemCodeRepository, refreshTokenCache, configConfig, settingService, emailService, turnstileService, emailQueueService, promoService, referralService, subscriptionService)
 	userService := service.NewUserService(userRepository, apiKeyAuthCacheInvalidator, billingCache)
 	redeemCache := repository.NewRedeemCache(redisClient)
-	redeemService := service.NewRedeemService(redeemCodeRepository, userRepository, subscriptionService, redeemCache, billingCacheService, client, apiKeyAuthCacheInvalidator)
+	redeemService := service.NewRedeemService(redeemCodeRepository, userRepository, subscriptionService, redeemCache, billingCacheService, client, apiKeyAuthCacheInvalidator, referralService)
 	secretEncryptor, err := repository.NewAESEncryptor(configConfig)
 	if err != nil {
 		return nil, err
@@ -220,7 +220,7 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 		return nil, err
 	}
 	paymentCache := repository.NewPaymentCache(redisClient)
-	paymentService := service.ProvidePaymentService(paymentOrderRepository, paymentPlanRepository, paymentProvider, paymentCache, userService, subscriptionService, billingCacheService, client, configConfig)
+	paymentService := service.ProvidePaymentService(paymentOrderRepository, paymentPlanRepository, paymentProvider, paymentCache, userService, subscriptionService, billingCacheService, client, referralService, configConfig)
 	paymentExpiryService := service.ProvidePaymentExpiryService(paymentOrderRepository, configConfig)
 	paymentPlanHandler := admin.NewPaymentPlanHandler(paymentService)
 	paymentOrderHandler := admin.NewPaymentOrderHandler(paymentService)

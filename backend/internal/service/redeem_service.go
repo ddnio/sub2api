@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -80,6 +81,7 @@ type RedeemService struct {
 	billingCacheService  *BillingCacheService
 	entClient            *dbent.Client
 	authCacheInvalidator APIKeyAuthCacheInvalidator
+	referralService      *ReferralService
 }
 
 // NewRedeemService 创建兑换码服务实例
@@ -91,6 +93,7 @@ func NewRedeemService(
 	billingCacheService *BillingCacheService,
 	entClient *dbent.Client,
 	authCacheInvalidator APIKeyAuthCacheInvalidator,
+	referralService *ReferralService,
 ) *RedeemService {
 	return &RedeemService{
 		redeemRepo:           redeemRepo,
@@ -100,6 +103,7 @@ func NewRedeemService(
 		billingCacheService:  billingCacheService,
 		entClient:            entClient,
 		authCacheInvalidator: authCacheInvalidator,
+		referralService:      referralService,
 	}
 }
 
@@ -319,6 +323,12 @@ func (s *RedeemService) Redeem(ctx context.Context, userID int64, code string) (
 		// 增加用户余额
 		if err := s.userRepo.UpdateBalance(txCtx, userID, redeemCode.Value); err != nil {
 			return nil, fmt.Errorf("update user balance: %w", err)
+		}
+		// 首次充值触发邀请奖励（同一事务内，通过 txCtx 复用事务）
+		if s.referralService != nil {
+			if err := s.referralService.GrantFirstRechargeReward(txCtx, userID); err != nil {
+				log.Printf("[Redeem] Failed to grant referral reward for user %d: %v", userID, err)
+			}
 		}
 
 	case RedeemTypeConcurrency:

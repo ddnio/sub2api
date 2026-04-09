@@ -416,11 +416,13 @@ func ProvidePaymentService(
 	subscriptionService *SubscriptionService,
 	billingCacheService *BillingCacheService,
 	entClient *dbent.Client,
+	referralService *ReferralService,
 	cfg *config.Config,
 ) *PaymentService {
 	return NewPaymentService(
 		orderRepo, planRepo, provider, cache,
 		userService, subscriptionService, billingCacheService, entClient,
+		referralService,
 		cfg.Payment.OrderExpirySec, cfg.Payment.MinTopupAmount, cfg.Payment.MaxTopupAmount,
 	)
 }

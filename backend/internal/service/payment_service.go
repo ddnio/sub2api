@@ -199,6 +199,7 @@ type PaymentService struct {
 	subscriptionService *SubscriptionService
 	billingCacheService *BillingCacheService
 	entClient           *dbent.Client
+	referralService     *ReferralService
 	orderExpirySec      int
 	minTopupAmount      float64
 	maxTopupAmount      float64
@@ -213,6 +214,7 @@ func NewPaymentService(
 	subscriptionService *SubscriptionService,
 	billingCacheService *BillingCacheService,
 	entClient *dbent.Client,
+	referralService *ReferralService,
 	orderExpirySec int,
 	minTopupAmount float64,
 	maxTopupAmount float64,
@@ -235,6 +237,7 @@ func NewPaymentService(
 		subscriptionService: subscriptionService,
 		billingCacheService: billingCacheService,
 		entClient:           entClient,
+		referralService:     referralService,
 		orderExpirySec:      orderExpirySec,
 		minTopupAmount:      minTopupAmount,
 		maxTopupAmount:      maxTopupAmount,
@@ -494,6 +497,12 @@ func (s *PaymentService) deliverBenefits(ctx context.Context, order *PaymentOrde
 		err := s.userService.UpdateBalance(ctx, order.UserID, creditAmount)
 		if err != nil {
 			return fmt.Errorf("update balance: %w", err)
+		}
+		// 首次付款触发邀请奖励（幂等，原子 UPDATE 保证只发一次）
+		if s.referralService != nil {
+			if err := s.referralService.GrantFirstRechargeReward(ctx, order.UserID); err != nil {
+				log.Printf("[Payment] Failed to grant referral reward for user %d: %v", order.UserID, err)
+			}
 		}
 		// Update credit_amount on order
 		_, _ = s.orderRepo.UpdateStatusAtomically(ctx, order.OrderNo,

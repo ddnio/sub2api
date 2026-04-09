@@ -2,11 +2,8 @@ package repository
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
 	"errors"
-	"fmt"
 	"strings"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -117,10 +114,6 @@ func (r *usageBillingRepository) applyUsageBillingEffects(ctx context.Context, t
 
 	if cmd.BalanceCost > 0 {
 		if err := deductUsageBillingBalance(ctx, tx, cmd.UserID, cmd.BalanceCost); err != nil {
-			return err
-		}
-		// 首次余额扣费触发邀请奖励（原子：同一事务内；订阅扣费不触发）
-		if err := grantReferralRewardOnFirstConsumption(ctx, tx, cmd.UserID, result); err != nil {
 			return err
 		}
 	}
@@ -314,84 +307,3 @@ func incrementUsageBillingAccountQuota(ctx context.Context, tx *sql.Tx, accountI
 	return nil
 }
 
-// grantReferralRewardOnFirstConsumption 首次余额消费时原子发放邀请奖励。
-// 幂等：UPDATE ... WHERE reward_granted_at IS NULL 保证只触发一次。
-// 无邀请关系的用户：UPDATE 0 rows，无额外开销。
-func grantReferralRewardOnFirstConsumption(ctx context.Context, tx *sql.Tx, userID int64, result *service.UsageBillingApplyResult) error {
-	// 原子标记 + 读取奖励信息
-	var inviterID int64
-	var inviterReward, inviteeReward float64
-	err := tx.QueryRowContext(ctx, `
-		UPDATE user_referrals
-		SET reward_granted_at = NOW(),
-			inviter_rewarded = inviter_reward_snapshot,
-			invitee_rewarded = invitee_reward_snapshot
-		WHERE invitee_id = $1 AND reward_granted_at IS NULL
-		RETURNING inviter_id, inviter_reward_snapshot, invitee_reward_snapshot
-	`, userID).Scan(&inviterID, &inviterReward, &inviteeReward)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil // 非被邀请用户或奖励已发放
-	}
-	if err != nil {
-		return fmt.Errorf("grant referral reward: claim: %w", err)
-	}
-
-	// 给邀请人加余额（检查 RowsAffected 防止已删除用户导致账实不符）
-	if inviterReward > 0 {
-		res, err := tx.ExecContext(ctx, `
-			UPDATE users SET balance = balance + $1, updated_at = NOW()
-			WHERE id = $2 AND deleted_at IS NULL
-		`, inviterReward, inviterID)
-		if err != nil {
-			return fmt.Errorf("grant referral reward: inviter balance: %w", err)
-		}
-		if affected, _ := res.RowsAffected(); affected > 0 {
-			if err := insertReferralRedeemCode(ctx, tx, "ref_inviter", inviterReward, inviterID,
-				fmt.Sprintf("邀请用户注册奖励 (用户ID: %d)", userID)); err != nil {
-				return fmt.Errorf("grant referral reward: inviter redeem: %w", err)
-			}
-		}
-	}
-
-	// 给被邀请人加余额
-	if inviteeReward > 0 {
-		res, err := tx.ExecContext(ctx, `
-			UPDATE users SET balance = balance + $1, updated_at = NOW()
-			WHERE id = $2 AND deleted_at IS NULL
-		`, inviteeReward, userID)
-		if err != nil {
-			return fmt.Errorf("grant referral reward: invitee balance: %w", err)
-		}
-		if affected, _ := res.RowsAffected(); affected > 0 {
-			if err := insertReferralRedeemCode(ctx, tx, "ref_invitee", inviteeReward, userID,
-				fmt.Sprintf("通过邀请注册奖励 (邀请人ID: %d)", inviterID)); err != nil {
-				return fmt.Errorf("grant referral reward: invitee redeem: %w", err)
-			}
-		}
-	}
-
-	// 标记结果，供 service 层做缓存失效
-	result.ReferralRewardGranted = true
-	result.ReferralInviterID = inviterID
-	result.ReferralInviteeID = userID
-	result.ReferralInviterAmount = inviterReward
-	result.ReferralInviteeAmount = inviteeReward
-
-	return nil
-}
-
-// insertReferralRedeemCode 写入邀请奖励的 redeem_code 审计记录（128-bit 随机码）。
-func insertReferralRedeemCode(ctx context.Context, tx *sql.Tx, redeemType string, value float64, usedBy int64, notes string) error {
-	b := make([]byte, 16) // 16 bytes = 32 hex chars = MaxLen(32)
-	if _, err := rand.Read(b); err != nil {
-		return fmt.Errorf("generate redeem code: %w", err)
-	}
-	code := hex.EncodeToString(b)
-
-	_, err := tx.ExecContext(ctx, `
-		INSERT INTO redeem_codes (code, type, value, status, used_by, used_at, notes, created_at, validity_days)
-		VALUES ($1, $2, $3, $4, $5, NOW(), $6, NOW(), 0)
-	`, code, redeemType, value, "used", usedBy, notes)
-	return err
-}

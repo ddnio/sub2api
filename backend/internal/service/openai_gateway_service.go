@@ -399,17 +399,12 @@ func (s *OpenAIGatewayService) getCodexSnapshotThrottle() *accountWriteThrottle 
 }
 
 func (s *OpenAIGatewayService) billingDeps() *billingDeps {
-	var authInv APIKeyAuthCacheInvalidator
-	if inv, ok := s.cache.(APIKeyAuthCacheInvalidator); ok {
-		authInv = inv
-	}
 	return &billingDeps{
-		accountRepo:          s.accountRepo,
-		userRepo:             s.userRepo,
-		userSubRepo:          s.userSubRepo,
-		billingCacheService:  s.billingCacheService,
-		deferredService:      s.deferredService,
-		authCacheInvalidator: authInv,
+		accountRepo:         s.accountRepo,
+		userRepo:            s.userRepo,
+		userSubRepo:         s.userSubRepo,
+		billingCacheService: s.billingCacheService,
+		deferredService:     s.deferredService,
 	}
 }
 

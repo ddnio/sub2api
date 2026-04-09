@@ -103,13 +103,6 @@ func valueOrZero(v *int64) int64 {
 type UsageBillingApplyResult struct {
 	Applied              bool
 	APIKeyQuotaExhausted bool
-
-	// Referral reward fields (populated when first consumption triggers reward)
-	ReferralRewardGranted bool
-	ReferralInviterID     int64
-	ReferralInviteeID     int64
-	ReferralInviterAmount float64
-	ReferralInviteeAmount float64
 }
 
 type UsageBillingRepository interface {

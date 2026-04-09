@@ -347,6 +347,112 @@ func (s *ReferralService) GetInviteCount(ctx context.Context, userID int64) (int
 		Count(ctx)
 }
 
+// GrantFirstRechargeReward 首次充值/付款时触发邀请奖励发放。
+// 幂等：原子 UPDATE reward_granted_at IS NULL 保证只发一次。
+// 支持外部事务：ctx 中若包含 ent Tx 则复用（RedeemService 场景），否则自建事务（Payment 场景）。
+func (s *ReferralService) GrantFirstRechargeReward(ctx context.Context, inviteeID int64) error {
+	// 原子标记：只有一个请求能成功 claim
+	ref, err := s.entClient.UserReferral.Query().
+		Where(
+			userreferral.InviteeID(inviteeID),
+			userreferral.RewardGrantedAtIsNil(),
+		).
+		Only(ctx)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			return nil // 非被邀请用户或奖励已发放
+		}
+		return fmt.Errorf("query pending referral: %w", err)
+	}
+
+	inviterID := ref.InviterID
+	inviterReward := ref.InviterRewardSnapshot
+	inviteeReward := ref.InviteeRewardSnapshot
+
+	// 获取或创建事务（复用 RedeemService 的 txCtx，或自建）
+	var tx *dbent.Tx
+	existingTx := dbent.TxFromContext(ctx)
+	if existingTx != nil {
+		tx = existingTx
+	} else {
+		tx, err = s.entClient.Tx(ctx)
+		if err != nil {
+			return fmt.Errorf("begin referral reward tx: %w", err)
+		}
+		defer func() { _ = tx.Rollback() }()
+	}
+
+	txCtx := dbent.NewTxContext(ctx, tx)
+
+	// 原子标记发放（WHERE reward_granted_at IS NULL 保证幂等）
+	now := time.Now()
+	affected, err := tx.UserReferral.Update().
+		Where(
+			userreferral.ID(ref.ID),
+			userreferral.RewardGrantedAtIsNil(),
+		).
+		SetRewardGrantedAt(now).
+		SetInviterRewarded(inviterReward).
+		SetInviteeRewarded(inviteeReward).
+		Save(txCtx)
+	if err != nil {
+		return fmt.Errorf("claim referral reward: %w", err)
+	}
+	if affected == 0 {
+		return nil // 被其他并发请求抢先 claim 了
+	}
+
+	// 给邀请人加余额 + 写审计记录
+	if inviterReward > 0 {
+		if err := s.userRepo.UpdateBalance(txCtx, inviterID, inviterReward); err != nil {
+			return fmt.Errorf("inviter balance: %w", err)
+		}
+		inviterCode, _ := generateRandomCode(16) // 128-bit
+		_, _ = tx.RedeemCode.Create().
+			SetCode(inviterCode).
+			SetType(AdjustmentTypeReferralInviter).
+			SetValue(inviterReward).
+			SetStatus(StatusUsed).
+			SetUsedBy(inviterID).
+			SetUsedAt(now).
+			SetNotes(fmt.Sprintf("邀请用户充值奖励 (用户ID: %d)", inviteeID)).
+			Save(txCtx)
+	}
+
+	// 给被邀请人加余额 + 写审计记录
+	if inviteeReward > 0 {
+		if err := s.userRepo.UpdateBalance(txCtx, inviteeID, inviteeReward); err != nil {
+			return fmt.Errorf("invitee balance: %w", err)
+		}
+		inviteeCode, _ := generateRandomCode(16) // 128-bit
+		_, _ = tx.RedeemCode.Create().
+			SetCode(inviteeCode).
+			SetType(AdjustmentTypeReferralInvitee).
+			SetValue(inviteeReward).
+			SetStatus(StatusUsed).
+			SetUsedBy(inviteeID).
+			SetUsedAt(now).
+			SetNotes(fmt.Sprintf("通过邀请充值奖励 (邀请人ID: %d)", inviterID)).
+			Save(txCtx)
+	}
+
+	// 仅自建事务时提交（复用外部事务时由调用方提交）
+	if existingTx == nil {
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("commit referral reward: %w", err)
+		}
+	}
+
+	// Post-commit: 异步失效缓存
+	go s.invalidateReferralCaches(context.Background(), inviterID, inviteeID, inviterReward, inviteeReward)
+
+	logger.LegacyPrintf("service.referral",
+		"[Referral] Reward granted on first recharge: inviter=%d invitee=%d reward_inviter=%.2f reward_invitee=%.2f",
+		inviterID, inviteeID, inviterReward, inviteeReward)
+
+	return nil
+}
+
 // generateRandomCode 生成随机 hex 码
 func generateRandomCode(byteLen int) (string, error) {
 	b := make([]byte, byteLen)
