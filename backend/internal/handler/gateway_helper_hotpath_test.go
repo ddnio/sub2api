@@ -168,6 +168,23 @@ func TestSetClaudeCodeClientContext_FastPathAndStrictPath(t *testing.T) {
 		require.True(t, service.IsClaudeCodeClient(c.Request.Context()))
 	})
 
+	t.Run("cli_count_tokens_path_sets_true_without_system_prompt", func(t *testing.T) {
+		c, _ := newHelperTestContext(http.MethodPost, "/v1/messages/count_tokens")
+		c.Request.Header.Set("User-Agent", "claude-cli/2.1.97")
+
+		// count_tokens 请求不携带 system prompt，仅靠 UA 即可判定为 Claude Code
+		SetClaudeCodeClientContext(c, []byte(`{"model":"claude-opus-4-6","messages":[{"role":"user","content":"hi"}]}`), nil)
+		require.True(t, service.IsClaudeCodeClient(c.Request.Context()))
+	})
+
+	t.Run("non_cli_count_tokens_path_sets_false", func(t *testing.T) {
+		c, _ := newHelperTestContext(http.MethodPost, "/v1/messages/count_tokens")
+		c.Request.Header.Set("User-Agent", "curl/8.6.0")
+
+		SetClaudeCodeClientContext(c, []byte(`{"model":"claude-opus-4-6"}`), nil)
+		require.False(t, service.IsClaudeCodeClient(c.Request.Context()))
+	})
+
 	t.Run("cli_messages_path_invalid_body_sets_false", func(t *testing.T) {
 		c, _ := newHelperTestContext(http.MethodPost, "/v1/messages")
 		c.Request.Header.Set("User-Agent", "claude-cli/1.0.1")

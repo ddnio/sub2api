@@ -39,7 +39,10 @@ func SetClaudeCodeClientContext(c *gin.Context, body []byte, parsedReq *service.
 	}
 
 	isClaudeCode := false
-	if !strings.Contains(c.Request.URL.Path, "messages") {
+	if strings.HasSuffix(c.Request.URL.Path, "/count_tokens") {
+		// count_tokens 路径：UA 匹配即视为 Claude Code（不携带 system prompt，无法做严格校验）
+		isClaudeCode = true
+	} else if !strings.Contains(c.Request.URL.Path, "messages") {
 		// 与 Validate 行为一致：非 messages 路径 UA 命中即可视为 Claude Code 客户端。
 		isClaudeCode = true
 	} else {
