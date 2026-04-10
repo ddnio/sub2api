@@ -25,10 +25,6 @@ type User struct {
 	// map[groupID]rateMultiplier
 	GroupRates map[int64]float64
 
-	// Sora 存储配额
-	SoraStorageQuotaBytes int64 // 用户级 Sora 存储配额（0 表示使用分组或系统默认值）
-	SoraStorageUsedBytes  int64 // Sora 存储已用量
-
 	// 推荐码
 	ReferralCode *string // 用户唯一推荐码
 

@@ -244,48 +244,6 @@ func (_u *UserUpdate) ClearTotpEnabledAt() *UserUpdate {
 	return _u
 }
 
-// SetSoraStorageQuotaBytes sets the "sora_storage_quota_bytes" field.
-func (_u *UserUpdate) SetSoraStorageQuotaBytes(v int64) *UserUpdate {
-	_u.mutation.ResetSoraStorageQuotaBytes()
-	_u.mutation.SetSoraStorageQuotaBytes(v)
-	return _u
-}
-
-// SetNillableSoraStorageQuotaBytes sets the "sora_storage_quota_bytes" field if the given value is not nil.
-func (_u *UserUpdate) SetNillableSoraStorageQuotaBytes(v *int64) *UserUpdate {
-	if v != nil {
-		_u.SetSoraStorageQuotaBytes(*v)
-	}
-	return _u
-}
-
-// AddSoraStorageQuotaBytes adds value to the "sora_storage_quota_bytes" field.
-func (_u *UserUpdate) AddSoraStorageQuotaBytes(v int64) *UserUpdate {
-	_u.mutation.AddSoraStorageQuotaBytes(v)
-	return _u
-}
-
-// SetSoraStorageUsedBytes sets the "sora_storage_used_bytes" field.
-func (_u *UserUpdate) SetSoraStorageUsedBytes(v int64) *UserUpdate {
-	_u.mutation.ResetSoraStorageUsedBytes()
-	_u.mutation.SetSoraStorageUsedBytes(v)
-	return _u
-}
-
-// SetNillableSoraStorageUsedBytes sets the "sora_storage_used_bytes" field if the given value is not nil.
-func (_u *UserUpdate) SetNillableSoraStorageUsedBytes(v *int64) *UserUpdate {
-	if v != nil {
-		_u.SetSoraStorageUsedBytes(*v)
-	}
-	return _u
-}
-
-// AddSoraStorageUsedBytes adds value to the "sora_storage_used_bytes" field.
-func (_u *UserUpdate) AddSoraStorageUsedBytes(v int64) *UserUpdate {
-	_u.mutation.AddSoraStorageUsedBytes(v)
-	return _u
-}
-
 // SetReferralCode sets the "referral_code" field.
 func (_u *UserUpdate) SetReferralCode(v string) *UserUpdate {
 	_u.mutation.SetReferralCode(v)
@@ -885,18 +843,6 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.TotpEnabledAtCleared() {
 		_spec.ClearField(user.FieldTotpEnabledAt, field.TypeTime)
-	}
-	if value, ok := _u.mutation.SoraStorageQuotaBytes(); ok {
-		_spec.SetField(user.FieldSoraStorageQuotaBytes, field.TypeInt64, value)
-	}
-	if value, ok := _u.mutation.AddedSoraStorageQuotaBytes(); ok {
-		_spec.AddField(user.FieldSoraStorageQuotaBytes, field.TypeInt64, value)
-	}
-	if value, ok := _u.mutation.SoraStorageUsedBytes(); ok {
-		_spec.SetField(user.FieldSoraStorageUsedBytes, field.TypeInt64, value)
-	}
-	if value, ok := _u.mutation.AddedSoraStorageUsedBytes(); ok {
-		_spec.AddField(user.FieldSoraStorageUsedBytes, field.TypeInt64, value)
 	}
 	if value, ok := _u.mutation.ReferralCode(); ok {
 		_spec.SetField(user.FieldReferralCode, field.TypeString, value)
@@ -1682,48 +1628,6 @@ func (_u *UserUpdateOne) ClearTotpEnabledAt() *UserUpdateOne {
 	return _u
 }
 
-// SetSoraStorageQuotaBytes sets the "sora_storage_quota_bytes" field.
-func (_u *UserUpdateOne) SetSoraStorageQuotaBytes(v int64) *UserUpdateOne {
-	_u.mutation.ResetSoraStorageQuotaBytes()
-	_u.mutation.SetSoraStorageQuotaBytes(v)
-	return _u
-}
-
-// SetNillableSoraStorageQuotaBytes sets the "sora_storage_quota_bytes" field if the given value is not nil.
-func (_u *UserUpdateOne) SetNillableSoraStorageQuotaBytes(v *int64) *UserUpdateOne {
-	if v != nil {
-		_u.SetSoraStorageQuotaBytes(*v)
-	}
-	return _u
-}
-
-// AddSoraStorageQuotaBytes adds value to the "sora_storage_quota_bytes" field.
-func (_u *UserUpdateOne) AddSoraStorageQuotaBytes(v int64) *UserUpdateOne {
-	_u.mutation.AddSoraStorageQuotaBytes(v)
-	return _u
-}
-
-// SetSoraStorageUsedBytes sets the "sora_storage_used_bytes" field.
-func (_u *UserUpdateOne) SetSoraStorageUsedBytes(v int64) *UserUpdateOne {
-	_u.mutation.ResetSoraStorageUsedBytes()
-	_u.mutation.SetSoraStorageUsedBytes(v)
-	return _u
-}
-
-// SetNillableSoraStorageUsedBytes sets the "sora_storage_used_bytes" field if the given value is not nil.
-func (_u *UserUpdateOne) SetNillableSoraStorageUsedBytes(v *int64) *UserUpdateOne {
-	if v != nil {
-		_u.SetSoraStorageUsedBytes(*v)
-	}
-	return _u
-}
-
-// AddSoraStorageUsedBytes adds value to the "sora_storage_used_bytes" field.
-func (_u *UserUpdateOne) AddSoraStorageUsedBytes(v int64) *UserUpdateOne {
-	_u.mutation.AddSoraStorageUsedBytes(v)
-	return _u
-}
-
 // SetReferralCode sets the "referral_code" field.
 func (_u *UserUpdateOne) SetReferralCode(v string) *UserUpdateOne {
 	_u.mutation.SetReferralCode(v)
@@ -2353,18 +2257,6 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if _u.mutation.TotpEnabledAtCleared() {
 		_spec.ClearField(user.FieldTotpEnabledAt, field.TypeTime)
-	}
-	if value, ok := _u.mutation.SoraStorageQuotaBytes(); ok {
-		_spec.SetField(user.FieldSoraStorageQuotaBytes, field.TypeInt64, value)
-	}
-	if value, ok := _u.mutation.AddedSoraStorageQuotaBytes(); ok {
-		_spec.AddField(user.FieldSoraStorageQuotaBytes, field.TypeInt64, value)
-	}
-	if value, ok := _u.mutation.SoraStorageUsedBytes(); ok {
-		_spec.SetField(user.FieldSoraStorageUsedBytes, field.TypeInt64, value)
-	}
-	if value, ok := _u.mutation.AddedSoraStorageUsedBytes(); ok {
-		_spec.AddField(user.FieldSoraStorageUsedBytes, field.TypeInt64, value)
 	}
 	if value, ok := _u.mutation.ReferralCode(); ok {
 		_spec.SetField(user.FieldReferralCode, field.TypeString, value)

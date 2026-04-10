@@ -35,6 +35,7 @@ func ProvideAdminHandlers(
 	scheduledTestHandler *admin.ScheduledTestHandler,
 	paymentPlanHandler *admin.PaymentPlanHandler,
 	paymentOrderHandler *admin.PaymentOrderHandler,
+	channelHandler *admin.ChannelHandler,
 ) *AdminHandlers {
 	return &AdminHandlers{
 		Dashboard:             dashboardHandler,
@@ -63,6 +64,7 @@ func ProvideAdminHandlers(
 		ScheduledTest:         scheduledTestHandler,
 		PaymentPlan:           paymentPlanHandler,
 		PaymentOrder:          paymentOrderHandler,
+		Channel:               channelHandler,
 	}
 }
 
@@ -88,8 +90,6 @@ func ProvideHandlers(
 	adminHandlers *AdminHandlers,
 	gatewayHandler *GatewayHandler,
 	openaiGatewayHandler *OpenAIGatewayHandler,
-	soraGatewayHandler *SoraGatewayHandler,
-	soraClientHandler *SoraClientHandler,
 	settingHandler *SettingHandler,
 	totpHandler *TotpHandler,
 	_ *service.IdempotencyCoordinator,
@@ -110,8 +110,6 @@ func ProvideHandlers(
 		Admin:           adminHandlers,
 		Gateway:         gatewayHandler,
 		OpenAIGateway:   openaiGatewayHandler,
-		SoraGateway:     soraGatewayHandler,
-		SoraClient:      soraClientHandler,
 		Setting:         settingHandler,
 		Totp:            totpHandler,
 		Payment:         paymentHandler,
@@ -133,7 +131,6 @@ var ProviderSet = wire.NewSet(
 	NewAnnouncementHandler,
 	NewGatewayHandler,
 	NewOpenAIGatewayHandler,
-	NewSoraGatewayHandler,
 	NewTotpHandler,
 	ProvideSettingHandler,
 
@@ -164,6 +161,7 @@ var ProviderSet = wire.NewSet(
 	admin.NewScheduledTestHandler,
 	admin.NewPaymentPlanHandler,
 	admin.NewPaymentOrderHandler,
+	admin.NewChannelHandler,
 
 	// User-facing payment handlers
 	NewPaymentHandler,
