@@ -258,8 +258,6 @@ func addDefaultModelsForPlatform(modelSet map[string]struct{}, platform string) 
 		for _, id := range []string{"gemini-2.5-pro", "gemini-2.5-flash"} {
 			modelSet[id] = struct{}{}
 		}
-	case service.PlatformSora:
-		// Sora models are per-request priced (not token-based); skip for pricing page.
 	default:
 		// Unknown platform: add Claude defaults as safe fallback.
 		for _, id := range claude.DefaultModelIDs() {
