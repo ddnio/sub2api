@@ -32,6 +32,7 @@ type AdminHandlers struct {
 	ScheduledTest         *admin.ScheduledTestHandler
 	PaymentPlan           *admin.PaymentPlanHandler
 	PaymentOrder          *admin.PaymentOrderHandler
+	Channel               *admin.ChannelHandler
 }
 
 // Handlers contains all HTTP handlers
@@ -46,8 +47,6 @@ type Handlers struct {
 	Admin           *AdminHandlers
 	Gateway         *GatewayHandler
 	OpenAIGateway   *OpenAIGatewayHandler
-	SoraGateway     *SoraGatewayHandler
-	SoraClient      *SoraClientHandler
 	Setting         *SettingHandler
 	Totp            *TotpHandler
 	Payment         *PaymentHandler
