@@ -1,0 +1,40 @@
+name: Check upstream updates
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # 每周一 09:00 UTC
+  workflow_dispatch:       # 支持手动触发
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/Wei-Shaw/sub2api.git
+          git fetch upstream --quiet
+
+      - name: Check commits behind
+        run: |
+          BEHIND=$(git log HEAD..upstream/main --oneline | wc -l | tr -d ' ')
+          echo "落后 upstream $BEHIND 个 commits"
+
+          echo "## 📊 Upstream 同步状态" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$BEHIND" -eq 0 ]; then
+            echo "✅ 与 upstream/main 保持同步" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ 落后 upstream **$BEHIND** 个 commits" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 最近 20 条未合并提交" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            git log HEAD..upstream/main --oneline | head -20 >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "👉 参考 [upstream-sync.md](../docs/engineering/upstream-sync.md) 执行同步" >> $GITHUB_STEP_SUMMARY
+          fi
