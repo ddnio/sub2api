@@ -284,6 +284,27 @@ payment:
 
 迁移自动执行，无需额外操作。
 
+### 完整发布清单（main 合入后必做）
+
+改动合并到 `main` 后，**需要同时部署到三个环境**，不能只部署其中一个。否则会出现不同业务线/域名代码版本不一致。
+
+| 步骤 | 环境 | 服务器 | 域名 | 部署命令 |
+|---|---|---|---|---|
+| 1 | ToC 测试 | `108.160.133.141` | `router-test.nanafox.com` | `git checkout main && git pull && bash deploy/deploy-server.sh test` |
+| 2 | ToC 生产 | `108.160.133.141` | `router.nanafox.com` | `git checkout main && git pull && bash deploy/deploy-server.sh prod` |
+| 3 | ToB 生产 | `43.106.8.109` | `fx.nanafox.com` | `git checkout main && git pull && bash deploy/deploy-server.sh prod` |
+
+验证方法：
+```bash
+# 在每台服务器上确认当前运行的代码 commit
+cd /data/service/sub2api && git log --oneline -1
+docker ps --format '{{.Names}} | {{.CreatedAt}}' | grep sub2api
+```
+
+**规则**：
+- feature 分支验证通过 → 立即 cherry-pick / merge 到 main → **立即**按清单部署三环境
+- 不要让 feature 分支长期悬挂（会与主线演进冲突，且容易遗漏部署）
+
 ---
 
 ## 八、ToB 服务器（43.106.8.109）
