@@ -64,7 +64,44 @@ func ResponsesToAnthropicRequest(req *ResponsesRequest) (*AnthropicRequest, erro
 		}
 	}
 
+	// text.format → output_config.format
+	// json_schema: {type:"json_schema", name:"X", strict:true, schema:{...}}
+	//   → output_config.format: {type:"json_schema", schema:{...}}  (name/strict dropped)
+	// json_object: {type:"json_object"}
+	//   → output_config.format: {type:"json"}  (Anthropic uses "json" not "json_object")
+	if req.Text != nil && req.Text.Format != nil {
+		if af := convertTextFormatToAnthropic(req.Text.Format); af != nil {
+			if out.OutputConfig == nil {
+				out.OutputConfig = &AnthropicOutputConfig{}
+			}
+			out.OutputConfig.Format = af
+		}
+	}
+
 	return out, nil
+}
+
+// convertTextFormatToAnthropic maps a Responses API text.format to an
+// Anthropic output_config.format.
+//
+//	{type:"json_schema", schema:{...}} → &AnthropicOutputFormat{Type:"json_schema", Schema:{...}}
+//	{type:"json_object"}               → &AnthropicOutputFormat{Type:"json"}
+//	other                              → nil
+func convertTextFormatToAnthropic(tf *ResponsesTextFormat) *AnthropicOutputFormat {
+	if tf == nil {
+		return nil
+	}
+	switch tf.Type {
+	case "json_schema":
+		return &AnthropicOutputFormat{
+			Type:   "json_schema",
+			Schema: tf.Schema,
+		}
+	case "json_object":
+		return &AnthropicOutputFormat{Type: "json"}
+	default:
+		return nil
+	}
 }
 
 // defaultThinkingBudget returns a sensible thinking budget based on effort level.

@@ -69,6 +69,18 @@ func ChatCompletionsToResponses(req *ChatCompletionsRequest) (*ResponsesRequest,
 		out.Tools = convertChatToolsToResponses(req.Tools, req.Functions)
 	}
 
+	// response_format → text.format
+	// json_schema: {"type":"json_schema","json_schema":{"name":"X","strict":true,"schema":{...}}}
+	//   → text.format: {"type":"json_schema","name":"X","strict":true,"schema":{...}}
+	// json_object: {"type":"json_object"}
+	//   → text.format: {"type":"json_object"}
+	// type "text" or absent: no text.format needed
+	if len(req.ResponseFormat) > 0 {
+		if tf := convertChatResponseFormatToTextFormat(req.ResponseFormat); tf != nil {
+			out.Text = &ResponsesTextConfig{Format: tf}
+		}
+	}
+
 	// tool_choice: Chat Completions uses nested {"type":"function","function":{"name":"X"}},
 	// Responses API uses flat {"type":"function","name":"X"}. Strings (auto/none/required)
 	// and already-flat objects pass through.
@@ -485,4 +497,43 @@ func remapChatToolChoiceToResponses(raw json.RawMessage) (json.RawMessage, error
 
 	// Other tool types (e.g. allowed_tools, file_search) — pass through.
 	return raw, nil
+}
+
+// convertChatResponseFormatToTextFormat maps a Chat Completions response_format
+// value to a Responses API text.format object.
+//
+//	{"type":"json_schema","json_schema":{"name":"X","strict":true,"schema":{...}}}
+//	  → &ResponsesTextFormat{Type:"json_schema", Name:"X", Strict:true, Schema:{...}}
+//
+//	{"type":"json_object"}
+//	  → &ResponsesTextFormat{Type:"json_object"}
+//
+//	{"type":"text"} or unrecognised → nil (no text.format needed)
+func convertChatResponseFormatToTextFormat(raw json.RawMessage) *ResponsesTextFormat {
+	var rf struct {
+		Type       string `json:"type"`
+		JSONSchema *struct {
+			Name   string          `json:"name"`
+			Strict *bool           `json:"strict"`
+			Schema json.RawMessage `json:"schema"`
+		} `json:"json_schema"`
+	}
+	if err := json.Unmarshal(raw, &rf); err != nil {
+		return nil
+	}
+
+	switch rf.Type {
+	case "json_schema":
+		tf := &ResponsesTextFormat{Type: "json_schema"}
+		if rf.JSONSchema != nil {
+			tf.Name = rf.JSONSchema.Name
+			tf.Strict = rf.JSONSchema.Strict
+			tf.Schema = rf.JSONSchema.Schema
+		}
+		return tf
+	case "json_object":
+		return &ResponsesTextFormat{Type: "json_object"}
+	default:
+		return nil
+	}
 }

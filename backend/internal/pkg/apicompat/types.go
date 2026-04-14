@@ -28,7 +28,15 @@ type AnthropicRequest struct {
 
 // AnthropicOutputConfig controls output generation parameters.
 type AnthropicOutputConfig struct {
-	Effort string `json:"effort,omitempty"` // "low" | "medium" | "high" | "max"
+	Effort string                 `json:"effort,omitempty"` // "low" | "medium" | "high" | "max"
+	Format *AnthropicOutputFormat `json:"format,omitempty"`
+}
+
+// AnthropicOutputFormat specifies the structured output format for Anthropic requests.
+// type: "json_schema" | "json"
+type AnthropicOutputFormat struct {
+	Type   string          `json:"type"`
+	Schema json.RawMessage `json:"schema,omitempty"`
 }
 
 // AnthropicThinking configures extended thinking in the Anthropic API.
@@ -163,6 +171,21 @@ type ResponsesRequest struct {
 	Reasoning       *ResponsesReasoning `json:"reasoning,omitempty"`
 	ToolChoice      json.RawMessage     `json:"tool_choice,omitempty"`
 	ServiceTier     string              `json:"service_tier,omitempty"`
+	Text            *ResponsesTextConfig `json:"text,omitempty"`
+}
+
+// ResponsesTextConfig controls output text format in the Responses API.
+type ResponsesTextConfig struct {
+	Format *ResponsesTextFormat `json:"format,omitempty"`
+}
+
+// ResponsesTextFormat describes the structured output format for text responses.
+// type: "text" | "json_object" | "json_schema"
+type ResponsesTextFormat struct {
+	Type   string          `json:"type"`
+	Name   string          `json:"name,omitempty"`
+	Strict *bool           `json:"strict,omitempty"`
+	Schema json.RawMessage `json:"schema,omitempty"`
 }
 
 // ResponsesReasoning configures reasoning effort in the Responses API.
@@ -348,6 +371,7 @@ type ChatCompletionsRequest struct {
 	ReasoningEffort     string             `json:"reasoning_effort,omitempty"` // "low" | "medium" | "high" | "xhigh"
 	ServiceTier         string             `json:"service_tier,omitempty"`
 	Stop                json.RawMessage    `json:"stop,omitempty"` // string or []string
+	ResponseFormat      json.RawMessage    `json:"response_format,omitempty"`
 
 	// Legacy function calling (deprecated but still supported)
 	Functions    []ChatFunction  `json:"functions,omitempty"`
