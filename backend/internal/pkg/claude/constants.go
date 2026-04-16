@@ -78,6 +78,12 @@ var DefaultModels = []Model{
 		CreatedAt:   "2025-11-01T00:00:00Z",
 	},
 	{
+		ID:          "claude-opus-4-7",
+		Type:        "model",
+		DisplayName: "Claude Opus 4.7",
+		CreatedAt:   "2026-04-17T00:00:00Z",
+	},
+	{
 		ID:          "claude-opus-4-6",
 		Type:        "model",
 		DisplayName: "Claude Opus 4.6",
