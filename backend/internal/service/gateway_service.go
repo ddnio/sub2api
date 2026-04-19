@@ -321,8 +321,14 @@ func isClaudeCodeCredentialScopeError(msg string) bool {
 	if m == "" {
 		return false
 	}
-	return strings.Contains(m, "only authorized for use with claude code") &&
-		strings.Contains(m, "cannot be used for other api requests")
+	if strings.Contains(m, "only authorized for use with claude code") &&
+		strings.Contains(m, "cannot be used for other api requests") {
+		return true
+	}
+	// Anthropic 将请求识别为第三方 app 并扣除 extra usage 的错误（mimic 未生效时触发）
+	return strings.Contains(m, "third-party apps") &&
+		strings.Contains(m, "extra usage") &&
+		strings.Contains(m, "not your plan limits")
 }
 
 // sseDataRe matches SSE data lines with optional whitespace after colon.
