@@ -26,6 +26,8 @@
         :user="profileUser"
         :linuxdo-enabled="publicSettings?.linuxdo_oauth_enabled || false"
         :wechat-enabled="wechatOAuthEnabledForCurrentBrowser"
+        :wechat-open-enabled="publicSettings?.wechat_oauth_open_enabled"
+        :wechat-mp-enabled="publicSettings?.wechat_oauth_mp_enabled"
         :oidc-enabled="publicSettings?.oidc_oauth_enabled || false"
         :oidc-provider-name="publicSettings?.oidc_oauth_provider_name || 'OIDC'"
         @updated="handleProfileUpdated"

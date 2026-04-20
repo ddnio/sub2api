@@ -65,7 +65,9 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
+import { resolveWeChatOAuthStart, type WeChatOAuthPublicSettings } from '@/api/auth'
 import { startOAuthBinding, unbindAuthProvider } from '@/api/user'
+import { useAppStore } from '@/stores'
 import type { User, UserAuthBindingStatus, UserAuthProvider, UserProfile } from '@/types'
 
 const props = withDefaults(
@@ -73,12 +75,16 @@ const props = withDefaults(
     user: UserProfile | User | null
     linuxdoEnabled?: boolean
     wechatEnabled?: boolean
+    wechatOpenEnabled?: boolean
+    wechatMpEnabled?: boolean
     oidcEnabled?: boolean
     oidcProviderName?: string
   }>(),
   {
     linuxdoEnabled: false,
     wechatEnabled: false,
+    wechatOpenEnabled: undefined,
+    wechatMpEnabled: undefined,
     oidcEnabled: false,
     oidcProviderName: 'OIDC',
   }
@@ -86,7 +92,30 @@ const props = withDefaults(
 
 const { t } = useI18n()
 const route = useRoute()
+const appStore = useAppStore()
 const unbindingProvider = ref<UserAuthProvider | null>(null)
+
+const wechatOAuthSettings = computed<WeChatOAuthPublicSettings | null>(() => {
+  if (appStore.cachedPublicSettings) {
+    return appStore.cachedPublicSettings
+  }
+
+  if (
+    typeof props.wechatEnabled === 'boolean' ||
+    typeof props.wechatOpenEnabled === 'boolean' ||
+    typeof props.wechatMpEnabled === 'boolean'
+  ) {
+    return {
+      wechat_oauth_enabled: props.wechatEnabled,
+      wechat_oauth_open_enabled: props.wechatOpenEnabled,
+      wechat_oauth_mp_enabled: props.wechatMpEnabled,
+    }
+  }
+
+  return null
+})
+
+const resolvedWeChatBinding = computed(() => resolveWeChatOAuthStart(wechatOAuthSettings.value))
 
 const emit = defineEmits<{
   updated: [user: UserProfile]
@@ -121,7 +150,7 @@ const providerItems = computed(() => [
     provider: 'wechat' as const,
     label: t('profile.authBindings.providers.wechat'),
     bound: Boolean(getStatus('wechat')?.bound),
-    canBind: props.wechatEnabled && Boolean(getStatus('wechat')?.can_bind),
+    canBind: resolvedWeChatBinding.value.mode !== null && Boolean(getStatus('wechat')?.can_bind),
     canUnbind: Boolean(getStatus('wechat')?.can_unbind),
     hint: providerHint(getStatus('wechat')),
   },
@@ -139,7 +168,10 @@ function handleBind(provider: UserAuthProvider): void {
   if (provider === 'email') {
     return
   }
-  void startOAuthBinding(provider, route.fullPath || '/profile')
+  void startOAuthBinding(provider, {
+    redirectTo: route.fullPath || '/profile',
+    wechatOAuthSettings: provider === 'wechat' ? wechatOAuthSettings.value : null,
+  })
 }
 
 async function handleUnbind(provider: UserAuthProvider): Promise<void> {

@@ -133,12 +133,21 @@ describe('ProfileIdentityBindingsSection', () => {
           },
         }),
         wechatEnabled: true,
+        wechatOpenEnabled: true,
+        wechatMpEnabled: false,
       },
     })
 
     await wrapper.get('[data-testid="profile-binding-wechat-action"]').trigger('click')
 
-    expect(apiState.startOAuthBinding).toHaveBeenCalledWith('wechat', '/profile')
+    expect(apiState.startOAuthBinding).toHaveBeenCalledWith('wechat', {
+      redirectTo: '/profile',
+      wechatOAuthSettings: {
+        wechat_oauth_enabled: true,
+        wechat_oauth_open_enabled: true,
+        wechat_oauth_mp_enabled: false,
+      },
+    })
   })
 
   it('emits updated profile after unbinding a provider', async () => {
@@ -166,5 +175,25 @@ describe('ProfileIdentityBindingsSection', () => {
 
     expect(apiState.unbindAuthProvider).toHaveBeenCalledWith('linuxdo')
     expect(wrapper.emitted('updated')?.[0]).toEqual([updated])
+  })
+
+  it('hides the WeChat bind action outside the WeChat browser when only mp mode is configured', () => {
+    const wrapper = mount(ProfileIdentityBindingsSection, {
+      props: {
+        user: createUser({
+          identities: {
+            email: { bound: true },
+            wechat: { bound: false, can_bind: true },
+          },
+        }),
+        linuxdoEnabled: false,
+        oidcEnabled: false,
+        wechatEnabled: true,
+        wechatOpenEnabled: false,
+        wechatMpEnabled: true,
+      },
+    })
+
+    expect(wrapper.find('[data-testid="profile-binding-wechat-action"]').exists()).toBe(false)
   })
 })
