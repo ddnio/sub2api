@@ -292,11 +292,15 @@ func (h *AuthHandler) Login2FA(c *gin.Context) {
 			response.ErrorFrom(c, infraerrors.Conflict("PENDING_AUTH_TARGET_USER_MISMATCH", "pending oauth session must be completed by the targeted user"))
 			return
 		}
-		if err := applyPendingOAuthBinding(c.Request.Context(), h.authService.EntClient(), h.userService, pendingSession, nil, &user.ID, true); err != nil {
+		decision, err := h.ensurePendingOAuthAdoptionDecision(c, pendingSession.ID, oauthAdoptionDecisionRequest{})
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+		if err := applyPendingOAuthBinding(c.Request.Context(), h.entClient(), h.authService, h.userService, pendingSession, decision, &user.ID, true, true); err != nil {
 			response.ErrorFrom(c, pendingOAuthBindApplyError(err))
 			return
 		}
-		h.authService.RecordSuccessfulLogin(c.Request.Context(), user.ID)
 		if _, err := pendingSvc.ConsumeBrowserSession(c.Request.Context(), pendingSession.SessionToken, pendingSession.BrowserSessionKey); err != nil {
 			response.ErrorFrom(c, err)
 			return
@@ -304,6 +308,12 @@ func (h *AuthHandler) Login2FA(c *gin.Context) {
 		secureCookie := isRequestHTTPS(c)
 		clearOAuthPendingSessionCookie(c, secureCookie)
 		clearOAuthPendingBrowserCookie(c, secureCookie)
+		h.authService.RecordSuccessfulLogin(c.Request.Context(), user.ID)
+		user, err = h.userService.GetByID(c.Request.Context(), session.UserID)
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
 	}
 
 	// Delete the login session (only after all checks pass)

@@ -49,6 +49,15 @@ CREATE TABLE IF NOT EXISTS user_avatars (
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 )`)
 	require.NoError(t, err)
+	_, err = db.Exec(`
+CREATE TABLE IF NOT EXISTS user_provider_default_grants (
+	user_id INTEGER NOT NULL,
+	provider_type TEXT NOT NULL,
+	grant_reason TEXT NOT NULL,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (user_id, provider_type, grant_reason)
+)`)
+	require.NoError(t, err)
 
 	drv := entsql.OpenDB(dialect.SQLite, db)
 	client := enttest.NewClient(t, enttest.WithOptions(dbent.Driver(drv)))
@@ -109,6 +118,10 @@ type oauthPendingTotpLoginSessionCacheStub struct {
 	loginSessions map[string]*service.TotpLoginSession
 }
 
+type oauthPendingDefaultSubscriptionAssignerStub struct {
+	calls []service.AssignSubscriptionInput
+}
+
 func (s *oauthPendingTotpLoginSessionCacheStub) GetSetupSession(context.Context, int64) (*service.TotpSetupSession, error) {
 	return nil, nil
 }
@@ -148,6 +161,13 @@ func (s *oauthPendingTotpLoginSessionCacheStub) GetVerifyAttempts(context.Contex
 
 func (s *oauthPendingTotpLoginSessionCacheStub) ClearVerifyAttempts(context.Context, int64) error {
 	return nil
+}
+
+func (s *oauthPendingDefaultSubscriptionAssignerStub) AssignOrExtendSubscription(_ context.Context, input *service.AssignSubscriptionInput) (*service.UserSubscription, bool, error) {
+	if input != nil {
+		s.calls = append(s.calls, *input)
+	}
+	return &service.UserSubscription{UserID: input.UserID, GroupID: input.GroupID}, false, nil
 }
 
 func TestApplySuggestedProfileToCompletionResponse(t *testing.T) {
@@ -479,7 +499,11 @@ func TestCompletePendingOAuthBindSessionCreatesIdentity(t *testing.T) {
 		},
 	}
 
-	err = completePendingOAuthBindSession(ctx, client, session)
+	authSvc := service.NewAuthService(client, repository.NewUserRepository(client, nil), nil, &oauthPendingRefreshTokenCacheStub{}, &config.Config{
+		JWT: config.JWTConfig{Secret: "test-secret", ExpireHour: 1, RefreshTokenExpireDays: 30},
+	}, service.NewSettingService(repository.NewSettingRepository(client), &config.Config{}), nil, nil, nil, nil, nil, nil)
+
+	err = completePendingOAuthBindSession(ctx, client, authSvc, session)
 	require.NoError(t, err)
 
 	identity, err := client.AuthIdentity.Query().Only(ctx)
@@ -487,6 +511,98 @@ func TestCompletePendingOAuthBindSessionCreatesIdentity(t *testing.T) {
 	require.Equal(t, user.ID, identity.UserID)
 	require.Equal(t, "linuxdo", identity.ProviderType)
 	require.Equal(t, "subject-bind", identity.ProviderSubject)
+}
+
+func TestBindPendingOAuthLoginAppliesFirstBindGrantOnce(t *testing.T) {
+	client := newOAuthPendingHandlerTestClient(t)
+	ctx := context.Background()
+	gin.SetMode(gin.TestMode)
+
+	settingRepo := repository.NewSettingRepository(client)
+	require.NoError(t, settingRepo.Set(ctx, service.SettingKeyAuthSourceDefaultLinuxDoBalance, "21.75"))
+	require.NoError(t, settingRepo.Set(ctx, service.SettingKeyAuthSourceDefaultLinuxDoConcurrency, "9"))
+	require.NoError(t, settingRepo.Set(ctx, service.SettingKeyAuthSourceDefaultLinuxDoSubscriptions, `[{"group_id":22,"validity_days":14}]`))
+	require.NoError(t, settingRepo.Set(ctx, service.SettingKeyAuthSourceDefaultLinuxDoGrantOnFirstBind, "true"))
+	settingSvc := service.NewSettingService(settingRepo, &config.Config{})
+	userRepo := repository.NewUserRepository(client, nil)
+	assigner := &oauthPendingDefaultSubscriptionAssignerStub{}
+	authSvc := service.NewAuthService(client, userRepo, nil, &oauthPendingRefreshTokenCacheStub{}, &config.Config{
+		JWT: config.JWTConfig{Secret: "test-secret", ExpireHour: 1, RefreshTokenExpireDays: 30},
+	}, settingSvc, nil, nil, nil, nil, nil, assigner)
+	hash, err := authSvc.HashPassword("password")
+	require.NoError(t, err)
+	user, err := client.User.Create().
+		SetEmail("first-bind@example.com").
+		SetPasswordHash(hash).
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		SetConcurrency(1).
+		Save(ctx)
+	require.NoError(t, err)
+
+	pendingSvc := service.NewAuthPendingIdentityService(client)
+	pendingSession, err := pendingSvc.CreatePendingSession(ctx, service.CreatePendingAuthSessionInput{
+		Intent: oauthIntentBindCurrentUser,
+		Identity: service.PendingAuthIdentityKey{
+			ProviderType:    "linuxdo",
+			ProviderKey:     "linuxdo",
+			ProviderSubject: "subject-first-bind",
+		},
+		TargetUserID:           &user.ID,
+		BrowserSessionKey:      "browser-first-bind",
+		UpstreamIdentityClaims: map[string]any{"email": "first-bind@linuxdo-connect.invalid"},
+	})
+	require.NoError(t, err)
+
+	handler := NewAuthHandler(&config.Config{}, authSvc, service.NewUserService(userRepo, nil, nil), settingSvc, nil, nil, nil)
+	body, err := json.Marshal(bindPendingOAuthLoginRequest{Email: user.Email, Password: "password"})
+	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/pending/bind-login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: oauthPendingSessionCookieName, Value: encodeCookieValue(pendingSession.SessionToken)})
+	req.AddCookie(&http.Cookie{Name: oauthPendingBrowserCookieName, Value: encodeCookieValue(pendingSession.BrowserSessionKey)})
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = req
+
+	handler.BindPendingOAuthLogin(c)
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	updated, err := client.User.Get(ctx, user.ID)
+	require.NoError(t, err)
+	require.Equal(t, 21.75, updated.Balance)
+	require.Equal(t, 10, updated.Concurrency)
+	require.Len(t, assigner.calls, 1)
+	require.Equal(t, int64(22), assigner.calls[0].GroupID)
+
+	secondSession, err := pendingSvc.CreatePendingSession(ctx, service.CreatePendingAuthSessionInput{
+		Intent: oauthIntentBindCurrentUser,
+		Identity: service.PendingAuthIdentityKey{
+			ProviderType:    "linuxdo",
+			ProviderKey:     "linuxdo",
+			ProviderSubject: "subject-first-bind-second",
+		},
+		TargetUserID:           &user.ID,
+		BrowserSessionKey:      "browser-first-bind-second",
+		UpstreamIdentityClaims: map[string]any{"email": "first-bind-2@linuxdo-connect.invalid"},
+	})
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/pending/bind-login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: oauthPendingSessionCookieName, Value: encodeCookieValue(secondSession.SessionToken)})
+	req.AddCookie(&http.Cookie{Name: oauthPendingBrowserCookieName, Value: encodeCookieValue(secondSession.BrowserSessionKey)})
+	rec = httptest.NewRecorder()
+	c, _ = gin.CreateTestContext(rec)
+	c.Request = req
+
+	handler.BindPendingOAuthLogin(c)
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	updated, err = client.User.Get(ctx, user.ID)
+	require.NoError(t, err)
+	require.Equal(t, 21.75, updated.Balance)
+	require.Equal(t, 10, updated.Concurrency)
+	require.Len(t, assigner.calls, 1)
 }
 
 func TestLogin2FACompletesPendingOAuthBindSession(t *testing.T) {
