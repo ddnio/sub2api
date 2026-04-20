@@ -428,6 +428,16 @@ export function hasExplicitWeChatOAuthCapabilities(
   )
 }
 
+export function hasExplicitWeChatOAuthCapabilities(
+  settings: WeChatOAuthPublicSettings | null | undefined,
+): settings is WeChatOAuthPublicSettings & {
+  wechat_oauth_open_enabled: boolean
+  wechat_oauth_mp_enabled: boolean
+} {
+  return typeof settings?.wechat_oauth_open_enabled === 'boolean'
+    && typeof settings?.wechat_oauth_mp_enabled === 'boolean'
+}
+
 export function resolveWeChatOAuthStart(
   settings: WeChatOAuthPublicSettings | null | undefined,
   userAgent?: string
@@ -518,6 +528,28 @@ export function resolveWeChatOAuthStartStrict(
       mobileEnabled: false,
       isWeChatBrowser,
       unavailableReason: 'capability_unknown'
+    }
+  }
+
+  return resolveWeChatOAuthStart(settings, normalizedUserAgent)
+}
+
+export function resolveWeChatOAuthStartStrict(
+  settings: WeChatOAuthPublicSettings | null | undefined,
+  userAgent?: string,
+): ResolvedWeChatOAuthStart {
+  const normalizedUserAgent = (userAgent
+    ?? (typeof navigator !== 'undefined' ? navigator.userAgent : '')
+    ?? '').trim()
+  const isWeChatBrowser = /MicroMessenger/i.test(normalizedUserAgent)
+
+  if (!hasExplicitWeChatOAuthCapabilities(settings)) {
+    return {
+      mode: null,
+      openEnabled: false,
+      mpEnabled: false,
+      isWeChatBrowser,
+      unavailableReason: 'capability_unknown',
     }
   }
 
