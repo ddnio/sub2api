@@ -88,6 +88,18 @@ func RegisterAuthRoutes(
 			}),
 			h.Auth.CompleteLinuxDoOAuthRegistration,
 		)
+		auth.POST("/oauth/linuxdo/bind-login",
+			rateLimiter.LimitWithOptions("oauth-linuxdo-bind-login", 20, time.Minute, middleware.RateLimitOptions{
+				FailureMode: middleware.RateLimitFailClose,
+			}),
+			h.Auth.BindLinuxDoOAuthLogin,
+		)
+		auth.POST("/oauth/linuxdo/create-account",
+			rateLimiter.LimitWithOptions("oauth-linuxdo-create-account", 10, time.Minute, middleware.RateLimitOptions{
+				FailureMode: middleware.RateLimitFailClose,
+			}),
+			h.Auth.CreateLinuxDoOAuthAccount,
+		)
 		auth.GET("/oauth/wechat/start", h.Auth.WeChatOAuthStart)
 		auth.GET("/oauth/wechat/callback", h.Auth.WeChatOAuthCallback)
 		auth.GET("/oauth/wechat/payment/start", h.Auth.WeChatPaymentOAuthStart)
@@ -98,6 +110,18 @@ func RegisterAuthRoutes(
 			}),
 			h.Auth.CompleteWeChatOAuthRegistration,
 		)
+		auth.POST("/oauth/wechat/bind-login",
+			rateLimiter.LimitWithOptions("oauth-wechat-bind-login", 20, time.Minute, middleware.RateLimitOptions{
+				FailureMode: middleware.RateLimitFailClose,
+			}),
+			h.Auth.BindWeChatOAuthLogin,
+		)
+		auth.POST("/oauth/wechat/create-account",
+			rateLimiter.LimitWithOptions("oauth-wechat-create-account", 10, time.Minute, middleware.RateLimitOptions{
+				FailureMode: middleware.RateLimitFailClose,
+			}),
+			h.Auth.CreateWeChatOAuthAccount,
+		)
 		auth.GET("/oauth/oidc/start", h.Auth.OIDCOAuthStart)
 		auth.GET("/oauth/oidc/callback", h.Auth.OIDCOAuthCallback)
 		auth.POST("/oauth/oidc/complete-registration",
@@ -105,6 +129,18 @@ func RegisterAuthRoutes(
 				FailureMode: middleware.RateLimitFailClose,
 			}),
 			h.Auth.CompleteOIDCOAuthRegistration,
+		)
+		auth.POST("/oauth/oidc/bind-login",
+			rateLimiter.LimitWithOptions("oauth-oidc-bind-login", 20, time.Minute, middleware.RateLimitOptions{
+				FailureMode: middleware.RateLimitFailClose,
+			}),
+			h.Auth.BindOIDCOAuthLogin,
+		)
+		auth.POST("/oauth/oidc/create-account",
+			rateLimiter.LimitWithOptions("oauth-oidc-create-account", 10, time.Minute, middleware.RateLimitOptions{
+				FailureMode: middleware.RateLimitFailClose,
+			}),
+			h.Auth.CreateOIDCOAuthAccount,
 		)
 	}
 

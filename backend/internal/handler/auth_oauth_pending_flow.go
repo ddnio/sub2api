@@ -405,8 +405,15 @@ func (h *AuthHandler) entClient() *dbent.Client {
 	return h.authService.EntClient()
 }
 
-func (h *AuthHandler) isForceEmailOnThirdPartySignup(context.Context) bool {
-	return false
+func (h *AuthHandler) isForceEmailOnThirdPartySignup(ctx context.Context) bool {
+	if h == nil || h.settingSvc == nil {
+		return false
+	}
+	defaults, err := h.settingSvc.GetAuthSourceDefaultSettings(ctx)
+	if err != nil || defaults == nil {
+		return false
+	}
+	return defaults.ForceEmailOnThirdPartySignup
 }
 
 func (h *AuthHandler) findOAuthIdentityUser(ctx context.Context, identity service.PendingAuthIdentityKey) (*dbent.User, error) {
@@ -812,6 +819,18 @@ func (h *AuthHandler) CreatePendingOAuthAccount(c *gin.Context) {
 	writeOAuthTokenPairResponse(c, tokenPair)
 }
 
+func (h *AuthHandler) CreateLinuxDoOAuthAccount(c *gin.Context) {
+	h.CreatePendingOAuthAccount(c)
+}
+
+func (h *AuthHandler) CreateOIDCOAuthAccount(c *gin.Context) {
+	h.CreatePendingOAuthAccount(c)
+}
+
+func (h *AuthHandler) CreateWeChatOAuthAccount(c *gin.Context) {
+	h.CreatePendingOAuthAccount(c)
+}
+
 // BindPendingOAuthLogin completes a DB-backed pending OAuth session by binding
 // it to an existing local account after password verification.
 func (h *AuthHandler) BindPendingOAuthLogin(c *gin.Context) {
@@ -877,6 +896,18 @@ func (h *AuthHandler) BindPendingOAuthLogin(c *gin.Context) {
 
 	clearCookies()
 	writeOAuthTokenPairResponse(c, tokenPair)
+}
+
+func (h *AuthHandler) BindLinuxDoOAuthLogin(c *gin.Context) {
+	h.BindPendingOAuthLogin(c)
+}
+
+func (h *AuthHandler) BindOIDCOAuthLogin(c *gin.Context) {
+	h.BindPendingOAuthLogin(c)
+}
+
+func (h *AuthHandler) BindWeChatOAuthLogin(c *gin.Context) {
+	h.BindPendingOAuthLogin(c)
 }
 
 // ExchangePendingOAuthCompletion redeems a pending OAuth browser session into a frontend-safe payload.
