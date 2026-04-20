@@ -43,7 +43,7 @@
             class="btn btn-secondary btn-sm"
             @click="handleBind(item.provider)"
           >
-            {{ t('profile.authBindings.bindAction') }}
+            {{ t('profile.authBindings.bindAction', { providerName: item.label }) }}
           </button>
         </div>
       </div>
@@ -56,11 +56,11 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { startOAuthBinding } from '@/api/user'
-import type { UserAuthBindingStatus, UserAuthProvider, UserProfile } from '@/types'
+import type { User, UserAuthBindingStatus, UserAuthProvider, UserProfile } from '@/types'
 
 const props = withDefaults(
   defineProps<{
-    user: UserProfile | null
+    user: UserProfile | User | null
     linuxdoEnabled?: boolean
     oidcEnabled?: boolean
     oidcProviderName?: string

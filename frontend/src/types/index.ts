@@ -24,21 +24,6 @@ export interface FetchOptions {
 
 // ==================== User & Auth Types ====================
 
-export interface User {
-  id: number
-  username: string
-  email: string
-  role: 'admin' | 'user' // User role for authorization
-  balance: number // User balance for API usage
-  concurrency: number // Allowed concurrent requests
-  status: 'active' | 'disabled' // Account status
-  allowed_groups: number[] | null // Allowed group IDs (null = all non-exclusive groups)
-  subscriptions?: UserSubscription[] // User's active subscriptions
-  referral_code?: string // 推荐码
-  created_at: string
-  updated_at: string
-}
-
 export type UserAuthProvider = 'email' | 'linuxdo' | 'oidc' | 'wechat'
 
 export interface UserAuthBindingStatus {
@@ -48,11 +33,56 @@ export interface UserAuthBindingStatus {
   display_name?: string
   subject_hint?: string
   provider_key?: string
+  provider_subject?: string | null
+  issuer?: string | null
+  label?: string | null
+  provider_label?: string | null
+  metadata?: Record<string, unknown>
   verified_at?: string
   bind_start_path?: string
   can_bind?: boolean
   can_unbind?: boolean
   note?: string
+}
+
+export interface UserProfileSourceContext {
+  provider?: UserAuthProvider | string
+  source?: string | null
+  label?: string | null
+  provider_label?: string | null
+}
+
+export interface User {
+  id: number
+  username: string
+  email: string
+  avatar_url?: string | null
+  avatar_source?: string | UserProfileSourceContext | null
+  username_source?: string | UserProfileSourceContext | null
+  display_name_source?: string | UserProfileSourceContext | null
+  nickname_source?: string | UserProfileSourceContext | null
+  profile_sources?: {
+    avatar?: string | UserProfileSourceContext | null
+    username?: string | UserProfileSourceContext | null
+    display_name?: string | UserProfileSourceContext | null
+    nickname?: string | UserProfileSourceContext | null
+  }
+  auth_bindings?: Partial<Record<UserAuthProvider, boolean | UserAuthBindingStatus>>
+  identity_bindings?: Partial<Record<UserAuthProvider, boolean | UserAuthBindingStatus>>
+  identities?: UserAuthIdentitySet
+  email_bound?: boolean
+  linuxdo_bound?: boolean
+  oidc_bound?: boolean
+  wechat_bound?: boolean
+  role: 'admin' | 'user' // User role for authorization
+  balance: number // User balance for API usage
+  concurrency: number // Allowed concurrent requests
+  status: 'active' | 'disabled' // Account status
+  allowed_groups: number[] | null // Allowed group IDs (null = all non-exclusive groups)
+  subscriptions?: UserSubscription[] // User's active subscriptions
+  referral_code?: string // 推荐码
+  created_at: string
+  updated_at: string
 }
 
 export type UserAuthIdentitySet = Partial<Record<UserAuthProvider, UserAuthBindingStatus>>
@@ -69,7 +99,6 @@ export interface UserProfile extends User {
   balance_notify_threshold: number | null
   balance_notify_threshold_type: 'fixed' | 'percentage' | string
   balance_notify_extra_emails: NotifyEmailEntry[]
-  identities?: UserAuthIdentitySet
 }
 
 export interface AdminUser extends User {
