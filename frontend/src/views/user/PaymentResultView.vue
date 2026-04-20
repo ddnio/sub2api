@@ -300,8 +300,19 @@ onMounted(async () => {
   if (restored?.orderId) {
     orderId = restored.orderId
   }
+  if (routeOrderId > 0) {
+    orderId = routeOrderId
+  }
   if (!outTradeNo && restored?.outTradeNo) {
     outTradeNo = restored.outTradeNo
+  }
+
+  if (!order.value && resumeToken && orderId) {
+    try {
+      order.value = await paymentStore.pollOrderStatus(orderId)
+    } catch (_err: unknown) {
+      // Fall through to signed resume-token recovery below.
+    }
   }
 
   if (resumeToken) {

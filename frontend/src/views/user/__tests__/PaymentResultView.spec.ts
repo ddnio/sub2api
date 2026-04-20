@@ -126,7 +126,7 @@ describe('PaymentResultView', () => {
     await flushPromises()
 
     expect(resolveOrderPublicByResumeToken).toHaveBeenCalledWith('resume-42')
-    expect(pollOrderStatus).not.toHaveBeenCalled()
+    expect(pollOrderStatus).toHaveBeenCalledWith(999)
     expect(wrapper.text()).toContain('payment.result.processing')
     expect(wrapper.text()).not.toContain('payment.result.success')
     expect(wrapper.text()).not.toContain('payment.result.failed')
@@ -153,6 +153,12 @@ describe('PaymentResultView', () => {
       resumeToken: 'resume-authoritative',
       createdAt: Date.UTC(2099, 0, 1, 0, 0, 0),
     }))
+    pollOrderStatus.mockResolvedValue({
+      ...orderFactory('PENDING'),
+      amount: 88,
+      pay_amount: 88,
+      fee_rate: 0,
+    })
     resolveOrderPublicByResumeToken.mockResolvedValue({
       data: {
         ...orderFactory('PAID'),
@@ -172,7 +178,7 @@ describe('PaymentResultView', () => {
 
     await flushPromises()
 
-    expect(pollOrderStatus).not.toHaveBeenCalled()
+    expect(pollOrderStatus).toHaveBeenCalledWith(42)
     expect(resolveOrderPublicByResumeToken).toHaveBeenCalledWith('resume-authoritative')
     expect(wrapper.text()).toContain('payment.result.success')
     expect(wrapper.text()).toContain('103.00')
