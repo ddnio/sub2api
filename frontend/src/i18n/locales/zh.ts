@@ -491,6 +491,7 @@ export default {
     signUp: '注册',
     processing: '处理中...',
     continue: '继续',
+    wechatCallbackPageTitle: '微信 OAuth 回调',
     wechatPaymentCallbackPageTitle: '微信支付回调',
     rememberMe: '记住我',
     dontHaveAccount: '还没有账户？',

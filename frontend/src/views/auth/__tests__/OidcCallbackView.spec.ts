@@ -152,6 +152,8 @@ describe('OidcCallbackView pending OAuth flow', () => {
       password: 'secret-123',
       verify_code: '246810',
       invitation_code: 'INVITE-1',
+      adopt_display_name: false,
+      adopt_avatar: false,
     })
     expect(localStorage.getItem('refresh_token')).toBe('refresh-token')
     expect(setToken).toHaveBeenCalledWith('access-token')
@@ -192,6 +194,8 @@ describe('OidcCallbackView pending OAuth flow', () => {
     expect(bindPendingOAuthLogin).toHaveBeenCalledWith({
       email: 'new@example.com',
       password: 'existing-password',
+      adopt_display_name: false,
+      adopt_avatar: false,
     })
     expect(setToken).toHaveBeenCalledWith('bound-access')
     expect(replace).toHaveBeenCalledWith('/profile')

@@ -491,6 +491,7 @@ export default {
     signUp: 'Sign up',
     processing: 'Processing...',
     continue: 'Continue',
+    wechatCallbackPageTitle: 'WeChat OAuth Callback',
     wechatPaymentCallbackPageTitle: 'WeChat Payment Callback',
     rememberMe: 'Remember me',
     dontHaveAccount: "Don't have an account?",

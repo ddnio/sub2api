@@ -11,7 +11,61 @@
       </div>
 
       <transition name="fade">
-        <div v-if="needsInvitation || needsCreateAccount || needsBindLogin || needsTotpChallenge" class="space-y-4">
+        <div
+          v-if="needsInvitation || needsAdoptionConfirmation || needsCreateAccount || needsBindLogin || needsTotpChallenge"
+          class="space-y-4"
+        >
+          <div
+            v-if="adoptionRequired && (suggestedDisplayName || suggestedAvatarUrl)"
+            class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-dark-600 dark:bg-dark-800/60"
+          >
+            <div class="space-y-3">
+              <div class="space-y-1">
+                <p class="text-sm font-medium text-gray-900 dark:text-white">
+                  Use LinuxDo profile details
+                </p>
+                <p class="text-xs text-gray-500 dark:text-dark-400">
+                  Choose whether to apply the nickname or avatar from LinuxDo to this account.
+                </p>
+              </div>
+
+              <label
+                v-if="suggestedDisplayName"
+                class="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm dark:border-dark-600 dark:bg-dark-900/50"
+              >
+                <input v-model="adoptDisplayName" type="checkbox" class="mt-1 h-4 w-4" />
+                <span class="space-y-1">
+                  <span class="block font-medium text-gray-900 dark:text-white">
+                    Use display name
+                  </span>
+                  <span class="block text-gray-500 dark:text-dark-400">
+                    {{ suggestedDisplayName }}
+                  </span>
+                </span>
+              </label>
+
+              <label
+                v-if="suggestedAvatarUrl"
+                class="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm dark:border-dark-600 dark:bg-dark-900/50"
+              >
+                <input v-model="adoptAvatar" type="checkbox" class="mt-1 h-4 w-4" />
+                <img
+                  :src="suggestedAvatarUrl"
+                  alt="LinuxDo avatar"
+                  class="h-10 w-10 rounded-full border border-gray-200 object-cover dark:border-dark-600"
+                />
+                <span class="space-y-1">
+                  <span class="block font-medium text-gray-900 dark:text-white">
+                    Use avatar
+                  </span>
+                  <span class="block break-all text-gray-500 dark:text-dark-400">
+                    {{ suggestedAvatarUrl }}
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+
           <template v-if="needsInvitation">
             <p class="text-sm text-gray-700 dark:text-gray-300">
               {{ t('auth.linuxdo.invitationRequired') }}
@@ -37,6 +91,15 @@
               @click="handleSubmitInvitation"
             >
               {{ isSubmitting ? t('auth.linuxdo.completing') : t('auth.linuxdo.completeRegistration') }}
+            </button>
+          </template>
+
+          <template v-else-if="needsAdoptionConfirmation">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              Review the LinuxDo profile details before continuing.
+            </p>
+            <button class="btn btn-primary w-full" :disabled="isSubmitting" @click="handleContinueLogin">
+              {{ isSubmitting ? t('common.processing') : 'Continue' }}
             </button>
           </template>
 
@@ -173,7 +236,9 @@ import {
   bindPendingOAuthLogin,
   completeLinuxDoOAuthRegistration,
   createPendingOAuthAccount,
+  exchangePendingOAuthCompletion,
   login2FA,
+  type PendingOAuthAdoptionDecision,
   type PendingOAuthExchangeResponse,
   type PendingOAuthTokenPairResponse,
 } from '@/api/auth'
@@ -215,6 +280,12 @@ const totpTempToken = ref('')
 const totpCode = ref('')
 const totpError = ref('')
 const totpUserEmailMasked = ref('')
+const adoptionRequired = ref(false)
+const suggestedDisplayName = ref('')
+const suggestedAvatarUrl = ref('')
+const adoptDisplayName = ref(true)
+const adoptAvatar = ref(true)
+const needsAdoptionConfirmation = ref(false)
 
 const needsCreateAccount = computed(() => pendingAccountAction.value === 'create_account')
 const needsBindLogin = computed(() => pendingAccountAction.value === 'bind_login')
@@ -280,6 +351,30 @@ function getRequestErrorMessage(error: unknown, fallback: string): string {
   return err.response?.data?.detail || err.response?.data?.message || err.message || fallback
 }
 
+function currentAdoptionDecision(): PendingOAuthAdoptionDecision {
+  return {
+    adopt_display_name: adoptDisplayName.value,
+    adopt_avatar: adoptAvatar.value,
+  }
+}
+
+function applyAdoptionSuggestionState(payload: PendingOAuthExchangeResponse) {
+  adoptionRequired.value = payload.adoption_required === true
+  suggestedDisplayName.value = payload.suggested_display_name || ''
+  suggestedAvatarUrl.value = payload.suggested_avatar_url || ''
+
+  if (!suggestedDisplayName.value) {
+    adoptDisplayName.value = false
+  }
+  if (!suggestedAvatarUrl.value) {
+    adoptAvatar.value = false
+  }
+}
+
+function hasSuggestedProfile(payload: PendingOAuthExchangeResponse): boolean {
+  return Boolean(payload.suggested_display_name || payload.suggested_avatar_url)
+}
+
 function persistTokenContext(tokenData: PendingOAuthTokenPairResponse) {
   if (tokenData.refresh_token) {
     localStorage.setItem('refresh_token', tokenData.refresh_token)
@@ -293,6 +388,10 @@ function isTokenPair(payload: PendingAccountResponse): payload is PendingOAuthTo
   return typeof payload.access_token === 'string' && payload.access_token.trim().length > 0
 }
 
+function getCompletionRedirect(payload: PendingAccountResponse): string {
+  return 'redirect' in payload && typeof payload.redirect === 'string' ? payload.redirect : ''
+}
+
 async function finalizePendingAccountResponse(payload: PendingAccountResponse) {
   if (applyTotpChallenge(payload)) {
     return
@@ -302,7 +401,29 @@ async function finalizePendingAccountResponse(payload: PendingAccountResponse) {
     persistTokenContext(payload)
     await authStore.setToken(payload.access_token)
     appStore.showSuccess(t('auth.loginSuccess'))
-    await router.replace(redirectTo.value)
+    await router.replace(sanitizeRedirectPath(getCompletionRedirect(payload) || redirectTo.value))
+    return
+  }
+
+  applyPendingAccountAction(payload)
+}
+
+async function finalizeAdoptionCompletion(payload: PendingAccountResponse) {
+  if (applyTotpChallenge(payload)) {
+    return
+  }
+
+  if (isTokenPair(payload)) {
+    persistTokenContext(payload)
+    await authStore.setToken(payload.access_token)
+    appStore.showSuccess(t('auth.loginSuccess'))
+    await router.replace(sanitizeRedirectPath(getCompletionRedirect(payload) || redirectTo.value))
+    return
+  }
+
+  if (isOAuthBindCompletion(payload) || payload.redirect) {
+    appStore.showSuccess(t('profile.authBindings.bindSuccess'))
+    await router.replace(sanitizeRedirectPath(payload.redirect || '/profile'))
     return
   }
 
@@ -346,10 +467,29 @@ async function handleCreateAccount(payload: PendingOAuthCreateAccountPayload) {
       password: payload.password,
       verify_code: payload.verifyCode || undefined,
       invitation_code: payload.invitationCode || undefined,
+      ...currentAdoptionDecision(),
     })
     await finalizePendingAccountResponse(completion)
   } catch (e: unknown) {
     accountActionError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+async function handleContinueLogin() {
+  isSubmitting.value = true
+  try {
+    const completion = await exchangePendingOAuthCompletion({
+      adoptDisplayName: adoptDisplayName.value,
+      adoptAvatar: adoptAvatar.value,
+    })
+    needsAdoptionConfirmation.value = false
+    await finalizeAdoptionCompletion(completion)
+  } catch (e: unknown) {
+    errorMessage.value = getRequestErrorMessage(e, t('auth.loginFailed'))
+    appStore.showError(errorMessage.value)
+    needsAdoptionConfirmation.value = false
   } finally {
     isSubmitting.value = false
   }
@@ -363,7 +503,7 @@ async function handleBindLogin() {
 
   isSubmitting.value = true
   try {
-    const completion = await bindPendingOAuthLogin({ email, password })
+    const completion = await bindPendingOAuthLogin({ email, password, ...currentAdoptionDecision() })
     await finalizePendingAccountResponse(completion)
   } catch (e: unknown) {
     accountActionError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
@@ -410,6 +550,7 @@ onMounted(async () => {
   const rawHash = typeof window !== 'undefined' ? window.location.hash : ''
   const params = parseFragmentParams(rawHash)
   const pendingPayload = await resolvePendingOAuthPayload(params)
+  applyAdoptionSuggestionState(pendingPayload)
 
   const token = pendingPayload.access_token || ''
   const refreshToken = pendingPayload.refresh_token || ''
@@ -443,6 +584,12 @@ onMounted(async () => {
     if (isOAuthBindCompletion(pendingPayload)) {
       appStore.showSuccess(t('profile.authBindings.bindSuccess'))
       await router.replace(redirect)
+      return
+    }
+    if (adoptionRequired.value && hasSuggestedProfile(pendingPayload)) {
+      redirectTo.value = redirect
+      needsAdoptionConfirmation.value = true
+      isProcessing.value = false
       return
     }
     errorMessage.value = t('auth.linuxdo.callbackMissingToken')
