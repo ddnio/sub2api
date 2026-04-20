@@ -244,10 +244,10 @@ func TestPrepareIdentityBindingStart_AllowsLinuxDoAndOIDC(t *testing.T) {
 func TestPrepareIdentityBindingStart_RejectsUnsupportedProvidersAndUnsafeRedirect(t *testing.T) {
 	svc := NewUserService(&mockUserRepo{}, nil, nil)
 
-	_, err := svc.PrepareIdentityBindingStart(context.Background(), StartUserIdentityBindingRequest{Provider: "wechat"})
+	_, err := svc.PrepareIdentityBindingStart(context.Background(), StartUserIdentityBindingRequest{Provider: "email"})
 	require.ErrorIs(t, err, ErrIdentityProviderInvalid)
 
-	_, err = svc.PrepareIdentityBindingStart(context.Background(), StartUserIdentityBindingRequest{Provider: "email"})
+	_, err = svc.PrepareIdentityBindingStart(context.Background(), StartUserIdentityBindingRequest{Provider: "unsupported"})
 	require.ErrorIs(t, err, ErrIdentityProviderInvalid)
 
 	_, err = svc.PrepareIdentityBindingStart(context.Background(), StartUserIdentityBindingRequest{
