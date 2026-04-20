@@ -46,6 +46,12 @@ func (m *mockUserRepo) List(context.Context, pagination.PaginationParams) ([]Use
 func (m *mockUserRepo) ListWithFilters(context.Context, pagination.PaginationParams, UserListFilters) ([]User, *pagination.PaginationResult, error) {
 	return nil, nil, nil
 }
+func (m *mockUserRepo) GetLatestUsedAtByUserIDs(context.Context, []int64) (map[int64]*time.Time, error) {
+	return map[int64]*time.Time{}, nil
+}
+func (m *mockUserRepo) GetLatestUsedAtByUserID(context.Context, int64) (*time.Time, error) {
+	return nil, nil
+}
 func (m *mockUserRepo) UpdateBalance(ctx context.Context, id int64, amount float64) error {
 	if m.updateBalanceFn != nil {
 		return m.updateBalanceFn(ctx, id, amount)

@@ -89,6 +89,14 @@ func (s *userRepoStub) ListWithFilters(ctx context.Context, params pagination.Pa
 	panic("unexpected ListWithFilters call")
 }
 
+func (s *userRepoStub) GetLatestUsedAtByUserIDs(ctx context.Context, userIDs []int64) (map[int64]*time.Time, error) {
+	return map[int64]*time.Time{}, nil
+}
+
+func (s *userRepoStub) GetLatestUsedAtByUserID(ctx context.Context, userID int64) (*time.Time, error) {
+	return nil, nil
+}
+
 func (s *userRepoStub) UpdateBalance(ctx context.Context, id int64, amount float64) error {
 	panic("unexpected UpdateBalance call")
 }
