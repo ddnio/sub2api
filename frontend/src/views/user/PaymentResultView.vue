@@ -291,7 +291,6 @@ onMounted(async () => {
   const routeOrderId = Number(readRouteQueryString('order_id')) || 0
   let outTradeNo = readRouteQueryString('out_trade_no')
   let orderId = 0
-  let resumeTokenLookupFailed = false
 
   const restored = restoreRecoverySnapshot({
     resumeToken,
@@ -313,16 +312,15 @@ onMounted(async () => {
         orderId = resolvedOrder.id
       }
     } else if (routeOrderId > 0) {
-      resumeTokenLookupFailed = true
       orderId = routeOrderId
-    } else {
-      resumeTokenLookupFailed = true
     }
   } else if (routeOrderId > 0) {
     orderId = routeOrderId
   }
 
-  const hasLegacyFallbackContext = readRouteQueryString('trade_status').trim() !== ''
+  const hasLegacyFallbackContext = Boolean(
+    readRouteQueryString('trade_status') || readRouteQueryString('money') || readRouteQueryString('type'),
+  )
   const shouldUsePublicOutTradeNo = outTradeNo !== '' && (hasLegacyFallbackContext || routeOrderId > 0 || orderId > 0)
 
   if (!order.value && orderId && (!resumeToken || routeOrderId > 0)) {
@@ -333,7 +331,7 @@ onMounted(async () => {
     }
   }
 
-  if (!order.value && shouldUsePublicOutTradeNo && (!resumeToken || resumeTokenLookupFailed)) {
+  if (!order.value && shouldUsePublicOutTradeNo && !resumeToken) {
     const legacyOrder = await resolveOrderFromOutTradeNo(outTradeNo)
     if (legacyOrder) {
       order.value = legacyOrder
@@ -368,7 +366,7 @@ onMounted(async () => {
       }
     }
 
-    if (shouldUsePublicOutTradeNo) {
+    if (shouldUsePublicOutTradeNo && !resumeToken) {
       return await resolveOrderFromOutTradeNo(outTradeNo)
     }
 
