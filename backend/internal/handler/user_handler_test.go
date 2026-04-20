@@ -298,6 +298,11 @@ func TestUserHandlerGetProfileReturnsLegacyCompatibilityFields(t *testing.T) {
 	require.Equal(t, false, resp.Data["wechat_bound"])
 	require.Equal(t, "https://cdn.example.com/linuxdo.png", resp.Data["avatar_url"])
 
+	avatarSource, ok := resp.Data["avatar_source"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "linuxdo", avatarSource["provider"])
+	require.Equal(t, "linuxdo", avatarSource["source"])
+
 	authBindings, ok := resp.Data["auth_bindings"].(map[string]any)
 	require.True(t, ok)
 	linuxdoBinding, ok := authBindings["linuxdo"].(map[string]any)
@@ -311,15 +316,12 @@ func TestUserHandlerGetProfileReturnsLegacyCompatibilityFields(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, true, emailBinding["bound"])
 
-	avatarSource, ok := resp.Data["avatar_source"].(map[string]any)
-	require.True(t, ok)
-	require.Equal(t, "linuxdo", avatarSource["provider"])
-
 	profileSources, ok := resp.Data["profile_sources"].(map[string]any)
 	require.True(t, ok)
 	usernameSource, ok := profileSources["username"].(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, "linuxdo", usernameSource["provider"])
+	require.Equal(t, "linuxdo", usernameSource["source"])
 }
 
 func TestUserHandlerStartIdentityBindingReturnsAuthorizeURL(t *testing.T) {
