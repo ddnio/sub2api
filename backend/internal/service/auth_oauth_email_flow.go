@@ -91,19 +91,15 @@ func (s *AuthService) RegisterOAuthEmailAccount(
 		return nil, nil, fmt.Errorf("hash password: %w", err)
 	}
 
-	defaultBalance := s.cfg.Default.UserBalance
-	defaultConcurrency := s.cfg.Default.UserConcurrency
-	if s.settingService != nil {
-		defaultBalance = s.settingService.GetDefaultBalance(ctx)
-		defaultConcurrency = s.settingService.GetDefaultConcurrency(ctx)
-	}
+	signupSource = normalizeOAuthSignupSource(signupSource)
+	grantPlan := s.resolveSignupGrantPlan(ctx, signupSource)
 
 	user := &User{
 		Email:        email,
 		PasswordHash: hashedPassword,
 		Role:         RoleUser,
-		Balance:      defaultBalance,
-		Concurrency:  defaultConcurrency,
+		Balance:      grantPlan.Balance,
+		Concurrency:  grantPlan.Concurrency,
 		Status:       StatusActive,
 	}
 	applyUserNotifyDefaults(user)
@@ -116,7 +112,7 @@ func (s *AuthService) RegisterOAuthEmailAccount(
 		return nil, nil, ErrServiceUnavailable
 	}
 
-	s.assignDefaultSubscriptions(ctx, user.ID)
+	s.assignSubscriptions(ctx, user.ID, grantPlan.Subscriptions, "auto assigned by signup defaults")
 
 	if invitationRedeemCode != nil {
 		if err := s.redeemRepo.Use(ctx, invitationRedeemCode.ID, user.ID); err != nil {
@@ -138,8 +134,7 @@ func (s *AuthService) RegisterOAuthEmailAccount(
 		}
 	}
 
-	s.updateUserSignupSource(ctx, user.ID, normalizeOAuthSignupSource(signupSource))
-	s.touchUserLogin(ctx, user.ID)
+	s.postAuthUserBootstrap(ctx, user, signupSource, true)
 
 	tokenPair, err := s.GenerateTokenPair(ctx, user, "")
 	if err != nil {
