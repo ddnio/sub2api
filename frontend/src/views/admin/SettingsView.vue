@@ -3003,7 +3003,7 @@ import PaymentProviderDialog from '@/components/payment/PaymentProviderDialog.vu
 import { useClipboard } from '@/composables/useClipboard'
 import { useAppStore } from '@/stores'
 import { useAdminSettingsStore } from '@/stores/adminSettings'
-import { extractApiErrorMessage } from '@/utils/apiError'
+import { extractApiErrorMessage, extractI18nErrorMessage } from '@/utils/apiError'
 import {
   isRegistrationEmailSuffixDomainValid,
   normalizeRegistrationEmailSuffixDomain,
@@ -4264,8 +4264,7 @@ async function loadProviders() {
   try {
     providers.value = await adminAPI.payment.listProviders()
   } catch (e: unknown) {
-    const detail = e instanceof Error ? e.message : String(e)
-    appStore.showError(`Load providers failed: ${detail}`)
+    appStore.showError(extractI18nErrorMessage(e, t, 'payment.errors', t('common.error')))
   } finally {
     providersLoading.value = false
   }
@@ -4383,8 +4382,7 @@ async function handleSaveProvider(payload: Partial<ProviderInstance>) {
     appStore.showSuccess(t('admin.settings.settingsSaved'))
     await loadProviders()
   } catch (e: unknown) {
-    const detail = e instanceof Error ? e.message : String(e)
-    appStore.showError(`${t('common.saveFailed')}: ${detail}`)
+    appStore.showError(extractI18nErrorMessage(e, t, 'payment.errors', t('common.saveFailed')))
   } finally {
     providerSaving.value = false
   }
@@ -4419,8 +4417,7 @@ async function handleToggleField(provider: ProviderInstance, field: 'enabled' | 
     await adminAPI.payment.updateProvider(provider.id, payload)
     await loadProviders()
   } catch (e: unknown) {
-    const detail = e instanceof Error ? e.message : String(e)
-    appStore.showError(`${t('common.saveFailed')}: ${detail}`)
+    appStore.showError(extractI18nErrorMessage(e, t, 'payment.errors', t('common.saveFailed')))
   }
 }
 
@@ -4446,8 +4443,7 @@ async function handleToggleType(provider: ProviderInstance, type: string) {
     await adminAPI.payment.updateProvider(provider.id, { supported_types: updated })
     await loadProviders()
   } catch (e: unknown) {
-    const detail = e instanceof Error ? e.message : String(e)
-    appStore.showError(`${t('common.saveFailed')}: ${detail}`)
+    appStore.showError(extractI18nErrorMessage(e, t, 'payment.errors', t('common.saveFailed')))
   }
 }
 
@@ -4456,8 +4452,7 @@ async function handleReorderProviders(updates: { id: number; sort_order: number 
     await Promise.all(updates.map((item) => adminAPI.payment.updateProvider(item.id, { sort_order: item.sort_order })))
     await loadProviders()
   } catch (e: unknown) {
-    const detail = e instanceof Error ? e.message : String(e)
-    appStore.showError(`${t('common.saveFailed')}: ${detail}`)
+    appStore.showError(extractI18nErrorMessage(e, t, 'payment.errors', t('common.saveFailed')))
     loadProviders()
   }
 }
@@ -4476,8 +4471,7 @@ async function handleDeleteProvider() {
     deletingProviderId.value = null
     await loadProviders()
   } catch (e: unknown) {
-    const detail = e instanceof Error ? e.message : String(e)
-    appStore.showError(`${t('common.deleteFailed')}: ${detail}`)
+    appStore.showError(extractI18nErrorMessage(e, t, 'payment.errors', t('common.deleteFailed')))
   }
 }
 
