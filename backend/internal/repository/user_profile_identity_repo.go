@@ -112,7 +112,7 @@ func txAwareSQLExecutor(ctx context.Context, fallback sqlExecutor, client *dbent
 			return exec
 		}
 	}
-	if fallback != nil {
+	if !isNilSQLExecutor(fallback) {
 		return fallback
 	}
 	return sqlExecutorFromEntClient(client)
@@ -124,6 +124,19 @@ func (r *userRepository) userProfileIdentitySQL(ctx context.Context) (sqlExecuto
 		return nil, fmt.Errorf("sql executor is not configured")
 	}
 	return exec, nil
+}
+
+func isNilSQLExecutor(exec sqlExecutor) bool {
+	if exec == nil {
+		return true
+	}
+	value := reflect.ValueOf(exec)
+	switch value.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return value.IsNil()
+	default:
+		return false
+	}
 }
 
 func sqlExecutorFromEntClient(client *dbent.Client) sqlExecutor {

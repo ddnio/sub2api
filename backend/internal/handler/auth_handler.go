@@ -292,7 +292,7 @@ func (h *AuthHandler) Login2FA(c *gin.Context) {
 			response.ErrorFrom(c, infraerrors.Conflict("PENDING_AUTH_TARGET_USER_MISMATCH", "pending oauth session must be completed by the targeted user"))
 			return
 		}
-		if err := ensurePendingOAuthIdentityForUser(c.Request.Context(), h.authService.EntClient(), pendingSession, user.ID); err != nil {
+		if err := applyPendingOAuthBinding(c.Request.Context(), h.authService.EntClient(), h.userService, pendingSession, nil, &user.ID, true); err != nil {
 			response.ErrorFrom(c, pendingOAuthBindApplyError(err))
 			return
 		}

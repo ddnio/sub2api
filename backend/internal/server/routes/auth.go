@@ -88,6 +88,16 @@ func RegisterAuthRoutes(
 			}),
 			h.Auth.CompleteLinuxDoOAuthRegistration,
 		)
+		auth.GET("/oauth/wechat/start", h.Auth.WeChatOAuthStart)
+		auth.GET("/oauth/wechat/callback", h.Auth.WeChatOAuthCallback)
+		auth.GET("/oauth/wechat/payment/start", h.Auth.WeChatPaymentOAuthStart)
+		auth.GET("/oauth/wechat/payment/callback", h.Auth.WeChatPaymentOAuthCallback)
+		auth.POST("/oauth/wechat/complete-registration",
+			rateLimiter.LimitWithOptions("oauth-wechat-complete", 10, time.Minute, middleware.RateLimitOptions{
+				FailureMode: middleware.RateLimitFailClose,
+			}),
+			h.Auth.CompleteWeChatOAuthRegistration,
+		)
 		auth.GET("/oauth/oidc/start", h.Auth.OIDCOAuthStart)
 		auth.GET("/oauth/oidc/callback", h.Auth.OIDCOAuthCallback)
 		auth.POST("/oauth/oidc/complete-registration",
@@ -123,6 +133,12 @@ func RegisterAuthRoutes(
 			query.Set("intent", "bind_current_user")
 			c.Request.URL.RawQuery = query.Encode()
 			h.Auth.OIDCOAuthStart(c)
+		})
+		authenticated.GET("/auth/oauth/wechat/bind/start", func(c *gin.Context) {
+			query := c.Request.URL.Query()
+			query.Set("intent", "bind_current_user")
+			c.Request.URL.RawQuery = query.Encode()
+			h.Auth.WeChatOAuthStart(c)
 		})
 	}
 }

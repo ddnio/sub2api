@@ -37,6 +37,18 @@ func newOAuthPendingHandlerTestClient(t *testing.T) *dbent.Client {
 
 	_, err = db.Exec("PRAGMA foreign_keys = ON")
 	require.NoError(t, err)
+	_, err = db.Exec(`
+CREATE TABLE IF NOT EXISTS user_avatars (
+	user_id INTEGER PRIMARY KEY,
+	storage_provider TEXT NOT NULL DEFAULT 'database',
+	storage_key TEXT NOT NULL DEFAULT '',
+	url TEXT NOT NULL DEFAULT '',
+	content_type TEXT NOT NULL DEFAULT '',
+	byte_size INTEGER NOT NULL DEFAULT 0,
+	sha256 TEXT NOT NULL DEFAULT '',
+	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+)`)
+	require.NoError(t, err)
 
 	drv := entsql.OpenDB(dialect.SQLite, db)
 	client := enttest.NewClient(t, enttest.WithOptions(dbent.Driver(drv)))
