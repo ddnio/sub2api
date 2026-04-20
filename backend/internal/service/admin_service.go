@@ -576,6 +576,9 @@ func (s *adminServiceImpl) CreateUser(ctx context.Context, input *CreateUserInpu
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, err
 	}
+	if err := ensureEmailAuthIdentitySync(ctx, s.userRepo, user.ID, user.Email); err != nil {
+		return nil, fmt.Errorf("sync email auth identity: %w", err)
+	}
 	s.assignDefaultSubscriptions(ctx, user.ID)
 	return user, nil
 }
@@ -619,6 +622,7 @@ func (s *adminServiceImpl) UpdateUser(ctx context.Context, id int64, input *Upda
 	oldConcurrency := user.Concurrency
 	oldStatus := user.Status
 	oldRole := user.Role
+	oldEmail := user.Email
 
 	if input.Email != "" {
 		user.Email = input.Email
@@ -650,6 +654,9 @@ func (s *adminServiceImpl) UpdateUser(ctx context.Context, id int64, input *Upda
 
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		return nil, err
+	}
+	if err := replaceEmailAuthIdentitySync(ctx, s.userRepo, user.ID, oldEmail, user.Email); err != nil {
+		return nil, fmt.Errorf("sync email auth identity: %w", err)
 	}
 
 	// 同步用户专属分组倍率

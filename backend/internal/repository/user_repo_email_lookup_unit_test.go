@@ -51,22 +51,22 @@ func TestUserRepositoryGetByEmailNormalizesLegacySpacingAndCase(t *testing.T) {
 }
 
 func TestUserRepositoryGetByEmailRejectsNormalizedDuplicates(t *testing.T) {
-	repo, _ := newUserEmailLookupRepo(t)
+	repo, client := newUserEmailLookupRepo(t)
 	ctx := context.Background()
 
-	err := repo.Create(ctx, &service.User{
-		Email:        " Legacy@Example.com ",
-		PasswordHash: "hash",
-		Role:         service.RoleUser,
-		Status:       service.StatusActive,
-	})
+	_, err := client.User.Create().
+		SetEmail(" Legacy@Example.com ").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
 	require.NoError(t, err)
-	err = repo.Create(ctx, &service.User{
-		Email:        "legacy@example.com",
-		PasswordHash: "hash",
-		Role:         service.RoleUser,
-		Status:       service.StatusActive,
-	})
+	_, err = client.User.Create().
+		SetEmail("legacy@example.com").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
 	require.NoError(t, err)
 
 	_, err = repo.GetByEmail(ctx, " legacy@example.com ")
