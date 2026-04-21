@@ -377,7 +377,7 @@ func (s *OpenAIGatewayService) streamChatCompletionsUpstream(
 	return usage, firstTokenMs, nil
 }
 
-// toolCallAcc accumulates streaming tool_call deltas by index.
+// toolCallAcc accumulates streaming tool_call deltas by index within a choice.
 type toolCallAcc struct {
 	id          string
 	typ         string
@@ -385,15 +385,22 @@ type toolCallAcc struct {
 	argsBuilder strings.Builder
 }
 
+// choiceAcc accumulates streaming choice deltas by index.
+type choiceAcc struct {
+	finishReason   string
+	contentBuilder strings.Builder
+	toolCallsMap   map[int]*toolCallAcc
+}
+
 // convertChatCompletionsSSEToJSON aggregates a chat completions SSE stream into a single JSON response.
 // Used when upstream returns text/event-stream despite stream=false (cascaded sub2api scenario).
+// All choices are preserved by index; tool_calls within each choice are accumulated in order.
 func convertChatCompletionsSSEToJSON(body []byte, upstreamModel string) ([]byte, OpenAIUsage, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(body))
 	scanner.Buffer(make([]byte, 64*1024), defaultMaxLineSize)
 
-	var id, model, finishReason string
-	var contentBuilder strings.Builder
-	var toolCallsMap map[int]*toolCallAcc
+	var id, model string
+	var choicesMap map[int]*choiceAcc
 	var usage OpenAIUsage
 	var lastPayload []byte
 
@@ -414,33 +421,44 @@ func convertChatCompletionsSSEToJSON(body []byte, upstreamModel string) ([]byte,
 		if model == "" {
 			model = gjson.GetBytes(pb, "model").String()
 		}
-		if fr := gjson.GetBytes(pb, "choices.0.finish_reason").String(); fr != "" {
-			finishReason = fr
-		}
-		if delta := gjson.GetBytes(pb, "choices.0.delta.content").String(); delta != "" {
-			contentBuilder.WriteString(delta)
-		}
-		gjson.GetBytes(pb, "choices.0.delta.tool_calls").ForEach(func(_, v gjson.Result) bool {
-			idx := int(v.Get("index").Int())
-			if toolCallsMap == nil {
-				toolCallsMap = make(map[int]*toolCallAcc)
+		gjson.GetBytes(pb, "choices").ForEach(func(_, choiceVal gjson.Result) bool {
+			idx := int(choiceVal.Get("index").Int())
+			if choicesMap == nil {
+				choicesMap = make(map[int]*choiceAcc)
 			}
-			if _, ok := toolCallsMap[idx]; !ok {
-				toolCallsMap[idx] = &toolCallAcc{}
+			if _, ok := choicesMap[idx]; !ok {
+				choicesMap[idx] = &choiceAcc{}
 			}
-			tc := toolCallsMap[idx]
-			if s := v.Get("id").String(); s != "" {
-				tc.id = s
+			ch := choicesMap[idx]
+			if fr := choiceVal.Get("finish_reason").String(); fr != "" {
+				ch.finishReason = fr
 			}
-			if s := v.Get("type").String(); s != "" {
-				tc.typ = s
+			if delta := choiceVal.Get("delta.content").String(); delta != "" {
+				ch.contentBuilder.WriteString(delta)
 			}
-			if s := v.Get("function.name").String(); s != "" {
-				tc.name = s
-			}
-			if s := v.Get("function.arguments").String(); s != "" {
-				tc.argsBuilder.WriteString(s)
-			}
+			choiceVal.Get("delta.tool_calls").ForEach(func(_, v gjson.Result) bool {
+				tcIdx := int(v.Get("index").Int())
+				if ch.toolCallsMap == nil {
+					ch.toolCallsMap = make(map[int]*toolCallAcc)
+				}
+				if _, ok := ch.toolCallsMap[tcIdx]; !ok {
+					ch.toolCallsMap[tcIdx] = &toolCallAcc{}
+				}
+				tc := ch.toolCallsMap[tcIdx]
+				if s := v.Get("id").String(); s != "" {
+					tc.id = s
+				}
+				if s := v.Get("type").String(); s != "" {
+					tc.typ = s
+				}
+				if s := v.Get("function.name").String(); s != "" {
+					tc.name = s
+				}
+				if s := v.Get("function.arguments").String(); s != "" {
+					tc.argsBuilder.WriteString(s)
+				}
+				return true
+			})
 			return true
 		})
 		if u := parseChatCompletionsUsage(pb); u.InputTokens > 0 || u.OutputTokens > 0 {
@@ -459,44 +477,59 @@ func convertChatCompletionsSSEToJSON(body []byte, upstreamModel string) ([]byte,
 		model = upstreamModel
 	}
 
-	msg := map[string]any{"role": "assistant"}
-	if len(toolCallsMap) > 0 {
-		indices := make([]int, 0, len(toolCallsMap))
-		for idx := range toolCallsMap {
-			indices = append(indices, idx)
-		}
-		sort.Ints(indices)
-		toolCalls := make([]map[string]any, 0, len(indices))
-		for _, idx := range indices {
-			tc := toolCallsMap[idx]
-			toolCalls = append(toolCalls, map[string]any{
-				"id":   tc.id,
-				"type": tc.typ,
-				"function": map[string]any{
-					"name":      tc.name,
-					"arguments": tc.argsBuilder.String(),
-				},
-			})
-		}
-		msg["tool_calls"] = toolCalls
-		if contentBuilder.Len() > 0 {
-			msg["content"] = contentBuilder.String()
+	choiceIndices := make([]int, 0, len(choicesMap))
+	for idx := range choicesMap {
+		choiceIndices = append(choiceIndices, idx)
+	}
+	sort.Ints(choiceIndices)
+
+	choices := make([]map[string]any, 0, len(choiceIndices))
+	for _, idx := range choiceIndices {
+		ch := choicesMap[idx]
+		msg := map[string]any{"role": "assistant"}
+		if len(ch.toolCallsMap) > 0 {
+			tcIndices := make([]int, 0, len(ch.toolCallsMap))
+			for tcIdx := range ch.toolCallsMap {
+				tcIndices = append(tcIndices, tcIdx)
+			}
+			sort.Ints(tcIndices)
+			toolCalls := make([]map[string]any, 0, len(tcIndices))
+			for _, tcIdx := range tcIndices {
+				tc := ch.toolCallsMap[tcIdx]
+				toolCalls = append(toolCalls, map[string]any{
+					"id":   tc.id,
+					"type": tc.typ,
+					"function": map[string]any{
+						"name":      tc.name,
+						"arguments": tc.argsBuilder.String(),
+					},
+				})
+			}
+			msg["tool_calls"] = toolCalls
+			if ch.contentBuilder.Len() > 0 {
+				msg["content"] = ch.contentBuilder.String()
+			} else {
+				msg["content"] = nil
+			}
 		} else {
-			msg["content"] = nil
+			msg["content"] = ch.contentBuilder.String()
 		}
-	} else {
-		msg["content"] = contentBuilder.String()
+		choices = append(choices, map[string]any{
+			"index":         idx,
+			"message":       msg,
+			"finish_reason": ch.finishReason,
+		})
+	}
+
+	if len(choices) == 0 {
+		return nil, OpenAIUsage{}, errors.New("empty sse stream: no choices")
 	}
 
 	result := map[string]any{
-		"id":     id,
-		"object": "chat.completion",
-		"model":  model,
-		"choices": []map[string]any{{
-			"index":         0,
-			"message":       msg,
-			"finish_reason": finishReason,
-		}},
+		"id":      id,
+		"object":  "chat.completion",
+		"model":   model,
+		"choices": choices,
 	}
 	if usage.InputTokens > 0 || usage.OutputTokens > 0 {
 		usageMap := map[string]any{

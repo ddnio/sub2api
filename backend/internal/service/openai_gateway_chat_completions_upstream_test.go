@@ -327,6 +327,22 @@ func TestConvertChatCompletionsSSEToJSON(t *testing.T) {
 	assert.Equal(t, 5, usage.OutputTokens)
 }
 
+func TestConvertChatCompletionsSSEToJSON_MultiChoice(t *testing.T) {
+	sse := strings.Join([]string{
+		`data: {"id":"c1","model":"gpt-4","choices":[{"index":0,"delta":{"content":"A"}},{"index":1,"delta":{"content":"B"}}]}`,
+		`data: {"choices":[{"index":0,"delta":{"content":"1"},"finish_reason":"stop"},{"index":1,"delta":{"content":"2"},"finish_reason":"stop"}]}`,
+		`data: [DONE]`,
+		``,
+	}, "\n")
+
+	out, _, err := convertChatCompletionsSSEToJSON([]byte(sse), "gpt-4")
+	require.NoError(t, err)
+
+	outStr := string(out)
+	assert.Contains(t, outStr, "A1", "choice 0 content must be aggregated")
+	assert.Contains(t, outStr, "B2", "choice 1 content must be aggregated")
+}
+
 func TestConvertChatCompletionsSSEToJSON_ToolCalls(t *testing.T) {
 	// Two chunks: first carries id/type/name, second carries arguments fragment
 	sse := strings.Join([]string{

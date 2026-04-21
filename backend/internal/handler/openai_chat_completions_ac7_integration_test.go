@@ -12,7 +12,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestAC7_RecordUsage_UpstreamEndpoint verifies the AC7 invariant end-to-end:
+// TestAC7_RecordUsage_UpstreamEndpoint verifies the AC7 invariant end-to-end.
+//
+// Test methodology note (C2): usageRecordWorkerPool is nil so submitUsageRecordTask
+// runs synchronously. This is valid because in production the handler returns
+// immediately after submitting the task — the gin context is never modified again
+// after submission, so the async path reads the same override value. The sync path
+// exercises the identical closure logic without the goroutine scheduling overhead.
+//
 // the per-attempt reset of ctxKeyUpstreamEndpointOverride propagates through
 // submitUsageRecordTask → RecordUsage → UpstreamEndpoint correctly.
 //
