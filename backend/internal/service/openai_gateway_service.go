@@ -342,6 +342,20 @@ type OpenAIGatewayService struct {
 	openaiWSRetryMetrics  openAIWSRetryMetrics
 	responseHeaderFilter  *responseheaders.CompiledHeaderFilter
 	codexSnapshotThrottle *accountWriteThrottle
+
+	recordUsageHook func(ctx context.Context, input *OpenAIRecordUsageInput) error // test-only, nil in production
+}
+
+// SetRecordUsageHookForTest injects a test-only hook that replaces RecordUsage.
+// Must not be called in production code.
+func (s *OpenAIGatewayService) SetRecordUsageHookForTest(fn func(context.Context, *OpenAIRecordUsageInput) error) {
+	s.recordUsageHook = fn
+}
+
+// NewOpenAIGatewayServiceForTest creates a minimal OpenAIGatewayService for unit and handler tests.
+// Only httpUpstream and cfg are populated; all repos/caches are nil.
+func NewOpenAIGatewayServiceForTest(upstream HTTPUpstream, cfg *config.Config) *OpenAIGatewayService {
+	return &OpenAIGatewayService{httpUpstream: upstream, cfg: cfg}
 }
 
 // NewOpenAIGatewayService creates a new OpenAIGatewayService
@@ -4411,6 +4425,9 @@ type OpenAIRecordUsageInput struct {
 
 // RecordUsage records usage and deducts balance
 func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRecordUsageInput) error {
+	if s.recordUsageHook != nil {
+		return s.recordUsageHook(ctx, input)
+	}
 	result := input.Result
 
 	// 跳过所有 token 均为零的用量记录——上游未返回 usage 时不应写入数据库

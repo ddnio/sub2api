@@ -153,3 +153,39 @@ func TestGetUpstreamEndpoint_FullFlow(t *testing.T) {
 	got := GetUpstreamEndpoint(c, service.PlatformOpenAI)
 	require.Equal(t, "/v1/responses/compact", got)
 }
+
+func TestGetUpstreamEndpoint_Override(t *testing.T) {
+	t.Run("override set — returns override ignoring inbound", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(rec)
+		c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+		c.Set(ctxKeyInboundEndpoint, EndpointChatCompletions)
+		c.Set(ctxKeyUpstreamEndpointOverride, EndpointChatCompletions)
+
+		got := GetUpstreamEndpoint(c, service.PlatformOpenAI)
+		require.Equal(t, EndpointChatCompletions, got)
+	})
+
+	t.Run("override empty string — falls through to derive", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(rec)
+		c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
+		c.Set(ctxKeyInboundEndpoint, EndpointResponses)
+		c.Set(ctxKeyUpstreamEndpointOverride, "")
+
+		got := GetUpstreamEndpoint(c, service.PlatformOpenAI)
+		require.Equal(t, EndpointResponses, got)
+	})
+
+	t.Run("override key absent — falls through to DeriveUpstreamEndpoint", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(rec)
+		c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+		c.Set(ctxKeyInboundEndpoint, EndpointChatCompletions)
+
+		// OpenAI platform always derives to /v1/responses without override.
+		got := GetUpstreamEndpoint(c, service.PlatformOpenAI)
+		require.Equal(t, EndpointResponses, got)
+	})
+
+}

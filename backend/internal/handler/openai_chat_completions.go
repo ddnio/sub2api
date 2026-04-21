@@ -177,6 +177,13 @@ func (h *OpenAIGatewayHandler) ChatCompletions(c *gin.Context) {
 		_ = scheduleDecision
 		setOpsSelectedAccount(c, account.ID, account.Platform)
 
+		// per-attempt upstream endpoint override (D2)
+		if account.IsOpenAIUpstream() {
+			c.Set(ctxKeyUpstreamEndpointOverride, EndpointChatCompletions)
+		} else {
+			c.Set(ctxKeyUpstreamEndpointOverride, "")
+		}
+
 		accountReleaseFunc, acquired := h.acquireResponsesAccountSlot(c, apiKey.GroupID, sessionHash, selection, reqStream, &streamStarted, reqLog)
 		if !acquired {
 			return
@@ -190,7 +197,12 @@ func (h *OpenAIGatewayHandler) ChatCompletions(c *gin.Context) {
 		if channelMapping.Mapped {
 			forwardBody = h.gatewayService.ReplaceModelInBody(body, channelMapping.MappedModel)
 		}
-		result, err := h.gatewayService.ForwardAsChatCompletions(c.Request.Context(), c, account, forwardBody, promptCacheKey, defaultMappedModel)
+		var result *service.OpenAIForwardResult
+		if account.IsOpenAIUpstream() {
+			result, err = h.gatewayService.ForwardChatCompletionsUpstream(c.Request.Context(), c, account, forwardBody, defaultMappedModel)
+		} else {
+			result, err = h.gatewayService.ForwardAsChatCompletions(c.Request.Context(), c, account, forwardBody, promptCacheKey, defaultMappedModel)
+		}
 
 		forwardDurationMs := time.Since(forwardStart).Milliseconds()
 		if accountReleaseFunc != nil {

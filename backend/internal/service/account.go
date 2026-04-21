@@ -856,13 +856,16 @@ func (a *Account) GetOpenAIBaseURL() string {
 	if !a.IsOpenAI() {
 		return ""
 	}
-	if a.Type == AccountTypeAPIKey {
-		baseURL := a.GetCredential("base_url")
-		if baseURL != "" {
+	if a.Type == AccountTypeAPIKey || a.Type == AccountTypeUpstream {
+		if baseURL := a.GetCredential("base_url"); baseURL != "" {
 			return baseURL
 		}
 	}
 	return "https://api.openai.com"
+}
+
+func (a *Account) IsOpenAIUpstream() bool {
+	return a.IsOpenAI() && a.Type == AccountTypeUpstream
 }
 
 func (a *Account) GetOpenAIAccessToken() string {

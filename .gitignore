@@ -136,3 +136,5 @@ docs/*
 frontend/coverage/
 aicodex
 output/
+# Added by code-review-graph
+.code-review-graph/
