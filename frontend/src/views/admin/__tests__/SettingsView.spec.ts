@@ -603,7 +603,7 @@ describe("admin SettingsView wechat connect controls", () => {
 
     expect(
       (
-        wrapper.get('[data-testid="wechat-connect-app-id"]')
+        wrapper.get('[data-testid="wechat-connect-mp-app-id"]')
           .element as HTMLInputElement
       ).value,
     ).toBe("wx-app-id-123");
@@ -624,7 +624,7 @@ describe("admin SettingsView wechat connect controls", () => {
     );
     expect(
       wrapper
-        .get('[data-testid="wechat-connect-app-secret"]')
+        .get('[data-testid="wechat-connect-mp-app-secret"]')
         .attributes("placeholder"),
     ).toContain("密钥已配置");
     expect(
@@ -642,10 +642,10 @@ describe("admin SettingsView wechat connect controls", () => {
     await openSecurityTab(wrapper);
 
     await wrapper
-      .get('[data-testid="wechat-connect-app-id"]')
+      .get('[data-testid="wechat-connect-mp-app-id"]')
       .setValue("wx-app-id-updated");
     await wrapper
-      .get('[data-testid="wechat-connect-app-secret"]')
+      .get('[data-testid="wechat-connect-mp-app-secret"]')
       .setValue("new-secret");
     await wrapper
       .get('[data-testid="wechat-connect-open-enabled"]')
@@ -667,9 +667,10 @@ describe("admin SettingsView wechat connect controls", () => {
       expect.objectContaining({
         wechat_connect_enabled: true,
         wechat_connect_app_id: "wx-app-id-updated",
-        wechat_connect_app_secret: "new-secret",
         wechat_connect_open_enabled: true,
         wechat_connect_mp_enabled: true,
+        wechat_connect_mp_app_id: "wx-app-id-updated",
+        wechat_connect_mp_app_secret: "new-secret",
         wechat_connect_redirect_url:
           "https://admin.example.com/api/v1/auth/oauth/wechat/callback",
         wechat_connect_frontend_redirect_url: "/auth/wechat/callback",
@@ -677,13 +678,13 @@ describe("admin SettingsView wechat connect controls", () => {
     );
     expect(
       (
-        wrapper.get('[data-testid="wechat-connect-app-secret"]')
+        wrapper.get('[data-testid="wechat-connect-mp-app-secret"]')
           .element as HTMLInputElement
       ).value,
     ).toBe("");
     expect(
       wrapper
-        .get('[data-testid="wechat-connect-app-secret"]')
+        .get('[data-testid="wechat-connect-mp-app-secret"]')
         .attributes("placeholder"),
     ).toContain("密钥已配置");
   });
