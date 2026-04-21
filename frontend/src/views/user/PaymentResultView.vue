@@ -238,15 +238,6 @@ async function resolveOrderFromResumeToken(resumeToken: string): Promise<Payment
   }
 }
 
-async function resolveOrderFromOutTradeNo(outTradeNo: string): Promise<PaymentOrder | null> {
-  try {
-    const result = await paymentAPI.verifyOrderPublic(outTradeNo)
-    return result.data
-  } catch (_err: unknown) {
-    return null
-  }
-}
-
 function clearStatusRefreshTimer(): void {
   if (statusRefreshTimer !== null) {
     clearTimeout(statusRefreshTimer)
@@ -329,26 +320,13 @@ onMounted(async () => {
     orderId = routeOrderId
   }
 
-  const hasLegacyFallbackContext = Boolean(
-    readRouteQueryString('trade_status') || readRouteQueryString('money') || readRouteQueryString('type'),
-  )
-  const shouldUsePublicOutTradeNo = outTradeNo !== '' && (hasLegacyFallbackContext || routeOrderId > 0 || orderId > 0)
+  const hasLegacyFallbackContext = readRouteQueryString('trade_status') !== ''
 
   if (!order.value && orderId && (!resumeToken || routeOrderId > 0)) {
     try {
       order.value = await paymentStore.pollOrderStatus(orderId)
     } catch (_err: unknown) {
-      // Order lookup failed, will try legacy fallback below when possible.
-    }
-  }
-
-  if (!order.value && shouldUsePublicOutTradeNo && !resumeToken) {
-    const legacyOrder = await resolveOrderFromOutTradeNo(outTradeNo)
-    if (legacyOrder) {
-      order.value = legacyOrder
-      if (!orderId) {
-        orderId = legacyOrder.id
-      }
+      // Order lookup failed; signed resume-token recovery is the only public fallback.
     }
   }
 
@@ -373,12 +351,8 @@ onMounted(async () => {
       try {
         return await paymentStore.pollOrderStatus(orderId)
       } catch (_err: unknown) {
-        // Fall through to legacy public verification when order polling is unavailable.
+        return null
       }
-    }
-
-    if (shouldUsePublicOutTradeNo && !resumeToken) {
-      return await resolveOrderFromOutTradeNo(outTradeNo)
     }
 
     return null

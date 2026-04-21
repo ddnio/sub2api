@@ -310,16 +310,13 @@ describe('PaymentResultView', () => {
     expect(wrapper.text()).not.toContain('sub2_20260420abcd1234')
   })
 
-  it('uses public out_trade_no verification when no signed resume context is available', async () => {
+  it('does not use anonymous out_trade_no verification when no signed resume context is available', async () => {
     routeState.query = {
       out_trade_no: 'legacy-123',
       trade_status: 'TRADE_SUCCESS',
     }
-    verifyOrderPublic.mockResolvedValue({
-      data: orderFactory('PAID'),
-    })
 
-    const wrapper = mount(PaymentResultView, {
+    mount(PaymentResultView, {
       global: {
         stubs: {
           OrderStatusBadge: true,
@@ -329,9 +326,8 @@ describe('PaymentResultView', () => {
 
     await flushPromises()
 
-    expect(verifyOrderPublic).toHaveBeenCalledWith('legacy-123')
+    expect(verifyOrderPublic).not.toHaveBeenCalled()
     expect(pollOrderStatus).not.toHaveBeenCalled()
-    expect(wrapper.text()).toContain('payment.result.success')
   })
 
   it('does not use public out_trade_no verification for bare order numbers without legacy return markers', async () => {
