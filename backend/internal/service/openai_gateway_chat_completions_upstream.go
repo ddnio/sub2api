@@ -344,8 +344,7 @@ func (s *OpenAIGatewayService) streamChatCompletionsUpstream(
 			}
 		}
 
-		if strings.HasPrefix(line, "data: ") {
-			payload := strings.TrimSpace(line[6:])
+		if payload, ok := extractSSEDataPayload(line); ok {
 			if payload == "" {
 				continue
 			}
@@ -387,6 +386,18 @@ func (s *OpenAIGatewayService) streamChatCompletionsUpstream(
 	return usage, firstTokenMs, nil
 }
 
+// extractSSEDataPayload pulls the data payload out of an SSE line, tolerating both
+// canonical "data: <payload>" and the unsanctioned "data:<payload>" variant used
+// by some OpenAI-compatible upstreams (e.g. Kimi). Per W3C SSE spec both are valid.
+// Returns payload (trimmed) and true when line is a data line; false otherwise.
+func extractSSEDataPayload(line string) (string, bool) {
+	const prefix = "data:"
+	if !strings.HasPrefix(line, prefix) {
+		return "", false
+	}
+	return strings.TrimSpace(line[len(prefix):]), true
+}
+
 // toolCallAcc accumulates streaming tool_call deltas by index within a choice.
 type toolCallAcc struct {
 	id          string
@@ -416,10 +427,10 @@ func convertChatCompletionsSSEToJSON(body []byte, upstreamModel string) ([]byte,
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		if !strings.HasPrefix(line, "data: ") {
+		payload, ok := extractSSEDataPayload(line)
+		if !ok {
 			continue
 		}
-		payload := strings.TrimSpace(line[6:])
 		if payload == "" || payload == "[DONE]" {
 			continue
 		}

@@ -380,6 +380,46 @@ func TestConvertChatCompletionsSSEToJSON_MultiChoice(t *testing.T) {
 	assert.Contains(t, outStr, "B2", "choice 1 content must be aggregated")
 }
 
+func TestExtractSSEDataPayload(t *testing.T) {
+	cases := []struct {
+		line    string
+		payload string
+		ok      bool
+	}{
+		{"data: {\"a\":1}", `{"a":1}`, true},
+		{"data:{\"a\":1}", `{"a":1}`, true},         // Kimi-style, no space
+		{"data:  {\"a\":1}  ", `{"a":1}`, true},     // extra whitespace
+		{"data: [DONE]", "[DONE]", true},
+		{"data:[DONE]", "[DONE]", true},
+		{"event: message", "", false},
+		{"", "", false},
+		{":heartbeat", "", false},
+	}
+	for _, tc := range cases {
+		got, ok := extractSSEDataPayload(tc.line)
+		assert.Equal(t, tc.ok, ok, "line=%q ok", tc.line)
+		assert.Equal(t, tc.payload, got, "line=%q payload", tc.line)
+	}
+}
+
+func TestConvertChatCompletionsSSEToJSON_NoSpaceAfterColon(t *testing.T) {
+	// Kimi-style SSE: "data:" with no space before payload
+	sse := strings.Join([]string{
+		`data:{"id":"c1","model":"kimi-for-coding","choices":[{"index":0,"delta":{"content":"Hi"}}]}`,
+		`data:{"choices":[{"index":0,"delta":{},"finish_reason":"stop","usage":{"prompt_tokens":8,"completion_tokens":5,"total_tokens":13}}]}`,
+		`data:{"choices":[],"usage":{"prompt_tokens":8,"completion_tokens":5,"total_tokens":13}}`,
+		`data: [DONE]`,
+		``,
+	}, "\n")
+
+	out, usage, err := convertChatCompletionsSSEToJSON([]byte(sse), "kimi-for-coding")
+	require.NoError(t, err)
+	assert.Contains(t, string(out), `"Hi"`)
+	assert.Contains(t, string(out), `"finish_reason":"stop"`)
+	assert.Equal(t, 8, usage.InputTokens, "must parse usage even when SSE uses `data:` without space")
+	assert.Equal(t, 5, usage.OutputTokens)
+}
+
 func TestConvertChatCompletionsSSEToJSON_ToolCalls(t *testing.T) {
 	// Two chunks: first carries id/type/name, second carries arguments fragment
 	sse := strings.Join([]string{
