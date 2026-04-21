@@ -37,6 +37,18 @@ type SystemSettings struct {
 	LinuxDoConnectClientSecretConfigured bool
 	LinuxDoConnectRedirectURL            string
 
+	// WeChat Connect OAuth 登录
+	WeChatConnectEnabled             bool
+	WeChatConnectAppID               string
+	WeChatConnectAppSecret           string
+	WeChatConnectAppSecretConfigured bool
+	WeChatConnectOpenEnabled         bool
+	WeChatConnectMPEnabled           bool
+	WeChatConnectMode                string
+	WeChatConnectScopes              string
+	WeChatConnectRedirectURL         string
+	WeChatConnectFrontendRedirectURL string
+
 	// Generic OIDC OAuth 登录
 	OIDCConnectEnabled                bool
 	OIDCConnectProviderName           string
@@ -176,6 +188,34 @@ type PublicSettings struct {
 	BalanceLowNotifyThreshold   float64
 	BalanceLowNotifyRechargeURL string
 	AccountQuotaNotifyEnabled   bool
+}
+
+type WeChatConnectOAuthConfig struct {
+	Enabled             bool
+	AppID               string
+	AppSecret           string
+	OpenEnabled         bool
+	MPEnabled           bool
+	Mode                string
+	Scopes              string
+	RedirectURL         string
+	FrontendRedirectURL string
+}
+
+func (cfg WeChatConnectOAuthConfig) SupportsMode(mode string) bool {
+	switch normalizeWeChatConnectModeSetting(mode) {
+	case "mp":
+		return cfg.MPEnabled
+	default:
+		return cfg.OpenEnabled
+	}
+}
+
+func (cfg WeChatConnectOAuthConfig) ScopeForMode(mode string) string {
+	if normalizeWeChatConnectModeSetting(mode) == "mp" {
+		return normalizeWeChatConnectScopeSetting(cfg.Scopes, "mp")
+	}
+	return defaultWeChatConnectScopeForMode("open")
 }
 
 // StreamTimeoutSettings 流超时处理配置（仅控制超时后的处理方式，超时判定由网关配置控制）

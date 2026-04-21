@@ -11,6 +11,214 @@ export interface DefaultSubscriptionSetting {
   validity_days: number
 }
 
+export type AuthSourceType = 'email' | 'linuxdo' | 'oidc' | 'wechat'
+
+export interface AuthSourceDefaultsValue {
+  balance: number
+  concurrency: number
+  subscriptions: DefaultSubscriptionSetting[]
+  grant_on_signup: boolean
+  grant_on_first_bind: boolean
+}
+
+export type AuthSourceDefaultsState = Record<AuthSourceType, AuthSourceDefaultsValue>
+export type PaymentVisibleMethod = 'alipay' | 'wxpay'
+export type PaymentVisibleMethodSource =
+  | ''
+  | 'official_alipay'
+  | 'easypay_alipay'
+  | 'official_wxpay'
+  | 'easypay_wxpay'
+export type WeChatConnectMode = 'open' | 'mp'
+
+export interface PaymentVisibleMethodSourceOption {
+  value: PaymentVisibleMethodSource
+  labelZh: string
+  labelEn: string
+}
+
+export interface WeChatConnectModeOption {
+  value: WeChatConnectMode
+  labelZh: string
+  labelEn: string
+}
+
+const AUTH_SOURCE_TYPES: AuthSourceType[] = ['email', 'linuxdo', 'oidc', 'wechat']
+const AUTH_SOURCE_DEFAULT_BALANCE = 0
+const AUTH_SOURCE_DEFAULT_CONCURRENCY = 5
+const PAYMENT_VISIBLE_METHOD_SOURCE_OPTIONS: Record<
+  PaymentVisibleMethod,
+  PaymentVisibleMethodSourceOption[]
+> = {
+  alipay: [
+    { value: '', labelZh: '未配置', labelEn: 'Not configured' },
+    { value: 'official_alipay', labelZh: '支付宝官方', labelEn: 'Official Alipay' },
+    { value: 'easypay_alipay', labelZh: '易支付支付宝', labelEn: 'EasyPay Alipay' },
+  ],
+  wxpay: [
+    { value: '', labelZh: '未配置', labelEn: 'Not configured' },
+    { value: 'official_wxpay', labelZh: '微信官方', labelEn: 'Official WeChat Pay' },
+    { value: 'easypay_wxpay', labelZh: '易支付微信', labelEn: 'EasyPay WeChat Pay' },
+  ],
+}
+const PAYMENT_VISIBLE_METHOD_SOURCE_ALIASES: Record<
+  PaymentVisibleMethod,
+  Record<string, PaymentVisibleMethodSource>
+> = {
+  alipay: {
+    official_alipay: 'official_alipay',
+    alipay: 'official_alipay',
+    alipay_direct: 'official_alipay',
+    official: 'official_alipay',
+    easypay_alipay: 'easypay_alipay',
+    easypay: 'easypay_alipay',
+  },
+  wxpay: {
+    official_wxpay: 'official_wxpay',
+    wxpay: 'official_wxpay',
+    wxpay_direct: 'official_wxpay',
+    wechat: 'official_wxpay',
+    official: 'official_wxpay',
+    easypay_wxpay: 'easypay_wxpay',
+    easypay: 'easypay_wxpay',
+  },
+}
+const WECHAT_CONNECT_MODE_OPTIONS: WeChatConnectModeOption[] = [
+  { value: 'open', labelZh: '微信开放平台', labelEn: 'WeChat Open Platform' },
+  { value: 'mp', labelZh: '微信公众号 / 小程序', labelEn: 'WeChat Official Account / Mini Program' },
+]
+const WECHAT_CONNECT_MODE_ALIASES: Record<string, WeChatConnectMode> = {
+  open: 'open',
+  open_platform: 'open',
+  official: 'open',
+  wx_open: 'open',
+  mp: 'mp',
+  official_account: 'mp',
+  wechat_mp: 'mp',
+  mini_program: 'mp',
+}
+
+export function normalizeDefaultSubscriptionSettings(
+  subscriptions: DefaultSubscriptionSetting[] | null | undefined
+): DefaultSubscriptionSetting[] {
+  if (!Array.isArray(subscriptions)) return []
+
+  return subscriptions
+    .filter((item) => item.group_id > 0 && item.validity_days > 0)
+    .map((item) => ({
+      group_id: Math.floor(item.group_id),
+      validity_days: Math.min(36500, Math.max(1, Math.floor(item.validity_days))),
+    }))
+}
+
+export function buildAuthSourceDefaultsState(
+  settings: Partial<SystemSettings>
+): AuthSourceDefaultsState {
+  const raw = settings as Record<string, unknown>
+
+  return AUTH_SOURCE_TYPES.reduce((acc, source) => {
+    const subscriptions = raw[`auth_source_default_${source}_subscriptions`]
+    acc[source] = {
+      balance: Number(raw[`auth_source_default_${source}_balance`] ?? AUTH_SOURCE_DEFAULT_BALANCE),
+      concurrency: Math.max(
+        1,
+        Number(raw[`auth_source_default_${source}_concurrency`] ?? AUTH_SOURCE_DEFAULT_CONCURRENCY)
+      ),
+      subscriptions: normalizeDefaultSubscriptionSettings(
+        Array.isArray(subscriptions) ? (subscriptions as DefaultSubscriptionSetting[]) : []
+      ),
+      grant_on_signup: raw[`auth_source_default_${source}_grant_on_signup`] === true,
+      grant_on_first_bind: raw[`auth_source_default_${source}_grant_on_first_bind`] === true,
+    }
+    return acc
+  }, {} as AuthSourceDefaultsState)
+}
+
+export function appendAuthSourceDefaultsToUpdateRequest(
+  payload: UpdateSettingsRequest,
+  authSourceDefaults: AuthSourceDefaultsState
+): UpdateSettingsRequest {
+  const target = payload as Record<string, unknown>
+
+  for (const source of AUTH_SOURCE_TYPES) {
+    const current = authSourceDefaults[source]
+    target[`auth_source_default_${source}_balance`] = Number(current.balance) || 0
+    target[`auth_source_default_${source}_concurrency`] = Math.max(
+      1,
+      Math.floor(Number(current.concurrency) || AUTH_SOURCE_DEFAULT_CONCURRENCY)
+    )
+    target[`auth_source_default_${source}_subscriptions`] = normalizeDefaultSubscriptionSettings(
+      current.subscriptions
+    )
+    target[`auth_source_default_${source}_grant_on_signup`] = current.grant_on_signup
+    target[`auth_source_default_${source}_grant_on_first_bind`] = current.grant_on_first_bind
+  }
+
+  return payload
+}
+
+export function getPaymentVisibleMethodSourceOptions(
+  method: PaymentVisibleMethod
+): PaymentVisibleMethodSourceOption[] {
+  return PAYMENT_VISIBLE_METHOD_SOURCE_OPTIONS[method]
+}
+
+export function normalizePaymentVisibleMethodSource(
+  method: PaymentVisibleMethod,
+  source: unknown
+): PaymentVisibleMethodSource {
+  if (typeof source !== 'string') return ''
+
+  const normalized = source.trim().toLowerCase()
+  if (!normalized) return ''
+
+  return PAYMENT_VISIBLE_METHOD_SOURCE_ALIASES[method][normalized] ?? ''
+}
+
+export function getWeChatConnectModeOptions(): WeChatConnectModeOption[] {
+  return WECHAT_CONNECT_MODE_OPTIONS
+}
+
+export function normalizeWeChatConnectMode(source: unknown): WeChatConnectMode {
+  if (typeof source !== 'string') return 'open'
+
+  const normalized = source.trim().toLowerCase()
+  if (!normalized) return 'open'
+
+  return WECHAT_CONNECT_MODE_ALIASES[normalized] ?? 'open'
+}
+
+export function defaultWeChatConnectScopesForMode(mode: unknown): string {
+  return normalizeWeChatConnectMode(mode) === 'mp' ? 'snsapi_userinfo' : 'snsapi_login'
+}
+
+export function resolveWeChatConnectModeCapabilities(
+  openEnabled: unknown,
+  mpEnabled: unknown,
+  legacyMode: unknown
+): { openEnabled: boolean; mpEnabled: boolean } {
+  if (typeof openEnabled === 'boolean' || typeof mpEnabled === 'boolean') {
+    return {
+      openEnabled: openEnabled === true,
+      mpEnabled: mpEnabled === true,
+    }
+  }
+
+  return normalizeWeChatConnectMode(legacyMode) === 'mp'
+    ? { openEnabled: false, mpEnabled: true }
+    : { openEnabled: true, mpEnabled: false }
+}
+
+export function deriveWeChatConnectStoredMode(
+  openEnabled: boolean,
+  mpEnabled: boolean,
+  legacyMode: unknown
+): WeChatConnectMode {
+  if (mpEnabled) return 'mp'
+  if (openEnabled) return 'open'
+  return normalizeWeChatConnectMode(legacyMode)
+}
+
 /**
  * System settings interface
  */
@@ -32,6 +240,27 @@ export interface SystemSettings {
   default_balance: number
   default_concurrency: number
   default_subscriptions: DefaultSubscriptionSetting[]
+  auth_source_default_email_balance?: number
+  auth_source_default_email_concurrency?: number
+  auth_source_default_email_subscriptions?: DefaultSubscriptionSetting[]
+  auth_source_default_email_grant_on_signup?: boolean
+  auth_source_default_email_grant_on_first_bind?: boolean
+  auth_source_default_linuxdo_balance?: number
+  auth_source_default_linuxdo_concurrency?: number
+  auth_source_default_linuxdo_subscriptions?: DefaultSubscriptionSetting[]
+  auth_source_default_linuxdo_grant_on_signup?: boolean
+  auth_source_default_linuxdo_grant_on_first_bind?: boolean
+  auth_source_default_oidc_balance?: number
+  auth_source_default_oidc_concurrency?: number
+  auth_source_default_oidc_subscriptions?: DefaultSubscriptionSetting[]
+  auth_source_default_oidc_grant_on_signup?: boolean
+  auth_source_default_oidc_grant_on_first_bind?: boolean
+  auth_source_default_wechat_balance?: number
+  auth_source_default_wechat_concurrency?: number
+  auth_source_default_wechat_subscriptions?: DefaultSubscriptionSetting[]
+  auth_source_default_wechat_grant_on_signup?: boolean
+  auth_source_default_wechat_grant_on_first_bind?: boolean
+  force_email_on_third_party_signup?: boolean
   // OEM settings
   site_name: string
   site_logo: string
@@ -71,6 +300,17 @@ export interface SystemSettings {
   linuxdo_connect_client_id: string
   linuxdo_connect_client_secret_configured: boolean
   linuxdo_connect_redirect_url: string
+
+  // WeChat Connect OAuth settings
+  wechat_connect_enabled: boolean
+  wechat_connect_app_id: string
+  wechat_connect_app_secret_configured: boolean
+  wechat_connect_open_enabled?: boolean
+  wechat_connect_mp_enabled?: boolean
+  wechat_connect_mode: string
+  wechat_connect_scopes: string
+  wechat_connect_redirect_url: string
+  wechat_connect_frontend_redirect_url: string
 
   // Generic OIDC OAuth settings
   oidc_connect_enabled: boolean
@@ -141,6 +381,27 @@ export interface UpdateSettingsRequest {
   default_balance?: number
   default_concurrency?: number
   default_subscriptions?: DefaultSubscriptionSetting[]
+  auth_source_default_email_balance?: number
+  auth_source_default_email_concurrency?: number
+  auth_source_default_email_subscriptions?: DefaultSubscriptionSetting[]
+  auth_source_default_email_grant_on_signup?: boolean
+  auth_source_default_email_grant_on_first_bind?: boolean
+  auth_source_default_linuxdo_balance?: number
+  auth_source_default_linuxdo_concurrency?: number
+  auth_source_default_linuxdo_subscriptions?: DefaultSubscriptionSetting[]
+  auth_source_default_linuxdo_grant_on_signup?: boolean
+  auth_source_default_linuxdo_grant_on_first_bind?: boolean
+  auth_source_default_oidc_balance?: number
+  auth_source_default_oidc_concurrency?: number
+  auth_source_default_oidc_subscriptions?: DefaultSubscriptionSetting[]
+  auth_source_default_oidc_grant_on_signup?: boolean
+  auth_source_default_oidc_grant_on_first_bind?: boolean
+  auth_source_default_wechat_balance?: number
+  auth_source_default_wechat_concurrency?: number
+  auth_source_default_wechat_subscriptions?: DefaultSubscriptionSetting[]
+  auth_source_default_wechat_grant_on_signup?: boolean
+  auth_source_default_wechat_grant_on_first_bind?: boolean
+  force_email_on_third_party_signup?: boolean
   site_name?: string
   site_logo?: string
   site_subtitle?: string
@@ -175,6 +436,15 @@ export interface UpdateSettingsRequest {
   linuxdo_connect_client_id?: string
   linuxdo_connect_client_secret?: string
   linuxdo_connect_redirect_url?: string
+  wechat_connect_enabled?: boolean
+  wechat_connect_app_id?: string
+  wechat_connect_app_secret?: string
+  wechat_connect_open_enabled?: boolean
+  wechat_connect_mp_enabled?: boolean
+  wechat_connect_mode?: string
+  wechat_connect_scopes?: string
+  wechat_connect_redirect_url?: string
+  wechat_connect_frontend_redirect_url?: string
   oidc_connect_enabled?: boolean
   oidc_connect_provider_name?: string
   oidc_connect_client_id?: string

@@ -520,14 +520,21 @@ func requiresWeChatJSAPICompatibleSelection(req CreateOrderRequest, sel *payment
 	return strings.TrimSpace(req.OpenID) != ""
 }
 
-// getWeChatPaymentOAuthCredential returns MP OAuth credentials for JSAPI payment.
-// [fork patch] JSAPI payment not supported in this fork (Native Pay / QR code only).
-// Returns NOT_CONFIGURED so JSAPI paths fail gracefully.
-func (s *PaymentService) getWeChatPaymentOAuthCredential(_ context.Context) (string, string, error) {
-	return "", "", infraerrors.ServiceUnavailable(
-		"WECHAT_PAYMENT_MP_NOT_CONFIGURED",
-		"wechat in-app payment (JSAPI) is not configured in this deployment",
-	)
+func (s *PaymentService) getWeChatPaymentOAuthCredential(ctx context.Context) (string, string, error) {
+	if s == nil || s.configService == nil || s.configService.settingRepo == nil {
+		return "", "", infraerrors.ServiceUnavailable(
+			"WECHAT_PAYMENT_MP_NOT_CONFIGURED",
+			"wechat in-app payment requires a complete WeChat MP OAuth credential",
+		)
+	}
+	cfg, err := (&SettingService{settingRepo: s.configService.settingRepo}).GetWeChatConnectOAuthConfig(ctx)
+	if err != nil || !cfg.SupportsMode("mp") || strings.TrimSpace(cfg.AppID) == "" || strings.TrimSpace(cfg.AppSecret) == "" {
+		return "", "", infraerrors.ServiceUnavailable(
+			"WECHAT_PAYMENT_MP_NOT_CONFIGURED",
+			"wechat in-app payment requires a complete WeChat MP OAuth credential",
+		)
+	}
+	return strings.TrimSpace(cfg.AppID), strings.TrimSpace(cfg.AppSecret), nil
 }
 
 func classifyCreatePaymentError(req CreateOrderRequest, providerKey string, err error) error {

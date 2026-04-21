@@ -1174,6 +1174,182 @@
           </div>
         </div>
 
+        <!-- WeChat Connect OAuth 登录 -->
+        <div class="card">
+          <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+              {{ localText('微信登录', 'WeChat Connect') }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {{
+                localText(
+                  '用于微信开放平台或公众号/小程序的第三方登录配置。',
+                  'Third-party login configuration for WeChat Open Platform or Official Account / Mini Program.'
+                )
+              }}
+            </p>
+          </div>
+          <div class="space-y-5 p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="font-medium text-gray-900 dark:text-white">
+                  {{ localText('启用微信登录', 'Enable WeChat Connect') }}
+                </label>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  {{
+                    localText(
+                      '开启后可使用微信第三方登录回调与授权配置。',
+                      'Enable this to configure WeChat OAuth callbacks and authorization.'
+                    )
+                  }}
+                </p>
+              </div>
+              <Toggle v-model="form.wechat_connect_enabled" data-testid="wechat-connect-enabled" />
+            </div>
+
+            <div
+              v-if="form.wechat_connect_enabled"
+              class="space-y-6 border-t border-gray-100 pt-4 dark:border-dark-700"
+            >
+              <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ localText('AppID', 'App ID') }}
+                  </label>
+                  <input
+                    data-testid="wechat-connect-app-id"
+                    v-model="form.wechat_connect_app_id"
+                    type="text"
+                    class="input font-mono text-sm"
+                    :placeholder="localText('微信开放平台 AppID', 'WeChat App ID')"
+                  />
+                </div>
+
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ localText('AppSecret', 'App Secret') }}
+                  </label>
+                  <input
+                    data-testid="wechat-connect-app-secret"
+                    v-model="form.wechat_connect_app_secret"
+                    type="password"
+                    class="input font-mono text-sm"
+                    :placeholder="
+                      form.wechat_connect_app_secret_configured
+                        ? localText('密钥已配置，留空以保留当前值。', 'Secret configured. Leave empty to keep the current value.')
+                        : localText('微信开放平台 AppSecret', 'WeChat App Secret')
+                    "
+                  />
+                  <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{
+                      form.wechat_connect_app_secret_configured
+                        ? localText('密钥已配置，留空以保留当前值。', 'Secret configured. Leave empty to keep the current value.')
+                        : localText('填写后会覆盖当前微信密钥。', 'Enter a new secret to replace the current WeChat credential.')
+                    }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div class="space-y-3">
+                  <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ localText('模式', 'Mode') }}
+                  </label>
+                  <div class="flex items-center justify-between rounded border border-gray-200 px-4 py-3 dark:border-dark-700">
+                    <div>
+                      <div class="font-medium text-gray-900 dark:text-white">
+                        {{ localText('非微信环境使用开放平台', 'Use Open outside WeChat') }}
+                      </div>
+                      <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        {{
+                          localText(
+                            '浏览器不在微信内时，自动走开放平台扫码授权。',
+                            'Use Open Platform QR authorization outside the WeChat browser.'
+                          )
+                        }}
+                      </p>
+                    </div>
+                    <Toggle
+                      v-model="form.wechat_connect_open_enabled"
+                      data-testid="wechat-connect-open-enabled"
+                      @update:model-value="syncWeChatConnectMode"
+                    />
+                  </div>
+                  <div class="flex items-center justify-between rounded border border-gray-200 px-4 py-3 dark:border-dark-700">
+                    <div>
+                      <div class="font-medium text-gray-900 dark:text-white">
+                        {{ localText('微信环境使用公众号', 'Use MP inside WeChat') }}
+                      </div>
+                      <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        {{
+                          localText(
+                            '浏览器在微信内时，自动走公众号授权。',
+                            'Use Official Account authorization inside the WeChat browser.'
+                          )
+                        }}
+                      </p>
+                    </div>
+                    <Toggle
+                      v-model="form.wechat_connect_mp_enabled"
+                      data-testid="wechat-connect-mp-enabled"
+                      @update:model-value="syncWeChatConnectMode"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ localText('回调地址', 'Redirect URL') }}
+                  </label>
+                  <input
+                    data-testid="wechat-connect-redirect-url"
+                    v-model="form.wechat_connect_redirect_url"
+                    type="url"
+                    class="input font-mono text-sm"
+                    placeholder="https://your-site.com/api/v1/auth/oauth/wechat/callback"
+                  />
+                  <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                    <button
+                      type="button"
+                      class="btn btn-secondary btn-sm w-fit"
+                      @click="setAndCopyWeChatRedirectUrl"
+                    >
+                      {{ localText('使用当前站点生成并复制', 'Generate & Copy (current site)') }}
+                    </button>
+                    <code
+                      v-if="wechatRedirectUrlSuggestion"
+                      class="select-all break-all rounded bg-gray-50 px-2 py-1 font-mono text-xs text-gray-600 dark:bg-dark-800 dark:text-gray-300"
+                    >
+                      {{ wechatRedirectUrlSuggestion }}
+                    </code>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ localText('前端回调地址', 'Frontend redirect URL') }}
+                </label>
+                <input
+                  data-testid="wechat-connect-frontend-redirect-url"
+                  v-model="form.wechat_connect_frontend_redirect_url"
+                  type="text"
+                  class="input font-mono text-sm"
+                  placeholder="/auth/wechat/callback"
+                />
+                <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{
+                    localText(
+                      '通常用于前端路由回调地址，需与后端配置保持一致。',
+                      'Usually the frontend route callback path; keep it aligned with the backend.'
+                    )
+                  }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Generic OIDC OAuth 登录 -->
         <div class="card">
           <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
@@ -2976,6 +3152,11 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDebounceFn } from '@vueuse/core'
 import { adminAPI } from '@/api'
+import {
+  defaultWeChatConnectScopesForMode,
+  deriveWeChatConnectStoredMode,
+  resolveWeChatConnectModeCapabilities
+} from '@/api/admin/settings'
 import type {
   SystemSettings,
   UpdateSettingsRequest,
@@ -3011,9 +3192,13 @@ import {
   parseRegistrationEmailSuffixWhitelistInput
 } from '@/utils/registrationEmailPolicy'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const appStore = useAppStore()
 const adminSettingsStore = useAdminSettingsStore()
+
+function localText(zh: string, en: string): string {
+  return locale.value.startsWith('zh') ? zh : en
+}
 
 type SettingsTab = 'general' | 'security' | 'users' | 'gateway' | 'email' | 'backup' | 'contact' | 'payment'
 const activeTab = ref<SettingsTab>('general')
@@ -3113,6 +3298,9 @@ type SettingsForm = SystemSettings & {
   smtp_password: string
   turnstile_secret_key: string
   linuxdo_connect_client_secret: string
+  wechat_connect_app_secret: string
+  wechat_connect_open_enabled: boolean
+  wechat_connect_mp_enabled: boolean
   oidc_connect_client_secret: string
 }
 
@@ -3171,6 +3359,17 @@ const form = reactive<SettingsForm>({
   linuxdo_connect_client_secret: '',
   linuxdo_connect_client_secret_configured: false,
   linuxdo_connect_redirect_url: '',
+  // WeChat Connect OAuth 登录
+  wechat_connect_enabled: false,
+  wechat_connect_app_id: '',
+  wechat_connect_app_secret: '',
+  wechat_connect_app_secret_configured: false,
+  wechat_connect_open_enabled: false,
+  wechat_connect_mp_enabled: false,
+  wechat_connect_mode: 'open',
+  wechat_connect_scopes: 'snsapi_login',
+  wechat_connect_redirect_url: '',
+  wechat_connect_frontend_redirect_url: '/auth/wechat/callback',
   // Generic OIDC OAuth 登录
   oidc_connect_enabled: false,
   oidc_connect_provider_name: 'OIDC',
@@ -3511,6 +3710,43 @@ async function setAndCopyLinuxdoRedirectUrl() {
   await copyToClipboard(url, t('admin.settings.linuxdo.redirectUrlSetAndCopied'))
 }
 
+const wechatRedirectUrlSuggestion = computed(() => {
+  if (typeof window === 'undefined') return ''
+  const origin =
+    window.location.origin || `${window.location.protocol}//${window.location.host}`
+  return `${origin}/api/v1/auth/oauth/wechat/callback`
+})
+
+function syncWeChatConnectMode() {
+  const capabilities = resolveWeChatConnectModeCapabilities(
+    form.wechat_connect_open_enabled,
+    form.wechat_connect_mp_enabled,
+    form.wechat_connect_mode
+  )
+  form.wechat_connect_open_enabled = capabilities.openEnabled
+  form.wechat_connect_mp_enabled = capabilities.mpEnabled
+  form.wechat_connect_mode = deriveWeChatConnectStoredMode(
+    capabilities.openEnabled,
+    capabilities.mpEnabled,
+    form.wechat_connect_mode
+  )
+  form.wechat_connect_scopes = defaultWeChatConnectScopesForMode(form.wechat_connect_mode)
+}
+
+async function setAndCopyWeChatRedirectUrl() {
+  const url = wechatRedirectUrlSuggestion.value
+  if (!url) return
+
+  form.wechat_connect_redirect_url = url
+  await copyToClipboard(
+    url,
+    localText(
+      '已使用当前站点生成回调地址并复制到剪贴板',
+      'Redirect URL generated and copied to clipboard'
+    )
+  )
+}
+
 const oidcRedirectUrlSuggestion = computed(() => {
   if (typeof window === 'undefined') return ''
   const origin =
@@ -3623,6 +3859,20 @@ async function loadSettings() {
     smtpPasswordManuallyEdited.value = false
     form.turnstile_secret_key = ''
     form.linuxdo_connect_client_secret = ''
+    form.wechat_connect_app_secret = ''
+    const wechatCapabilities = resolveWeChatConnectModeCapabilities(
+      settings.wechat_connect_open_enabled,
+      settings.wechat_connect_mp_enabled,
+      settings.wechat_connect_mode
+    )
+    form.wechat_connect_open_enabled = wechatCapabilities.openEnabled
+    form.wechat_connect_mp_enabled = wechatCapabilities.mpEnabled
+    form.wechat_connect_mode = deriveWeChatConnectStoredMode(
+      wechatCapabilities.openEnabled,
+      wechatCapabilities.mpEnabled,
+      settings.wechat_connect_mode
+    )
+    form.wechat_connect_scopes = defaultWeChatConnectScopesForMode(form.wechat_connect_mode)
     form.oidc_connect_client_secret = ''
     await loadWebSearchConfig()
   } catch (error: any) {
@@ -3733,6 +3983,12 @@ async function saveSettings() {
     // Optional URL fields: auto-clear invalid values so they don't cause backend 400 errors
     if (!isValidHttpUrl(form.frontend_url)) form.frontend_url = ''
     if (!isValidHttpUrl(form.doc_url)) form.doc_url = ''
+    syncWeChatConnectMode()
+    const wechatStoredMode = deriveWeChatConnectStoredMode(
+      form.wechat_connect_open_enabled,
+      form.wechat_connect_mp_enabled,
+      form.wechat_connect_mode
+    )
 
     const payload: UpdateSettingsRequest = {
       registration_enabled: form.registration_enabled,
@@ -3785,6 +4041,15 @@ async function saveSettings() {
       linuxdo_connect_client_id: form.linuxdo_connect_client_id,
       linuxdo_connect_client_secret: form.linuxdo_connect_client_secret || undefined,
       linuxdo_connect_redirect_url: form.linuxdo_connect_redirect_url,
+      wechat_connect_enabled: form.wechat_connect_enabled,
+      wechat_connect_app_id: form.wechat_connect_app_id,
+      wechat_connect_app_secret: form.wechat_connect_app_secret || undefined,
+      wechat_connect_open_enabled: form.wechat_connect_open_enabled,
+      wechat_connect_mp_enabled: form.wechat_connect_mp_enabled,
+      wechat_connect_mode: wechatStoredMode,
+      wechat_connect_scopes: defaultWeChatConnectScopesForMode(wechatStoredMode),
+      wechat_connect_redirect_url: form.wechat_connect_redirect_url,
+      wechat_connect_frontend_redirect_url: form.wechat_connect_frontend_redirect_url,
       oidc_connect_enabled: form.oidc_connect_enabled,
       oidc_connect_provider_name: form.oidc_connect_provider_name,
       oidc_connect_client_id: form.oidc_connect_client_id,
@@ -3834,6 +4099,20 @@ async function saveSettings() {
     smtpPasswordManuallyEdited.value = false
     form.turnstile_secret_key = ''
     form.linuxdo_connect_client_secret = ''
+    form.wechat_connect_app_secret = ''
+    const updatedWechatCapabilities = resolveWeChatConnectModeCapabilities(
+      updated.wechat_connect_open_enabled,
+      updated.wechat_connect_mp_enabled,
+      updated.wechat_connect_mode
+    )
+    form.wechat_connect_open_enabled = updatedWechatCapabilities.openEnabled
+    form.wechat_connect_mp_enabled = updatedWechatCapabilities.mpEnabled
+    form.wechat_connect_mode = deriveWeChatConnectStoredMode(
+      updatedWechatCapabilities.openEnabled,
+      updatedWechatCapabilities.mpEnabled,
+      updated.wechat_connect_mode
+    )
+    form.wechat_connect_scopes = defaultWeChatConnectScopesForMode(form.wechat_connect_mode)
     form.oidc_connect_client_secret = ''
     const webSearchSaved = await saveWebSearchConfig()
     // Refresh cached settings so sidebar/header update immediately

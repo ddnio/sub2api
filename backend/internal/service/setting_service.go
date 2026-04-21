@@ -171,7 +171,75 @@ var (
 const (
 	defaultAuthSourceBalance     = 0
 	defaultAuthSourceConcurrency = 5
+	defaultWeChatConnectMode     = "open"
+	defaultWeChatConnectScopes   = "snsapi_login"
+	defaultWeChatConnectFrontend = "/auth/wechat/callback"
 )
+
+func normalizeWeChatConnectModeSetting(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "mp":
+		return "mp"
+	default:
+		return "open"
+	}
+}
+
+func defaultWeChatConnectScopeForMode(mode string) string {
+	if normalizeWeChatConnectModeSetting(mode) == "mp" {
+		return "snsapi_userinfo"
+	}
+	return defaultWeChatConnectScopes
+}
+
+func normalizeWeChatConnectScopeSetting(raw, mode string) string {
+	switch normalizeWeChatConnectModeSetting(mode) {
+	case "mp":
+		switch strings.TrimSpace(raw) {
+		case "snsapi_base":
+			return "snsapi_base"
+		case "snsapi_userinfo":
+			return "snsapi_userinfo"
+		default:
+			return defaultWeChatConnectScopeForMode(mode)
+		}
+	default:
+		return defaultWeChatConnectScopes
+	}
+}
+
+func parseWeChatConnectCapabilitySettings(settings map[string]string, enabled bool, mode string) (bool, bool) {
+	mode = normalizeWeChatConnectModeSetting(mode)
+	rawOpen, hasOpen := settings[SettingKeyWeChatConnectOpenEnabled]
+	rawMP, hasMP := settings[SettingKeyWeChatConnectMPEnabled]
+	openConfigured := hasOpen && strings.TrimSpace(rawOpen) != ""
+	mpConfigured := hasMP && strings.TrimSpace(rawMP) != ""
+
+	if openConfigured || mpConfigured {
+		openEnabled := strings.TrimSpace(rawOpen) == "true"
+		mpEnabled := strings.TrimSpace(rawMP) == "true"
+		return openEnabled, mpEnabled
+	}
+
+	if !enabled {
+		return false, false
+	}
+	if mode == "mp" {
+		return false, true
+	}
+	return true, false
+}
+
+func normalizeWeChatConnectStoredMode(openEnabled, mpEnabled bool, mode string) string {
+	switch {
+	case mpEnabled:
+		return "mp"
+	case openEnabled:
+		return "open"
+	default:
+		return normalizeWeChatConnectModeSetting(mode)
+	}
+}
 
 // NewSettingService 创建系统设置服务实例
 func NewSettingService(settingRepo SettingRepository, cfg *config.Config) *SettingService {
@@ -234,6 +302,15 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyCustomEndpoints,
 		SettingKeyContactChannels,
 		SettingKeyLinuxDoConnectEnabled,
+		SettingKeyWeChatConnectEnabled,
+		SettingKeyWeChatConnectAppID,
+		SettingKeyWeChatConnectAppSecret,
+		SettingKeyWeChatConnectOpenEnabled,
+		SettingKeyWeChatConnectMPEnabled,
+		SettingKeyWeChatConnectMode,
+		SettingKeyWeChatConnectScopes,
+		SettingKeyWeChatConnectRedirectURL,
+		SettingKeyWeChatConnectFrontendRedirectURL,
 		SettingKeyBackendModeEnabled,
 		SettingKeyReferralEnabled,
 		SettingKeyOIDCConnectEnabled,
@@ -284,7 +361,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		balanceLowNotifyThreshold = v
 	}
 
-	weChatOAuth := weChatOAuthEnabledFromEnv()
+	weChatEnabled, weChatOpenEnabled, weChatMPEnabled := s.weChatOAuthCapabilitiesFromSettings(settings)
 
 	return &PublicSettings{
 		RegistrationEnabled:              settings[SettingKeyRegistrationEnabled] == "true",
@@ -313,9 +390,9 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		CustomMenuItems:                  settings[SettingKeyCustomMenuItems],
 		CustomEndpoints:                  settings[SettingKeyCustomEndpoints],
 		LinuxDoOAuthEnabled:              linuxDoEnabled,
-		WeChatOAuthEnabled:               weChatOAuth.Enabled,
-		WeChatOAuthOpenEnabled:           weChatOAuth.OpenEnabled,
-		WeChatOAuthMPEnabled:             weChatOAuth.MPEnabled,
+		WeChatOAuthEnabled:               weChatEnabled,
+		WeChatOAuthOpenEnabled:           weChatOpenEnabled,
+		WeChatOAuthMPEnabled:             weChatMPEnabled,
 		BackendModeEnabled:               settings[SettingKeyBackendModeEnabled] == "true",
 		OIDCOAuthEnabled:                 oidcEnabled,
 		OIDCOAuthProviderName:            oidcProviderName,
@@ -424,6 +501,63 @@ func emptyContactChannelsIfNil(in []ContactChannel) []ContactChannel {
 		return []ContactChannel{}
 	}
 	return in
+}
+
+func DefaultWeChatConnectScopesForMode(mode string) string {
+	return defaultWeChatConnectScopeForMode(mode)
+}
+
+func (s *SettingService) parseWeChatConnectOAuthConfig(settings map[string]string) (WeChatConnectOAuthConfig, error) {
+	enabled := settings[SettingKeyWeChatConnectEnabled] == "true"
+	mode := normalizeWeChatConnectModeSetting(settings[SettingKeyWeChatConnectMode])
+	openEnabled, mpEnabled := parseWeChatConnectCapabilitySettings(settings, enabled, mode)
+	mode = normalizeWeChatConnectStoredMode(openEnabled, mpEnabled, mode)
+
+	cfg := WeChatConnectOAuthConfig{
+		Enabled:             enabled,
+		AppID:               strings.TrimSpace(settings[SettingKeyWeChatConnectAppID]),
+		AppSecret:           strings.TrimSpace(settings[SettingKeyWeChatConnectAppSecret]),
+		OpenEnabled:         openEnabled,
+		MPEnabled:           mpEnabled,
+		Mode:                mode,
+		Scopes:              normalizeWeChatConnectScopeSetting(settings[SettingKeyWeChatConnectScopes], mode),
+		RedirectURL:         strings.TrimSpace(settings[SettingKeyWeChatConnectRedirectURL]),
+		FrontendRedirectURL: strings.TrimSpace(settings[SettingKeyWeChatConnectFrontendRedirectURL]),
+	}
+	if cfg.FrontendRedirectURL == "" {
+		cfg.FrontendRedirectURL = defaultWeChatConnectFrontend
+	}
+
+	if !cfg.Enabled || (!cfg.OpenEnabled && !cfg.MPEnabled) {
+		return WeChatConnectOAuthConfig{}, infraerrors.NotFound("OAUTH_DISABLED", "wechat oauth is disabled")
+	}
+	if cfg.AppID == "" {
+		return WeChatConnectOAuthConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "wechat oauth app id not configured")
+	}
+	if cfg.AppSecret == "" {
+		return WeChatConnectOAuthConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "wechat oauth app secret not configured")
+	}
+	if cfg.RedirectURL == "" {
+		return WeChatConnectOAuthConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "wechat oauth redirect url not configured")
+	}
+	if cfg.FrontendRedirectURL == "" {
+		return WeChatConnectOAuthConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "wechat oauth frontend redirect url not configured")
+	}
+	if err := config.ValidateAbsoluteHTTPURL(cfg.RedirectURL); err != nil {
+		return WeChatConnectOAuthConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "wechat oauth redirect url invalid")
+	}
+	if err := config.ValidateFrontendRedirectURL(cfg.FrontendRedirectURL); err != nil {
+		return WeChatConnectOAuthConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "wechat oauth frontend redirect url invalid")
+	}
+	return cfg, nil
+}
+
+func (s *SettingService) weChatOAuthCapabilitiesFromSettings(settings map[string]string) (bool, bool, bool) {
+	cfg, err := s.parseWeChatConnectOAuthConfig(settings)
+	if err != nil {
+		return false, false, false
+	}
+	return true, cfg.OpenEnabled, cfg.MPEnabled
 }
 
 // filterUserVisibleMenuItems filters out admin-only menu items from a raw JSON
@@ -596,6 +730,30 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 		normalizedWhitelist = []string{}
 	}
 	settings.RegistrationEmailSuffixWhitelist = normalizedWhitelist
+	alipaySource, err := normalizeVisibleMethodSettingSource("alipay", settings.PaymentVisibleMethodAlipaySource, settings.PaymentVisibleMethodAlipayEnabled)
+	if err != nil {
+		return nil, err
+	}
+	wxpaySource, err := normalizeVisibleMethodSettingSource("wxpay", settings.PaymentVisibleMethodWxpaySource, settings.PaymentVisibleMethodWxpayEnabled)
+	if err != nil {
+		return nil, err
+	}
+	settings.PaymentVisibleMethodAlipaySource = alipaySource
+	settings.PaymentVisibleMethodWxpaySource = wxpaySource
+	settings.WeChatConnectAppID = strings.TrimSpace(settings.WeChatConnectAppID)
+	settings.WeChatConnectAppSecret = strings.TrimSpace(settings.WeChatConnectAppSecret)
+	settings.WeChatConnectMode = normalizeWeChatConnectStoredMode(
+		settings.WeChatConnectOpenEnabled,
+		settings.WeChatConnectMPEnabled,
+		settings.WeChatConnectMode,
+	)
+	settings.WeChatConnectScopes = normalizeWeChatConnectScopeSetting(settings.WeChatConnectScopes, settings.WeChatConnectMode)
+	settings.WeChatConnectRedirectURL = strings.TrimSpace(settings.WeChatConnectRedirectURL)
+	settings.WeChatConnectFrontendRedirectURL = strings.TrimSpace(settings.WeChatConnectFrontendRedirectURL)
+	if settings.WeChatConnectFrontendRedirectURL == "" {
+		settings.WeChatConnectFrontendRedirectURL = defaultWeChatConnectFrontend
+	}
+
 	updates := make(map[string]string)
 
 	// 注册设置
@@ -667,6 +825,19 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 	updates[SettingKeyOIDCConnectUserInfoUsernamePath] = settings.OIDCConnectUserInfoUsernamePath
 	if settings.OIDCConnectClientSecret != "" {
 		updates[SettingKeyOIDCConnectClientSecret] = settings.OIDCConnectClientSecret
+	}
+
+	// WeChat Connect OAuth 登录
+	updates[SettingKeyWeChatConnectEnabled] = strconv.FormatBool(settings.WeChatConnectEnabled)
+	updates[SettingKeyWeChatConnectAppID] = settings.WeChatConnectAppID
+	updates[SettingKeyWeChatConnectOpenEnabled] = strconv.FormatBool(settings.WeChatConnectOpenEnabled)
+	updates[SettingKeyWeChatConnectMPEnabled] = strconv.FormatBool(settings.WeChatConnectMPEnabled)
+	updates[SettingKeyWeChatConnectMode] = settings.WeChatConnectMode
+	updates[SettingKeyWeChatConnectScopes] = settings.WeChatConnectScopes
+	updates[SettingKeyWeChatConnectRedirectURL] = settings.WeChatConnectRedirectURL
+	updates[SettingKeyWeChatConnectFrontendRedirectURL] = settings.WeChatConnectFrontendRedirectURL
+	if settings.WeChatConnectAppSecret != "" {
+		updates[SettingKeyWeChatConnectAppSecret] = settings.WeChatConnectAppSecret
 	}
 
 	// OEM设置
@@ -1212,6 +1383,12 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyTablePageSizeOptions:                     "[10,20,50,100]",
 		SettingKeyCustomMenuItems:                          "[]",
 		SettingKeyCustomEndpoints:                          "[]",
+		SettingKeyWeChatConnectEnabled:                     "false",
+		SettingKeyWeChatConnectOpenEnabled:                 "false",
+		SettingKeyWeChatConnectMPEnabled:                   "false",
+		SettingKeyWeChatConnectMode:                        "open",
+		SettingKeyWeChatConnectScopes:                      "snsapi_login",
+		SettingKeyWeChatConnectFrontendRedirectURL:         defaultWeChatConnectFrontend,
 		SettingKeyOIDCConnectEnabled:                       "false",
 		SettingKeyOIDCConnectProviderName:                  "OIDC",
 		SettingKeyDefaultConcurrency:                       strconv.Itoa(s.cfg.Default.UserConcurrency),
@@ -1220,22 +1397,22 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyAuthSourceDefaultEmailBalance:            "0",
 		SettingKeyAuthSourceDefaultEmailConcurrency:        "5",
 		SettingKeyAuthSourceDefaultEmailSubscriptions:      "[]",
-		SettingKeyAuthSourceDefaultEmailGrantOnSignup:      "true",
+		SettingKeyAuthSourceDefaultEmailGrantOnSignup:      "false",
 		SettingKeyAuthSourceDefaultEmailGrantOnFirstBind:   "false",
 		SettingKeyAuthSourceDefaultLinuxDoBalance:          "0",
 		SettingKeyAuthSourceDefaultLinuxDoConcurrency:      "5",
 		SettingKeyAuthSourceDefaultLinuxDoSubscriptions:    "[]",
-		SettingKeyAuthSourceDefaultLinuxDoGrantOnSignup:    "true",
+		SettingKeyAuthSourceDefaultLinuxDoGrantOnSignup:    "false",
 		SettingKeyAuthSourceDefaultLinuxDoGrantOnFirstBind: "false",
 		SettingKeyAuthSourceDefaultOIDCBalance:             "0",
 		SettingKeyAuthSourceDefaultOIDCConcurrency:         "5",
 		SettingKeyAuthSourceDefaultOIDCSubscriptions:       "[]",
-		SettingKeyAuthSourceDefaultOIDCGrantOnSignup:       "true",
+		SettingKeyAuthSourceDefaultOIDCGrantOnSignup:       "false",
 		SettingKeyAuthSourceDefaultOIDCGrantOnFirstBind:    "false",
 		SettingKeyAuthSourceDefaultWeChatBalance:           "0",
 		SettingKeyAuthSourceDefaultWeChatConcurrency:       "5",
 		SettingKeyAuthSourceDefaultWeChatSubscriptions:     "[]",
-		SettingKeyAuthSourceDefaultWeChatGrantOnSignup:     "true",
+		SettingKeyAuthSourceDefaultWeChatGrantOnSignup:     "false",
 		SettingKeyAuthSourceDefaultWeChatGrantOnFirstBind:  "false",
 		SettingKeyForceEmailOnThirdPartySignup:             "false",
 		SettingKeySMTPPort:                                 "587",
@@ -1521,6 +1698,28 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 		result.OIDCConnectClientSecret = strings.TrimSpace(oidcBase.ClientSecret)
 	}
 	result.OIDCConnectClientSecretConfigured = result.OIDCConnectClientSecret != ""
+
+	// WeChat Connect 设置：完全以 DB 系统设置为准。
+	result.WeChatConnectEnabled = settings[SettingKeyWeChatConnectEnabled] == "true"
+	result.WeChatConnectAppID = strings.TrimSpace(settings[SettingKeyWeChatConnectAppID])
+	result.WeChatConnectAppSecret = strings.TrimSpace(settings[SettingKeyWeChatConnectAppSecret])
+	result.WeChatConnectAppSecretConfigured = result.WeChatConnectAppSecret != ""
+	result.WeChatConnectOpenEnabled, result.WeChatConnectMPEnabled = parseWeChatConnectCapabilitySettings(
+		settings,
+		result.WeChatConnectEnabled,
+		settings[SettingKeyWeChatConnectMode],
+	)
+	result.WeChatConnectMode = normalizeWeChatConnectStoredMode(
+		result.WeChatConnectOpenEnabled,
+		result.WeChatConnectMPEnabled,
+		settings[SettingKeyWeChatConnectMode],
+	)
+	result.WeChatConnectScopes = normalizeWeChatConnectScopeSetting(settings[SettingKeyWeChatConnectScopes], result.WeChatConnectMode)
+	result.WeChatConnectRedirectURL = strings.TrimSpace(settings[SettingKeyWeChatConnectRedirectURL])
+	result.WeChatConnectFrontendRedirectURL = strings.TrimSpace(settings[SettingKeyWeChatConnectFrontendRedirectURL])
+	if result.WeChatConnectFrontendRedirectURL == "" {
+		result.WeChatConnectFrontendRedirectURL = defaultWeChatConnectFrontend
+	}
 
 	// Model fallback settings
 	result.EnableModelFallback = settings[SettingKeyEnableModelFallback] == "true"
@@ -1969,6 +2168,28 @@ func (s *SettingService) GetLinuxDoConnectOAuthConfig(ctx context.Context) (conf
 	}
 
 	return effective, nil
+}
+
+// GetWeChatConnectOAuthConfig 返回用于登录的最终生效 WeChat Connect 配置。
+//
+// WeChat Connect 已回归 DB 系统设置模型，不再回退到 config/env。
+func (s *SettingService) GetWeChatConnectOAuthConfig(ctx context.Context) (WeChatConnectOAuthConfig, error) {
+	keys := []string{
+		SettingKeyWeChatConnectEnabled,
+		SettingKeyWeChatConnectAppID,
+		SettingKeyWeChatConnectAppSecret,
+		SettingKeyWeChatConnectOpenEnabled,
+		SettingKeyWeChatConnectMPEnabled,
+		SettingKeyWeChatConnectMode,
+		SettingKeyWeChatConnectScopes,
+		SettingKeyWeChatConnectRedirectURL,
+		SettingKeyWeChatConnectFrontendRedirectURL,
+	}
+	settings, err := s.settingRepo.GetMultiple(ctx, keys)
+	if err != nil {
+		return WeChatConnectOAuthConfig{}, fmt.Errorf("get wechat connect settings: %w", err)
+	}
+	return s.parseWeChatConnectOAuthConfig(settings)
 }
 
 // GetOverloadCooldownSettings 获取529过载冷却配置

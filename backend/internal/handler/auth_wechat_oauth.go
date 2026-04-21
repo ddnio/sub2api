@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -149,7 +148,7 @@ func (h *AuthHandler) WeChatOAuthStart(c *gin.Context) {
 // WeChatOAuthCallback exchanges the code with WeChat, resolves openid/unionid,
 // and stores the result in the unified pending-auth flow.
 func (h *AuthHandler) WeChatOAuthCallback(c *gin.Context) {
-	frontendCallback := wechatOAuthFrontendCallback()
+	frontendCallback := h.wechatOAuthFrontendCallback(c.Request.Context())
 
 	if providerErr := strings.TrimSpace(c.Query("error")); providerErr != "" {
 		redirectOAuthError(c, frontendCallback, "provider_error", providerErr, c.Query("error_description"))
@@ -435,22 +434,34 @@ func (h *AuthHandler) WeChatPaymentOAuthCallback(c *gin.Context) {
 		scope = strings.TrimSpace(tokenResp.Scope)
 	}
 
+	resumeToken, err := h.wechatPaymentResumeService().CreateWeChatPaymentResumeToken(service.WeChatPaymentResumeClaims{
+		OpenID:      openid,
+		PaymentType: paymentContext.PaymentType,
+		Amount:      paymentContext.Amount,
+		OrderType:   paymentContext.OrderType,
+		PlanID:      paymentContext.PlanID,
+		RedirectTo:  redirectTo,
+		Scope:       scope,
+	})
+	if err != nil {
+		redirectOAuthError(c, frontendCallback, "invalid_context", "failed to encode payment resume context", "")
+		return
+	}
+
 	fragment := url.Values{}
-	fragment.Set("openid", openid)
-	fragment.Set("state", state)
-	fragment.Set("scope", scope)
-	fragment.Set("payment_type", paymentContext.PaymentType)
-	if paymentContext.Amount != "" {
-		fragment.Set("amount", paymentContext.Amount)
-	}
-	if paymentContext.OrderType != "" {
-		fragment.Set("order_type", paymentContext.OrderType)
-	}
-	if paymentContext.PlanID > 0 {
-		fragment.Set("plan_id", strconv.FormatInt(paymentContext.PlanID, 10))
-	}
+	fragment.Set("wechat_resume_token", resumeToken)
 	fragment.Set("redirect", redirectTo)
 	redirectWithFragment(c, frontendCallback, fragment)
+}
+
+func (h *AuthHandler) wechatPaymentResumeService() *service.PaymentResumeService {
+	var legacyKey []byte
+	if h != nil && h.cfg != nil {
+		if key, err := payment.ProvideEncryptionKey(h.cfg); err == nil {
+			legacyKey = []byte(key)
+		}
+	}
+	return service.NewLegacyAwarePaymentResumeService(legacyKey)
 }
 
 type completeWeChatOAuthRequest struct {
@@ -824,22 +835,158 @@ func (h *AuthHandler) ensureWeChatRuntimeIdentityBinding(
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	err = ensurePendingOAuthIdentityForUser(dbent.NewTxContext(ctx, tx), tx.Client(), &dbent.PendingAuthSession{
+	txCtx := dbent.NewTxContext(ctx, tx)
+	session := &dbent.PendingAuthSession{
 		ProviderType:           strings.TrimSpace(identity.ProviderType),
 		ProviderKey:            strings.TrimSpace(identity.ProviderKey),
 		ProviderSubject:        strings.TrimSpace(identity.ProviderSubject),
 		UpstreamIdentityClaims: cloneOAuthMetadata(upstreamClaims),
-	}, userID)
+	}
+	if err := h.repairLegacyWeChatIdentity(txCtx, tx.Client(), session, userID, upstreamClaims); err != nil {
+		return err
+	}
+	err = ensurePendingOAuthIdentityForUser(txCtx, tx.Client(), session, userID)
 	if err != nil {
 		return err
 	}
 	return tx.Commit()
 }
 
+func (h *AuthHandler) repairLegacyWeChatIdentity(
+	ctx context.Context,
+	client *dbent.Client,
+	session *dbent.PendingAuthSession,
+	userID int64,
+	upstreamClaims map[string]any,
+) error {
+	if client == nil || session == nil || userID <= 0 {
+		return infraerrors.BadRequest("PENDING_AUTH_SESSION_INVALID", "pending auth session is invalid")
+	}
+	providerType := strings.TrimSpace(session.ProviderType)
+	providerKey := strings.TrimSpace(session.ProviderKey)
+	providerSubject := strings.TrimSpace(session.ProviderSubject)
+	if providerType != "wechat" || providerKey == "" || providerSubject == "" {
+		return nil
+	}
+
+	openid := strings.TrimSpace(pendingSessionStringValue(upstreamClaims, "openid"))
+	candidates := []struct {
+		key     string
+		subject string
+	}{
+		{key: providerKey, subject: openid},
+		{key: wechatOAuthLegacyProviderKey, subject: providerSubject},
+	}
+	for _, candidate := range candidates {
+		if candidate.key == "" || candidate.subject == "" {
+			continue
+		}
+		if candidate.key == providerKey && candidate.subject == providerSubject {
+			continue
+		}
+		legacy, err := client.AuthIdentity.Query().
+			Where(
+				authidentity.ProviderTypeEQ(providerType),
+				authidentity.ProviderKeyEQ(candidate.key),
+				authidentity.ProviderSubjectEQ(candidate.subject),
+			).
+			Only(ctx)
+		if err != nil {
+			if dbent.IsNotFound(err) {
+				continue
+			}
+			return err
+		}
+		if legacy.UserID != userID {
+			return infraerrors.Conflict("AUTH_IDENTITY_OWNERSHIP_CONFLICT", "auth identity already belongs to another user")
+		}
+		existingCanonical, err := client.AuthIdentity.Query().
+			Where(
+				authidentity.ProviderTypeEQ(providerType),
+				authidentity.ProviderKeyEQ(providerKey),
+				authidentity.ProviderSubjectEQ(providerSubject),
+			).
+			Only(ctx)
+		if err != nil && !dbent.IsNotFound(err) {
+			return err
+		}
+		if existingCanonical != nil && existingCanonical.ID != legacy.ID {
+			if existingCanonical.UserID != userID {
+				return infraerrors.Conflict("AUTH_IDENTITY_OWNERSHIP_CONFLICT", "auth identity already belongs to another user")
+			}
+			if err := client.AuthIdentity.DeleteOneID(legacy.ID).Exec(ctx); err != nil {
+				return err
+			}
+			continue
+		}
+		_, err = client.AuthIdentity.UpdateOneID(legacy.ID).
+			SetProviderKey(providerKey).
+			SetProviderSubject(providerSubject).
+			SetMetadata(clonePendingCompletionMap(upstreamClaims)).
+			Save(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	identityRecord, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ(providerType),
+			authidentity.ProviderKeyEQ(providerKey),
+			authidentity.ProviderSubjectEQ(providerSubject),
+		).
+		Only(ctx)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	channel := strings.TrimSpace(pendingSessionStringValue(upstreamClaims, "channel"))
+	channelAppID := strings.TrimSpace(pendingSessionStringValue(upstreamClaims, "channel_app_id"))
+	channelSubject := strings.TrimSpace(pendingSessionStringValue(upstreamClaims, "channel_subject"))
+	if channelSubject == "" {
+		channelSubject = openid
+	}
+	if channel == "" || channelAppID == "" || channelSubject == "" {
+		return nil
+	}
+	existingChannel, err := client.AuthIdentityChannel.Query().
+		Where(
+			authidentitychannel.ProviderTypeEQ(providerType),
+			authidentitychannel.ProviderKeyEQ(providerKey),
+			authidentitychannel.ChannelEQ(channel),
+			authidentitychannel.ChannelAppIDEQ(channelAppID),
+			authidentitychannel.ChannelSubjectEQ(channelSubject),
+		).
+		Only(ctx)
+	if err != nil && !dbent.IsNotFound(err) {
+		return err
+	}
+	if existingChannel != nil {
+		if existingChannel.IdentityID != identityRecord.ID {
+			return infraerrors.Conflict("AUTH_IDENTITY_CHANNEL_OWNERSHIP_CONFLICT", "auth identity channel already belongs to another identity")
+		}
+		return nil
+	}
+	return client.AuthIdentityChannel.Create().
+		SetIdentityID(identityRecord.ID).
+		SetProviderType(providerType).
+		SetProviderKey(providerKey).
+		SetChannel(channel).
+		SetChannelAppID(channelAppID).
+		SetChannelSubject(channelSubject).
+		SetMetadata(map[string]any{"openid": channelSubject}).
+		Exec(ctx)
+}
+
 func (h *AuthHandler) getWeChatOAuthConfig(ctx context.Context, rawMode string, c *gin.Context) (wechatOAuthConfig, error) {
 	mode, err := resolveWeChatOAuthMode(rawMode, c)
 	if err != nil {
 		return wechatOAuthConfig{}, err
+	}
+
+	if h == nil || h.settingSvc == nil {
+		return wechatOAuthConfig{}, infraerrors.ServiceUnavailable("CONFIG_NOT_READY", "wechat oauth settings service not ready")
 	}
 
 	apiBaseURL := ""
@@ -850,27 +997,28 @@ func (h *AuthHandler) getWeChatOAuthConfig(ctx context.Context, rawMode string, 
 		}
 	}
 
+	effective, err := h.settingSvc.GetWeChatConnectOAuthConfig(ctx)
+	if err != nil {
+		return wechatOAuthConfig{}, err
+	}
+	if effective.Mode != mode {
+		return wechatOAuthConfig{}, infraerrors.NotFound("OAUTH_DISABLED", "wechat oauth is disabled")
+	}
+
 	cfg := wechatOAuthConfig{
 		mode:             mode,
-		redirectURI:      resolveWeChatOAuthAbsoluteURL(apiBaseURL, c, "/api/v1/auth/oauth/wechat/callback"),
-		frontendCallback: wechatOAuthFrontendCallback(),
+		appID:            strings.TrimSpace(effective.AppID),
+		appSecret:        strings.TrimSpace(effective.AppSecret),
+		redirectURI:      firstNonEmpty(strings.TrimSpace(effective.RedirectURL), resolveWeChatOAuthAbsoluteURL(apiBaseURL, c, "/api/v1/auth/oauth/wechat/callback")),
+		frontendCallback: firstNonEmpty(strings.TrimSpace(effective.FrontendRedirectURL), wechatOAuthDefaultFrontendCB),
+		scope:            firstNonEmpty(strings.TrimSpace(effective.Scopes), service.DefaultWeChatConnectScopesForMode(mode)),
 	}
 
 	switch mode {
 	case "mp":
-		cfg.appID = strings.TrimSpace(os.Getenv("WECHAT_OAUTH_MP_APP_ID"))
-		cfg.appSecret = strings.TrimSpace(os.Getenv("WECHAT_OAUTH_MP_APP_SECRET"))
 		cfg.authorizeURL = "https://open.weixin.qq.com/connect/oauth2/authorize"
-		cfg.scope = "snsapi_userinfo"
 	default:
-		cfg.appID = strings.TrimSpace(os.Getenv("WECHAT_OAUTH_OPEN_APP_ID"))
-		cfg.appSecret = strings.TrimSpace(os.Getenv("WECHAT_OAUTH_OPEN_APP_SECRET"))
 		cfg.authorizeURL = "https://open.weixin.qq.com/connect/qrconnect"
-		cfg.scope = "snsapi_login"
-	}
-
-	if cfg.appID == "" || cfg.appSecret == "" {
-		return wechatOAuthConfig{}, infraerrors.NotFound("OAUTH_DISABLED", "wechat oauth is disabled")
 	}
 	if strings.TrimSpace(cfg.redirectURI) == "" {
 		return wechatOAuthConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "wechat oauth redirect url not configured")
@@ -879,8 +1027,14 @@ func (h *AuthHandler) getWeChatOAuthConfig(ctx context.Context, rawMode string, 
 	return cfg, nil
 }
 
-func wechatOAuthFrontendCallback() string {
-	return firstNonEmpty(strings.TrimSpace(os.Getenv("WECHAT_OAUTH_FRONTEND_REDIRECT_URL")), wechatOAuthDefaultFrontendCB)
+func (h *AuthHandler) wechatOAuthFrontendCallback(ctx context.Context) string {
+	if h != nil && h.settingSvc != nil {
+		cfg, err := h.settingSvc.GetWeChatConnectOAuthConfig(ctx)
+		if err == nil && strings.TrimSpace(cfg.FrontendRedirectURL) != "" {
+			return strings.TrimSpace(cfg.FrontendRedirectURL)
+		}
+	}
+	return wechatOAuthDefaultFrontendCB
 }
 
 func resolveWeChatOAuthMode(rawMode string, c *gin.Context) (string, error) {
