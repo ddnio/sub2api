@@ -377,6 +377,153 @@ export async function getPublicSettings(): Promise<PublicSettings> {
   return data
 }
 
+export type WeChatOAuthMode = 'open' | 'mp'
+export type WeChatOAuthUnavailableReason =
+  | 'not_configured'
+  | 'capability_unknown'
+  | 'external_browser_required'
+  | 'wechat_browser_required'
+  | 'native_app_required'
+
+export interface ResolvedWeChatOAuthStart {
+  mode: WeChatOAuthMode | null
+  openEnabled: boolean
+  mpEnabled: boolean
+  mobileEnabled: boolean
+  isWeChatBrowser: boolean
+  unavailableReason: WeChatOAuthUnavailableReason | null
+}
+
+export type WeChatOAuthPublicSettings = {
+  wechat_oauth_enabled?: boolean
+  wechat_oauth_open_enabled?: boolean
+  wechat_oauth_mp_enabled?: boolean
+  wechat_oauth_mobile_enabled?: boolean
+}
+
+export function isWeChatWebOAuthEnabled(
+  settings: WeChatOAuthPublicSettings | null | undefined
+): boolean {
+  const legacyEnabled = settings?.wechat_oauth_enabled ?? false
+  const hasExplicitCapabilities =
+    typeof settings?.wechat_oauth_open_enabled === 'boolean' ||
+    typeof settings?.wechat_oauth_mp_enabled === 'boolean'
+
+  if (!hasExplicitCapabilities) {
+    return legacyEnabled
+  }
+
+  return settings?.wechat_oauth_open_enabled === true || settings?.wechat_oauth_mp_enabled === true
+}
+
+export function hasExplicitWeChatOAuthCapabilities(
+  settings: WeChatOAuthPublicSettings | null | undefined
+): settings is WeChatOAuthPublicSettings & {
+  wechat_oauth_open_enabled: boolean
+  wechat_oauth_mp_enabled: boolean
+} {
+  return (
+    typeof settings?.wechat_oauth_open_enabled === 'boolean' &&
+    typeof settings?.wechat_oauth_mp_enabled === 'boolean'
+  )
+}
+
+export function resolveWeChatOAuthStart(
+  settings: WeChatOAuthPublicSettings | null | undefined,
+  userAgent?: string
+): ResolvedWeChatOAuthStart {
+  const normalizedUserAgent = (
+    userAgent ??
+    (typeof navigator !== 'undefined' ? navigator.userAgent : '') ??
+    ''
+  ).trim()
+  const isWeChatBrowser = /MicroMessenger/i.test(normalizedUserAgent)
+  const legacyEnabled = settings?.wechat_oauth_enabled ?? false
+  const openEnabled =
+    typeof settings?.wechat_oauth_open_enabled === 'boolean'
+      ? settings.wechat_oauth_open_enabled
+      : legacyEnabled
+  const mpEnabled =
+    typeof settings?.wechat_oauth_mp_enabled === 'boolean'
+      ? settings.wechat_oauth_mp_enabled
+      : legacyEnabled
+  const mobileEnabled =
+    typeof settings?.wechat_oauth_mobile_enabled === 'boolean'
+      ? settings.wechat_oauth_mobile_enabled
+      : false
+
+  if (isWeChatBrowser) {
+    if (mpEnabled) {
+      return { mode: 'mp', openEnabled, mpEnabled, mobileEnabled, isWeChatBrowser, unavailableReason: null }
+    }
+    if (openEnabled) {
+      return {
+        mode: null,
+        openEnabled,
+        mpEnabled,
+        mobileEnabled,
+        isWeChatBrowser,
+        unavailableReason: 'external_browser_required'
+      }
+    }
+    return {
+      mode: null,
+      openEnabled,
+      mpEnabled,
+      mobileEnabled,
+      isWeChatBrowser,
+      unavailableReason: mobileEnabled ? 'native_app_required' : 'not_configured'
+    }
+  }
+
+  if (openEnabled) {
+    return { mode: 'open', openEnabled, mpEnabled, mobileEnabled, isWeChatBrowser, unavailableReason: null }
+  }
+  if (mpEnabled) {
+    return {
+      mode: null,
+      openEnabled,
+      mpEnabled,
+      mobileEnabled,
+      isWeChatBrowser,
+      unavailableReason: 'wechat_browser_required'
+    }
+  }
+  return {
+    mode: null,
+    openEnabled,
+    mpEnabled,
+    mobileEnabled,
+    isWeChatBrowser,
+    unavailableReason: mobileEnabled ? 'native_app_required' : 'not_configured'
+  }
+}
+
+export function resolveWeChatOAuthStartStrict(
+  settings: WeChatOAuthPublicSettings | null | undefined,
+  userAgent?: string
+): ResolvedWeChatOAuthStart {
+  const normalizedUserAgent = (
+    userAgent ??
+    (typeof navigator !== 'undefined' ? navigator.userAgent : '') ??
+    ''
+  ).trim()
+  const isWeChatBrowser = /MicroMessenger/i.test(normalizedUserAgent)
+
+  if (!hasExplicitWeChatOAuthCapabilities(settings)) {
+    return {
+      mode: null,
+      openEnabled: false,
+      mpEnabled: false,
+      mobileEnabled: false,
+      isWeChatBrowser,
+      unavailableReason: 'capability_unknown'
+    }
+  }
+
+  return resolveWeChatOAuthStart(settings, normalizedUserAgent)
+}
+
 /**
  * Send verification code to email
  * @param request - Email and optional Turnstile token

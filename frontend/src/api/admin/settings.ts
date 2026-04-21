@@ -29,7 +29,7 @@ export type PaymentVisibleMethodSource =
   | 'easypay_alipay'
   | 'official_wxpay'
   | 'easypay_wxpay'
-export type WeChatConnectMode = 'open' | 'mp'
+export type WeChatConnectMode = 'open' | 'mp' | 'mobile'
 
 export interface PaymentVisibleMethodSourceOption {
   value: PaymentVisibleMethodSource
@@ -84,8 +84,9 @@ const PAYMENT_VISIBLE_METHOD_SOURCE_ALIASES: Record<
   },
 }
 const WECHAT_CONNECT_MODE_OPTIONS: WeChatConnectModeOption[] = [
-  { value: 'open', labelZh: '微信开放平台', labelEn: 'WeChat Open Platform' },
-  { value: 'mp', labelZh: '微信公众号 / 小程序', labelEn: 'WeChat Official Account / Mini Program' },
+  { value: 'open', labelZh: 'PC 应用', labelEn: 'PC App' },
+  { value: 'mp', labelZh: '公众号', labelEn: 'Official Account' },
+  { value: 'mobile', labelZh: '移动应用', labelEn: 'Mobile App' },
 ]
 const WECHAT_CONNECT_MODE_ALIASES: Record<string, WeChatConnectMode> = {
   open: 'open',
@@ -96,6 +97,9 @@ const WECHAT_CONNECT_MODE_ALIASES: Record<string, WeChatConnectMode> = {
   official_account: 'mp',
   wechat_mp: 'mp',
   mini_program: 'mp',
+  mobile: 'mobile',
+  mobile_app: 'mobile',
+  native_app: 'mobile',
 }
 
 export function normalizeDefaultSubscriptionSettings(
@@ -189,32 +193,52 @@ export function normalizeWeChatConnectMode(source: unknown): WeChatConnectMode {
 }
 
 export function defaultWeChatConnectScopesForMode(mode: unknown): string {
-  return normalizeWeChatConnectMode(mode) === 'mp' ? 'snsapi_userinfo' : 'snsapi_login'
+  switch (normalizeWeChatConnectMode(mode)) {
+    case 'mp':
+      return 'snsapi_userinfo'
+    case 'mobile':
+      return ''
+    default:
+      return 'snsapi_login'
+  }
 }
 
 export function resolveWeChatConnectModeCapabilities(
   openEnabled: unknown,
   mpEnabled: unknown,
+  mobileEnabled: unknown,
   legacyMode: unknown
-): { openEnabled: boolean; mpEnabled: boolean } {
-  if (typeof openEnabled === 'boolean' || typeof mpEnabled === 'boolean') {
+): { openEnabled: boolean; mpEnabled: boolean; mobileEnabled: boolean } {
+  if (
+    typeof openEnabled === 'boolean' ||
+    typeof mpEnabled === 'boolean' ||
+    typeof mobileEnabled === 'boolean'
+  ) {
     return {
       openEnabled: openEnabled === true,
       mpEnabled: mpEnabled === true,
+      mobileEnabled: mobileEnabled === true,
     }
   }
 
-  return normalizeWeChatConnectMode(legacyMode) === 'mp'
-    ? { openEnabled: false, mpEnabled: true }
-    : { openEnabled: true, mpEnabled: false }
+  switch (normalizeWeChatConnectMode(legacyMode)) {
+    case 'mp':
+      return { openEnabled: false, mpEnabled: true, mobileEnabled: false }
+    case 'mobile':
+      return { openEnabled: false, mpEnabled: false, mobileEnabled: true }
+    default:
+      return { openEnabled: true, mpEnabled: false, mobileEnabled: false }
+  }
 }
 
 export function deriveWeChatConnectStoredMode(
   openEnabled: boolean,
   mpEnabled: boolean,
+  mobileEnabled: boolean,
   legacyMode: unknown
 ): WeChatConnectMode {
   if (mpEnabled) return 'mp'
+  if (mobileEnabled) return 'mobile'
   if (openEnabled) return 'open'
   return normalizeWeChatConnectMode(legacyMode)
 }
@@ -305,8 +329,15 @@ export interface SystemSettings {
   wechat_connect_enabled: boolean
   wechat_connect_app_id: string
   wechat_connect_app_secret_configured: boolean
+  wechat_connect_open_app_id?: string
+  wechat_connect_open_app_secret_configured?: boolean
+  wechat_connect_mp_app_id?: string
+  wechat_connect_mp_app_secret_configured?: boolean
+  wechat_connect_mobile_app_id?: string
+  wechat_connect_mobile_app_secret_configured?: boolean
   wechat_connect_open_enabled?: boolean
   wechat_connect_mp_enabled?: boolean
+  wechat_connect_mobile_enabled?: boolean
   wechat_connect_mode: string
   wechat_connect_scopes: string
   wechat_connect_redirect_url: string
@@ -364,6 +395,33 @@ export interface SystemSettings {
   enable_fingerprint_unification: boolean
   enable_metadata_passthrough: boolean
   enable_cch_signing: boolean
+
+  // Payment configuration
+  payment_enabled: boolean
+  payment_min_amount: number
+  payment_max_amount: number
+  payment_daily_limit: number
+  payment_order_timeout_minutes: number
+  payment_max_pending_orders: number
+  payment_enabled_types: string[]
+  payment_balance_disabled: boolean
+  payment_balance_recharge_multiplier: number
+  payment_recharge_fee_rate: number
+  payment_load_balance_strategy: string
+  payment_product_name_prefix: string
+  payment_product_name_suffix: string
+  payment_help_image_url: string
+  payment_help_text: string
+  payment_cancel_rate_limit_enabled: boolean
+  payment_cancel_rate_limit_max: number
+  payment_cancel_rate_limit_window: number
+  payment_cancel_rate_limit_unit: string
+  payment_cancel_rate_limit_window_mode: string
+  payment_visible_method_alipay_source?: string
+  payment_visible_method_wxpay_source?: string
+  payment_visible_method_alipay_enabled?: boolean
+  payment_visible_method_wxpay_enabled?: boolean
+  openai_advanced_scheduler_enabled?: boolean
 }
 
 export interface UpdateSettingsRequest {
@@ -439,8 +497,15 @@ export interface UpdateSettingsRequest {
   wechat_connect_enabled?: boolean
   wechat_connect_app_id?: string
   wechat_connect_app_secret?: string
+  wechat_connect_open_app_id?: string
+  wechat_connect_open_app_secret?: string
+  wechat_connect_mp_app_id?: string
+  wechat_connect_mp_app_secret?: string
+  wechat_connect_mobile_app_id?: string
+  wechat_connect_mobile_app_secret?: string
   wechat_connect_open_enabled?: boolean
   wechat_connect_mp_enabled?: boolean
+  wechat_connect_mobile_enabled?: boolean
   wechat_connect_mode?: string
   wechat_connect_scopes?: string
   wechat_connect_redirect_url?: string
@@ -484,6 +549,32 @@ export interface UpdateSettingsRequest {
   enable_fingerprint_unification?: boolean
   enable_metadata_passthrough?: boolean
   enable_cch_signing?: boolean
+  // Payment configuration
+  payment_enabled?: boolean
+  payment_min_amount?: number
+  payment_max_amount?: number
+  payment_daily_limit?: number
+  payment_order_timeout_minutes?: number
+  payment_max_pending_orders?: number
+  payment_enabled_types?: string[]
+  payment_balance_disabled?: boolean
+  payment_balance_recharge_multiplier?: number
+  payment_recharge_fee_rate?: number
+  payment_load_balance_strategy?: string
+  payment_product_name_prefix?: string
+  payment_product_name_suffix?: string
+  payment_help_image_url?: string
+  payment_help_text?: string
+  payment_cancel_rate_limit_enabled?: boolean
+  payment_cancel_rate_limit_max?: number
+  payment_cancel_rate_limit_window?: number
+  payment_cancel_rate_limit_unit?: string
+  payment_cancel_rate_limit_window_mode?: string
+  payment_visible_method_alipay_source?: string
+  payment_visible_method_wxpay_source?: string
+  payment_visible_method_alipay_enabled?: boolean
+  payment_visible_method_wxpay_enabled?: boolean
+  openai_advanced_scheduler_enabled?: boolean
 }
 
 /**

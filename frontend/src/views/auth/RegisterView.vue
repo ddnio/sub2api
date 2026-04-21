@@ -333,7 +333,11 @@ import OidcOAuthSection from '@/components/auth/OidcOAuthSection.vue'
 import Icon from '@/components/icons/Icon.vue'
 import TurnstileWidget from '@/components/TurnstileWidget.vue'
 import { useAuthStore, useAppStore } from '@/stores'
-import { validatePromoCode, validateInvitationCode } from '@/api/auth'
+import {
+  isWeChatWebOAuthEnabled,
+  validatePromoCode,
+  validateInvitationCode
+} from '@/api/auth'
 import { buildAuthErrorMessage } from '@/utils/authError'
 import {
   isRegistrationEmailSuffixAllowed,
@@ -424,6 +428,7 @@ onMounted(async () => {
     turnstileSiteKey.value = settings.turnstile_site_key || ''
 
     linuxdoOAuthEnabled.value = settings.linuxdo_oauth_enabled
+    wechatOAuthEnabled.value = isWeChatWebOAuthEnabled(settings)
     oidcOAuthEnabled.value = settings.oidc_oauth_enabled
     oidcOAuthProviderName.value = settings.oidc_oauth_provider_name || 'OIDC'
     registrationEmailSuffixWhitelist.value = normalizeRegistrationEmailSuffixWhitelist(

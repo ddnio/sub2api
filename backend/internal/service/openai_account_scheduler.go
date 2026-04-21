@@ -13,13 +13,29 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"golang.org/x/sync/singleflight"
 )
 
 const (
 	openAIAccountScheduleLayerPreviousResponse = "previous_response_id"
 	openAIAccountScheduleLayerSessionSticky    = "session_hash"
 	openAIAccountScheduleLayerLoadBalance      = "load_balance"
+	openAIAdvancedSchedulerSettingKey          = "openai_advanced_scheduler_enabled"
 )
+
+const (
+	openAIAdvancedSchedulerSettingCacheTTL  = 5 * time.Second
+	openAIAdvancedSchedulerSettingDBTimeout = 2 * time.Second
+)
+
+type cachedOpenAIAdvancedSchedulerSetting struct {
+	enabled   bool
+	expiresAt int64
+}
+
+var openAIAdvancedSchedulerSettingCache atomic.Value // *cachedOpenAIAdvancedSchedulerSetting
+var openAIAdvancedSchedulerSettingSF singleflight.Group
 
 type OpenAIAccountScheduleRequest struct {
 	GroupID                 *int64
@@ -816,8 +832,54 @@ func (s *defaultOpenAIAccountScheduler) SnapshotMetrics() OpenAIAccountScheduler
 	return snapshot
 }
 
-func (s *OpenAIGatewayService) getOpenAIAccountScheduler() OpenAIAccountScheduler {
+func (s *OpenAIGatewayService) openAIAdvancedSchedulerSettingRepo() SettingRepository {
+	if s == nil || s.rateLimitService == nil || s.rateLimitService.settingService == nil {
+		return nil
+	}
+	return s.rateLimitService.settingService.settingRepo
+}
+
+func (s *OpenAIGatewayService) isOpenAIAdvancedSchedulerEnabled(ctx context.Context) bool {
+	if cached, ok := openAIAdvancedSchedulerSettingCache.Load().(*cachedOpenAIAdvancedSchedulerSetting); ok && cached != nil {
+		if time.Now().UnixNano() < cached.expiresAt {
+			return cached.enabled
+		}
+	}
+
+	result, _, _ := openAIAdvancedSchedulerSettingSF.Do(openAIAdvancedSchedulerSettingKey, func() (any, error) {
+		if cached, ok := openAIAdvancedSchedulerSettingCache.Load().(*cachedOpenAIAdvancedSchedulerSetting); ok && cached != nil {
+			if time.Now().UnixNano() < cached.expiresAt {
+				return cached.enabled, nil
+			}
+		}
+
+		enabled := false
+		if repo := s.openAIAdvancedSchedulerSettingRepo(); repo != nil {
+			dbCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), openAIAdvancedSchedulerSettingDBTimeout)
+			defer cancel()
+
+			value, err := repo.GetValue(dbCtx, openAIAdvancedSchedulerSettingKey)
+			if err == nil {
+				enabled = strings.EqualFold(strings.TrimSpace(value), "true")
+			}
+		}
+
+		openAIAdvancedSchedulerSettingCache.Store(&cachedOpenAIAdvancedSchedulerSetting{
+			enabled:   enabled,
+			expiresAt: time.Now().Add(openAIAdvancedSchedulerSettingCacheTTL).UnixNano(),
+		})
+		return enabled, nil
+	})
+
+	enabled, _ := result.(bool)
+	return enabled
+}
+
+func (s *OpenAIGatewayService) getOpenAIAccountScheduler(ctx context.Context) OpenAIAccountScheduler {
 	if s == nil {
+		return nil
+	}
+	if !s.isOpenAIAdvancedSchedulerEnabled(ctx) {
 		return nil
 	}
 	s.openaiSchedulerOnce.Do(func() {
@@ -829,6 +891,11 @@ func (s *OpenAIGatewayService) getOpenAIAccountScheduler() OpenAIAccountSchedule
 		}
 	})
 	return s.openaiScheduler
+}
+
+func resetOpenAIAdvancedSchedulerSettingCacheForTest() {
+	openAIAdvancedSchedulerSettingCache = atomic.Value{}
+	openAIAdvancedSchedulerSettingSF = singleflight.Group{}
 }
 
 func (s *OpenAIGatewayService) SelectAccountWithScheduler(
@@ -873,7 +940,7 @@ func (s *OpenAIGatewayService) selectAccountWithScheduler(
 	requiredImageCapability OpenAIImagesCapability,
 ) (*AccountSelectionResult, OpenAIAccountScheduleDecision, error) {
 	decision := OpenAIAccountScheduleDecision{}
-	scheduler := s.getOpenAIAccountScheduler()
+	scheduler := s.getOpenAIAccountScheduler(ctx)
 	if scheduler == nil {
 		decision.Layer = openAIAccountScheduleLayerLoadBalance
 		isTransportCompatible := func(account *Account) bool {
@@ -968,7 +1035,7 @@ func cloneExcludedAccountIDs(ids map[int64]struct{}) map[int64]struct{} {
 }
 
 func (s *OpenAIGatewayService) ReportOpenAIAccountScheduleResult(accountID int64, success bool, firstTokenMs *int) {
-	scheduler := s.getOpenAIAccountScheduler()
+	scheduler := s.getOpenAIAccountScheduler(context.Background())
 	if scheduler == nil {
 		return
 	}
@@ -976,7 +1043,7 @@ func (s *OpenAIGatewayService) ReportOpenAIAccountScheduleResult(accountID int64
 }
 
 func (s *OpenAIGatewayService) RecordOpenAIAccountSwitch() {
-	scheduler := s.getOpenAIAccountScheduler()
+	scheduler := s.getOpenAIAccountScheduler(context.Background())
 	if scheduler == nil {
 		return
 	}
@@ -984,7 +1051,7 @@ func (s *OpenAIGatewayService) RecordOpenAIAccountSwitch() {
 }
 
 func (s *OpenAIGatewayService) SnapshotOpenAIAccountSchedulerMetrics() OpenAIAccountSchedulerMetricsSnapshot {
-	scheduler := s.getOpenAIAccountScheduler()
+	scheduler := s.getOpenAIAccountScheduler(context.Background())
 	if scheduler == nil {
 		return OpenAIAccountSchedulerMetricsSnapshot{}
 	}

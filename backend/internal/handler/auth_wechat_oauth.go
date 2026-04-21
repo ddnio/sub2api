@@ -668,7 +668,13 @@ func (h *AuthHandler) ensureWeChatBindOwnership(
 	}
 	for _, identity := range identities {
 		if identity != nil && identity.UserID != userID {
-			return infraerrors.Conflict("AUTH_IDENTITY_OWNERSHIP_CONFLICT", "auth identity already belongs to another user")
+			activeOwner, lookupErr := findActiveUserByID(ctx, client, identity.UserID)
+			if lookupErr != nil {
+				return lookupErr
+			}
+			if activeOwner != nil {
+				return infraerrors.Conflict("AUTH_IDENTITY_OWNERSHIP_CONFLICT", "auth identity already belongs to another user")
+			}
 		}
 	}
 
@@ -693,7 +699,13 @@ func (h *AuthHandler) ensureWeChatBindOwnership(
 	}
 	for _, channel := range channels {
 		if channel != nil && channel.Edges.Identity != nil && channel.Edges.Identity.UserID != userID {
-			return infraerrors.Conflict("AUTH_IDENTITY_CHANNEL_OWNERSHIP_CONFLICT", "auth identity channel already belongs to another user")
+			activeOwner, lookupErr := findActiveUserByID(ctx, client, channel.Edges.Identity.UserID)
+			if lookupErr != nil {
+				return lookupErr
+			}
+			if activeOwner != nil {
+				return infraerrors.Conflict("AUTH_IDENTITY_CHANNEL_OWNERSHIP_CONFLICT", "auth identity channel already belongs to another user")
+			}
 		}
 	}
 	return nil
@@ -1007,8 +1019,8 @@ func (h *AuthHandler) getWeChatOAuthConfig(ctx context.Context, rawMode string, 
 
 	cfg := wechatOAuthConfig{
 		mode:             mode,
-		appID:            strings.TrimSpace(effective.AppID),
-		appSecret:        strings.TrimSpace(effective.AppSecret),
+		appID:            strings.TrimSpace(effective.AppIDForMode(mode)),
+		appSecret:        strings.TrimSpace(effective.AppSecretForMode(mode)),
 		redirectURI:      firstNonEmpty(strings.TrimSpace(effective.RedirectURL), resolveWeChatOAuthAbsoluteURL(apiBaseURL, c, "/api/v1/auth/oauth/wechat/callback")),
 		frontendCallback: firstNonEmpty(strings.TrimSpace(effective.FrontendRedirectURL), wechatOAuthDefaultFrontendCB),
 		scope:            firstNonEmpty(strings.TrimSpace(effective.Scopes), service.DefaultWeChatConnectScopesForMode(mode)),

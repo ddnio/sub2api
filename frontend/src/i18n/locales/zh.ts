@@ -5195,6 +5195,20 @@ export default {
         saveFailed: '保存联系渠道失败',
       },
 
+      paymentVisibleMethods: {
+        title: '结算页可见支付方式',
+        description: '选择前台结算页展示哪些支付方式，以及每种方式使用的支付来源键。',
+        methodLabel: '{title} 可见方式',
+        methodHint: '控制前台结算页是否展示该方式，以及展示时使用的来源键。',
+        sourceLabel: '支付来源',
+        sourceHint: '启用后必须明确选择一个来源；未配置状态不会对外展示该支付方式。',
+        sourceRequiredError: '{title} 已启用，请先选择支付来源。'
+      },
+      openaiExperimentalScheduler: {
+        title: 'OpenAI 实验调度策略',
+        description: '默认关闭。开启后仅影响本网关在 OpenAI 账号间的实验性调度选择逻辑，不代表上游 OpenAI 官方能力。'
+      },
+
       saveSettings: '保存设置',
       saving: '保存中...',
       settingsSaved: '设置保存成功',
