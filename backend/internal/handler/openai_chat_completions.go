@@ -177,8 +177,13 @@ func (h *OpenAIGatewayHandler) ChatCompletions(c *gin.Context) {
 		_ = scheduleDecision
 		setOpsSelectedAccount(c, account.ID, account.Platform)
 
-		// per-attempt upstream endpoint override (D2)
-		if account.IsOpenAIUpstream() {
+		// per-attempt upstream endpoint override (D2).
+		// chat-completions 直连路径覆盖两类账号：
+		//   1. type=upstream（原生 upstream）
+		//   2. apikey + openai_passthrough + 自定义非官方 base_url（OpenAI 兼容上游）
+		// 两者共用 ForwardChatCompletionsUpstream，避免被 Responses passthrough 误拿。
+		useDirectChatUpstream := account.ShouldUseDirectChatCompletionsUpstream()
+		if useDirectChatUpstream {
 			c.Set(ctxKeyUpstreamEndpointOverride, EndpointChatCompletions)
 		} else {
 			c.Set(ctxKeyUpstreamEndpointOverride, "")
@@ -198,7 +203,7 @@ func (h *OpenAIGatewayHandler) ChatCompletions(c *gin.Context) {
 			forwardBody = h.gatewayService.ReplaceModelInBody(body, channelMapping.MappedModel)
 		}
 		var result *service.OpenAIForwardResult
-		if account.IsOpenAIUpstream() {
+		if useDirectChatUpstream {
 			result, err = h.gatewayService.ForwardChatCompletionsUpstream(c.Request.Context(), c, account, forwardBody, defaultMappedModel)
 		} else {
 			result, err = h.gatewayService.ForwardAsChatCompletions(c.Request.Context(), c, account, forwardBody, promptCacheKey, defaultMappedModel)

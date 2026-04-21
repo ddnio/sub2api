@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"hash/fnv"
+	"net/url"
 	"reflect"
 	"sort"
 	"strconv"
@@ -866,6 +867,54 @@ func (a *Account) GetOpenAIBaseURL() string {
 
 func (a *Account) IsOpenAIUpstream() bool {
 	return a.IsOpenAI() && a.Type == AccountTypeUpstream
+}
+
+// ShouldUseDirectChatCompletionsUpstream 判定账号在 /v1/chat/completions 入口
+// 是否应走直连 chat completions upstream（ForwardChatCompletionsUpstream），
+// 而不是 Codex/OAuth 专用的 Responses passthrough（forwardOpenAIPassthrough）。
+//
+// 任一满足即可：
+//   - type=upstream：既有 upstream 账号，原始路径
+//   - platform=openai + type=apikey + extra.openai_passthrough=true
+//     + credentials.base_url 非空且非 OpenAI 官方域名
+//
+// 第二条是为了让"apikey + 自定义 OpenAI 兼容上游（Kimi/DeepSeek 等）+ 开 passthrough"
+// 的账号命中 chat completions 直连路径，避免被 Responses passthrough 误拿走。
+// 收窄到"非官方 base_url"是为了不影响真正调用官方 OpenAI 的 apikey passthrough 账号。
+func (a *Account) ShouldUseDirectChatCompletionsUpstream() bool {
+	if a == nil {
+		return false
+	}
+	if a.IsOpenAIUpstream() {
+		return true
+	}
+	if a.Platform != PlatformOpenAI || a.Type != AccountTypeAPIKey {
+		return false
+	}
+	if !a.IsOpenAIPassthroughEnabled() {
+		return false
+	}
+	baseURL := strings.TrimSpace(a.GetOpenAIBaseURL())
+	if baseURL == "" {
+		return false
+	}
+	return !isOpenAIOfficialBaseURL(baseURL)
+}
+
+// isOpenAIOfficialBaseURL 判定 base_url 是否指向 OpenAI 官方域名（*.openai.com）。
+// 仅拦 openai.com 及其子域；Azure OpenAI (*.openai.azure.com) 不视为官方，按自定义上游处理。
+func isOpenAIOfficialBaseURL(raw string) bool {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || u.Host == "" {
+		return false
+	}
+	host := strings.ToLower(u.Host)
+	if idx := strings.Index(host, ":"); idx >= 0 {
+		host = host[:idx]
+	}
+	// 去掉 FQDN 尾随点，避免 "api.openai.com." 绕过官方判定。
+	host = strings.TrimSuffix(host, ".")
+	return host == "openai.com" || strings.HasSuffix(host, ".openai.com")
 }
 
 func (a *Account) GetOpenAIAccessToken() string {

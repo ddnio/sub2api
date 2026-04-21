@@ -11,8 +11,12 @@ import (
 )
 
 // TestUpstreamEndpointOverride_PerAttemptReset verifies the D2 invariant:
-// each failover attempt resets ctxKeyUpstreamEndpointOverride based on the new account type,
-// preventing override contamination across failover switches.
+// each failover attempt resets ctxKeyUpstreamEndpointOverride based on the new account's
+// ShouldUseDirectChatCompletionsUpstream() verdict, preventing override contamination across
+// failover switches.
+//
+// 每个子 case 都直接调用 account.ShouldUseDirectChatCompletionsUpstream()，
+// 与 handler 内的判定保持一致，避免测试与实现漂移。
 func TestUpstreamEndpointOverride_PerAttemptReset(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -24,21 +28,58 @@ func TestUpstreamEndpointOverride_PerAttemptReset(t *testing.T) {
 		return c
 	}
 
+	// applyOverride 复制 handler 的判定-设值逻辑到测试，验证两者一致。
+	applyOverride := func(c *gin.Context, a *service.Account) {
+		if a.ShouldUseDirectChatCompletionsUpstream() {
+			c.Set(ctxKeyUpstreamEndpointOverride, EndpointChatCompletions)
+		} else {
+			c.Set(ctxKeyUpstreamEndpointOverride, "")
+		}
+	}
+
 	t.Run("upstream account sets override to /v1/chat/completions", func(t *testing.T) {
 		c := makeCtx()
 		account := &service.Account{
 			Platform: service.PlatformOpenAI,
 			Type:     service.AccountTypeUpstream,
 		}
-
-		if account.IsOpenAIUpstream() {
-			c.Set(ctxKeyUpstreamEndpointOverride, EndpointChatCompletions)
-		} else {
-			c.Set(ctxKeyUpstreamEndpointOverride, "")
-		}
-
+		applyOverride(c, account)
 		got := GetUpstreamEndpoint(c, account.Platform)
-		assert.Equal(t, EndpointChatCompletions, got, "Upstream account must produce /v1/chat/completions endpoint")
+		assert.Equal(t, EndpointChatCompletions, got, "upstream account must produce /v1/chat/completions endpoint")
+	})
+
+	t.Run("apikey+passthrough+custom base_url sets override to /v1/chat/completions", func(t *testing.T) {
+		c := makeCtx()
+		account := &service.Account{
+			Platform: service.PlatformOpenAI,
+			Type:     service.AccountTypeAPIKey,
+			Credentials: map[string]any{
+				"api_key":  "sk-test",
+				"base_url": "https://api.kimi.com/coding/v1",
+			},
+			Extra: map[string]any{"openai_passthrough": true},
+		}
+		applyOverride(c, account)
+		got := GetUpstreamEndpoint(c, account.Platform)
+		assert.Equal(t, EndpointChatCompletions, got,
+			"apikey + passthrough + custom base_url must route to /v1/chat/completions (new branch)")
+	})
+
+	t.Run("apikey+passthrough+official base_url does NOT override (stays /v1/responses)", func(t *testing.T) {
+		c := makeCtx()
+		account := &service.Account{
+			Platform: service.PlatformOpenAI,
+			Type:     service.AccountTypeAPIKey,
+			Credentials: map[string]any{
+				"api_key":  "sk-test",
+				"base_url": "https://api.openai.com/v1",
+			},
+			Extra: map[string]any{"openai_passthrough": true},
+		}
+		applyOverride(c, account)
+		got := GetUpstreamEndpoint(c, account.Platform)
+		assert.Equal(t, EndpointResponses, got,
+			"official openai.com base_url must remain on Responses passthrough (no regression)")
 	})
 
 	t.Run("oauth account clears override — GetUpstreamEndpoint returns /v1/responses", func(t *testing.T) {
@@ -52,17 +93,12 @@ func TestUpstreamEndpointOverride_PerAttemptReset(t *testing.T) {
 			Platform: service.PlatformOpenAI,
 			Type:     service.AccountTypeOAuth,
 		}
-		if oauthAccount.IsOpenAIUpstream() {
-			c.Set(ctxKeyUpstreamEndpointOverride, EndpointChatCompletions)
-		} else {
-			c.Set(ctxKeyUpstreamEndpointOverride, "")
-		}
-
+		applyOverride(c, oauthAccount)
 		got := GetUpstreamEndpoint(c, oauthAccount.Platform)
 		assert.Equal(t, EndpointResponses, got, "OAuth account after failover must produce /v1/responses (override cleared)")
 	})
 
-	t.Run("apikey account clears override — GetUpstreamEndpoint returns /v1/responses", func(t *testing.T) {
+	t.Run("apikey account without passthrough clears override", func(t *testing.T) {
 		c := makeCtx()
 		c.Set(ctxKeyUpstreamEndpointOverride, EndpointChatCompletions) // residual from prior attempt
 
@@ -70,13 +106,34 @@ func TestUpstreamEndpointOverride_PerAttemptReset(t *testing.T) {
 			Platform: service.PlatformOpenAI,
 			Type:     service.AccountTypeAPIKey,
 		}
-		if apiKeyAccount.IsOpenAIUpstream() {
-			c.Set(ctxKeyUpstreamEndpointOverride, EndpointChatCompletions)
-		} else {
-			c.Set(ctxKeyUpstreamEndpointOverride, "")
-		}
-
+		applyOverride(c, apiKeyAccount)
 		got := GetUpstreamEndpoint(c, apiKeyAccount.Platform)
-		assert.Equal(t, EndpointResponses, got, "APIKey account must produce /v1/responses (override cleared)")
+		assert.Equal(t, EndpointResponses, got, "APIKey account (no passthrough) must produce /v1/responses (override cleared)")
+	})
+
+	t.Run("failover: chat-upstream → plain apikey clears override", func(t *testing.T) {
+		c := makeCtx()
+
+		// Attempt 1: apikey+passthrough+kimi → sets override
+		first := &service.Account{
+			Platform: service.PlatformOpenAI,
+			Type:     service.AccountTypeAPIKey,
+			Credentials: map[string]any{
+				"api_key":  "sk-a",
+				"base_url": "https://api.kimi.com/coding/v1",
+			},
+			Extra: map[string]any{"openai_passthrough": true},
+		}
+		applyOverride(c, first)
+		assert.Equal(t, EndpointChatCompletions, GetUpstreamEndpoint(c, first.Platform))
+
+		// Attempt 2: plain apikey (no passthrough) → must clear override
+		second := &service.Account{
+			Platform: service.PlatformOpenAI,
+			Type:     service.AccountTypeAPIKey,
+		}
+		applyOverride(c, second)
+		assert.Equal(t, EndpointResponses, GetUpstreamEndpoint(c, second.Platform),
+			"plain apikey after chat-upstream must reset override to empty (so responses is used)")
 	})
 }

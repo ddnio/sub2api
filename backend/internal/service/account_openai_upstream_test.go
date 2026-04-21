@@ -50,3 +50,129 @@ func TestAccount_GetOpenAIBaseURL_Upstream(t *testing.T) {
 		assert.Equal(t, "", a.GetOpenAIBaseURL())
 	})
 }
+
+func TestAccount_ShouldUseDirectChatCompletionsUpstream(t *testing.T) {
+	mkApikey := func(passthrough bool, baseURL string) *Account {
+		extra := map[string]any{}
+		if passthrough {
+			extra["openai_passthrough"] = true
+		}
+		creds := map[string]any{"api_key": "sk-test"}
+		if baseURL != "" {
+			creds["base_url"] = baseURL
+		}
+		return &Account{
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Credentials: creds,
+			Extra:       extra,
+		}
+	}
+
+	cases := []struct {
+		name    string
+		account *Account
+		want    bool
+	}{
+		{
+			name:    "nil account",
+			account: nil,
+			want:    false,
+		},
+		{
+			name:    "type=upstream always true (openai)",
+			account: &Account{Platform: PlatformOpenAI, Type: AccountTypeUpstream, Credentials: map[string]any{"base_url": "https://api.kimi.com/coding/v1"}},
+			want:    true,
+		},
+		{
+			name:    "apikey + passthrough + kimi base_url → true",
+			account: mkApikey(true, "https://api.kimi.com/coding/v1"),
+			want:    true,
+		},
+		{
+			name:    "apikey + passthrough + deepseek base_url → true",
+			account: mkApikey(true, "https://api.deepseek.com/v1"),
+			want:    true,
+		},
+		{
+			name:    "apikey + passthrough + azure openai → true (Azure not treated as official)",
+			account: mkApikey(true, "https://myresource.openai.azure.com/openai"),
+			want:    true,
+		},
+		{
+			name:    "apikey + passthrough + official api.openai.com → false",
+			account: mkApikey(true, "https://api.openai.com/v1"),
+			want:    false,
+		},
+		{
+			name:    "apikey + passthrough + platform.openai.com → false",
+			account: mkApikey(true, "https://platform.openai.com"),
+			want:    false,
+		},
+		{
+			name:    "apikey + passthrough + empty base_url → false",
+			account: mkApikey(true, ""),
+			want:    false,
+		},
+		{
+			name:    "apikey + passthrough=false + custom base_url → false",
+			account: mkApikey(false, "https://api.kimi.com/coding/v1"),
+			want:    false,
+		},
+		{
+			name: "oauth (codex) + passthrough + custom base_url → false",
+			account: &Account{
+				Platform:    PlatformOpenAI,
+				Type:        AccountTypeOAuth,
+				Credentials: map[string]any{"base_url": "https://api.kimi.com/coding/v1"},
+				Extra:       map[string]any{"openai_passthrough": true},
+			},
+			want: false,
+		},
+		{
+			name: "anthropic upstream account → false (only openai covered here)",
+			account: &Account{
+				Platform:    PlatformAnthropic,
+				Type:        AccountTypeUpstream,
+				Credentials: map[string]any{"base_url": "https://api.kimi.com/coding/v1"},
+			},
+			want: false,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, c.account.ShouldUseDirectChatCompletionsUpstream())
+		})
+	}
+}
+
+func TestIsOpenAIOfficialBaseURL(t *testing.T) {
+	cases := []struct {
+		in   string
+		want bool
+	}{
+		{"https://api.openai.com", true},
+		{"https://api.openai.com/v1", true},
+		{"http://api.openai.com:443", true},
+		{"https://platform.openai.com", true},
+		{"https://platform.openai.com/foo", true},
+		{"https://openai.com", true},
+		{"https://myresource.openai.azure.com/openai", false},
+		{"https://api.kimi.com/coding/v1", false},
+		{"https://api.deepseek.com/v1", false},
+		{"https://api.OPENAI.com/v1", true},
+		{"", false},
+		{"not-a-url", false},
+		{"https://api.openai.com.evil.example", false},
+		// FQDN trailing dot variants — must still be detected as official
+		{"https://api.openai.com./v1", true},
+		{"https://platform.openai.com.", true},
+		{"https://openai.com.", true},
+	}
+	for _, c := range cases {
+		t.Run(c.in, func(t *testing.T) {
+			assert.Equal(t, c.want, isOpenAIOfficialBaseURL(c.in))
+		})
+	}
+}
