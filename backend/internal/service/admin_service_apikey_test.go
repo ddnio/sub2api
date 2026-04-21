@@ -86,6 +86,9 @@ func (s *userRepoStubForGroupUpdate) RemoveGroupFromUserAllowedGroups(context.Co
 func (s *userRepoStubForGroupUpdate) ListUserAuthIdentities(context.Context, int64) ([]UserAuthIdentityRecord, error) {
 	panic("unexpected")
 }
+func (s *userRepoStubForGroupUpdate) UnbindUserAuthProvider(context.Context, int64, string) error {
+	panic("unexpected")
+}
 func (s *userRepoStubForGroupUpdate) UpdateTotpSecret(context.Context, int64, *string) error {
 	panic("unexpected")
 }

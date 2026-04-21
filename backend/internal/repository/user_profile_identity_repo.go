@@ -8,6 +8,9 @@ import (
 	"unsafe"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/ent/authidentity"
+	"github.com/Wei-Shaw/sub2api/ent/authidentitychannel"
+	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 )
 
@@ -104,6 +107,54 @@ func (r *userRepository) DeleteUserAvatar(ctx context.Context, userID int64) err
 	}
 	_, err = exec.ExecContext(ctx, `DELETE FROM user_avatars WHERE user_id = $1`, userID)
 	return err
+}
+
+func (r *userRepository) UnbindUserAuthProvider(ctx context.Context, userID int64, provider string) error {
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	if provider == "" || provider == "email" {
+		return service.ErrIdentityProviderInvalid
+	}
+
+	tx, err := r.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	txCtx := dbent.NewTxContext(ctx, tx)
+
+	identityIDs, err := tx.Client().AuthIdentity.Query().
+		Where(
+			authidentity.UserIDEQ(userID),
+			authidentity.ProviderTypeEQ(provider),
+		).
+		IDs(txCtx)
+	if err != nil {
+		return err
+	}
+	if len(identityIDs) == 0 {
+		return tx.Commit()
+	}
+
+	if _, err := tx.Client().IdentityAdoptionDecision.Update().
+		Where(identityadoptiondecision.IdentityIDIn(identityIDs...)).
+		ClearIdentityID().
+		Save(txCtx); err != nil {
+		return err
+	}
+	if _, err := tx.Client().AuthIdentityChannel.Delete().
+		Where(authidentitychannel.IdentityIDIn(identityIDs...)).
+		Exec(txCtx); err != nil {
+		return err
+	}
+	if _, err := tx.Client().AuthIdentity.Delete().
+		Where(
+			authidentity.UserIDEQ(userID),
+			authidentity.ProviderTypeEQ(provider),
+		).
+		Exec(txCtx); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func txAwareSQLExecutor(ctx context.Context, fallback sqlExecutor, client *dbent.Client) sqlExecutor {

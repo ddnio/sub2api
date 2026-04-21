@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -20,6 +21,8 @@ type mockUserRepo struct {
 	updateBalanceErr error
 	updateBalanceFn  func(ctx context.Context, id int64, amount float64) error
 	getByIDUser      *User
+	identities       []UserAuthIdentityRecord
+	unboundProviders []string
 }
 
 func (m *mockUserRepo) Create(context.Context, *User) error { return nil }
@@ -69,7 +72,21 @@ func (m *mockUserRepo) RemoveGroupFromUserAllowedGroups(context.Context, int64, 
 	return nil
 }
 func (m *mockUserRepo) ListUserAuthIdentities(context.Context, int64) ([]UserAuthIdentityRecord, error) {
-	return nil, nil
+	out := make([]UserAuthIdentityRecord, len(m.identities))
+	copy(out, m.identities)
+	return out, nil
+}
+func (m *mockUserRepo) UnbindUserAuthProvider(_ context.Context, _ int64, provider string) error {
+	m.unboundProviders = append(m.unboundProviders, provider)
+	filtered := m.identities[:0]
+	for _, identity := range m.identities {
+		if strings.EqualFold(strings.TrimSpace(identity.ProviderType), provider) {
+			continue
+		}
+		filtered = append(filtered, identity)
+	}
+	m.identities = append([]UserAuthIdentityRecord(nil), filtered...)
+	return nil
 }
 func (m *mockUserRepo) UpdateTotpSecret(context.Context, int64, *string) error { return nil }
 func (m *mockUserRepo) EnableTotp(context.Context, int64) error                { return nil }
@@ -255,4 +272,92 @@ func TestPrepareIdentityBindingStart_RejectsUnsupportedProvidersAndUnsafeRedirec
 		RedirectTo: "https://evil.example",
 	})
 	require.ErrorIs(t, err, ErrIdentityRedirectInvalid)
+}
+
+func TestGetProfileIdentitySummaries_AllowsUnbindWhenAnotherLoginMethodRemains(t *testing.T) {
+	repo := &mockUserRepo{
+		getByIDUser: &User{
+			ID:    7,
+			Email: "alice@example.com",
+		},
+		identities: []UserAuthIdentityRecord{
+			{
+				ProviderType:    "email",
+				ProviderKey:     "email",
+				ProviderSubject: "alice@example.com",
+			},
+			{
+				ProviderType:    "linuxdo",
+				ProviderKey:     "linuxdo",
+				ProviderSubject: "linuxdo-subject-123456",
+				Metadata: map[string]any{
+					"username": "linuxdo-handle",
+				},
+			},
+		},
+	}
+	svc := NewUserService(repo, nil, nil)
+
+	summaries, err := svc.GetProfileIdentitySummaries(context.Background(), 7, repo.getByIDUser)
+
+	require.NoError(t, err)
+	require.True(t, summaries.LinuxDo.Bound)
+	require.True(t, summaries.LinuxDo.CanUnbind)
+	require.Equal(t, "linuxdo-handle", summaries.LinuxDo.DisplayName)
+	require.NotEmpty(t, summaries.LinuxDo.SubjectHint)
+}
+
+func TestUnbindUserAuthProviderRejectsLastRemainingLoginMethod(t *testing.T) {
+	repo := &mockUserRepo{
+		getByIDUser: &User{
+			ID:    9,
+			Email: "only-user@linuxdo-connect.invalid",
+		},
+		identities: []UserAuthIdentityRecord{
+			{
+				ProviderType:    "linuxdo",
+				ProviderKey:     "linuxdo",
+				ProviderSubject: "linuxdo-only-subject",
+			},
+		},
+	}
+	svc := NewUserService(repo, nil, nil)
+
+	_, err := svc.UnbindUserAuthProvider(context.Background(), 9, "linuxdo")
+
+	require.ErrorIs(t, err, ErrIdentityUnbindLastMethod)
+	require.Empty(t, repo.unboundProviders)
+}
+
+func TestUnbindUserAuthProviderRemovesProviderAndReturnsUpdatedProfile(t *testing.T) {
+	repo := &mockUserRepo{
+		getByIDUser: &User{
+			ID:    12,
+			Email: "alice@example.com",
+		},
+		identities: []UserAuthIdentityRecord{
+			{
+				ProviderType:    "email",
+				ProviderKey:     "email",
+				ProviderSubject: "alice@example.com",
+			},
+			{
+				ProviderType:    "linuxdo",
+				ProviderKey:     "linuxdo",
+				ProviderSubject: "linuxdo-subject-12",
+			},
+		},
+	}
+	svc := NewUserService(repo, nil, nil)
+
+	user, err := svc.UnbindUserAuthProvider(context.Background(), 12, "linuxdo")
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"linuxdo"}, repo.unboundProviders)
+	require.Equal(t, int64(12), user.ID)
+
+	summaries, err := svc.GetProfileIdentitySummaries(context.Background(), 12, user)
+	require.NoError(t, err)
+	require.False(t, summaries.LinuxDo.Bound)
+	require.True(t, summaries.LinuxDo.CanBind)
 }

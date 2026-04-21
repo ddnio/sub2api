@@ -183,6 +183,34 @@ func (h *UserHandler) StartIdentityBinding(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// UnbindIdentity removes a third-party sign-in provider from the current user.
+// DELETE /api/v1/user/account-bindings/:provider
+func (h *UserHandler) UnbindIdentity(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	updatedUser, err := h.userService.UnbindUserAuthProvider(
+		c.Request.Context(),
+		subject.UserID,
+		c.Param("provider"),
+	)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	profileResp, err := h.buildUserProfileResponse(c.Request.Context(), subject.UserID, updatedUser)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, profileResp)
+}
+
 // SendNotifyEmailCodeRequest represents the request to send notify email verification code
 type SendNotifyEmailCodeRequest struct {
 	Email string `json:"email" binding:"required,email"`
