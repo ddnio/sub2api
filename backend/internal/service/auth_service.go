@@ -853,7 +853,7 @@ func (s *AuthService) postAuthUserBootstrap(ctx context.Context, user *User, sig
 	s.updateUserSignupSource(ctx, user.ID, signupSource)
 
 	if signupSource == "email" {
-		s.ensureEmailAuthIdentity(ctx, user)
+		s.ensureEmailAuthIdentity(ctx, user, "")
 	}
 	if touchLogin {
 		s.touchUserLogin(ctx, user.ID)
