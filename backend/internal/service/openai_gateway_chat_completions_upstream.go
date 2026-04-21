@@ -97,6 +97,16 @@ func (s *OpenAIGatewayService) ForwardChatCompletionsUpstream(
 	req.Header.Del("x-goog-api-key")
 	req.Header.Set("authorization", "Bearer "+apiKey)
 
+	// Isolate session_id / conversation_id so that users in the same API key group
+	// sharing this upstream account cannot collide on third-party cache/session keys.
+	apiKeyID := getAPIKeyIDFromContext(c)
+	if v := strings.TrimSpace(req.Header.Get("session_id")); v != "" {
+		req.Header.Set("session_id", isolateOpenAISessionID(apiKeyID, v))
+	}
+	if v := strings.TrimSpace(req.Header.Get("conversation_id")); v != "" {
+		req.Header.Set("conversation_id", isolateOpenAISessionID(apiKeyID, v))
+	}
+
 	if ua := account.GetOpenAIUserAgent(); ua != "" {
 		req.Header.Set("User-Agent", ua)
 	}

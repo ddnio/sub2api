@@ -251,6 +251,43 @@ func TestForwardChatCompletionsUpstream_Stream(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "[DONE]")
 }
 
+func TestForwardChatCompletionsUpstream_IsolatesSessionAndConversationIDs(t *testing.T) {
+	var capturedSession, capturedConversation string
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedSession = r.Header.Get("session_id")
+		capturedConversation = r.Header.Get("conversation_id")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprint(w, `{"id":"1","object":"chat.completion","model":"gpt-4","choices":[],"usage":{"prompt_tokens":1,"completion_tokens":1}}`)
+	}))
+	defer fakeServer.Close()
+
+	svc := newTestOpenAIService(&directHTTPUpstream{})
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	c.Request.Header.Set("session_id", "client-raw-session")
+	c.Request.Header.Set("conversation_id", "client-raw-conv")
+	c.Set("api_key", &APIKey{ID: 42})
+
+	account := makeTestAccount("key", fakeServer.URL)
+	body := []byte(`{"model":"gpt-4","messages":[]}`)
+
+	_, err := svc.ForwardChatCompletionsUpstream(c.Request.Context(), c, account, body, "")
+	require.NoError(t, err)
+
+	require.NotEmpty(t, capturedSession)
+	require.NotEmpty(t, capturedConversation)
+	// raw client values must not reach upstream
+	assert.NotEqual(t, "client-raw-session", capturedSession)
+	assert.NotEqual(t, "client-raw-conv", capturedConversation)
+	// isolation must match helper output for apiKeyID=42
+	assert.Equal(t, isolateOpenAISessionID(42, "client-raw-session"), capturedSession)
+	assert.Equal(t, isolateOpenAISessionID(42, "client-raw-conv"), capturedConversation)
+}
+
 func TestForwardChatCompletionsUpstream_ResultModelIsOriginalModel(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
