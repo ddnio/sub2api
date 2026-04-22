@@ -179,7 +179,7 @@ func (s *OpenAIGatewayService) ForwardChatCompletionsUpstream(
 		c.Writer.Header().Set("X-Accel-Buffering", "no")
 		c.Status(resp.StatusCode)
 		var streamErr error
-		usage, firstTokenMs, streamErr = s.streamChatCompletionsUpstream(resp, c, account, startTime)
+		usage, firstTokenMs, streamErr = s.streamChatCompletionsUpstream(resp, c, account, startTime, originalModel)
 		if streamErr != nil {
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
 				Platform: account.Platform, AccountID: account.ID, AccountName: account.Name,
@@ -214,12 +214,22 @@ func (s *OpenAIGatewayService) ForwardChatCompletionsUpstream(
 				})
 				return nil, fmt.Errorf("convert upstream SSE to JSON: %w", convErr)
 			}
+			if originalModel != "" {
+				if rewritten, rerr := sjson.SetBytes(convertedBody, "model", originalModel); rerr == nil {
+					convertedBody = rewritten
+				}
+			}
 			writeOpenAIPassthroughResponseHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 			c.Writer.Header().Set("Content-Type", "application/json")
 			c.Status(resp.StatusCode)
 			_, _ = c.Writer.Write(convertedBody)
 			usage = convertedUsage
 		} else {
+			if originalModel != "" {
+				if rewritten, rerr := sjson.SetBytes(respBody, "model", originalModel); rerr == nil {
+					respBody = rewritten
+				}
+			}
 			writeOpenAIPassthroughResponseHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 			c.Status(resp.StatusCode)
 			_, _ = c.Writer.Write(respBody)
@@ -310,6 +320,7 @@ func parseChatCompletionsUsage(data []byte) OpenAIUsage {
 // and returns an error if the stream terminates without [DONE] or hits a scanner error.
 func (s *OpenAIGatewayService) streamChatCompletionsUpstream(
 	resp *http.Response, c *gin.Context, account *Account, startTime time.Time,
+	originalModel string,
 ) (OpenAIUsage, *int, error) {
 	flusher, _ := c.Writer.(http.Flusher)
 
@@ -332,6 +343,26 @@ func (s *OpenAIGatewayService) streamChatCompletionsUpstream(
 	for scanner.Scan() {
 		line := scanner.Text()
 
+		if payload, ok := extractSSEDataPayload(line); ok {
+			if payload != "" && payload != "[DONE]" {
+				if originalModel != "" {
+					if rewritten, rerr := sjson.SetBytes([]byte(payload), "model", originalModel); rerr == nil {
+						line = "data: " + string(rewritten)
+					}
+				}
+				if firstTokenMs == nil {
+					ms := int(time.Since(startTime).Milliseconds())
+					firstTokenMs = &ms
+				}
+				u := parseChatCompletionsUsage([]byte(payload))
+				if u.InputTokens > 0 || u.OutputTokens > 0 {
+					usage = u
+				}
+			} else if payload == "[DONE]" {
+				sawDone = true
+			}
+		}
+
 		if !clientDisconnected {
 			if _, werr := fmt.Fprintln(c.Writer, line); werr != nil {
 				clientDisconnected = true
@@ -341,24 +372,6 @@ func (s *OpenAIGatewayService) streamChatCompletionsUpstream(
 				).Info("upstream_chat_completions.client_disconnected_drain_continuing")
 			} else if flusher != nil {
 				flusher.Flush()
-			}
-		}
-
-		if payload, ok := extractSSEDataPayload(line); ok {
-			if payload == "" {
-				continue
-			}
-			if payload == "[DONE]" {
-				sawDone = true
-				continue
-			}
-			if firstTokenMs == nil {
-				ms := int(time.Since(startTime).Milliseconds())
-				firstTokenMs = &ms
-			}
-			u := parseChatCompletionsUsage([]byte(payload))
-			if u.InputTokens > 0 || u.OutputTokens > 0 {
-				usage = u
 			}
 		}
 	}
