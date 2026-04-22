@@ -876,11 +876,15 @@ func (a *Account) IsOpenAIUpstream() bool {
 // 任一满足即可：
 //   - type=upstream：既有 upstream 账号，原始路径
 //   - platform=openai + type=apikey + extra.openai_passthrough=true
-//     + credentials.base_url 非空且非 OpenAI 官方域名
+//     （含官方与非官方 base_url，统一走 chat/completions 上游）
 //
-// 第二条是为了让"apikey + 自定义 OpenAI 兼容上游（Kimi/DeepSeek 等）+ 开 passthrough"
-// 的账号命中 chat completions 直连路径，避免被 Responses passthrough 误拿走。
-// 收窄到"非官方 base_url"是为了不影响真正调用官方 OpenAI 的 apikey passthrough 账号。
+// OAuth 账号不在此列，因为 chatgpt.com/backend-api/codex/* 命名空间没有
+// /chat/completions 端点，OAuth 必须由 ForwardAsChatCompletions 做 CC→Responses
+// 转换后走 /codex/responses。
+//
+// 所有 apikey passthrough 统一走 CC 上游的原因是：Platform API 同时支持
+// /chat/completions 和 /responses，而客户端既然走了 /v1/chat/completions 入口，
+// 请求体就是 CC 格式，直接打 CC 上游可避免无意义的协议转换和格式不匹配风险。
 func (a *Account) ShouldUseDirectChatCompletionsUpstream() bool {
 	if a == nil {
 		return false
@@ -891,14 +895,8 @@ func (a *Account) ShouldUseDirectChatCompletionsUpstream() bool {
 	if a.Platform != PlatformOpenAI || a.Type != AccountTypeAPIKey {
 		return false
 	}
-	if !a.IsOpenAIPassthroughEnabled() {
-		return false
-	}
-	baseURL := strings.TrimSpace(a.GetOpenAIBaseURL())
-	if baseURL == "" {
-		return false
-	}
-	return !isOpenAIOfficialBaseURL(baseURL)
+	// 所有 apikey + passthrough 在 /v1/chat/completions 入口都走 CC 上游
+	return a.IsOpenAIPassthroughEnabled()
 }
 
 // isOpenAIOfficialBaseURL 判定 base_url 是否指向 OpenAI 官方域名（*.openai.com）。

@@ -180,8 +180,9 @@ func (h *OpenAIGatewayHandler) ChatCompletions(c *gin.Context) {
 		// per-attempt upstream endpoint override (D2).
 		// chat-completions 直连路径覆盖两类账号：
 		//   1. type=upstream（原生 upstream）
-		//   2. apikey + openai_passthrough + 自定义非官方 base_url（OpenAI 兼容上游）
-		// 两者共用 ForwardChatCompletionsUpstream，避免被 Responses passthrough 误拿。
+		//   2. platform=openai + type=apikey + extra.openai_passthrough=true
+		//      （含官方与非官方 base_url，统一走 chat/completions 上游）
+		// OAuth 账号不在此列，由 ForwardAsChatCompletions 做 CC→Responses 转换后走 /codex/responses。
 		useDirectChatUpstream := account.ShouldUseDirectChatCompletionsUpstream()
 		if useDirectChatUpstream {
 			c.Set(ctxKeyUpstreamEndpointOverride, EndpointChatCompletions)

@@ -100,19 +100,19 @@ func TestAccount_ShouldUseDirectChatCompletionsUpstream(t *testing.T) {
 			want:    true,
 		},
 		{
-			name:    "apikey + passthrough + official api.openai.com → false",
+			name:    "apikey + passthrough + official api.openai.com → true",
 			account: mkApikey(true, "https://api.openai.com/v1"),
-			want:    false,
+			want:    true,
 		},
 		{
-			name:    "apikey + passthrough + platform.openai.com → false",
+			name:    "apikey + passthrough + platform.openai.com → true",
 			account: mkApikey(true, "https://platform.openai.com"),
-			want:    false,
+			want:    true,
 		},
 		{
-			name:    "apikey + passthrough + empty base_url → false",
+			name:    "apikey + passthrough + empty base_url → true",
 			account: mkApikey(true, ""),
-			want:    false,
+			want:    true,
 		},
 		{
 			name:    "apikey + passthrough=false + custom base_url → false",
