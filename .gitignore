@@ -136,3 +136,25 @@ docs/*
 frontend/coverage/
 aicodex
 output/
+
+# ===================
+# AI 助手 / IDE 工具产物（仅本地使用，不入库）
+# ===================
+# OMC 工具状态、会话、计划、临时文件
+.omc/
+**/.omc/
+# Cursor / Kiro / Qoder / Windsurf / OpenCode / Gemini / MCP 等 AI 工具
+.cursor/
+.cursorrules
+.kiro/
+.qoder/
+.windsurfrules
+.opencode.json
+.mcp.json
+GEMINI.md
+QODER.md
+ONBOARDING.md
+# bmad 框架
+_bmad/
+# 仓库根的临时密钥文件
+api_key
