@@ -2384,7 +2384,7 @@ type PaymentConfig struct {
 	CallbackBaseURL string  `mapstructure:"callback_base_url"`
 	OrderExpirySec  int     `mapstructure:"order_expiry_sec"`  // default 900
 	ExpiryTickSec   int     `mapstructure:"expiry_tick_sec"`   // default 60
-	MinTopupAmount  float64 `mapstructure:"min_topup_amount"`  // default 1.00
+	MinTopupAmount  float64 `mapstructure:"min_topup_amount"`  // default 10.00
 	MaxTopupAmount  float64 `mapstructure:"max_topup_amount"`  // default 10000.00
 
 	// 微信支付 Native Pay v3
