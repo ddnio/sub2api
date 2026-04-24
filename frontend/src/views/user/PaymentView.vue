@@ -106,7 +106,7 @@
           </div>
           <button
             class="btn btn-primary w-full"
-            :disabled="!topupAmount || topupAmount <= 0 || creatingOrder"
+            :disabled="!topupAmount || topupAmount < MIN_TOPUP_AMOUNT || topupAmount > MAX_TOPUP_AMOUNT || creatingOrder"
             @click="createTopupOrder"
           >
             {{ creatingOrder ? t('payment.paying') : t('payment.confirmPayment') }}
@@ -262,6 +262,8 @@ const loadPlans = async () => {
 }
 
 // 充值
+const MIN_TOPUP_AMOUNT = 10
+const MAX_TOPUP_AMOUNT = 10000
 const topupAmount = ref<number | null>(null)
 const quickAmounts = [10, 30, 50, 100, 200, 500]
 
@@ -322,7 +324,14 @@ const openPlanPayment = async (plan: PaymentPlan) => {
 }
 
 const createTopupOrder = async () => {
-  if (!topupAmount.value || topupAmount.value <= 0) return
+  if (!topupAmount.value || topupAmount.value < MIN_TOPUP_AMOUNT) {
+    appStore.showError(t('payment.topupMin', { min: MIN_TOPUP_AMOUNT }))
+    return
+  }
+  if (topupAmount.value > MAX_TOPUP_AMOUNT) {
+    appStore.showError(t('payment.topupMax', { max: MAX_TOPUP_AMOUNT }))
+    return
+  }
   creatingOrder.value = true
   try {
     const res = await paymentAPI.createOrder({
