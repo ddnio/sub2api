@@ -13,8 +13,27 @@ Sub2API 是一个 AI API 网关平台。后端 Go，前端 Vue3，数据库 Post
 
 - `origin` = 团队 fork（ddnio/sub2api），`upstream` = 上游（Wei-Shaw/sub2api）
 - 日常功能在 `feature/<topic>` 分支开发，不直接推 `main`
+- **新功能/改动一律走 git worktree**（见下节），不再原地切分支
 - 变更部署方式时，同步更新 `docs/engineering/deployment.md`
 - **不要提交任何 config.yaml、密钥、生产密码**
+
+## Worktree 工作流（默认）
+
+本仓库默认用 git worktree 隔离每个改动。Claude Code 用原生 `EnterWorktree` 工具自动建在 `.claude/worktrees/<feature>/`（已被 `.gitignore` 覆盖）。
+
+新建 worktree 后必做的 bootstrap：
+
+1. **拷配置**：`cp ../../backend/config.yaml backend/config.yaml`（路径相对当前 worktree）
+2. **装前端依赖**：`pnpm --dir frontend install --frozen-lockfile`
+3. **并行跑 dev 时必须改端口**：默认后端 8080、前端 vite 5173，多 worktree 同时跑必须 `export SERVER_PORT=80xx` 和 `pnpm --dir frontend dev -- --port 51xx`，否则端口冲突
+
+跨 worktree 注意：
+
+- 改 `backend/cmd/server/wire_gen.go` 或 `backend/ent/schema/` 前，先 `git worktree list` 确认其他 worktree 没在改同一处（生成文件冲突难合）
+- 退出用 `ExitWorktree(action="remove")`；过期目录 `git worktree prune`
+- Go build cache 默认全局共享（`~/Library/Caches/go-build`），不必单独管
+
+完整规范见 `docs/engineering/git-workflow.md`。
 
 ## 本地开发
 

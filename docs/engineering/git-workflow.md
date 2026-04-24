@@ -53,13 +53,17 @@ git checkout main
 git pull --ff-only origin main
 ```
 
-### 2. 创建工作分支
+### 2. 创建工作分支（默认走 worktree）
+
+新功能、修复、文档调整一律用 git worktree 隔离。详见下文「Worktree 工作流」。
+
+如果确实只想原地切分支（极小改动、不会跑 dev、几分钟搞完），也可以：
 
 ```bash
 git checkout -b feature/<topic>
 ```
 
-示例：
+示例分支命名：
 
 - `feature/payment-webhook`
 - `feature/admin-usage-dashboard`
@@ -82,7 +86,15 @@ git push -u origin feature/<topic>
 
 不要把功能分支推到 `upstream`。
 
-### 5. 有意识地合回主线
+### 5. 在 fork 内开 PR
+
+```bash
+gh pr create --repo ddnio/sub2api --base main --head ddnio:<branch> ...
+```
+
+注意：`gh pr create` 默认目标是 fork 的 parent（即 upstream Wei-Shaw/sub2api）。**必须显式指定 `--repo ddnio/sub2api`**，否则 PR 会错开到上游。
+
+### 6. 有意识地合回主线
 
 如果当前只使用 `main`：
 
@@ -93,6 +105,84 @@ git push -u origin feature/<topic>
 
 - 功能先合到 `develop`
 - 测试完成后再从 `develop` 合到 `main`
+
+## Worktree 工作流
+
+### 为什么默认用 worktree
+
+- 多分支并行不需要 `git stash` 来回切
+- Claude Code 多个 session 可以同时挂在不同 worktree 上互不干扰
+- 切分支不影响当前正在跑的 dev / build
+
+### 目录约定
+
+Claude Code 用原生 `EnterWorktree` 工具，默认建在仓库内 `.claude/worktrees/<name>/`。该路径已被根 `.gitignore` 的 `.claude` 规则覆盖，不会污染 git 状态。
+
+手动场景也用同一路径：
+
+```bash
+git worktree add .claude/worktrees/<feature> -b feature/<topic>
+```
+
+### 新建 worktree 后必做的 bootstrap
+
+每个 worktree 都是干净的工作区，不带本地不入库的文件。新建后立即：
+
+```bash
+cd .claude/worktrees/<feature>
+
+# 1. 拷配置（gitignored，主仓库才有）
+cp ../../backend/config.yaml backend/config.yaml
+
+# 2. 装前端依赖（pnpm 用 content-addressable store，磁盘开销小，但符号链接结构必须重建）
+pnpm --dir frontend install --frozen-lockfile
+```
+
+Go build cache 默认在 `~/Library/Caches/go-build`，**全局共享**，不需要每个 worktree 单独管。
+
+### 并行跑 dev 时的端口冲突
+
+后端默认 `8080`、前端 vite 默认 `5173`。多 worktree 同时跑 dev 必须错开端口：
+
+```bash
+# 后端
+SERVER_PORT=8090 go run ./cmd/server
+
+# 前端
+pnpm --dir frontend dev -- --port 5183
+```
+
+建议为每个长期 worktree 在 README 顶部记录它分配的端口。
+
+### 跨 worktree 风险点
+
+| 文件 | 风险 | 防御 |
+|------|------|------|
+| `backend/cmd/server/wire_gen.go` | 手动维护，多个 worktree 同时改 Provider 难合 | 改前 `git worktree list` 看其他 worktree 是否动过 |
+| `backend/ent/schema/` + 生成产物 | merge 后要重跑 `go generate ./ent/...` | 同上，且生成产物冲突要全量 regenerate |
+| `backend/migrations/` | 同号不同内容的 migration 冲突 | 取下一个未占号；上游同步时按字典序并存 |
+
+### 退出与清理
+
+任务完成、PR 合并后立即清理，避免长尾 worktree 越攒越多：
+
+```bash
+# Claude Code 内
+ExitWorktree(action="remove")
+
+# 命令行
+git worktree remove .claude/worktrees/<feature>
+
+# 定期清理元数据残留（worktree 目录已删但 .git 里还记录的）
+git worktree prune
+git worktree list   # 确认现状
+```
+
+如果只是临时离开 worktree、之后还要回来：`ExitWorktree(action="keep")`，目录和分支都保留。
+
+### 长期改进（可选）
+
+- 整理一份 `backend/config.example.yaml`（脱敏 + 注释），新 worktree bootstrap 改成 `cp config.example.yaml backend/config.yaml` 再补本地密钥，比拷主仓库更可持续
 
 ## 同步上游更新
 
