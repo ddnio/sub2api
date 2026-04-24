@@ -73,14 +73,14 @@
               <input
                 v-model.number="topupAmount"
                 type="number"
-                min="1"
+                min="10"
                 step="0.01"
                 :placeholder="t('payment.topupAmountPlaceholder')"
                 class="input flex-1"
               />
             </div>
             <p class="mt-1 text-xs text-gray-400">
-              {{ t('payment.topupMin', { min: 1 }) }} · {{ t('payment.topupMax', { max: 10000 }) }}
+              {{ t('payment.topupMin', { min: 10 }) }} · {{ t('payment.topupMax', { max: 10000 }) }}
             </p>
           </div>
           <!-- 快捷金额 -->

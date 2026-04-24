@@ -223,7 +223,7 @@ func NewPaymentService(
 		orderExpirySec = 900
 	}
 	if minTopupAmount <= 0 {
-		minTopupAmount = 1.0
+		minTopupAmount = 10.0
 	}
 	if maxTopupAmount <= 0 {
 		maxTopupAmount = 10000.0
