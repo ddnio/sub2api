@@ -324,8 +324,12 @@ const openPlanPayment = async (plan: PaymentPlan) => {
 }
 
 const createTopupOrder = async () => {
-  if (!topupAmount.value || topupAmount.value < MIN_TOPUP_AMOUNT || topupAmount.value > MAX_TOPUP_AMOUNT) {
+  if (!topupAmount.value || topupAmount.value < MIN_TOPUP_AMOUNT) {
     appStore.showError(t('payment.topupMin', { min: MIN_TOPUP_AMOUNT }))
+    return
+  }
+  if (topupAmount.value > MAX_TOPUP_AMOUNT) {
+    appStore.showError(t('payment.topupMax', { max: MAX_TOPUP_AMOUNT }))
     return
   }
   creatingOrder.value = true
