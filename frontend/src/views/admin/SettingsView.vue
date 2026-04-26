@@ -2415,8 +2415,137 @@
           <BackupSettings />
         </div>
 
+        <!-- Tab: Contact (悬浮联系按钮渠道) -->
+        <div v-show="activeTab === 'contact'" class="space-y-6">
+          <div class="card">
+            <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                {{ t('admin.settings.contact.title') }}
+              </h2>
+              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {{ t('admin.settings.contact.description') }}
+              </p>
+            </div>
+            <div class="space-y-6 p-6">
+              <div v-if="contactLoading" class="flex items-center gap-2 text-gray-500">
+                <div class="h-4 w-4 animate-spin rounded-full border-b-2 border-primary-600"></div>
+                {{ t('common.loading') }}
+              </div>
+              <template v-else>
+                <div
+                  v-for="(channel, index) in contactChannels"
+                  :key="channel.type"
+                  class="rounded-xl border border-gray-200 p-4 dark:border-dark-700"
+                >
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                      <span class="font-medium text-gray-900 dark:text-white">
+                        {{ t(`contact.channelTypes.${channel.type}`) }}
+                      </span>
+                      <span
+                        v-if="channel.enabled"
+                        class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      >
+                        {{ t('admin.settings.contact.statusEnabled') }}
+                      </span>
+                      <span
+                        v-else
+                        class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-dark-700 dark:text-gray-400"
+                      >
+                        {{ t('admin.settings.contact.statusDisabled') }}
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button
+                        type="button"
+                        class="btn btn-secondary btn-sm"
+                        :disabled="index === 0"
+                        :title="t('admin.settings.contact.moveUp')"
+                        @click="moveContactChannel(index, -1)"
+                      >
+                        <Icon name="arrowUp" size="sm" />
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-secondary btn-sm"
+                        :disabled="index === contactChannels.length - 1"
+                        :title="t('admin.settings.contact.moveDown')"
+                        @click="moveContactChannel(index, 1)"
+                      >
+                        <Icon name="arrowDown" size="sm" />
+                      </button>
+                      <Toggle v-model="channel.enabled" />
+                    </div>
+                  </div>
+
+                  <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label class="label">{{ t('admin.settings.contact.label') }}</label>
+                      <input
+                        v-model="channel.label"
+                        type="text"
+                        class="input"
+                        :maxlength="50"
+                        :placeholder="t(`contact.channelTypes.${channel.type}`)"
+                      />
+                    </div>
+                    <div>
+                      <label class="label">{{ t('admin.settings.contact.extraInfo') }}</label>
+                      <input
+                        v-model="channel.extra_info"
+                        type="text"
+                        class="input"
+                        :maxlength="200"
+                        :placeholder="t('admin.settings.contact.extraInfoPlaceholder')"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="mt-4">
+                    <label class="label">{{ t('admin.settings.contact.qrImage') }}</label>
+                    <ImageUpload
+                      v-model="channel.qr_image"
+                      mode="image"
+                      :upload-label="t('admin.settings.contact.uploadQR')"
+                      :max-size="30 * 1024"
+                    />
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      {{ t('admin.settings.contact.qrImageHint') }}
+                    </p>
+                  </div>
+
+                  <div class="mt-4">
+                    <label class="label">{{ t('admin.settings.contact.descriptionField') }}</label>
+                    <textarea
+                      v-model="channel.description"
+                      class="input"
+                      rows="3"
+                      :maxlength="500"
+                      :placeholder="t('admin.settings.contact.descriptionPlaceholder')"
+                    />
+                  </div>
+                </div>
+                <div class="flex justify-end">
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    :disabled="contactSaving"
+                    @click="saveContactChannels"
+                  >
+                    <svg v-if="contactSaving" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    {{ contactSaving ? t('admin.settings.saving') : t('admin.settings.saveSettings') }}
+                  </button>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
         <!-- Save Button -->
-        <div v-show="activeTab !== 'backup'" class="flex justify-end">
+        <div v-show="activeTab !== 'backup' && activeTab !== 'contact'" class="flex justify-end">
           <button type="submit" :disabled="saving || loadFailed" class="btn btn-primary">
             <svg v-if="saving" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle
@@ -2450,7 +2579,7 @@ import type {
   UpdateSettingsRequest,
   DefaultSubscriptionSetting
 } from '@/api/admin/settings'
-import type { AdminGroup } from '@/types'
+import type { AdminGroup, ContactChannel } from '@/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import Select from '@/components/common/Select.vue'
@@ -2473,7 +2602,7 @@ const { t } = useI18n()
 const appStore = useAppStore()
 const adminSettingsStore = useAdminSettingsStore()
 
-type SettingsTab = 'general' | 'security' | 'users' | 'gateway' | 'email' | 'backup'
+type SettingsTab = 'general' | 'security' | 'users' | 'gateway' | 'email' | 'backup' | 'contact'
 const activeTab = ref<SettingsTab>('general')
 const settingsTabs = [
   { key: 'general'  as SettingsTab, icon: 'home'   as const },
@@ -2482,6 +2611,7 @@ const settingsTabs = [
   { key: 'gateway'  as SettingsTab, icon: 'server' as const },
   { key: 'email'    as SettingsTab, icon: 'mail'   as const },
   { key: 'backup'   as SettingsTab, icon: 'database' as const },
+  { key: 'contact'  as SettingsTab, icon: 'chat'   as const },
 ]
 const { copyToClipboard } = useClipboard()
 
@@ -3360,6 +3490,53 @@ async function saveBetaPolicySettings() {
   }
 }
 
+// ============ Contact Channels (悬浮联系按钮渠道) ============
+
+const contactLoading = ref(true)
+const contactSaving = ref(false)
+const contactChannels = ref<ContactChannel[]>([])
+
+async function loadContactChannels() {
+  contactLoading.value = true
+  try {
+    contactChannels.value = await adminAPI.settings.getContactChannels()
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    appStore.showError(`${t('admin.settings.contact.loadFailed')}: ${detail}`)
+  } finally {
+    contactLoading.value = false
+  }
+}
+
+function moveContactChannel(index: number, delta: number) {
+  const target = index + delta
+  if (target < 0 || target >= contactChannels.value.length) return
+  const arr = [...contactChannels.value]
+  const tmp = arr[index]
+  arr[index] = arr[target]
+  arr[target] = tmp
+  // 重写 priority 以匹配显示顺序
+  arr.forEach((c, i) => (c.priority = i))
+  contactChannels.value = arr
+}
+
+async function saveContactChannels() {
+  // 保存前重写 priority 以匹配显示顺序
+  contactChannels.value.forEach((c, i) => (c.priority = i))
+  contactSaving.value = true
+  try {
+    contactChannels.value = await adminAPI.settings.updateContactChannels(contactChannels.value)
+    appStore.showSuccess(t('admin.settings.settingsSaved'))
+    // R2: 强刷 publicSettings 让本会话立即看到新配置
+    await appStore.fetchPublicSettings(true)
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    appStore.showError(`${t('admin.settings.contact.saveFailed')}: ${detail}`)
+  } finally {
+    contactSaving.value = false
+  }
+}
+
 onMounted(() => {
   loadSettings()
   loadSubscriptionGroups()
@@ -3368,6 +3545,7 @@ onMounted(() => {
   loadStreamTimeoutSettings()
   loadRectifierSettings()
   loadBetaPolicySettings()
+  loadContactChannels()
 })
 </script>
 

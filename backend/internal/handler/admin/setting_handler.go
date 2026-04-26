@@ -1706,3 +1706,71 @@ func (h *SettingHandler) UpdateStreamTimeoutSettings(c *gin.Context) {
 		ThresholdWindowMinutes: updatedSettings.ThresholdWindowMinutes,
 	})
 }
+
+// =========================
+// Contact Channels (悬浮联系按钮渠道配置)
+// =========================
+
+func contactChannelsToDTO(in []service.ContactChannel) []dto.ContactChannel {
+	out := make([]dto.ContactChannel, 0, len(in))
+	for _, c := range in {
+		out = append(out, dto.ContactChannel{
+			Type:        c.Type,
+			Label:       c.Label,
+			QRImage:     c.QRImage,
+			Description: c.Description,
+			ExtraInfo:   c.ExtraInfo,
+			Enabled:     c.Enabled,
+			Priority:    c.Priority,
+		})
+	}
+	return out
+}
+
+func contactChannelsFromDTO(in []dto.ContactChannel) []service.ContactChannel {
+	out := make([]service.ContactChannel, 0, len(in))
+	for _, c := range in {
+		out = append(out, service.ContactChannel{
+			Type:        c.Type,
+			Label:       c.Label,
+			QRImage:     c.QRImage,
+			Description: c.Description,
+			ExtraInfo:   c.ExtraInfo,
+			Enabled:     c.Enabled,
+			Priority:    c.Priority,
+		})
+	}
+	return out
+}
+
+// GetContactChannels 获取联系渠道完整列表（admin 视图，含 disabled）
+// GET /api/v1/admin/settings/contact-channels
+func (h *SettingHandler) GetContactChannels(c *gin.Context) {
+	channels, err := h.settingService.GetContactChannelsForAdmin(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, gin.H{"channels": contactChannelsToDTO(channels)})
+}
+
+// UpdateContactChannelsRequest 更新联系渠道请求
+type UpdateContactChannelsRequest struct {
+	Channels []dto.ContactChannel `json:"channels"`
+}
+
+// UpdateContactChannels 更新联系渠道列表
+// PUT /api/v1/admin/settings/contact-channels
+func (h *SettingHandler) UpdateContactChannels(c *gin.Context) {
+	var req UpdateContactChannelsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	updated, err := h.settingService.UpdateContactChannels(c.Request.Context(), contactChannelsFromDTO(req.Channels))
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"channels": contactChannelsToDTO(updated)})
+}

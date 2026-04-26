@@ -89,6 +89,18 @@ export interface CustomEndpoint {
   description: string
 }
 
+export type ContactChannelType = 'wechat_group' | 'customer_service' | 'official_account'
+
+export interface ContactChannel {
+  type: ContactChannelType
+  label: string
+  qr_image: string
+  description: string
+  extra_info: string
+  enabled: boolean
+  priority: number
+}
+
 export interface PublicSettings {
   registration_enabled: boolean
   email_verify_enabled: boolean
@@ -116,6 +128,7 @@ export interface PublicSettings {
   oidc_oauth_provider_name: string
   sora_client_enabled: boolean
   backend_mode_enabled: boolean
+  contact_channels: ContactChannel[]
   version: string
 }
 

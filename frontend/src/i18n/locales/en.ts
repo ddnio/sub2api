@@ -4338,6 +4338,7 @@ export default {
         email: 'Email',
         backup: 'Backup',
         data: 'Sora Storage',
+        contact: 'Contact',
       },
       emailTabDisabledTitle: 'Email Verification Not Enabled',
       emailTabDisabledHint: 'Enable email verification in the Security tab to configure SMTP settings.',
@@ -4830,6 +4831,27 @@ export default {
         presetOpusOnlyDesc: 'Pass for Opus, filter others',
         commonPatterns: 'Common patterns'
       },
+
+      // Floating contact button (admin config)
+      contact: {
+        title: 'Floating Contact Button',
+        description: 'Configure contact channels (WeChat group / customer service / official account) shown in the floating button on every page',
+        statusEnabled: 'Enabled',
+        statusDisabled: 'Disabled',
+        moveUp: 'Move up',
+        moveDown: 'Move down',
+        label: 'Display label',
+        extraInfo: 'Extra info',
+        extraInfoPlaceholder: 'e.g. WeChat ID or group number (optional)',
+        qrImage: 'QR Code Image',
+        uploadQR: 'Upload QR',
+        qrImageHint: 'PNG/JPEG only, recommended under 30KB. Enabled channels must include a QR image.',
+        descriptionField: 'Description',
+        descriptionPlaceholder: 'Caption shown below the QR (max 500 chars)',
+        loadFailed: 'Failed to load contact channels',
+        saveFailed: 'Failed to save contact channels',
+      },
+
       saveSettings: 'Save Settings',
       saving: 'Saving...',
       settingsSaved: 'Settings saved successfully',
@@ -5060,6 +5082,18 @@ export default {
     emptyDescription: 'There are no system announcements at this time',
     readStatus: 'You have read this announcement',
     markReadHint: 'Click "Mark as read" to mark this announcement'
+  },
+
+  // Floating contact button (user-facing)
+  contact: {
+    openTooltip: 'Contact Us',
+    close: 'Close',
+    dismissSession: "Don't show again this session",
+    channelTypes: {
+      wechat_group: 'User Group',
+      customer_service: 'Customer Service',
+      official_account: 'Official Account',
+    },
   },
 
   // User Subscriptions Page

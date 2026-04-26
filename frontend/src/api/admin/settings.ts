@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from '../client'
-import type { CustomMenuItem, CustomEndpoint } from '@/types'
+import type { CustomMenuItem, CustomEndpoint, ContactChannel } from '@/types'
 
 export interface DefaultSubscriptionSetting {
   group_id: number
@@ -449,6 +449,31 @@ export async function updateBetaPolicySettings(
   return data
 }
 
+// ==================== Contact Channels (悬浮联系按钮) ====================
+
+interface ContactChannelsResponse {
+  channels: ContactChannel[]
+}
+
+/**
+ * Get full contact channels list (admin view, includes disabled)
+ */
+export async function getContactChannels(): Promise<ContactChannel[]> {
+  const { data } = await apiClient.get<ContactChannelsResponse>('/admin/settings/contact-channels')
+  return data.channels ?? []
+}
+
+/**
+ * Update contact channels list
+ */
+export async function updateContactChannels(channels: ContactChannel[]): Promise<ContactChannel[]> {
+  const { data } = await apiClient.put<ContactChannelsResponse>(
+    '/admin/settings/contact-channels',
+    { channels }
+  )
+  return data.channels ?? []
+}
+
 export const settingsAPI = {
   getSettings,
   updateSettings,
@@ -464,7 +489,9 @@ export const settingsAPI = {
   getRectifierSettings,
   updateRectifierSettings,
   getBetaPolicySettings,
-  updateBetaPolicySettings
+  updateBetaPolicySettings,
+  getContactChannels,
+  updateContactChannels
 }
 
 export default settingsAPI

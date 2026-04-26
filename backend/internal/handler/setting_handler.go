@@ -22,6 +22,23 @@ func NewSettingHandler(settingService *service.SettingService, version string) *
 	}
 }
 
+// mapContactChannels 把 service 层结构映射为 dto 层（两边字段同名同序，但属于不同 package）
+func mapContactChannels(in []service.ContactChannel) []dto.ContactChannel {
+	out := make([]dto.ContactChannel, 0, len(in))
+	for _, c := range in {
+		out = append(out, dto.ContactChannel{
+			Type:        c.Type,
+			Label:       c.Label,
+			QRImage:     c.QRImage,
+			Description: c.Description,
+			ExtraInfo:   c.ExtraInfo,
+			Enabled:     c.Enabled,
+			Priority:    c.Priority,
+		})
+	}
+	return out
+}
+
 // GetPublicSettings 获取公开设置
 // GET /api/v1/settings/public
 func (h *SettingHandler) GetPublicSettings(c *gin.Context) {
@@ -58,6 +75,7 @@ func (h *SettingHandler) GetPublicSettings(c *gin.Context) {
 		OIDCOAuthProviderName:            settings.OIDCOAuthProviderName,
 		BackendModeEnabled:               settings.BackendModeEnabled,
 		ReferralEnabled:                  settings.ReferralEnabled,
+		ContactChannels:                  mapContactChannels(settings.ContactChannels),
 		Version:                          h.version,
 	})
 }

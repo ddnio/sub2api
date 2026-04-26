@@ -4503,6 +4503,7 @@ export default {
         email: '邮件设置',
         backup: '数据备份',
         data: 'Sora 存储',
+        contact: '联系方式',
       },
       emailTabDisabledTitle: '邮箱验证未启用',
       emailTabDisabledHint: '请在「安全与认证」选项卡中启用邮箱验证后，再配置 SMTP 设置。',
@@ -4993,6 +4994,27 @@ export default {
         presetOpusOnlyDesc: 'Opus 透传，其他模型过滤',
         commonPatterns: '常用模式'
       },
+
+      // 悬浮联系按钮（admin 配置）
+      contact: {
+        title: '悬浮联系按钮',
+        description: '配置全站右下角悬浮按钮中展示的联系渠道（用户交流群 / 客服微信 / 公众号）',
+        statusEnabled: '已启用',
+        statusDisabled: '已停用',
+        moveUp: '上移',
+        moveDown: '下移',
+        label: '展示标签',
+        extraInfo: '附加信息',
+        extraInfoPlaceholder: '如客服微信号、群编号（可选）',
+        qrImage: '二维码图片',
+        uploadQR: '上传二维码',
+        qrImageHint: '仅支持 PNG/JPEG，建议小于 30KB；启用渠道必须上传二维码',
+        descriptionField: '提示文案',
+        descriptionPlaceholder: '展示在二维码下方的说明文字（最多 500 字）',
+        loadFailed: '加载联系渠道失败',
+        saveFailed: '保存联系渠道失败',
+      },
+
       saveSettings: '保存设置',
       saving: '保存中...',
       settingsSaved: '设置保存成功',
@@ -5222,6 +5244,18 @@ export default {
     emptyDescription: '暂时没有任何系统公告',
     readStatus: '您已阅读此公告',
     markReadHint: '点击"已读"标记此公告'
+  },
+
+  // 悬浮联系按钮（用户侧）
+  contact: {
+    openTooltip: '联系我们',
+    close: '关闭',
+    dismissSession: '本次访问不再显示',
+    channelTypes: {
+      wechat_group: '用户交流群',
+      customer_service: '客服微信',
+      official_account: '公众号',
+    },
   },
 
   // User Subscriptions Page
