@@ -5248,7 +5248,7 @@ export default {
 
   // 悬浮联系按钮（用户侧）
   contact: {
-    label: '社群',
+    label: '联系我们',
     openTooltip: '微信群 · 客服 · 公众号',
     firstHint: '👋 加群可获取最新动态与售前答疑',
     close: '关闭',

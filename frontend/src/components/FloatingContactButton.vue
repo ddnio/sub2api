@@ -67,7 +67,7 @@ function markFirstHintSeen() {
   try {
     localStorage.setItem(FIRST_HINT_SEEN_KEY, '1')
   } catch {
-    // 忽略 storage 不可用
+    /* ignore: private mode */
   }
 }
 
@@ -85,7 +85,7 @@ async function open() {
   try {
     await appStore.fetchPublicSettings(false)
   } catch {
-    // 网络错误时仍使用现有缓存渲染
+    /* network error: render with current cache */
   }
   dismissFirstHint()
   isOpen.value = true
@@ -124,17 +124,24 @@ onBeforeUnmount(() => {
 
 <template>
   <div v-if="shouldRender">
-    <!-- 首次访问的轻气泡提示（仅展示一次，localStorage 记忆） -->
-    <transition name="fc-fade">
+    <!-- 首次访问轻气泡（仅展示一次，localStorage 记忆） -->
+    <transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0 translate-y-1"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 translate-y-1"
+    >
       <div
         v-if="showFirstHint && !isOpen"
-        class="floating-contact-hint"
+        class="fixed right-6 bottom-[88px] z-[59] inline-flex max-w-[240px] cursor-pointer items-center gap-2.5 rounded-xl bg-dark-900 px-3 py-2.5 text-[13px] text-white shadow-glass ring-1 ring-black/10 dark:bg-dark-700 dark:ring-white/10 sm:right-6 max-sm:right-4 max-sm:bottom-[80px]"
         @click="open"
       >
-        <span class="floating-contact-hint-text">{{ t('contact.firstHint') }}</span>
+        <span class="flex-1 leading-snug">{{ t('contact.firstHint') }}</span>
         <button
           type="button"
-          class="floating-contact-hint-close"
+          class="relative z-10 flex h-5 w-5 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white"
           :aria-label="t('contact.close')"
           @click.stop="dismissFirstHint"
         >
@@ -143,6 +150,8 @@ onBeforeUnmount(() => {
             <line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
+        <!-- 气泡指向尖角 -->
+        <span class="absolute right-[22px] -bottom-1.5 h-3 w-3 rotate-45 rounded-[2px] bg-dark-900 dark:bg-dark-700 max-sm:right-[18px]" aria-hidden="true"></span>
       </div>
     </transition>
 
@@ -151,7 +160,7 @@ onBeforeUnmount(() => {
       v-if="!isOpen"
       type="button"
       :aria-label="t('contact.openTooltip')"
-      class="floating-contact-btn"
+      class="group fixed right-6 bottom-6 z-[60] inline-flex h-11 items-center gap-2 rounded-full border border-primary-500/60 bg-white pl-3.5 pr-4 text-primary-600 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary-500 hover:shadow-card-hover hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:bg-dark-800 dark:text-primary-400 dark:ring-1 dark:ring-white/5 dark:hover:bg-dark-700 dark:focus-visible:ring-offset-dark-900 max-sm:h-12 max-sm:w-12 max-sm:right-4 max-sm:bottom-4 max-sm:gap-0 max-sm:p-0 max-sm:justify-center"
       @click="open"
     >
       <svg
@@ -162,402 +171,102 @@ onBeforeUnmount(() => {
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"
-        class="floating-contact-icon"
+        class="h-[18px] w-[18px] flex-shrink-0 max-sm:h-[22px] max-sm:w-[22px]"
         aria-hidden="true"
       >
-        <!-- users icon: 社群语义比单纯 chat-bubble 准确 -->
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        <!-- chat bubble + 三点：直观传达对话/咨询语义 -->
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+        <circle cx="8.5" cy="12" r="0.9" fill="currentColor" stroke="none"/>
+        <circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/>
+        <circle cx="15.5" cy="12" r="0.9" fill="currentColor" stroke="none"/>
       </svg>
-      <span class="floating-contact-label">{{ t('contact.label') }}</span>
-      <!-- 自定义 tooltip：hover 立即出现，不依赖原生 title -->
-      <span class="floating-contact-tooltip">{{ t('contact.openTooltip') }}</span>
+      <span class="text-sm font-medium tracking-wide max-sm:hidden">{{ t('contact.label') }}</span>
+      <!-- 自定义 tooltip：hover/focus 立即出现，不依赖原生 title -->
+      <span
+        class="pointer-events-none absolute right-0 bottom-[calc(100%+8px)] whitespace-nowrap rounded-md bg-dark-900/95 px-2.5 py-1.5 text-xs text-white opacity-0 shadow-glass-sm transition-all duration-150 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 group-focus-visible:opacity-100 group-focus-visible:translate-y-0 dark:bg-dark-700 max-sm:hidden"
+      >
+        {{ t('contact.openTooltip') }}
+      </span>
     </button>
 
     <!-- 弹窗遮罩 -->
-    <div
-      v-if="isOpen"
-      class="floating-contact-overlay"
-      role="dialog"
-      aria-modal="true"
-      @click.self="close"
+    <transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
     >
-      <div class="floating-contact-panel">
-        <!-- 顶部：tab + 关闭 -->
-        <div class="floating-contact-header">
-          <div v-if="channels.length > 1" class="floating-contact-tabs">
-            <button
-              v-for="c in channels"
-              :key="c.type"
-              type="button"
-              class="floating-contact-tab"
-              :class="{ 'floating-contact-tab-active': c.type === activeType }"
-              @click="selectTab(c.type)"
+      <div
+        v-if="isOpen"
+        class="fixed inset-0 z-[70] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        @click.self="close"
+      >
+        <div
+          class="w-full max-w-[360px] overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5 animate-scale-in dark:bg-dark-800 dark:ring-white/10 max-sm:max-w-[90vw]"
+        >
+          <!-- 顶部：tab + 关闭 -->
+          <div class="flex items-center gap-2 px-3 pt-3">
+            <div v-if="channels.length > 1" class="flex min-w-0 flex-1 flex-wrap gap-1">
+              <button
+                v-for="c in channels"
+                :key="c.type"
+                type="button"
+                class="rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors"
+                :class="
+                  c.type === activeType
+                    ? 'bg-primary-500 text-white shadow-glow'
+                    : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-700'
+                "
+                @click="selectTab(c.type)"
+              >
+                {{ tabLabel(c) }}
+              </button>
+            </div>
+            <div
+              v-else
+              class="flex-1 px-1 py-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100"
             >
-              {{ tabLabel(c) }}
+              {{ activeChannel ? tabLabel(activeChannel) : '' }}
+            </div>
+            <button
+              type="button"
+              class="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-dark-700 dark:hover:text-gray-100"
+              :aria-label="t('contact.close')"
+              @click="close"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
             </button>
           </div>
-          <div v-else class="floating-contact-single-title">
-            {{ activeChannel ? tabLabel(activeChannel) : '' }}
-          </div>
-          <button
-            type="button"
-            class="floating-contact-icon-btn ml-auto"
-            :aria-label="t('contact.close')"
-            @click="close"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
 
-        <!-- 内容：二维码 + 文案（纯文本插值，禁用 v-html，防 XSS） -->
-        <div v-if="activeChannel" class="floating-contact-body">
-          <img
-            class="floating-contact-qr"
-            :src="activeChannel.qr_image"
-            alt=""
-          />
-          <p v-if="activeChannel.description" class="floating-contact-desc">
-            {{ activeChannel.description }}
-          </p>
-          <p v-if="activeChannel.extra_info" class="floating-contact-extra">
-            {{ activeChannel.extra_info }}
-          </p>
+          <!-- 内容：二维码 + 文案（纯文本插值，禁用 v-html，防 XSS） -->
+          <div v-if="activeChannel" class="flex flex-col items-center px-5 pb-6 pt-4 text-center">
+            <img
+              :src="activeChannel.qr_image"
+              alt=""
+              class="h-[220px] w-[220px] rounded-xl bg-gray-50 object-contain p-2 ring-1 ring-black/5 dark:bg-gray-100 dark:ring-white/10"
+            />
+            <p
+              v-if="activeChannel.description"
+              class="mt-3.5 whitespace-pre-line break-words text-sm leading-relaxed text-gray-700 dark:text-gray-300"
+            >
+              {{ activeChannel.description }}
+            </p>
+            <p
+              v-if="activeChannel.extra_info"
+              class="mt-2 break-all text-xs text-gray-500 dark:text-gray-400"
+            >
+              {{ activeChannel.extra_info }}
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </transition>
   </div>
 </template>
-
-<style scoped>
-/* === 桌面端：白底胶囊（图标 + 文字），微信绿仅作 accent === */
-.floating-contact-btn {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  z-index: 60;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 44px;
-  padding: 0 16px 0 14px;
-  border-radius: 9999px;
-  background-color: #ffffff;
-  color: #111827;
-  border: 1px solid rgba(17, 24, 39, 0.08);
-  box-shadow: 0 8px 24px -10px rgba(17, 24, 39, 0.25);
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-}
-
-.floating-contact-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 32px -10px rgba(7, 193, 96, 0.35);
-  background-color: #f9fafb;
-}
-
-:global(.dark) .floating-contact-btn {
-  background-color: #1f2937;
-  color: #f3f4f6;
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.6);
-}
-
-:global(.dark) .floating-contact-btn:hover {
-  background-color: #111827;
-  box-shadow: 0 14px 32px -10px rgba(7, 193, 96, 0.45);
-}
-
-.floating-contact-icon {
-  width: 18px;
-  height: 18px;
-  color: #07c160; /* 微信绿仅落在图标上，作 accent */
-  flex-shrink: 0;
-}
-
-.floating-contact-label {
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-}
-
-/* === 自定义 tooltip：hover 立即出现 === */
-.floating-contact-tooltip {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 8px);
-  padding: 6px 10px;
-  font-size: 12px;
-  color: #fff;
-  background-color: rgba(17, 24, 39, 0.92);
-  border-radius: 6px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(4px);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.floating-contact-btn:hover .floating-contact-tooltip,
-.floating-contact-btn:focus-visible .floating-contact-tooltip {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* === 移动端：缩成紧凑圆形按钮 === */
-@media (max-width: 640px) {
-  .floating-contact-btn {
-    height: 48px;
-    width: 48px;
-    padding: 0;
-    justify-content: center;
-    right: 16px;
-    bottom: 16px;
-    background-color: #07c160;
-    color: #fff;
-    border-color: transparent;
-  }
-  .floating-contact-icon {
-    width: 22px;
-    height: 22px;
-    color: #fff;
-  }
-  .floating-contact-label,
-  .floating-contact-tooltip {
-    display: none;
-  }
-}
-
-/* === 首次轻气泡提示 === */
-.floating-contact-hint {
-  position: fixed;
-  right: 24px;
-  bottom: 80px;
-  z-index: 59;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px 10px 14px;
-  background-color: #111827;
-  color: #fff;
-  border-radius: 12px;
-  font-size: 13px;
-  box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.4);
-  cursor: pointer;
-  max-width: 240px;
-}
-
-.floating-contact-hint::after {
-  content: '';
-  position: absolute;
-  right: 22px;
-  bottom: -6px;
-  width: 12px;
-  height: 12px;
-  background-color: #111827;
-  transform: rotate(45deg);
-  border-radius: 2px;
-}
-
-.floating-contact-hint-text {
-  flex: 1 1 auto;
-  line-height: 1.4;
-}
-
-.floating-contact-hint-close {
-  position: relative;
-  z-index: 1;
-  border: 0;
-  background-color: transparent;
-  color: rgba(255, 255, 255, 0.7);
-  width: 22px;
-  height: 22px;
-  border-radius: 9999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.floating-contact-hint-close:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-@media (max-width: 640px) {
-  .floating-contact-hint {
-    right: 16px;
-    bottom: 72px;
-  }
-  .floating-contact-hint::after {
-    right: 18px;
-  }
-}
-
-.fc-fade-enter-active,
-.fc-fade-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.fc-fade-enter-from,
-.fc-fade-leave-to {
-  opacity: 0;
-  transform: translateY(6px);
-}
-
-/* === 弹窗（沿用原结构） === */
-.floating-contact-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 70;
-  background-color: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-}
-
-.floating-contact-panel {
-  width: 100%;
-  max-width: 360px;
-  background-color: #fff;
-  border-radius: 16px;
-  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-@media (max-width: 640px) {
-  .floating-contact-panel {
-    max-width: 90vw;
-  }
-}
-
-:global(.dark) .floating-contact-panel {
-  background-color: #1f2937;
-  color: #f3f4f6;
-}
-
-.floating-contact-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 12px 0 12px;
-}
-
-.floating-contact-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.floating-contact-tab {
-  padding: 6px 12px;
-  font-size: 13px;
-  border-radius: 9999px;
-  border: 0;
-  background-color: transparent;
-  color: #6b7280;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.floating-contact-tab:hover {
-  background-color: rgba(0, 0, 0, 0.04);
-}
-
-.floating-contact-tab-active {
-  background-color: #07c160;
-  color: #fff;
-}
-
-.floating-contact-tab-active:hover {
-  background-color: #07c160;
-}
-
-.floating-contact-single-title {
-  flex: 1 1 auto;
-  font-size: 14px;
-  font-weight: 600;
-  color: #111827;
-  padding: 6px 4px;
-}
-
-:global(.dark) .floating-contact-single-title {
-  color: #f9fafb;
-}
-
-.floating-contact-icon-btn {
-  border: 0;
-  background-color: transparent;
-  width: 32px;
-  height: 32px;
-  border-radius: 9999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #6b7280;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-
-.floating-contact-icon-btn:hover {
-  background-color: rgba(0, 0, 0, 0.06);
-  color: #111827;
-}
-
-:global(.dark) .floating-contact-icon-btn:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: #f9fafb;
-}
-
-.floating-contact-body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 16px 20px 24px;
-}
-
-.floating-contact-qr {
-  width: 220px;
-  height: 220px;
-  object-fit: contain;
-  border-radius: 12px;
-  background-color: #f9fafb;
-  padding: 8px;
-}
-
-:global(.dark) .floating-contact-qr {
-  background-color: #f3f4f6;
-}
-
-.floating-contact-desc {
-  margin-top: 14px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #374151;
-  white-space: pre-line;
-  word-break: break-word;
-}
-
-:global(.dark) .floating-contact-desc {
-  color: #d1d5db;
-}
-
-.floating-contact-extra {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #6b7280;
-  word-break: break-all;
-}
-</style>
