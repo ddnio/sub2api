@@ -146,6 +146,9 @@ type PublicSettings struct {
 	OIDCOAuthEnabled      bool
 	OIDCOAuthProviderName string
 	Version               string
+
+	// 悬浮联系按钮：仅 enabled 渠道，按 priority 升序
+	ContactChannels []ContactChannel
 }
 
 // StreamTimeoutSettings 流超时处理配置（仅控制超时后的处理方式，超时判定由网关配置控制）

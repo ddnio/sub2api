@@ -22,6 +22,17 @@ type CustomEndpoint struct {
 	Description string `json:"description"`
 }
 
+// ContactChannel represents a single floating-contact-button channel (WeChat group, customer service, official account).
+type ContactChannel struct {
+	Type        string `json:"type"`
+	Label       string `json:"label"`
+	QRImage     string `json:"qr_image"`
+	Description string `json:"description"`
+	ExtraInfo   string `json:"extra_info"`
+	Enabled     bool   `json:"enabled"`
+	Priority    int    `json:"priority"`
+}
+
 // SystemSettings represents the admin settings API response payload.
 type SystemSettings struct {
 	RegistrationEnabled              bool     `json:"registration_enabled"`
@@ -159,6 +170,7 @@ type PublicSettings struct {
 	SoraClientEnabled                bool             `json:"sora_client_enabled"`
 	BackendModeEnabled               bool             `json:"backend_mode_enabled"`
 	ReferralEnabled                  bool             `json:"referral_enabled"`
+	ContactChannels                  []ContactChannel `json:"contact_channels"`
 	Version                          string           `json:"version"`
 }
 

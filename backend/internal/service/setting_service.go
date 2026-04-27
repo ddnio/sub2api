@@ -163,6 +163,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyPurchaseSubscriptionURL,
 		SettingKeyCustomMenuItems,
 		SettingKeyCustomEndpoints,
+		SettingKeyContactChannels,
 		SettingKeyLinuxDoConnectEnabled,
 		SettingKeyBackendModeEnabled,
 		SettingKeyReferralEnabled,
@@ -229,6 +230,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		BackendModeEnabled:               settings[SettingKeyBackendModeEnabled] == "true",
 		OIDCOAuthEnabled:                 oidcEnabled,
 		OIDCOAuthProviderName:            oidcProviderName,
+		ContactChannels:                  publicContactChannels(settings[SettingKeyContactChannels]),
 	}, nil
 }
 
@@ -277,9 +279,10 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		LinuxDoOAuthEnabled              bool            `json:"linuxdo_oauth_enabled"`
 		BackendModeEnabled               bool            `json:"backend_mode_enabled"`
 		ReferralEnabled                  bool            `json:"referral_enabled"`
-		OIDCOAuthEnabled                 bool            `json:"oidc_oauth_enabled"`
-		OIDCOAuthProviderName            string          `json:"oidc_oauth_provider_name"`
-		Version                          string          `json:"version,omitempty"`
+		OIDCOAuthEnabled                 bool             `json:"oidc_oauth_enabled"`
+		OIDCOAuthProviderName            string           `json:"oidc_oauth_provider_name"`
+		ContactChannels                  []ContactChannel `json:"contact_channels"`
+		Version                          string           `json:"version,omitempty"`
 	}{
 		RegistrationEnabled:              settings.RegistrationEnabled,
 		EmailVerifyEnabled:               settings.EmailVerifyEnabled,
@@ -307,8 +310,17 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		ReferralEnabled:                  settings.ReferralEnabled,
 		OIDCOAuthEnabled:                 settings.OIDCOAuthEnabled,
 		OIDCOAuthProviderName:            settings.OIDCOAuthProviderName,
+		ContactChannels:                  emptyContactChannelsIfNil(settings.ContactChannels),
 		Version:                          s.version,
 	}, nil
+}
+
+// emptyContactChannelsIfNil 保证 JSON 序列化产出 [] 而非 null（前端可省一处判空）
+func emptyContactChannelsIfNil(in []ContactChannel) []ContactChannel {
+	if in == nil {
+		return []ContactChannel{}
+	}
+	return in
 }
 
 // filterUserVisibleMenuItems filters out admin-only menu items from a raw JSON
