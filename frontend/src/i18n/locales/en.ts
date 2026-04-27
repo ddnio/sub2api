@@ -5086,9 +5086,10 @@ export default {
 
   // Floating contact button (user-facing)
   contact: {
-    openTooltip: 'Contact Us',
+    label: 'Community',
+    openTooltip: 'WeChat Group · Support · Official Account',
+    firstHint: '👋 Join our group for updates & pre-sales help',
     close: 'Close',
-    dismissSession: "Don't show again this session",
     channelTypes: {
       wechat_group: 'User Group',
       customer_service: 'Customer Service',

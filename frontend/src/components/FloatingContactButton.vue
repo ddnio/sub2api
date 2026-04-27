@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAppStore } from '@/stores'
 import { useI18n } from 'vue-i18n'
 import type { ContactChannel } from '@/types'
 
-const SESSION_DISMISSED_KEY = 'contact_dismissed'
+const FIRST_HINT_SEEN_KEY = 'contact_first_hint_seen'
 
 // 排除路径前缀（admin / 安装向导 / 登录注册）— 避免遮挡管理界面与表单流
 const EXCLUDED_PATH_PREFIXES = ['/admin', '/setup', '/login', '/register']
@@ -15,30 +15,13 @@ const appStore = useAppStore()
 const { t } = useI18n()
 
 const isOpen = ref(false)
-const dismissed = ref(readDismissed())
 const activeType = ref<string>('')
-
-function readDismissed(): boolean {
-  try {
-    return sessionStorage.getItem(SESSION_DISMISSED_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
-function markDismissed() {
-  try {
-    sessionStorage.setItem(SESSION_DISMISSED_KEY, '1')
-  } catch {
-    // 忽略 storage 不可用（私密模式等）
-  }
-  dismissed.value = true
-  isOpen.value = false
-}
+const showFirstHint = ref(false)
+let firstHintTimerShow: ReturnType<typeof setTimeout> | null = null
+let firstHintTimerHide: ReturnType<typeof setTimeout> | null = null
 
 const channels = computed<ContactChannel[]>(() => {
   const list = appStore.cachedPublicSettings?.contact_channels ?? []
-  // 后端已过滤 enabled + 排序，这里再防御一次
   return [...list]
     .filter((c) => c && c.enabled && c.qr_image)
     .sort((a, b) => a.priority - b.priority)
@@ -50,7 +33,7 @@ const isExcludedRoute = computed(() => {
 })
 
 const shouldRender = computed(() => {
-  return !dismissed.value && !isExcludedRoute.value && channels.value.length > 0
+  return !isExcludedRoute.value && channels.value.length > 0
 })
 
 const activeChannel = computed<ContactChannel | undefined>(() => {
@@ -58,7 +41,6 @@ const activeChannel = computed<ContactChannel | undefined>(() => {
   return channels.value.find((c) => c.type === activeType.value) ?? channels.value[0]
 })
 
-// 同步 activeType 到当前可用渠道列表的第一个
 watch(
   channels,
   (list) => {
@@ -73,6 +55,31 @@ watch(
   { immediate: true }
 )
 
+function readFirstHintSeen(): boolean {
+  try {
+    return localStorage.getItem(FIRST_HINT_SEEN_KEY) === '1'
+  } catch {
+    return true
+  }
+}
+
+function markFirstHintSeen() {
+  try {
+    localStorage.setItem(FIRST_HINT_SEEN_KEY, '1')
+  } catch {
+    // 忽略 storage 不可用
+  }
+}
+
+function dismissFirstHint() {
+  showFirstHint.value = false
+  markFirstHintSeen()
+  if (firstHintTimerHide) {
+    clearTimeout(firstHintTimerHide)
+    firstHintTimerHide = null
+  }
+}
+
 async function open() {
   // R2: 打开弹窗时刷一次最新公开配置（store 内部不强制时走缓存，开销可控）
   try {
@@ -80,6 +87,7 @@ async function open() {
   } catch {
     // 网络错误时仍使用现有缓存渲染
   }
+  dismissFirstHint()
   isOpen.value = true
 }
 
@@ -93,18 +101,56 @@ function selectTab(type: string) {
 
 function tabLabel(c: ContactChannel): string {
   if (c.label) return c.label
-  // 渠道未填 label 时给默认 i18n 兜底
   return t(`contact.channelTypes.${c.type}`)
 }
+
+onMounted(() => {
+  if (readFirstHintSeen()) return
+  firstHintTimerShow = setTimeout(() => {
+    if (!shouldRender.value || isOpen.value) return
+    showFirstHint.value = true
+    firstHintTimerHide = setTimeout(() => {
+      showFirstHint.value = false
+      markFirstHintSeen()
+    }, 7000)
+  }, 3000)
+})
+
+onBeforeUnmount(() => {
+  if (firstHintTimerShow) clearTimeout(firstHintTimerShow)
+  if (firstHintTimerHide) clearTimeout(firstHintTimerHide)
+})
 </script>
 
 <template>
   <div v-if="shouldRender">
-    <!-- 悬浮按钮 -->
+    <!-- 首次访问的轻气泡提示（仅展示一次，localStorage 记忆） -->
+    <transition name="fc-fade">
+      <div
+        v-if="showFirstHint && !isOpen"
+        class="floating-contact-hint"
+        @click="open"
+      >
+        <span class="floating-contact-hint-text">{{ t('contact.firstHint') }}</span>
+        <button
+          type="button"
+          class="floating-contact-hint-close"
+          :aria-label="t('contact.close')"
+          @click.stop="dismissFirstHint"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </transition>
+
+    <!-- 悬浮入口：桌面胶囊 + 移动端圆形 -->
     <button
       v-if="!isOpen"
       type="button"
-      :title="t('contact.openTooltip')"
+      :aria-label="t('contact.openTooltip')"
       class="floating-contact-btn"
       @click="open"
     >
@@ -119,10 +165,15 @@ function tabLabel(c: ContactChannel): string {
         class="floating-contact-icon"
         aria-hidden="true"
       >
-        <path
-          d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
-        />
+        <!-- users icon: 社群语义比单纯 chat-bubble 准确 -->
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
       </svg>
+      <span class="floating-contact-label">{{ t('contact.label') }}</span>
+      <!-- 自定义 tooltip：hover 立即出现，不依赖原生 title -->
+      <span class="floating-contact-tooltip">{{ t('contact.openTooltip') }}</span>
     </button>
 
     <!-- 弹窗遮罩 -->
@@ -151,36 +202,17 @@ function tabLabel(c: ContactChannel): string {
           <div v-else class="floating-contact-single-title">
             {{ activeChannel ? tabLabel(activeChannel) : '' }}
           </div>
-          <div class="ml-auto flex items-center gap-1">
-            <button
-              type="button"
-              class="floating-contact-icon-btn"
-              :title="t('contact.dismissSession')"
-              :aria-label="t('contact.dismissSession')"
-              @click="markDismissed"
-            >
-              <!-- bell-off 表示本会话不再展示 -->
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" aria-hidden="true">
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                <path d="M18.63 13A17.89 17.89 0 0 1 18 8"/>
-                <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/>
-                <path d="M18 8a6 6 0 0 0-9.33-5"/>
-                <line x1="1" y1="1" x2="23" y2="23"/>
-              </svg>
-            </button>
-            <button
-              type="button"
-              class="floating-contact-icon-btn"
-              :title="t('contact.close')"
-              :aria-label="t('contact.close')"
-              @click="close"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" aria-hidden="true">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </div>
+          <button
+            type="button"
+            class="floating-contact-icon-btn ml-auto"
+            :aria-label="t('contact.close')"
+            @click="close"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
         </div>
 
         <!-- 内容：二维码 + 文案（纯文本插值，禁用 v-html，防 XSS） -->
@@ -203,48 +235,183 @@ function tabLabel(c: ContactChannel): string {
 </template>
 
 <style scoped>
+/* === 桌面端：白底胶囊（图标 + 文字），微信绿仅作 accent === */
 .floating-contact-btn {
   position: fixed;
   right: 24px;
   bottom: 24px;
   z-index: 60;
-  width: 56px;
-  height: 56px;
-  border-radius: 9999px;
-  background-color: #07c160;
-  color: #fff;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 6px 20px -4px rgba(7, 193, 96, 0.45);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  border: 0;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px 0 14px;
+  border-radius: 9999px;
+  background-color: #ffffff;
+  color: #111827;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  box-shadow: 0 8px 24px -10px rgba(17, 24, 39, 0.25);
   cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
 .floating-contact-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px -4px rgba(7, 193, 96, 0.55);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 32px -10px rgba(7, 193, 96, 0.35);
+  background-color: #f9fafb;
+}
+
+:global(.dark) .floating-contact-btn {
+  background-color: #1f2937;
+  color: #f3f4f6;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.6);
+}
+
+:global(.dark) .floating-contact-btn:hover {
+  background-color: #111827;
+  box-shadow: 0 14px 32px -10px rgba(7, 193, 96, 0.45);
 }
 
 .floating-contact-icon {
-  width: 26px;
-  height: 26px;
+  width: 18px;
+  height: 18px;
+  color: #07c160; /* 微信绿仅落在图标上，作 accent */
+  flex-shrink: 0;
 }
 
+.floating-contact-label {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* === 自定义 tooltip：hover 立即出现 === */
+.floating-contact-tooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #fff;
+  background-color: rgba(17, 24, 39, 0.92);
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.floating-contact-btn:hover .floating-contact-tooltip,
+.floating-contact-btn:focus-visible .floating-contact-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* === 移动端：缩成紧凑圆形按钮 === */
 @media (max-width: 640px) {
   .floating-contact-btn {
-    width: 48px;
     height: 48px;
+    width: 48px;
+    padding: 0;
+    justify-content: center;
     right: 16px;
     bottom: 16px;
+    background-color: #07c160;
+    color: #fff;
+    border-color: transparent;
   }
   .floating-contact-icon {
     width: 22px;
     height: 22px;
+    color: #fff;
+  }
+  .floating-contact-label,
+  .floating-contact-tooltip {
+    display: none;
   }
 }
 
+/* === 首次轻气泡提示 === */
+.floating-contact-hint {
+  position: fixed;
+  right: 24px;
+  bottom: 80px;
+  z-index: 59;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 14px;
+  background-color: #111827;
+  color: #fff;
+  border-radius: 12px;
+  font-size: 13px;
+  box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  max-width: 240px;
+}
+
+.floating-contact-hint::after {
+  content: '';
+  position: absolute;
+  right: 22px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background-color: #111827;
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+.floating-contact-hint-text {
+  flex: 1 1 auto;
+  line-height: 1.4;
+}
+
+.floating-contact-hint-close {
+  position: relative;
+  z-index: 1;
+  border: 0;
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.floating-contact-hint-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .floating-contact-hint {
+    right: 16px;
+    bottom: 72px;
+  }
+  .floating-contact-hint::after {
+    right: 18px;
+  }
+}
+
+.fc-fade-enter-active,
+.fc-fade-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.fc-fade-enter-from,
+.fc-fade-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+/* === 弹窗（沿用原结构） === */
 .floating-contact-overlay {
   position: fixed;
   inset: 0;
@@ -379,7 +546,7 @@ function tabLabel(c: ContactChannel): string {
   font-size: 14px;
   line-height: 1.5;
   color: #374151;
-  white-space: pre-line; /* 支持 admin 文案换行 */
+  white-space: pre-line;
   word-break: break-word;
 }
 
