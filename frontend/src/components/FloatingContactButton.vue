@@ -17,8 +17,13 @@ const { t } = useI18n()
 const isOpen = ref(false)
 const activeType = ref<string>('')
 const showFirstHint = ref(false)
+
+// 抽屉态：桌面端默认半隐，hover 滑出，离开后自动收回
+const expanded = ref(false)
 let firstHintTimerShow: ReturnType<typeof setTimeout> | null = null
 let firstHintTimerHide: ReturnType<typeof setTimeout> | null = null
+let expandTimer: ReturnType<typeof setTimeout> | null = null
+let collapseTimer: ReturnType<typeof setTimeout> | null = null
 
 const channels = computed<ContactChannel[]>(() => {
   const list = appStore.cachedPublicSettings?.contact_channels ?? []
@@ -80,6 +85,42 @@ function dismissFirstHint() {
   }
 }
 
+function clearExpandTimers() {
+  if (expandTimer) {
+    clearTimeout(expandTimer)
+    expandTimer = null
+  }
+  if (collapseTimer) {
+    clearTimeout(collapseTimer)
+    collapseTimer = null
+  }
+}
+
+function scheduleExpand() {
+  if (collapseTimer) {
+    clearTimeout(collapseTimer)
+    collapseTimer = null
+  }
+  if (expanded.value) return
+  if (expandTimer) clearTimeout(expandTimer)
+  // 150ms 意图判定，避免鼠标掠过时抖动
+  expandTimer = setTimeout(() => {
+    expanded.value = true
+  }, 150)
+}
+
+function scheduleCollapse() {
+  if (expandTimer) {
+    clearTimeout(expandTimer)
+    expandTimer = null
+  }
+  if (!expanded.value) return
+  if (collapseTimer) clearTimeout(collapseTimer)
+  collapseTimer = setTimeout(() => {
+    expanded.value = false
+  }, 600)
+}
+
 async function open() {
   // R2: 打开弹窗时刷一次最新公开配置（store 内部不强制时走缓存，开销可控）
   try {
@@ -88,6 +129,8 @@ async function open() {
     /* network error: render with current cache */
   }
   dismissFirstHint()
+  clearExpandTimers()
+  expanded.value = false // 弹窗打开时入口收回，弹窗本身承担可视化
   isOpen.value = true
 }
 
@@ -109,8 +152,11 @@ onMounted(() => {
   firstHintTimerShow = setTimeout(() => {
     if (!shouldRender.value || isOpen.value) return
     showFirstHint.value = true
+    // 首次提示时短暂展开抽屉，让用户注意到入口
+    expanded.value = true
     firstHintTimerHide = setTimeout(() => {
       showFirstHint.value = false
+      expanded.value = false
       markFirstHintSeen()
     }, 7000)
   }, 3000)
@@ -119,6 +165,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (firstHintTimerShow) clearTimeout(firstHintTimerShow)
   if (firstHintTimerHide) clearTimeout(firstHintTimerHide)
+  clearExpandTimers()
 })
 </script>
 
@@ -135,7 +182,7 @@ onBeforeUnmount(() => {
     >
       <div
         v-if="showFirstHint && !isOpen"
-        class="fixed right-6 bottom-[88px] z-[59] inline-flex max-w-[240px] cursor-pointer items-center gap-2.5 rounded-xl bg-dark-900 px-3 py-2.5 text-[13px] text-white shadow-glass ring-1 ring-black/10 dark:bg-dark-700 dark:ring-white/10 sm:right-6 max-sm:right-4 max-sm:bottom-[80px]"
+        class="fixed right-6 bottom-[88px] z-[59] inline-flex max-w-[240px] cursor-pointer items-center gap-2.5 rounded-xl bg-dark-900 px-3 py-2.5 text-[13px] text-white shadow-glass ring-1 ring-black/10 dark:bg-dark-700 dark:ring-white/10 max-sm:right-4 max-sm:bottom-[80px]"
         @click="open"
       >
         <span class="flex-1 leading-snug">{{ t('contact.firstHint') }}</span>
@@ -150,44 +197,55 @@ onBeforeUnmount(() => {
             <line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
-        <!-- 气泡指向尖角 -->
         <span class="absolute right-[22px] -bottom-1.5 h-3 w-3 rotate-45 rounded-[2px] bg-dark-900 dark:bg-dark-700 max-sm:right-[18px]" aria-hidden="true"></span>
       </div>
     </transition>
 
-    <!-- 悬浮入口：桌面胶囊 + 移动端圆形 -->
-    <button
+    <!-- 抽屉容器：fixed 在右下角，监听 hover 触发展开/收回 -->
+    <div
       v-if="!isOpen"
-      type="button"
-      :aria-label="t('contact.openTooltip')"
-      class="group fixed right-6 bottom-6 z-[60] inline-flex h-11 items-center gap-2 rounded-full border border-primary-500/60 bg-white pl-3.5 pr-4 text-primary-600 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary-500 hover:shadow-card-hover hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:bg-dark-800 dark:text-primary-400 dark:ring-1 dark:ring-white/5 dark:hover:bg-dark-700 dark:focus-visible:ring-offset-dark-900 max-sm:h-12 max-sm:w-12 max-sm:right-4 max-sm:bottom-4 max-sm:gap-0 max-sm:p-0 max-sm:justify-center"
-      @click="open"
+      class="fixed right-0 bottom-6 z-[60] max-sm:right-0 max-sm:bottom-4"
+      @mouseenter="scheduleExpand"
+      @mouseleave="scheduleCollapse"
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="h-[18px] w-[18px] flex-shrink-0 max-sm:h-[22px] max-sm:w-[22px]"
-        aria-hidden="true"
+      <button
+        type="button"
+        :aria-label="t('contact.openTooltip')"
+        class="group relative inline-flex h-11 items-center gap-2 rounded-l-full rounded-r-none border border-r-0 border-primary-500/60 bg-white pl-3.5 pr-4 text-primary-600 shadow-card transition-all duration-300 ease-out hover:border-primary-500 hover:shadow-card-hover hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:bg-dark-800 dark:text-primary-400 dark:ring-1 dark:ring-white/5 dark:hover:bg-dark-700 dark:focus-visible:ring-offset-dark-900 max-sm:h-12 max-sm:gap-0 max-sm:rounded-full max-sm:rounded-r-none max-sm:border-r-0 max-sm:p-0 max-sm:pl-3 max-sm:pr-2"
+        :class="expanded ? 'translate-x-0' : 'translate-x-[58%] max-sm:translate-x-[40%]'"
+        @click="open"
       >
-        <!-- chat bubble + 三点：直观传达对话/咨询语义 -->
-        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-        <circle cx="8.5" cy="12" r="0.9" fill="currentColor" stroke="none"/>
-        <circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/>
-        <circle cx="15.5" cy="12" r="0.9" fill="currentColor" stroke="none"/>
-      </svg>
-      <span class="text-sm font-medium tracking-wide max-sm:hidden">{{ t('contact.label') }}</span>
-      <!-- 自定义 tooltip：hover/focus 立即出现，不依赖原生 title -->
-      <span
-        class="pointer-events-none absolute right-0 bottom-[calc(100%+8px)] whitespace-nowrap rounded-md bg-dark-900/95 px-2.5 py-1.5 text-xs text-white opacity-0 shadow-glass-sm transition-all duration-150 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 group-focus-visible:opacity-100 group-focus-visible:translate-y-0 dark:bg-dark-700 max-sm:hidden"
-      >
-        {{ t('contact.openTooltip') }}
-      </span>
-    </button>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="h-[18px] w-[18px] flex-shrink-0 max-sm:h-[22px] max-sm:w-[22px]"
+          aria-hidden="true"
+        >
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+          <circle cx="8.5" cy="12" r="0.9" fill="currentColor" stroke="none"/>
+          <circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/>
+          <circle cx="15.5" cy="12" r="0.9" fill="currentColor" stroke="none"/>
+        </svg>
+        <span
+          class="text-sm font-medium tracking-wide whitespace-nowrap transition-opacity duration-200 max-sm:hidden"
+          :class="expanded ? 'opacity-100' : 'opacity-0'"
+        >
+          {{ t('contact.label') }}
+        </span>
+        <!-- tooltip：仅在抽屉收回时展示，提示用户可悬停 -->
+        <span
+          v-if="!expanded"
+          class="pointer-events-none absolute right-0 bottom-[calc(100%+8px)] whitespace-nowrap rounded-md bg-dark-900/95 px-2.5 py-1.5 text-xs text-white opacity-0 shadow-glass-sm transition-opacity duration-150 group-hover:opacity-100 dark:bg-dark-700 max-sm:hidden"
+        >
+          {{ t('contact.openTooltip') }}
+        </span>
+      </button>
+    </div>
 
     <!-- 弹窗遮罩 -->
     <transition
@@ -208,7 +266,6 @@ onBeforeUnmount(() => {
         <div
           class="w-full max-w-[360px] overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5 animate-scale-in dark:bg-dark-800 dark:ring-white/10 max-sm:max-w-[90vw]"
         >
-          <!-- 顶部：tab + 关闭 -->
           <div class="flex items-center gap-2 px-3 pt-3">
             <div v-if="channels.length > 1" class="flex min-w-0 flex-1 flex-wrap gap-1">
               <button
@@ -245,7 +302,6 @@ onBeforeUnmount(() => {
             </button>
           </div>
 
-          <!-- 内容：二维码 + 文案（纯文本插值，禁用 v-html，防 XSS） -->
           <div v-if="activeChannel" class="flex flex-col items-center px-5 pb-6 pt-4 text-center">
             <img
               :src="activeChannel.qr_image"
