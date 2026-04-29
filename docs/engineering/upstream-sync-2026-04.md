@@ -300,55 +300,67 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 
 ### Phase 2 待人工对齐（38 项 HOLD）
 
-按主题分组：
+每行 = 1 个 PR。分组按主题，每个 PR 仅出现在一个组。
 
-**Payment 域（10 项）** — 待 Q-C 决方向
+**Payment 域（9 项）** — 待 Q-C 决方向
 - #1572 feat/payment-system-v2（45k+ 行）
 - #1610 alipay-wxpay-type-mapping
 - #1655 payment-fee-multiplier
-- #1731 rate-billing-autofill
+- #1731 rate-billing-autofill-response-limit
 - #1764 wxpay-pubkey-hardening
-- #1973 zpay refund
-- #1576 payment-docs
+- #1973 Nobody-Zhang/main (Zpay refund)
+- #1576 feat/payment-docs
 - #1612 qrcode-density
 - #1734 payment-recommend-kyren-topup
-- #1666 account-cost-display
 
-**Auth 域（5 项）**
+**Auth 域（6 项）**
 - #1538 fix/bug-cleanup-main
-- #1785 / #1799 rebuild/auth-identity-foundation（80k 行级别）
-- #1810 / #1802 profile-auth-bindings-i18n
+- #1785 rebuild/auth-identity-foundation（80k 行级别）
+- #1799 rebuild/auth-identity-foundation（相关 PR）
+- #1810 profile-auth-bindings-i18n
+- #1802 profile-auth-bindings-i18n（相关 PR）
 - #1829 codex-oauth-proxy-message
-- #1940 bump-codex-cli-version（含 auth）
 
 **Affiliate 域（1 项）**
-- #1897 invite-affiliate-rebate
+- #1897 codex/invite-affiliate-rebate
 
 **大重构（4 项）**
-- #1850 channel-insights（35k 行）
+- #1850 feat/channel-insights（35k 行）
 - #1815 feat_rpm
 - #1828 wx-11/main
 - #1637 websearch-notify-pricing
 
 **OpenAI image API（5 项 - slice-4 整片）**
-- #1795 / #1813 / #1853 / #2006 / #2044
+- #1795 openai-image-api-sync
+- #1813 fix-openai-image-handling
+- #1853 codex-image-generation-bridge
+- #2006 openai-images-explicit-session
+- #2044 openai-image-apikey-versioned-base-url
 
 **Vertex / Fast-Flex（2 项）**
-- #1977 vertex Service Account
+- #1977 sholiverlee/vertex
 - #2051 openai-fast-flex-policy
 
 **Sidebar 已重构（3 项）**
-- #1545 / #1624 / #1635 sidebar 相关
+- #1545 smooth-sidebar-collapse
+- #1624 fix-issue-1613-version-dropdown
+- #1635 fix-issue-1613-version-dropdown（v2）
 
-**Signature/Schema 依赖（4 项）**
-- #1943 / #1960 stream-passthrough signature
-- #1766 / #1895 codex transform 重叠
+**Signature/Codex 重叠（4 项）**
+- #1943 openai-responses-preoutput-failover（passthrough signature 依赖）
+- #1960 openai-stream-keepalive-downstream-idle（passthrough signature 依赖）
+- #1766 codex-drop-removed-models（useModelWhitelist 冲突）
+- #1895 codex-spark-limitations（codex transform 冲突）
 
 **其他（4 项）**
-- #1752 quota-exceeded i18n
-- #1836 quota-cache billing repo
-- #1666 account-cost-display
-- 其余零散
+- #1940 bump-codex-cli-version（auth 域 deps bump）
+- #1752 quota-exceeded-scheduling（i18n 冲突）
+- #1836 account-daily-weekly-quota-cache-invalidation（billing repo 冲突）
+- #1666 account-cost-display（migration）
+
+**核对**: 9 + 6 + 1 + 4 + 5 + 2 + 3 + 4 + 4 = **38** ✅
+
+**未进切片的 24 个原始 HOLD**: 全部包含在上面 9 个分组里。剩余 14 个为各 slice 执行时新转入的（slice-0 转 #1624/#1635；slice-2 转 #1943/#1960；slice-3 转 #1766/#1895；slice-4 整片转 5 个；slice-6 转 #1752/#1836；slice-7 转 #1545）。
 
 ### 已知遗留
 
