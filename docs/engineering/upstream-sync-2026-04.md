@@ -59,14 +59,14 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 
 | 标签 | 数量 | 处理 |
 |---|---|---|
-| **AUTO-PICK** | 3 | 实际 cherry-pick 成功（slice-0） |
-| **KIMI-REVIEW** | 32 | 7 个主题切片，每片 kimi review |
-| **HOLD** | 26 | 留给最后人工逐个对齐 |
+| **AUTO-PICK** | 3 | slice-0 已完成 |
+| **KIMI-REVIEW** | 30 | 进度：slice-0/1 done, slice-2 in_progress, 4 个待启动 |
+| **HOLD** | 28 | 留给最后人工逐个对齐 |
 
 注：
-- AUTO-PICK 原计划 5 个，slice-0 执行时 #1624/#1635（sidebar version dropdown）冲突过大转 HOLD，实际 3 个
-- KIMI-REVIEW 原 31 个 + 从 HOLD 提升 1 个（#1766 codex-drop-removed-models）= 32
-- HOLD 原 24 + slice-0 转入 2 个（#1624/#1635）= 26
+- AUTO-PICK 原 5：slice-0 时 #1624/#1635 sidebar 已重构 skip 转 HOLD → 实际 3
+- KIMI-REVIEW 原 31 + 从 HOLD 提 #1766 = 32；slice-2 时 #1943/#1960 依赖 signature 重构 skip 转 HOLD → 30
+- HOLD 原 24 + slice-0 转 2 + slice-2 转 2 = 28
 
 ---
 
@@ -185,12 +185,24 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 - **merge SHA**: d80a3827
 
 ### slice-1-anthropic
-- **状态**: in_progress（PR 已开，待 review）
+- **状态**: ✅ done（merged at a53527fa）
 - **分支**: `sync/2026-04/slice-1-anthropic`
+- **PR**: [ddnio/sub2api#10](https://github.com/ddnio/sub2api/pull/10)
 - **包含 PR**: #1587, #1623, #1920, #1970, #1996, #2066（按 upstream 时间序）
-- **PR**:（待开）
+- **kimi review**: approve（无 critical，3 个 suggestion 均为 pre-existing）
 - **build 验证**: ✅ go build + pnpm build 全过
 - **冲突**: 无（6 个 cherry-pick 全部 clean apply）
+- **Schema/Generated Code 改动**: 无
+- **merge SHA**: a53527fa
+
+### slice-2-openai-core
+- **状态**: in_progress（PR 已开，待 review）
+- **分支**: `sync/2026-04/slice-2-openai-core`
+- **计划包含 PR**: #1668, #1687, #1683, #1772, #1943, #1960, #1948
+- **实际 cherry-pick**: #1668, #1687, #1683, #1772, #1948（5 个）
+- **跳过**: #1943 / #1960 — 依赖未拉的上游 refactor（`handleStreamingResponsePassthrough` 增加 `originalModel/mappedModel` 参数），手术整合风险大，转 HOLD
+- **build 验证**: ✅ go build + pnpm build 全过
+- **冲突**: #1943/#1960 因 signature 依赖 skip；其余 clean apply
 - **Schema/Generated Code 改动**: 无
 
 ### slice-2-openai-core
