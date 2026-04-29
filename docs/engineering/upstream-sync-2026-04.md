@@ -60,8 +60,8 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 | 标签 | 数量 | 处理 |
 |---|---|---|
 | **AUTO-PICK** | 3 | slice-0 完成 |
-| **KIMI-REVIEW** | 23 | slice-0~3 done, slice-4 整片 HOLD, slice-5 in_progress, 2 个待启动 |
-| **HOLD** | 35 | 留给最后人工逐个对齐 |
+| **KIMI-REVIEW** | 21 | slice-0/1/2/3/5 done, slice-4 整片 HOLD, slice-6 in_progress, slice-7 待启动 |
+| **HOLD** | 37 | 留给最后人工逐个对齐 |
 
 注：
 - AUTO-PICK 原 5：slice-0 #1624/#1635 sidebar 重构 skip → 实际 3
@@ -233,11 +233,23 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 - **副作用**: slice-3 的临时 `firstNonEmptyString` helper 因此保留（不再有上游 openai_images.go 替换）
 
 ### slice-5-cc-mimicry
-- **状态**: in_progress（PR 待开）
+- **状态**: ✅ done（merged at 4551da74）
 - **分支**: `sync/2026-04/slice-5-cc-mimicry`
+- **PR**: [ddnio/sub2api#13](https://github.com/ddnio/sub2api/pull/13)
 - **包含 PR**: #1914（cc-mimicry-parity, 13 文件 +1119/-76）
+- **kimi review**: approve（无 critical，3 条 nit suggestion）
 - **build 验证**: ✅ go build + pnpm build 全过
 - **冲突**: 无（clean apply）
+- **Schema/Generated Code 改动**: 无
+- **merge SHA**: 4551da74
+
+### slice-6-ops-misc
+- **状态**: in_progress（PR 待开）
+- **分支**: `sync/2026-04/slice-6-ops-misc`
+- **计划包含 PR**: #1702, #1749, #1752, #1836, #2090
+- **实际 cherry-pick**: #1702, #1749, #2090（3 个）
+- **跳过**: #1752 (i18n 冲突)、#1836 (usage_billing_repo 冲突)，转 HOLD
+- **build 验证**: ✅ go build + pnpm build 全过
 - **Schema/Generated Code 改动**: 无
 
 ### slice-2-openai-core
