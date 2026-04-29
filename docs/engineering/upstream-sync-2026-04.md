@@ -59,11 +59,14 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 
 | 标签 | 数量 | 处理 |
 |---|---|---|
-| **AUTO-PICK** | 5 | 一个切片，自审 + kimi 抽审 |
+| **AUTO-PICK** | 3 | 实际 cherry-pick 成功（slice-0） |
 | **KIMI-REVIEW** | 32 | 7 个主题切片，每片 kimi review |
-| **HOLD** | 24 | 留给最后人工逐个对齐 |
+| **HOLD** | 26 | 留给最后人工逐个对齐 |
 
-注：原 KIMI-REVIEW 31 个 + 从 HOLD 提升 1 个（#1766 codex-drop-removed-models）= 32。
+注：
+- AUTO-PICK 原计划 5 个，slice-0 执行时 #1624/#1635（sidebar version dropdown）冲突过大转 HOLD，实际 3 个
+- KIMI-REVIEW 原 31 个 + 从 HOLD 提升 1 个（#1766 codex-drop-removed-models）= 32
+- HOLD 原 24 + slice-0 转入 2 个（#1624/#1635）= 26
 
 ---
 
@@ -169,15 +172,14 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 > 每个切片 merge 后回填这里。SQL/migration/wire/ent 改动单独详记到下方变更登记区。
 
 ### slice-0-easy
-- **状态**: pending
+- **状态**: in_progress（PR 已开，待 review）
 - **分支**: `sync/2026-04/slice-0-easy`
-- **包含 PR**: #1753, #1663, #1635, #1624, #1543
-- **PR**:（待开）
-- **kimi review**:
-- **build 验证（go/pnpm/ent generate）**:
-- **冲突**:
-- **Schema/Generated Code 改动**: 无（AUTO-PICK 不含）
-- **merge SHA**:
+- **计划包含 PR**: #1753, #1663, #1635, #1624, #1543
+- **实际 cherry-pick**: #1543, #1663, #1753（3 个成功）
+- **跳过**: #1624 / #1635 — 上游 sidebar version dropdown 修复，fork sidebar 已重构（floating-contact + sora 移除），冲突过大且功能不适用，downgrade 到 HOLD
+- **build 验证**: ✅ go build ./... + pnpm build 全部通过
+- **冲突**: 仅 i18n/zh.ts 自动 merge 通过；sidebar 两个 PR 因 fork 重构 skip
+- **Schema/Generated Code 改动**: 无
 
 ### slice-1-anthropic
 - **状态**: pending
@@ -270,6 +272,29 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 > migration 字典序并存策略对**同表 schema 不同**的情况无效（参见 077 vs 092 撞表风险）。
 
 **当前**: 计划内 0 个 migration / 0 个 ent schema 改动（payment/auth/affiliate 全 hold）。
+
+### 生产/测试库 schema_migrations 现状（2026-04-29 实测）
+
+测试库（`sub2api_test`）和生产库（`sub2api`）**完全一致**，应用到 092：
+
+| 编号 | 文件 | 来源 |
+|---|---|---|
+| 077 | `077_add_payment_tables.sql` | fork（payment） |
+| 077 | `077_add_usage_log_requested_model.sql` | upstream |
+| 078 | `078_add_refund_no.sql` | fork（refund） |
+| 078 | `078_add_usage_log_requested_model_index_notx.sql` | upstream |
+| 091 | `091_add_referral_system.sql` | fork（referral） |
+| 091 | `091_add_group_messages_dispatch_model_config.sql` | upstream |
+| 092 | `092_referral_deferred_reward.sql` | fork |
+
+**实战验证**：077/078/091 双编号字典序并存策略已成功（test+prod 都跑过）。
+
+**已知冲突点**：
+- `payment_orders` 表已由 fork `077_add_payment_tables.sql` 创建并存在
+- 上游若引入 `092_payment_orders.sql`（在 HOLD #1572 内）会 `CREATE TABLE` 失败 → **永远不能并存执行**
+- 处理：Phase 2 决定 payment 方向时一并解决（要么走 fork 自研永远跳过，要么重构合并）
+
+### Schema & Generated Code 切片登记
 
 | 切片 | 文件 | 类型 | 改动摘要 | 编译验证 | pg_dump | 部署状态 |
 |---|---|---|---|---|---|---|
