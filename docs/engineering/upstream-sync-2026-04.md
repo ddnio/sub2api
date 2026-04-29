@@ -59,14 +59,14 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 
 | 标签 | 数量 | 处理 |
 |---|---|---|
-| **AUTO-PICK** | 3 | slice-0 已完成 |
-| **KIMI-REVIEW** | 28 | 进度：slice-0/1/2 done, slice-3 in_progress, 4 个待启动 |
-| **HOLD** | 30 | 留给最后人工逐个对齐 |
+| **AUTO-PICK** | 3 | slice-0 完成 |
+| **KIMI-REVIEW** | 23 | slice-0~3 done, slice-4 整片 HOLD, slice-5 in_progress, 2 个待启动 |
+| **HOLD** | 35 | 留给最后人工逐个对齐 |
 
 注：
-- AUTO-PICK 原 5：slice-0 时 #1624/#1635 sidebar 已重构 skip 转 HOLD → 实际 3
-- KIMI-REVIEW 原 31 + 从 HOLD 提 #1766 = 32；slice-2 #1943/#1960 + slice-3 #1766/#1895 转 HOLD → 28
-- HOLD 原 24 + 各 slice 转入 6（#1624/#1635/#1943/#1960/#1766/#1895）= 30
+- AUTO-PICK 原 5：slice-0 #1624/#1635 sidebar 重构 skip → 实际 3
+- KIMI-REVIEW 原 31 + 从 HOLD 提 #1766 = 32；slice-2 转 #1943/#1960，slice-3 转 #1766/#1895，slice-4 整片转 5 个（#1795/#1813/#1853/#2006/#2044）→ 23
+- HOLD 原 24 + slice 累计转入 11（#1624/#1635/#1943/#1960/#1766/#1895/#1795/#1813/#1853/#2006/#2044）= 35
 
 ---
 
@@ -209,13 +209,35 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 - **merge SHA**: 2ce67ca4
 
 ### slice-3-codex
-- **状态**: in_progress（PR 待开）
+- **状态**: ✅ done（merged at 60f10e5b）
 - **分支**: `sync/2026-04/slice-3-codex`
+- **PR**: [ddnio/sub2api#12](https://github.com/ddnio/sub2api/pull/12)
 - **计划包含 PR**: #1575, #1690, #1766, #1910, #1895, #1911
 - **实际 cherry-pick**: #1575, #1690, #1910, #1911（4 个）
 - **跳过**: #1766 (codex-drop-removed-models)、#1895 (codex-spark-limitations) — useModelWhitelist.ts / openai_codex_transform.go 多处冲突，转 HOLD
-- **额外 fix**: 临时添加本地 `firstNonEmptyString` helper（slice-4 openai_images.go 会替换）
+- **额外**: 临时本地 `firstNonEmptyString` helper（合并后 slice-4 失败，helper 保留为永久）
+- **kimi review**: approve
 - **build 验证**: ✅ go build + pnpm build + go vet 全过
+- **Schema/Generated Code 改动**: 无
+- **merge SHA**: 60f10e5b
+
+### slice-4-openai-image
+- **状态**: ❌ 整片转 HOLD（5 个 PR 全部 cherry-pick 冲突）
+- **分支**: 不创建 PR
+- **计划包含 PR**: #1795, #1813, #1853, #2006, #2044
+- **实际**: 全部失败
+- **原因**：
+  - #1795（openai-image-api-sync, +2805 行）冲突 `pkg/openai/constants.go` + `openai_account_scheduler.go`
+  - #1813、#1853、#2006、#2044 都依赖 #1795 引入的 `openai_images.go` 和接口，#1795 没合则无意义
+  - openai image API 在 fork 与 upstream 已严重分叉，需人工评估方向（保留 fork 自有实现 vs 整体切换上游）
+- **副作用**: slice-3 的临时 `firstNonEmptyString` helper 因此保留（不再有上游 openai_images.go 替换）
+
+### slice-5-cc-mimicry
+- **状态**: in_progress（PR 待开）
+- **分支**: `sync/2026-04/slice-5-cc-mimicry`
+- **包含 PR**: #1914（cc-mimicry-parity, 13 文件 +1119/-76）
+- **build 验证**: ✅ go build + pnpm build 全过
+- **冲突**: 无（clean apply）
 - **Schema/Generated Code 改动**: 无
 
 ### slice-2-openai-core
