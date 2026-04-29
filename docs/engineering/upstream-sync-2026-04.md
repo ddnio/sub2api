@@ -59,9 +59,8 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 
 | 标签 | 数量 | 处理 |
 |---|---|---|
-| **AUTO-PICK** | 3 | slice-0 完成 |
-| **KIMI-REVIEW** | 20 | slice-0/1/2/3/5/6 done, slice-4 整片 HOLD, slice-7 in_progress（最后一片） |
-| **HOLD** | 38 | 留给最后人工逐个对齐 |
+| **DONE（已合入 main）** | 23 | 全部 7 个 sync slice PR 已 merge |
+| **HOLD（待人工对齐）** | 38 | 见 Phase 2 章节 |
 
 注：
 - AUTO-PICK 原 5：slice-0 #1624/#1635 sidebar 重构 skip → 实际 3
@@ -256,13 +255,137 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 - **merge SHA**: 11f5a6e3
 
 ### slice-7-frontend
-- **状态**: in_progress（PR 待开）
+- **状态**: ✅ done（merged at a845041a）
 - **分支**: `sync/2026-04/slice-7-frontend`
+- **PR**: [ddnio/sub2api#15](https://github.com/ddnio/sub2api/pull/15)
 - **计划包含 PR**: #1545, #1603
 - **实际 cherry-pick**: #1603 datatable-mobile-double-render（1 个，2 文件 +177/-18）
 - **跳过**: #1545 smooth-sidebar-collapse — 与 fork 重构后的 AppSidebar.vue 冲突，转 HOLD
+- **kimi review**: approve
 - **build 验证**: ✅ go build + pnpm build 全过
 - **Schema/Generated Code 改动**: 无
+- **merge SHA**: a845041a
+
+---
+
+## 🏁 同步周期闭环总结（2026-04-30）
+
+**周期**: 2026-04-29 启动 → 2026-04-30 完成（约 2 个工作日）
+
+### 实际成果
+
+| 指标 | 数值 |
+|---|---|
+| **Upstream 增量** | 539 commits / 61 first-parent PR |
+| **成功合入 fork** | **23 个 PR**（slice-0 3 + slice-1 6 + slice-2 5 + slice-3 4 + slice-5 1 + slice-6 3 + slice-7 1） |
+| **HOLD 留待人工** | 38 个 PR |
+| **完成切片** | 7 个 / 计划 8 个（slice-4 整片 HOLD） |
+| **fork PR 总数** | 7 个 sync slice PR + 1 个台账 PR = 8 个 |
+| **kimi review 轮次** | 共 9 轮（其中 slice-2 跑 3 轮迭代修复） |
+| **生产/测试库 schema** | 未触动（无 migration 改动） |
+
+### 切片执行结果一览
+
+| 切片 | 计划 | 实际 | 跳过原因 | merge SHA |
+|---|---|---|---|---|
+| slice-0-easy | 5 | 3 | sidebar 重构（×2） | d80a3827 |
+| slice-1-anthropic | 6 | 6 | — | a53527fa |
+| slice-2-openai-core | 7 | 5 | signature 依赖（×2） | 2ce67ca4 |
+| slice-3-codex | 6 | 4 | useModelWhitelist / openai_codex_transform 冲突（×2） | 60f10e5b |
+| slice-4-openai-image | 5 | 0 | image API 整片分叉 | — |
+| slice-5-cc-mimicry | 1 | 1 | — | 4551da74 |
+| slice-6-ops-misc | 5 | 3 | i18n / billing repo 冲突（×2） | 11f5a6e3 |
+| slice-7-frontend | 2 | 1 | sidebar 重构 | a845041a |
+| **合计** | **37** | **23** | **14 转 HOLD（含 slice-4 整片 5 个）** | |
+
+### Phase 2 待人工对齐（38 项 HOLD）
+
+每行 = 1 个 PR。分组按主题，每个 PR 仅出现在一个组。
+
+**Payment 域（9 项）** — 待 Q-C 决方向
+- #1572 feat/payment-system-v2（45k+ 行）
+- #1610 alipay-wxpay-type-mapping
+- #1655 payment-fee-multiplier
+- #1731 rate-billing-autofill-response-limit
+- #1764 wxpay-pubkey-hardening
+- #1973 Nobody-Zhang/main (Zpay refund)
+- #1576 feat/payment-docs
+- #1612 qrcode-density
+- #1734 payment-recommend-kyren-topup
+
+**Auth 域（6 项）**
+- #1538 fix/bug-cleanup-main
+- #1785 rebuild/auth-identity-foundation（80k 行级别）
+- #1799 rebuild/auth-identity-foundation（相关 PR）
+- #1810 profile-auth-bindings-i18n
+- #1802 profile-auth-bindings-i18n（相关 PR）
+- #1829 codex-oauth-proxy-message
+
+**Affiliate 域（1 项）**
+- #1897 codex/invite-affiliate-rebate
+
+**大重构（4 项）**
+- #1850 feat/channel-insights（35k 行）
+- #1815 feat_rpm
+- #1828 wx-11/main
+- #1637 websearch-notify-pricing
+
+**OpenAI image API（5 项 - slice-4 整片）**
+- #1795 openai-image-api-sync
+- #1813 fix-openai-image-handling
+- #1853 codex-image-generation-bridge
+- #2006 openai-images-explicit-session
+- #2044 openai-image-apikey-versioned-base-url
+
+**Vertex / Fast-Flex（2 项）**
+- #1977 sholiverlee/vertex
+- #2051 openai-fast-flex-policy
+
+**Sidebar 已重构（3 项）**
+- #1545 smooth-sidebar-collapse
+- #1624 fix-issue-1613-version-dropdown
+- #1635 fix-issue-1613-version-dropdown（v2）
+
+**Signature/Codex 重叠（4 项）**
+- #1943 openai-responses-preoutput-failover（passthrough signature 依赖）
+- #1960 openai-stream-keepalive-downstream-idle（passthrough signature 依赖）
+- #1766 codex-drop-removed-models（useModelWhitelist 冲突）
+- #1895 codex-spark-limitations（codex transform 冲突）
+
+**其他（4 项）**
+- #1940 bump-codex-cli-version（auth 域 deps bump）
+- #1752 quota-exceeded-scheduling（i18n 冲突）
+- #1836 account-daily-weekly-quota-cache-invalidation（billing repo 冲突）
+- #1666 account-cost-display（migration）
+
+**核对**: 9 + 6 + 1 + 4 + 5 + 2 + 3 + 4 + 4 = **38** ✅
+
+**未进切片的 24 个原始 HOLD**: 全部包含在上面 9 个分组里。剩余 14 个为各 slice 执行时新转入的（slice-0 转 #1624/#1635；slice-2 转 #1943/#1960；slice-3 转 #1766/#1895；slice-4 整片转 5 个；slice-6 转 #1752/#1836；slice-7 转 #1545）。
+
+### 已知遗留
+
+1. **fork 临时 helper**: `backend/internal/service/openai_codex_string_helpers.go`（slice-3 引入）
+   - 因 slice-4 整片 HOLD，没有上游 `openai_images.go` 来替换它
+   - 决定 payment/openai-image 方向时一并清理
+
+2. **pre-existing 测试编译错误**（main 分支已有，非本周期引入）
+   - `auth_service_*_test.go` NewAuthService 签名缺 PromoService/ReferralService/DefaultSubscriptionAssigner
+   - `admin_service_create_user_test.go` defaultSubscriptionAssignerStub/settingRepoStub 未定义
+   - 需要单独 PR 修复
+
+3. **生产撞表风险未触发**
+   - 本周期未碰任何 migration，`payment_orders` 表撞库风险待 Phase 2 处理
+
+### 部署状态
+
+- **测试环境**: 未部署（本周期合入的 slice 都已在 fork main，但服务器 git pull 未触发；需后续单独评估部署窗口）
+- **生产环境**: 未部署
+- **DB schema**: 未变更
+
+### 下次同步建议
+
+- **频率**: 上游 v0.1.119 之后再积累至 ~50 commit 再启动下次 sync
+- **优先 Phase 2**: 在下次同步前先解决 payment/auth/affiliate 方向，否则 HOLD 会越滚越大
 
 ### slice-2-openai-core
 - **状态**: pending
