@@ -172,25 +172,26 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 > 每个切片 merge 后回填这里。SQL/migration/wire/ent 改动单独详记到下方变更登记区。
 
 ### slice-0-easy
-- **状态**: in_progress（PR 已开，待 review）
+- **状态**: ✅ done（merged at d80a3827）
 - **分支**: `sync/2026-04/slice-0-easy`
+- **PR**: [ddnio/sub2api#9](https://github.com/ddnio/sub2api/pull/9)
 - **计划包含 PR**: #1753, #1663, #1635, #1624, #1543
 - **实际 cherry-pick**: #1543, #1663, #1753（3 个成功）
 - **跳过**: #1624 / #1635 — 上游 sidebar version dropdown 修复，fork sidebar 已重构（floating-contact + sora 移除），冲突过大且功能不适用，downgrade 到 HOLD
-- **build 验证**: ✅ go build ./... + pnpm build 全部通过
+- **kimi review**: approve（无 critical，2 个 nit 已记录）
+- **build 验证**: ✅ go build / go test / pnpm build / vue-tsc 全部通过
 - **冲突**: 仅 i18n/zh.ts 自动 merge 通过；sidebar 两个 PR 因 fork 重构 skip
 - **Schema/Generated Code 改动**: 无
+- **merge SHA**: d80a3827
 
 ### slice-1-anthropic
-- **状态**: pending
+- **状态**: in_progress（PR 已开，待 review）
 - **分支**: `sync/2026-04/slice-1-anthropic`
-- **包含 PR**: #2066, #1996, #1970, #1623, #1587, #1920
-- **PR**:
-- **kimi review**:
-- **build 验证（go/pnpm/ent generate）**:
-- **冲突**:
-- **Schema/Generated Code 改动**:
-- **merge SHA**:
+- **包含 PR**: #1587, #1623, #1920, #1970, #1996, #2066（按 upstream 时间序）
+- **PR**:（待开）
+- **build 验证**: ✅ go build + pnpm build 全过
+- **冲突**: 无（6 个 cherry-pick 全部 clean apply）
+- **Schema/Generated Code 改动**: 无
 
 ### slice-2-openai-core
 - **状态**: pending
