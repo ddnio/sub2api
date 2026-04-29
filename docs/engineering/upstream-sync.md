@@ -170,6 +170,7 @@ jobs:
 |------|---------|-------|---------|------|
 | 2026-03-29 | ~ v0.1.105 | — | TLS 指纹、Privacy 模式、Responses↔Anthropic 双向转换 | main |
 | 2026-04-11 | v0.1.105 → v0.1.130 | 225 | channel 定价、OIDC 登录、删除 Sora、LoadFactor fix | feature/upstream-sync-channel-pricing |
+| 2026-04-29 | v0.1.105 → v0.1.119（中间态） | 539 | 切片增量同步：anthropic/openai/codex 修复 + ops/frontend；hold payment/auth/affiliate。详细台账 [`upstream-sync-2026-04.md`](./upstream-sync-2026-04.md) | worktree-upstream-sync-2026-04 |
 
 ---
 
