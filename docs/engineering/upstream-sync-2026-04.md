@@ -60,13 +60,13 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 | 标签 | 数量 | 处理 |
 |---|---|---|
 | **AUTO-PICK** | 3 | slice-0 已完成 |
-| **KIMI-REVIEW** | 30 | 进度：slice-0/1 done, slice-2 in_progress, 4 个待启动 |
-| **HOLD** | 28 | 留给最后人工逐个对齐 |
+| **KIMI-REVIEW** | 28 | 进度：slice-0/1/2 done, slice-3 in_progress, 4 个待启动 |
+| **HOLD** | 30 | 留给最后人工逐个对齐 |
 
 注：
 - AUTO-PICK 原 5：slice-0 时 #1624/#1635 sidebar 已重构 skip 转 HOLD → 实际 3
-- KIMI-REVIEW 原 31 + 从 HOLD 提 #1766 = 32；slice-2 时 #1943/#1960 依赖 signature 重构 skip 转 HOLD → 30
-- HOLD 原 24 + slice-0 转 2 + slice-2 转 2 = 28
+- KIMI-REVIEW 原 31 + 从 HOLD 提 #1766 = 32；slice-2 #1943/#1960 + slice-3 #1766/#1895 转 HOLD → 28
+- HOLD 原 24 + 各 slice 转入 6（#1624/#1635/#1943/#1960/#1766/#1895）= 30
 
 ---
 
@@ -196,13 +196,26 @@ cd ../frontend && pnpm build 2>&1 | tail -30
 - **merge SHA**: a53527fa
 
 ### slice-2-openai-core
-- **状态**: in_progress（PR 已开，待 review）
+- **状态**: ✅ done（merged at 2ce67ca4）
 - **分支**: `sync/2026-04/slice-2-openai-core`
+- **PR**: [ddnio/sub2api#11](https://github.com/ddnio/sub2api/pull/11)
 - **计划包含 PR**: #1668, #1687, #1683, #1772, #1943, #1960, #1948
 - **实际 cherry-pick**: #1668, #1687, #1683, #1772, #1948（5 个）
 - **跳过**: #1943 / #1960 — 依赖未拉的上游 refactor（`handleStreamingResponsePassthrough` 增加 `originalModel/mappedModel` 参数），手术整合风险大，转 HOLD
-- **build 验证**: ✅ go build + pnpm build 全过
-- **冲突**: #1943/#1960 因 signature 依赖 skip；其余 clean apply
+- **额外 fix**: 2 处 test 签名适配（kimi review 反馈）
+- **kimi review**: 3 轮 → approve（首轮 critical 修复后通过）
+- **build 验证**: ✅ go build + pnpm build + 相关测试全过
+- **Schema/Generated Code 改动**: 无
+- **merge SHA**: 2ce67ca4
+
+### slice-3-codex
+- **状态**: in_progress（PR 待开）
+- **分支**: `sync/2026-04/slice-3-codex`
+- **计划包含 PR**: #1575, #1690, #1766, #1910, #1895, #1911
+- **实际 cherry-pick**: #1575, #1690, #1910, #1911（4 个）
+- **跳过**: #1766 (codex-drop-removed-models)、#1895 (codex-spark-limitations) — useModelWhitelist.ts / openai_codex_transform.go 多处冲突，转 HOLD
+- **额外 fix**: 临时添加本地 `firstNonEmptyString` helper（slice-4 openai_images.go 会替换）
+- **build 验证**: ✅ go build + pnpm build + go vet 全过
 - **Schema/Generated Code 改动**: 无
 
 ### slice-2-openai-core
