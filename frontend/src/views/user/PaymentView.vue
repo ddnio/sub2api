@@ -76,7 +76,8 @@
               />
             </div>
             <p class="mt-1 text-xs text-gray-400">
-              {{ t('payment.topupMin', { min: 10 }) }} · {{ t('payment.topupMax', { max: 10000 }) }}
+              {{ t('payment.topupMin', { min: minTopupAmount }) }}
+              <span v-if="maxTopupAmount > 0"> · {{ t('payment.topupMax', { max: maxTopupAmount }) }}</span>
             </p>
           </div>
           <!-- 快捷金额 -->
@@ -102,7 +103,7 @@
           </div>
           <button
             class="btn btn-primary w-full"
-            :disabled="!topupAmount || topupAmount < MIN_TOPUP_AMOUNT || topupAmount > MAX_TOPUP_AMOUNT || creatingOrder"
+            :disabled="!topupAmount || topupAmount < minTopupAmount || (maxTopupAmount > 0 && topupAmount > maxTopupAmount) || balanceDisabled || creatingOrder"
             @click="createTopupOrder"
           >
             {{ creatingOrder ? t('payment.paying') : t('payment.confirmPayment') }}
@@ -258,10 +259,25 @@ const loadPlans = async () => {
 }
 
 // 充值
-const MIN_TOPUP_AMOUNT = 10
-const MAX_TOPUP_AMOUNT = 10000
+const minTopupAmount = ref(1)
+const maxTopupAmount = ref(0)
+const balanceDisabled = ref(false)
 const topupAmount = ref<number | null>(null)
 const quickAmounts = [10, 30, 50, 100, 200, 500]
+
+const loadCheckoutInfo = async () => {
+  try {
+    const info = await paymentAPI.getCheckoutInfo()
+    minTopupAmount.value = info.global_min > 0 ? info.global_min : 1
+    maxTopupAmount.value = info.global_max || 0
+    balanceDisabled.value = info.balance_disabled
+    if (info.plans?.length) {
+      plans.value = info.plans
+    }
+  } catch {
+    // Keep defaults and let order creation surface the server-side error.
+  }
+}
 
 // 支付方式
 const selectedPaymentType = ref<string>('wxpay')
@@ -320,12 +336,16 @@ const openPlanPayment = async (plan: PaymentPlan) => {
 }
 
 const createTopupOrder = async () => {
-  if (!topupAmount.value || topupAmount.value < MIN_TOPUP_AMOUNT) {
-    appStore.showError(t('payment.topupMin', { min: MIN_TOPUP_AMOUNT }))
+  if (balanceDisabled.value) {
+    appStore.showError(t('common.error'))
     return
   }
-  if (topupAmount.value > MAX_TOPUP_AMOUNT) {
-    appStore.showError(t('payment.topupMax', { max: MAX_TOPUP_AMOUNT }))
+  if (!topupAmount.value || topupAmount.value < minTopupAmount.value) {
+    appStore.showError(t('payment.topupMin', { min: minTopupAmount.value }))
+    return
+  }
+  if (maxTopupAmount.value > 0 && topupAmount.value > maxTopupAmount.value) {
+    appStore.showError(t('payment.topupMax', { max: maxTopupAmount.value }))
     return
   }
   creatingOrder.value = true
@@ -439,6 +459,7 @@ watch(activeTab, (tab) => {
 })
 
 onMounted(() => {
+  loadCheckoutInfo()
   loadPlans()
 })
 

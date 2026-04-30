@@ -39,6 +39,15 @@ describe('payment API contracts', () => {
     expect(result.status).toBe('COMPLETED')
   })
 
+  it('loads checkout info from the upstream payment v2 aggregate endpoint', async () => {
+    mockedClient.get.mockResolvedValueOnce({ data: { global_min: 1, global_max: 10000, methods: {}, plans: [] } })
+
+    const result = await paymentAPI.getCheckoutInfo()
+
+    expect(mockedClient.get).toHaveBeenCalledWith('/payment/checkout-info')
+    expect(result.global_min).toBe(1)
+  })
+
   it('uses upstream admin order operations', async () => {
     mockedClient.get.mockResolvedValueOnce({ data: { total_count: 3 } })
     mockedClient.post.mockResolvedValueOnce({ data: undefined })

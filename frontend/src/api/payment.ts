@@ -54,8 +54,32 @@ export interface OrderStatusResponse {
   status: string
 }
 
+export interface PaymentCheckoutInfo {
+  methods: Record<string, {
+    payment_type: string
+    fee_rate: number
+    daily_limit: number
+    single_min: number
+    single_max: number
+  }>
+  global_min: number
+  global_max: number
+  plans: PaymentPlan[]
+  balance_disabled: boolean
+  balance_recharge_multiplier: number
+  recharge_fee_rate: number
+  help_text: string
+  help_image_url: string
+  stripe_publishable_key: string
+}
+
 async function listPlans(): Promise<PaymentPlan[]> {
   const { data } = await apiClient.get('/payment/plans')
+  return data
+}
+
+async function getCheckoutInfo(): Promise<PaymentCheckoutInfo> {
+  const { data } = await apiClient.get('/payment/checkout-info')
   return data
 }
 
@@ -94,6 +118,7 @@ async function getOrderStatus(id: number): Promise<OrderStatusResponse> {
 
 export const paymentAPI = {
   listPlans,
+  getCheckoutInfo,
   createOrder,
   listOrders,
   getOrder,
