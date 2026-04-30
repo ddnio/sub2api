@@ -15,14 +15,16 @@ export interface AdminPaymentOrder extends PaymentOrder {
   callback_raw: string | null
 }
 
-export interface OrderStats {
-  total_orders: number
+export interface DashboardStats {
+  today_amount: number
   total_amount: number
-  paid_orders: number
-  paid_amount: number
-  completed_orders: number
-  completed_amount: number
-  breakdown: StatsBreakdown[]
+  today_count: number
+  total_count: number
+  avg_amount: number
+  pending_orders: number
+  daily_series: StatsBreakdown[]
+  payment_methods: Array<{ type: string; amount: number; count: number }>
+  top_users: Array<{ user_id: number; email: string; amount: number }>
 }
 
 export interface StatsBreakdown {
@@ -63,14 +65,8 @@ export interface PaymentConfig {
   help_text: string
 }
 
-async function listPlans(
-  page: number,
-  pageSize: number,
-  _params: Record<string, any>,
-  options?: FetchOptions
-): Promise<BasePaginationResponse<AdminPaymentPlan>> {
+async function listPlans(options?: FetchOptions): Promise<AdminPaymentPlan[]> {
   const { data } = await apiClient.get('/admin/payment/plans', {
-    params: { page, page_size: pageSize },
     signal: options?.signal
   })
   return data
@@ -120,20 +116,23 @@ async function getOrder(id: number): Promise<AdminPaymentOrder> {
   return data
 }
 
-async function completeOrder(id: number, adminNote?: string): Promise<void> {
-  await apiClient.post(`/admin/payment/orders/${id}/complete`, { admin_note: adminNote })
+async function retryOrder(id: number): Promise<void> {
+  await apiClient.post(`/admin/payment/orders/${id}/retry`)
 }
 
-async function refundOrder(id: number, adminNote?: string): Promise<void> {
-  await apiClient.post(`/admin/payment/orders/${id}/refund`, { admin_note: adminNote })
+async function refundOrder(id: number, req: {
+  amount?: number
+  reason?: string
+  deduct_balance?: boolean
+  force?: boolean
+}): Promise<void> {
+  await apiClient.post(`/admin/payment/orders/${id}/refund`, req)
 }
 
-async function getOrderStats(params: {
-  start_date?: string
-  end_date?: string
-  group_by?: string
-}): Promise<OrderStats> {
-  const { data } = await apiClient.get('/admin/payment/orders/stats', { params })
+async function getDashboard(days?: number): Promise<DashboardStats> {
+  const { data } = await apiClient.get('/admin/payment/dashboard', {
+    params: days ? { days } : undefined
+  })
   return data
 }
 
@@ -191,9 +190,9 @@ const adminPaymentAPI = {
   deletePlan,
   listOrders,
   getOrder,
-  completeOrder,
+  retryOrder,
   refundOrder,
-  getOrderStats,
+  getDashboard,
   listProviders,
   createProvider,
   updateProvider,

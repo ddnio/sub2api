@@ -75,21 +75,27 @@ async function listOrders(
   params: { status?: string; order_type?: string },
   options?: FetchOptions
 ): Promise<BasePaginationResponse<PaymentOrder>> {
-  const { data } = await apiClient.get('/payment/orders', {
+  const { data } = await apiClient.get('/payment/orders/my', {
     params: { page, page_size: pageSize, ...params },
     signal: options?.signal
   })
   return data
 }
 
-async function getOrderStatus(id: number): Promise<OrderStatusResponse> {
-  const { data } = await apiClient.get(`/payment/orders/${id}/status`)
+async function getOrder(id: number): Promise<PaymentOrder> {
+  const { data } = await apiClient.get(`/payment/orders/${id}`)
   return data
+}
+
+async function getOrderStatus(id: number): Promise<OrderStatusResponse> {
+  const order = await getOrder(id)
+  return { status: order.status }
 }
 
 export const paymentAPI = {
   listPlans,
   createOrder,
   listOrders,
+  getOrder,
   getOrderStatus
 }

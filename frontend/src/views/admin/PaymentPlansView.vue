@@ -39,15 +39,6 @@
         </DataTable>
       </template>
 
-      <template #pagination>
-        <Pagination
-          v-if="pagination.total > pagination.page_size"
-          :page="pagination.page"
-          :total="pagination.total"
-          :page-size="pagination.page_size"
-          @update:page="handlePageChange"
-        />
-      </template>
     </TablePageLayout>
 
     <!-- 创建/编辑弹窗 -->
@@ -133,11 +124,9 @@ import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI, type AdminPaymentPlan } from '@/api/admin'
 import { useAppStore } from '@/stores/app'
-import { useTableLoader } from '@/composables/useTableLoader'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
-import Pagination from '@/components/common/Pagination.vue'
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -152,11 +141,18 @@ const columns = [
   { key: 'actions', label: '' }
 ]
 
-const { items, loading, pagination, load, handlePageChange } = useTableLoader({
-  fetchFn: (page, pageSize, params, options) =>
-    adminAPI.payment.listPlans(page, pageSize, params, options),
-  initialParams: {}
-})
+const items = ref<AdminPaymentPlan[]>([])
+const loading = ref(false)
+const load = async () => {
+  loading.value = true
+  try {
+    items.value = await adminAPI.payment.listPlans()
+  } catch (e: any) {
+    appStore.showError(e?.response?.data?.message || e?.message || t('common.error'))
+  } finally {
+    loading.value = false
+  }
+}
 
 // 分组列表
 interface Group { id: number; name: string }

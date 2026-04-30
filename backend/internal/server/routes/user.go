@@ -103,19 +103,6 @@ func RegisterUserRoutes(
 			referral.GET("", h.Referral.GetReferralInfo)
 			referral.GET("/list", h.Referral.ListReferrals)
 		}
-
-		// 支付
-		registerPaymentRoutes(authenticated, h)
-	}
-}
-
-func registerPaymentRoutes(authenticated *gin.RouterGroup, h *handler.Handlers) {
-	payment := authenticated.Group("/payment")
-	{
-		payment.GET("/plans", h.Payment.GetPlans)
-		payment.POST("/orders", h.Payment.CreateOrder)
-		payment.GET("/orders", h.Payment.GetMyOrders)
-		payment.GET("/orders/:id", h.Payment.GetOrder)
 	}
 }
 

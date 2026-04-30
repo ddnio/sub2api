@@ -33,27 +33,27 @@
         <div class="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           <div class="card p-4 text-center">
             <p class="text-xs text-gray-500">{{ t('adminPayment.totalOrders') }}</p>
-            <p class="text-xl font-bold">{{ stats.total_orders }}</p>
+            <p class="text-xl font-bold">{{ stats.total_count }}</p>
           </div>
           <div class="card p-4 text-center">
             <p class="text-xs text-gray-500">{{ t('adminPayment.totalAmount') }}</p>
             <p class="text-xl font-bold text-primary-600">¥{{ stats.total_amount.toFixed(2) }}</p>
           </div>
           <div class="card p-4 text-center">
-            <p class="text-xs text-gray-500">{{ t('adminPayment.paidOrders') }}</p>
-            <p class="text-xl font-bold">{{ stats.paid_orders }}</p>
+            <p class="text-xs text-gray-500">{{ t('adminPayment.todayOrders') }}</p>
+            <p class="text-xl font-bold">{{ stats.today_count }}</p>
           </div>
           <div class="card p-4 text-center">
-            <p class="text-xs text-gray-500">{{ t('adminPayment.paidAmount') }}</p>
-            <p class="text-xl font-bold text-blue-600">¥{{ stats.paid_amount.toFixed(2) }}</p>
+            <p class="text-xs text-gray-500">{{ t('adminPayment.todayAmount') }}</p>
+            <p class="text-xl font-bold text-blue-600">¥{{ stats.today_amount.toFixed(2) }}</p>
           </div>
           <div class="card p-4 text-center">
-            <p class="text-xs text-gray-500">{{ t('adminPayment.completedOrders') }}</p>
-            <p class="text-xl font-bold">{{ stats.completed_orders }}</p>
+            <p class="text-xs text-gray-500">{{ t('adminPayment.pendingOrders') }}</p>
+            <p class="text-xl font-bold">{{ stats.pending_orders }}</p>
           </div>
           <div class="card p-4 text-center">
-            <p class="text-xs text-gray-500">{{ t('adminPayment.completedAmount') }}</p>
-            <p class="text-xl font-bold text-green-600">¥{{ stats.completed_amount.toFixed(2) }}</p>
+            <p class="text-xs text-gray-500">{{ t('adminPayment.avgAmount') }}</p>
+            <p class="text-xl font-bold text-green-600">¥{{ stats.avg_amount.toFixed(2) }}</p>
           </div>
         </div>
       </template>
@@ -78,10 +78,10 @@
             <div class="flex items-center gap-2">
               <button
                 v-if="(row as AdminPaymentOrder).status === 'PAID'"
-                @click="openAction(row as AdminPaymentOrder, 'complete')"
+                @click="openAction(row as AdminPaymentOrder, 'retry')"
                 class="btn btn-success btn-sm"
               >
-                {{ t('adminPayment.completeOrder') }}
+                {{ t('adminPayment.retryOrder') }}
               </button>
               <button
                 v-if="['PAID', 'COMPLETED'].includes((row as AdminPaymentOrder).status)"
@@ -112,20 +112,20 @@
         <div class="fixed inset-0 bg-black/50" @click="showActionDialog = false"></div>
         <div class="relative z-10 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
           <h2 class="mb-2 text-base font-semibold">
-            {{ actionType === 'complete' ? t('adminPayment.completeOrder') : t('adminPayment.refundOrder') }}
+            {{ actionType === 'retry' ? t('adminPayment.retryOrder') : t('adminPayment.refundOrder') }}
           </h2>
           <p class="mb-3 text-sm text-gray-500">
-            {{ actionType === 'complete' ? t('adminPayment.confirmComplete') : t('adminPayment.confirmRefund') }}
+            {{ actionType === 'retry' ? t('adminPayment.confirmRetry') : t('adminPayment.confirmRefund') }}
           </p>
           <div class="mb-1 text-xs text-gray-400">{{ t('payment.orderNo') }}: {{ actionOrder?.out_trade_no }}</div>
           <div class="mb-4 text-sm font-medium">¥{{ actionOrder?.amount?.toFixed(2) }}</div>
           <div class="mb-4">
-            <label class="input-label">{{ t('adminPayment.adminNote') }}</label>
-            <input v-model="actionNote" class="input" :placeholder="t('adminPayment.adminNote')" />
+            <label class="input-label">{{ actionType === 'retry' ? t('adminPayment.adminNote') : t('adminPayment.refundReason') }}</label>
+            <input v-model="actionNote" class="input" :placeholder="actionType === 'retry' ? t('adminPayment.adminNote') : t('adminPayment.refundReason')" />
           </div>
           <div class="flex justify-end gap-3">
             <button @click="showActionDialog = false" class="btn btn-secondary">{{ t('common.cancel') }}</button>
-            <button @click="doAction" :disabled="submitting" :class="['btn', actionType === 'complete' ? 'btn-success' : 'btn-danger']">
+            <button @click="doAction" :disabled="submitting" :class="['btn', actionType === 'retry' ? 'btn-success' : 'btn-danger']">
               {{ submitting ? t('common.saving') : t('common.confirm') }}
             </button>
           </div>
@@ -138,7 +138,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { adminAPI, type AdminPaymentOrder, type OrderStats } from '@/api/admin'
+import { adminAPI, type AdminPaymentOrder, type DashboardStats } from '@/api/admin'
 import { useAppStore } from '@/stores/app'
 import { useTableLoader } from '@/composables/useTableLoader'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -185,10 +185,10 @@ const { items, loading, params, pagination, load, reload, handlePageChange } = u
 
 // 统计
 const showStats = ref(false)
-const stats = ref<OrderStats | null>(null)
+const stats = ref<DashboardStats | null>(null)
 const loadStats = async () => {
   try {
-    stats.value = await adminAPI.payment.getOrderStats({})
+    stats.value = await adminAPI.payment.getDashboard()
   } catch {
     // ignore
   }
@@ -196,12 +196,12 @@ const loadStats = async () => {
 
 // 操作
 const showActionDialog = ref(false)
-const actionType = ref<'complete' | 'refund'>('complete')
+const actionType = ref<'retry' | 'refund'>('retry')
 const actionOrder = ref<AdminPaymentOrder | null>(null)
 const actionNote = ref('')
 const submitting = ref(false)
 
-const openAction = (order: AdminPaymentOrder, type: 'complete' | 'refund') => {
+const openAction = (order: AdminPaymentOrder, type: 'retry' | 'refund') => {
   actionOrder.value = order
   actionType.value = type
   actionNote.value = ''
@@ -212,10 +212,14 @@ const doAction = async () => {
   if (!actionOrder.value) return
   submitting.value = true
   try {
-    if (actionType.value === 'complete') {
-      await adminAPI.payment.completeOrder(actionOrder.value.id, actionNote.value || undefined)
+    if (actionType.value === 'retry') {
+      await adminAPI.payment.retryOrder(actionOrder.value.id)
     } else {
-      await adminAPI.payment.refundOrder(actionOrder.value.id, actionNote.value || undefined)
+      await adminAPI.payment.refundOrder(actionOrder.value.id, {
+        amount: actionOrder.value.amount,
+        reason: actionNote.value || undefined,
+        deduct_balance: true
+      })
     }
     showActionDialog.value = false
     reload()

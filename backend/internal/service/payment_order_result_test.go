@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
@@ -91,54 +90,8 @@ func TestBuildCreateOrderResponseCopiesJSAPIPayload(t *testing.T) {
 	}
 }
 
-func TestMaybeBuildWeChatOAuthRequiredResponse(t *testing.T) {
+func TestMaybeBuildWeChatOAuthRequiredResponseRequiresMPConfigInFork(t *testing.T) {
 	t.Setenv("PAYMENT_RESUME_SIGNING_KEY", "0123456789abcdef0123456789abcdef")
-
-	svc := newWeChatPaymentOAuthTestService(map[string]string{
-		SettingKeyWeChatConnectEnabled:             "true",
-		SettingKeyWeChatConnectAppID:               "wx123456",
-		SettingKeyWeChatConnectAppSecret:           "wechat-secret",
-		SettingKeyWeChatConnectMode:                "mp",
-		SettingKeyWeChatConnectScopes:              "snsapi_base",
-		SettingKeyWeChatConnectRedirectURL:         "https://api.example.com/api/v1/auth/oauth/wechat/callback",
-		SettingKeyWeChatConnectFrontendRedirectURL: "/auth/wechat/callback",
-	})
-
-	resp, err := svc.maybeBuildWeChatOAuthRequiredResponse(context.Background(), CreateOrderRequest{
-		Amount:          12.5,
-		PaymentType:     payment.TypeWxpay,
-		IsWeChatBrowser: true,
-		SrcURL:          "https://merchant.example/payment?from=wechat",
-		OrderType:       payment.OrderTypeBalance,
-	}, 12.5, 12.88, 0.03)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if resp == nil {
-		t.Fatal("expected oauth_required response, got nil")
-	}
-	if resp.ResultType != payment.CreatePaymentResultOAuthRequired {
-		t.Fatalf("result type = %q, want %q", resp.ResultType, payment.CreatePaymentResultOAuthRequired)
-	}
-	if resp.OAuth == nil {
-		t.Fatal("expected oauth payload, got nil")
-	}
-	if resp.OAuth.AppID != "wx123456" {
-		t.Fatalf("appid = %q, want %q", resp.OAuth.AppID, "wx123456")
-	}
-	if resp.OAuth.Scope != "snsapi_base" {
-		t.Fatalf("scope = %q, want %q", resp.OAuth.Scope, "snsapi_base")
-	}
-	if resp.OAuth.RedirectURL != "/auth/wechat/payment/callback" {
-		t.Fatalf("redirect_url = %q, want %q", resp.OAuth.RedirectURL, "/auth/wechat/payment/callback")
-	}
-	if resp.OAuth.AuthorizeURL != "/api/v1/auth/oauth/wechat/payment/start?amount=12.5&order_type=balance&payment_type=wxpay&redirect=%2Fpurchase%3Ffrom%3Dwechat&scope=snsapi_base" {
-		t.Fatalf("authorize_url = %q", resp.OAuth.AuthorizeURL)
-	}
-}
-
-func TestMaybeBuildWeChatOAuthRequiredResponseRequiresMPConfigInWeChat(t *testing.T) {
-	t.Parallel()
 
 	svc := newWeChatPaymentOAuthTestService(nil)
 
@@ -162,93 +115,8 @@ func TestMaybeBuildWeChatOAuthRequiredResponseRequiresMPConfigInWeChat(t *testin
 	}
 }
 
-func TestMaybeBuildWeChatOAuthRequiredResponseRequiresResumeSigningKey(t *testing.T) {
-	t.Parallel()
-
-	svc := &PaymentService{
-		configService: &PaymentConfigService{
-			settingRepo: &paymentConfigSettingRepoStub{values: map[string]string{
-				SettingKeyWeChatConnectEnabled:             "true",
-				SettingKeyWeChatConnectAppID:               "wx123456",
-				SettingKeyWeChatConnectAppSecret:           "wechat-secret",
-				SettingKeyWeChatConnectMode:                "mp",
-				SettingKeyWeChatConnectScopes:              "snsapi_base",
-				SettingKeyWeChatConnectRedirectURL:         "https://api.example.com/api/v1/auth/oauth/wechat/callback",
-				SettingKeyWeChatConnectFrontendRedirectURL: "/auth/wechat/callback",
-			}},
-			// Intentionally missing payment resume signing key.
-			encryptionKey: nil,
-		},
-	}
-
-	resp, err := svc.maybeBuildWeChatOAuthRequiredResponse(context.Background(), CreateOrderRequest{
-		Amount:          12.5,
-		PaymentType:     payment.TypeWxpay,
-		IsWeChatBrowser: true,
-		SrcURL:          "https://merchant.example/payment?from=wechat",
-		OrderType:       payment.OrderTypeBalance,
-	}, 12.5, 12.88, 0.03)
-	if resp != nil {
-		t.Fatalf("expected nil response, got %+v", resp)
-	}
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-
-	appErr := infraerrors.FromError(err)
-	if appErr.Reason != "PAYMENT_RESUME_NOT_CONFIGURED" {
-		t.Fatalf("reason = %q, want %q", appErr.Reason, "PAYMENT_RESUME_NOT_CONFIGURED")
-	}
-}
-
-func TestMaybeBuildWeChatOAuthRequiredResponseFallsBackToConfiguredLegacySigningKey(t *testing.T) {
-	svc := &PaymentService{
-		configService: &PaymentConfigService{
-			settingRepo: &paymentConfigSettingRepoStub{values: map[string]string{
-				SettingKeyWeChatConnectEnabled:             "true",
-				SettingKeyWeChatConnectAppID:               "wx123456",
-				SettingKeyWeChatConnectAppSecret:           "wechat-secret",
-				SettingKeyWeChatConnectMode:                "mp",
-				SettingKeyWeChatConnectScopes:              "snsapi_base",
-				SettingKeyWeChatConnectRedirectURL:         "https://api.example.com/api/v1/auth/oauth/wechat/callback",
-				SettingKeyWeChatConnectFrontendRedirectURL: "/auth/wechat/callback",
-			}},
-			// Legacy stable signing key remains available for no-config upgrade compatibility.
-			encryptionKey: []byte("0123456789abcdef0123456789abcdef"),
-		},
-	}
-
-	resp, err := svc.maybeBuildWeChatOAuthRequiredResponse(context.Background(), CreateOrderRequest{
-		Amount:          12.5,
-		PaymentType:     payment.TypeWxpay,
-		IsWeChatBrowser: true,
-		SrcURL:          "https://merchant.example/payment?from=wechat",
-		OrderType:       payment.OrderTypeBalance,
-	}, 12.5, 12.88, 0.03)
-	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
-	}
-	if resp == nil {
-		t.Fatal("expected oauth-required response, got nil")
-	}
-	if resp.ResultType != payment.CreatePaymentResultOAuthRequired {
-		t.Fatalf("result type = %q, want %q", resp.ResultType, payment.CreatePaymentResultOAuthRequired)
-	}
-	if resp.OAuth == nil || strings.TrimSpace(resp.OAuth.AuthorizeURL) == "" {
-		t.Fatalf("expected oauth redirect payload, got %+v", resp.OAuth)
-	}
-}
-
 func TestMaybeBuildWeChatOAuthRequiredResponseForSelectionSkipsEasyPayProvider(t *testing.T) {
-	svc := newWeChatPaymentOAuthTestService(map[string]string{
-		SettingKeyWeChatConnectEnabled:             "true",
-		SettingKeyWeChatConnectAppID:               "wx123456",
-		SettingKeyWeChatConnectAppSecret:           "wechat-secret",
-		SettingKeyWeChatConnectMode:                "mp",
-		SettingKeyWeChatConnectScopes:              "snsapi_base",
-		SettingKeyWeChatConnectRedirectURL:         "https://api.example.com/api/v1/auth/oauth/wechat/callback",
-		SettingKeyWeChatConnectFrontendRedirectURL: "/auth/wechat/callback",
-	})
+	svc := newWeChatPaymentOAuthTestService(nil)
 
 	resp, err := svc.maybeBuildWeChatOAuthRequiredResponseForSelection(context.Background(), CreateOrderRequest{
 		Amount:          12.5,

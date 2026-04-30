@@ -86,9 +86,6 @@ func RegisterAdminRoutes(
 		// 定时测试计划
 		registerScheduledTestRoutes(admin, h)
 
-		// 支付管理
-		registerAdminPaymentRoutes(admin, h)
-
 		// 渠道管理
 		registerChannelRoutes(admin, h)
 	}
