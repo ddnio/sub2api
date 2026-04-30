@@ -21,6 +21,9 @@ DO $$ BEGIN
 END $$;
 
 -- Restore historical data with field mapping.
+-- NOTE: out_trade_no is NOT included here — column is added by 102_add_out_trade_no_to_payment_orders.sql
+-- which runs after this file. The DEFAULT '' in 102 is equivalent to COALESCE(bak.order_no, '').
+-- To backfill out_trade_no from backup, see the UPDATE below (runs after 102).
 INSERT INTO payment_orders (
   id,
   user_id,
@@ -30,7 +33,6 @@ INSERT INTO payment_orders (
   pay_amount,
   payment_type,
   payment_trade_no,
-  out_trade_no,
   order_type,
   plan_id,
   status,
@@ -51,7 +53,6 @@ SELECT
   ROUND(bak.amount::numeric, 2),                                       -- pay_amount = amount (no fee)
   COALESCE(bak.provider, ''),                                          -- provider → payment_type
   COALESCE(bak.provider_order_no, ''),                                 -- → payment_trade_no
-  COALESCE(bak.order_no, ''),                                          -- order_no → out_trade_no
   CASE bak.type WHEN 'plan' THEN 'subscription' ELSE 'balance' END,   -- type → order_type
   bak.plan_id,
   UPPER(bak.status),                                                   -- lowercase → UPPERCASE
