@@ -560,6 +560,15 @@ func registerAdminPaymentRoutes(adminGroup *gin.RouterGroup, h *handler.Handlers
 		orders.GET("/:id", h.Admin.Payment.GetOrderDetail)
 		orders.POST("/:id/refund", h.Admin.Payment.ProcessRefund)
 	}
+	providers := adminGroup.Group("/payment/providers")
+	{
+		providers.GET("", h.Admin.Payment.ListProviders)
+		providers.POST("", h.Admin.Payment.CreateProvider)
+		providers.PUT("/:id", h.Admin.Payment.UpdateProvider)
+		providers.DELETE("/:id", h.Admin.Payment.DeleteProvider)
+	}
+	adminGroup.GET("/payment/config", h.Admin.Payment.GetConfig)
+	adminGroup.PUT("/payment/config", h.Admin.Payment.UpdateConfig)
 }
 
 func registerTLSFingerprintProfileRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
