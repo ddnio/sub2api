@@ -363,18 +363,21 @@ DROP TABLE IF EXISTS payment_orders_v1_backup;
 每次部署填写并提交本表到 git（`docs/engineering/payment-b2-deploy-log.md`）：
 
 ### 测试环境部署记录
+
 | 字段 | 值 |
 |---|---|
-| 部署时间 | 待填 |
-| 部署人 | 待填 |
-| 部署分支/commit | 待填 |
-| pg_dump 备份文件 | 待填 |
-| Preflight 检查结果 | 全部 0 ✓ |
-| Migration 日志关键节点 | 待填 |
-| 数据完整性验证 | 待填（new_orders 数 / backup 数） |
-| Provider 配置时间 | 待填 |
-| 端到端测试结果 | 待填（测试订单 ID） |
-| 异常 / 备注 | 待填 |
+| 部署时间 | 2026-04-30 19:00 (CST) |
+| 部署人 | nio |
+| 部署分支/commit | worktree-payment-b2 / `ac575113` |
+| pg_dump 备份文件 | `/data/backups/sub2api_test_pre_b2_20260430-1054.sql`（57MB，chmod 600）|
+| Preflight 检查结果 | bad_amount=0, null_expired=0, orphan_orders=0, fk_to_payment=0 ✓ |
+| 部署中遇到的问题 | **首次部署失败**：`113_normalize_legacy_wechat_provider_key.sql` 引用 `auth_identities` 表（属于 auth identity 模块，非 payment）。删除该文件后重新部署成功。教训：拉 upstream migration 时按内容判断，不能按文件名（"wechat" 可能指 OAuth 不是支付）|
+| Migration 应用数 | 27 个（091a → 112，跳过 113） |
+| 数据完整性验证 | new_orders=18, backup_orders=18 ✓<br>statuses: COMPLETED,EXPIRED,FAILED,REFUNDED（全大写）✓<br>null_expires=0, empty_otn=0 ✓<br>id_seq_last=18 = max_id ✓ |
+| HTTP /health | 200 ✓ |
+| Provider 配置时间 | 待执行（§5）|
+| 端到端测试结果 | 待执行（§6）|
+| 异常 / 备注 | 113 已从 PR 移除（commit `ac575113`），生产部署不会再遇到 |
 
 ### 生产环境部署记录
 （同上结构）
@@ -389,6 +392,7 @@ DROP TABLE IF EXISTS payment_orders_v1_backup;
 | Provider 配置后才能下单 | 部署后到完成 §5 之间用户无法支付 | 部署完立即配置（< 5 min） |
 | 容器 healthcheck 期间 503 | 启动期 `/health` 返回 503 | docker-compose `restart: unless-stopped` 自动恢复 |
 | backup 表占用空间 | 暂不删除（用于回滚） | 7 天后清理（§7） |
+| **拉 upstream migration 按内容判断** | 文件名含 "wechat" 不一定是支付（可能是 OAuth）；含 "auth" 一定不引入 | 测试环境实测；此 PR 已修复 113 问题 |
 
 ---
 
