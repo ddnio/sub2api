@@ -83,16 +83,21 @@ BEGIN
   );
 
   -- Reset BIGSERIAL sequence after explicit id inserts.
-  -- Using COALESCE(..., 0) so next id = 1 on empty table (not 2).
+  -- setval(seq, val, is_called=true): next nextval() returns val+1
+  -- setval(seq, val, is_called=false): next nextval() returns val
+  -- On empty table: MAX(id) IS NULL → use (1, false) so next id = 1
+  -- On non-empty: MAX(id) = N → use (N, true) so next id = N+1
   PERFORM setval(
     'payment_orders_id_seq',
-    COALESCE((SELECT MAX(id) FROM payment_orders), 0)
+    COALESCE((SELECT MAX(id) FROM payment_orders), 1),
+    (SELECT MAX(id) FROM payment_orders) IS NOT NULL
   );
 
-  -- Postcheck: all backup rows must be restored (including orphans via LEFT JOIN).
-  SELECT COUNT(*) INTO new_cnt FROM payment_orders;
+  -- Postcheck: all backup rows should be in payment_orders now.
+  -- Count only rows that came from backup (by id), not the entire table.
+  SELECT COUNT(*) INTO new_cnt FROM payment_orders WHERE id IN (SELECT id FROM payment_orders_v1_backup);
   SELECT COUNT(*) INTO bak_cnt FROM payment_orders_v1_backup;
   IF new_cnt != bak_cnt THEN
-    RAISE EXCEPTION 'POSTCHECK FAILED: payment_orders=% but backup=%', new_cnt, bak_cnt;
+    RAISE EXCEPTION 'POSTCHECK FAILED: restored=% but backup=%', new_cnt, bak_cnt;
   END IF;
 END $$;

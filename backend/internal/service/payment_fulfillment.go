@@ -458,7 +458,7 @@ WHERE NOT EXISTS (
 	WHERE order_id = $1::text
 	  AND action IN ('AFFILIATE_REBATE_APPLIED', 'AFFILIATE_REBATE_SKIPPED')
 )
-ON CONFLICT (order_id, action) DO NOTHING
+ON CONFLICT (order_id, action) WHERE action IN ('AFFILIATE_REBATE_APPLIED', 'AFFILIATE_REBATE_SKIPPED') DO NOTHING
 RETURNING id`, oid, string(detail))
 	if err != nil {
 		return false, err

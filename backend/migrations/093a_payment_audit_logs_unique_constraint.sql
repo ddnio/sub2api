@@ -1,20 +1,26 @@
 -- 093a_payment_audit_logs_unique_constraint.sql
--- Fork patch: add UNIQUE(order_id, action) constraint to payment_audit_logs.
+-- Fork patch: add partial unique constraint to payment_audit_logs for affiliate rebate claim.
 -- Required by payment_fulfillment.go tryClaimAffiliateRebateAudit which uses:
 --   ON CONFLICT (order_id, action) DO NOTHING
--- Without this constraint, ON CONFLICT raises:
---   ERROR: there is no unique or exclusion constraint matching the ON CONFLICT specification
--- Idempotent: checks pg_constraint before adding.
--- Note: ADD CONSTRAINT IF NOT EXISTS is NOT supported in PostgreSQL; use pg_constraint check.
+--
+-- IMPORTANT: Full UNIQUE(order_id, action) would break audit logs that intentionally
+-- write the same action multiple times (e.g., AFFILIATE_REBATE_FAILED, RECHARGE_RETRY).
+-- Solution: partial unique index covering only the two affiliate claim actions.
+--
+-- Idempotent: checks pg_class/pg_index before adding.
+-- Note: ADD CONSTRAINT IF NOT EXISTS is NOT supported in PostgreSQL.
 
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'uq_payment_audit_logs_order_action'
-      AND conrelid = 'payment_audit_logs'::regclass
+    SELECT 1 FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relname = 'uq_payment_audit_logs_affiliate_claim'
+      AND n.nspname = 'public'
   ) THEN
-    ALTER TABLE payment_audit_logs
-      ADD CONSTRAINT uq_payment_audit_logs_order_action
-      UNIQUE (order_id, action);
+    EXECUTE $idx$
+      CREATE UNIQUE INDEX uq_payment_audit_logs_affiliate_claim
+      ON payment_audit_logs (order_id, action)
+      WHERE action IN ('AFFILIATE_REBATE_APPLIED', 'AFFILIATE_REBATE_SKIPPED')
+    $idx$;
   END IF;
 END $$;
