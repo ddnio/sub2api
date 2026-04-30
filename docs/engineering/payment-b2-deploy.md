@@ -60,6 +60,16 @@ ls -lh /data/backups/sub2api_test_pre_b2_${TS}.sql
 chmod 600 /data/backups/sub2api_test_pre_b2_${TS}.sql
 ```
 
+如果 `/data/backups` 无写权限，改用当前登录用户可写目录，例如：
+
+```bash
+mkdir -p /home/nio/backups
+docker exec sub2api-postgres pg_dump -U sub2api sub2api_test \
+  > /home/nio/backups/sub2api_test_pre_b2_${TS}.sql
+ls -lh /home/nio/backups/sub2api_test_pre_b2_${TS}.sql
+chmod 600 /home/nio/backups/sub2api_test_pre_b2_${TS}.sql
+```
+
 生产环境将库名和文件名前缀替换为 `sub2api` / `sub2api_prod`。
 
 Preflight SQL（全部必须为 0）：
@@ -114,7 +124,7 @@ docker logs -f sub2api-prod
 
 日志检查：
 - 不能出现 `panic`、`ERROR`、`POSTCHECK FAILED`、`PREFLIGHT FAILED`。
-- payment migration 应包含 `091a`、`092`、`092b`、`093`、`093a`、`094`、`095`、`095a`、`096`、`096a`、`098`、`099`、`100`、`101`、`102`、`102a`、`103`、`111`、`112`、`117`、`119`、`120`、`120a`。
+- payment migration 应包含 `091a`、`092`、`092b`、`093`、`093a`、`094`、`095`、`095a`、`096`、`096a`、`098`、`099`、`100`、`101`、`102`、`102a`、`103`、`111`、`112`、`117`、`119`、`120`、`120a`、`120b`。
 - `113_normalize_legacy_wechat_provider_key.sql` 属于 upstream auth identity 迁移，不在本 PR 中引入。
 
 ## 5. 部署后验证
@@ -146,6 +156,7 @@ WHERE out_trade_no = '';
 SELECT COUNT(*) FROM payment_audit_logs;
 SELECT COUNT(*) FROM payment_provider_instances;
 SELECT COUNT(*) FROM subscription_plans;
+SELECT COUNT(*) FROM payment_plans;
 
 SELECT conname
 FROM pg_constraint
@@ -165,7 +176,26 @@ SELECT MAX(id) FROM payment_orders;
 - `status` 全部为大写状态。
 - `null_expires = 0`。
 - `payment_provider_instances` 首次部署后通常为 0，配置 Provider 后应增加。
+- `subscription_plans` 是 payment v2 当前套餐表；`120b` 会把旧 `payment_plans` 中未删除的套餐补进 `subscription_plans`。
 - `payment_orders_id_seq.last_value >= MAX(payment_orders.id)`。
+
+## 5.1 旧套餐数据处理
+
+payment v2 的用户套餐页和管理套餐页读取 `subscription_plans`。旧表 `payment_plans` 只保留历史数据；`120b` 会按 `group_id + name` 幂等补齐到新表。
+
+部署后如果 `payment_plans > 0` 且 `subscription_plans = 0`，说明 `120b` 未执行或执行失败，需要先查 `schema_migrations` 和容器启动日志，不要直接部署生产。
+
+手工复核字段映射：`name`、`description`、`group_id`、`duration_days -> validity_days`、`price`、`original_price`、`sort_order`，并设置 `validity_unit='day'`、`for_sale=is_active`。
+
+迁移或重建后复核：
+
+```bash
+docker exec sub2api-postgres psql -U sub2api -d sub2api_test -c "
+SELECT id, group_id, name, price, original_price, validity_days, validity_unit, for_sale, sort_order
+FROM subscription_plans
+ORDER BY sort_order, id;
+"
+```
 
 ## 6. 配置 wxpay Provider
 
