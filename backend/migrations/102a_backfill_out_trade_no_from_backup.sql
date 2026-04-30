@@ -4,11 +4,22 @@
 --
 -- 092b could not include out_trade_no because the column didn't exist yet at 092.
 -- This migration fills in the value from the backup table.
--- Idempotent: UPDATE WHERE out_trade_no = '' is safe to re-run.
+-- Fresh-install safe: skipped if backup table does not exist.
+-- Idempotent: WHERE out_trade_no = '' is safe to re-run.
 
-UPDATE payment_orders po
-SET out_trade_no = COALESCE(bak.order_no, '')
-FROM payment_orders_v1_backup bak
-WHERE po.id = bak.id
-  AND po.out_trade_no = ''
-  AND COALESCE(bak.order_no, '') != '';
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_tables
+    WHERE schemaname = 'public' AND tablename = 'payment_orders_v1_backup'
+  ) THEN
+    RAISE NOTICE '102a: payment_orders_v1_backup not found, skipping (fresh install)';
+    RETURN;
+  END IF;
+
+  UPDATE payment_orders po
+  SET out_trade_no = COALESCE(bak.order_no, '')
+  FROM payment_orders_v1_backup bak
+  WHERE po.id = bak.id
+    AND po.out_trade_no = ''
+    AND COALESCE(bak.order_no, '') != '';
+END $$;
