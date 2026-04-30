@@ -3,40 +3,51 @@ import type { BasePaginationResponse, FetchOptions } from '@/types'
 
 export interface PaymentPlan {
   id: number
+  group_id: number
+  group_platform: string
   name: string
   description: string
-  badge: string | null
-  group_id: number
-  group_name: string
-  duration_days: number
   price: number
   original_price: number | null
+  validity_days: number
+  validity_unit: string
+  features: string
+  product_name: string
+  for_sale: boolean
   sort_order: number
-  is_active: boolean
-  created_at: string
 }
 
 export interface PaymentOrder {
   id: number
-  order_no: string
-  type: string
+  out_trade_no: string
+  order_type: string
   plan_id: number | null
-  plan_name: string | null
   amount: number
-  credit_amount: number | null
-  currency: string
+  pay_amount: number
+  payment_type: string
+  payment_trade_no: string | null
+  qr_code: string | null
+  pay_url: string | null
   status: string
-  provider: string | null
-  provider_order_no: string | null
   paid_at: string | null
   completed_at: string | null
-  expired_at: string
+  expires_at: string
   created_at: string
 }
 
 export interface CreateOrderResponse {
-  order: PaymentOrder
-  qr_code_url: string
+  order_id: number
+  amount: number
+  pay_amount: number
+  fee_rate: number
+  status: string
+  result_type: string
+  payment_type: string
+  out_trade_no: string
+  pay_url: string
+  qr_code: string
+  expires_at: string
+  payment_mode: string
 }
 
 export interface OrderStatusResponse {
@@ -49,10 +60,10 @@ async function listPlans(): Promise<PaymentPlan[]> {
 }
 
 async function createOrder(params: {
-  type: 'plan' | 'topup'
+  order_type: 'balance' | 'subscription'
   plan_id?: number
   amount?: number
-  provider: 'wxpay'
+  payment_type: string
 }): Promise<CreateOrderResponse> {
   const { data } = await apiClient.post('/payment/orders', params)
   return data
@@ -61,7 +72,7 @@ async function createOrder(params: {
 async function listOrders(
   page: number,
   pageSize: number,
-  params: { status?: string; type?: string },
+  params: { status?: string; order_type?: string },
   options?: FetchOptions
 ): Promise<BasePaginationResponse<PaymentOrder>> {
   const { data } = await apiClient.get('/payment/orders', {

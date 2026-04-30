@@ -21,14 +21,10 @@
             <span v-if="value != null">¥{{ (value as number).toFixed(2) }}</span>
             <span v-else class="text-gray-400">—</span>
           </template>
-          <template #cell-is_active="{ value }">
+          <template #cell-for_sale="{ value }">
             <span :class="['badge', value ? 'badge-success' : 'badge-gray']">
               {{ value ? t('common.enabled') : t('common.disabled') }}
             </span>
-          </template>
-          <template #cell-badge="{ value }">
-            <span v-if="value" class="badge badge-warning">{{ value }}</span>
-            <span v-else class="text-gray-400">—</span>
           </template>
           <template #cell-actions="{ row }">
             <div class="flex items-center gap-2">
@@ -72,10 +68,6 @@
               <textarea v-model="form.description" rows="2" class="input"></textarea>
             </div>
             <div>
-              <label class="input-label">{{ t('adminPayment.planBadge') }}</label>
-              <input v-model="form.badge" class="input" placeholder="推荐、热门..." />
-            </div>
-            <div>
               <label class="input-label">{{ t('adminPayment.planGroup') }} *</label>
               <select v-model="form.group_id" required class="input">
                 <option value="">— {{ t('common.select') }} —</option>
@@ -85,7 +77,7 @@
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="input-label">{{ t('adminPayment.planDuration') }} *</label>
-                <input v-model.number="form.duration_days" type="number" min="1" required class="input" />
+                <input v-model.number="form.validity_days" type="number" min="1" required class="input" />
               </div>
               <div>
                 <label class="input-label">{{ t('adminPayment.planSortOrder') }}</label>
@@ -103,8 +95,8 @@
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <input id="is_active" v-model="form.is_active" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary-600" />
-              <label for="is_active" class="text-sm text-gray-700 dark:text-gray-300">{{ t('adminPayment.planIsActive') }}</label>
+              <input id="for_sale" v-model="form.for_sale" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary-600" />
+              <label for="for_sale" class="text-sm text-gray-700 dark:text-gray-300">{{ t('adminPayment.planIsActive') }}</label>
             </div>
             <div class="flex justify-end gap-3 pt-2">
               <button type="button" @click="showDialog = false" class="btn btn-secondary">{{ t('common.cancel') }}</button>
@@ -153,11 +145,10 @@ const appStore = useAppStore()
 const columns = [
   { key: 'name', label: t('adminPayment.planName') },
   { key: 'group_name', label: t('adminPayment.planGroup') },
-  { key: 'duration_days', label: t('adminPayment.planDuration') },
+  { key: 'validity_days', label: t('adminPayment.planDuration') },
   { key: 'price', label: t('adminPayment.planPrice') },
   { key: 'original_price', label: t('adminPayment.planOriginalPrice') },
-  { key: 'badge', label: t('payment.badge') },
-  { key: 'is_active', label: t('adminPayment.planIsActive') },
+  { key: 'for_sale', label: t('adminPayment.planIsActive') },
   { key: 'actions', label: '' }
 ]
 
@@ -187,13 +178,12 @@ const editingPlan = ref<AdminPaymentPlan | null>(null)
 const defaultForm = () => ({
   name: '',
   description: '',
-  badge: '',
   group_id: '' as number | '',
-  duration_days: 30,
+  validity_days: 30,
   price: 0,
   original_price: null as number | null,
   sort_order: 0,
-  is_active: true
+  for_sale: true
 })
 
 const form = reactive(defaultForm())
@@ -209,13 +199,12 @@ const openEditDialog = (plan: AdminPaymentPlan) => {
   Object.assign(form, {
     name: plan.name,
     description: plan.description ?? '',
-    badge: plan.badge ?? '',
     group_id: plan.group_id,
-    duration_days: plan.duration_days,
+    validity_days: plan.validity_days,
     price: plan.price,
     original_price: plan.original_price ?? null,
     sort_order: plan.sort_order,
-    is_active: plan.is_active
+    for_sale: plan.for_sale
   })
   showDialog.value = true
 }
@@ -226,13 +215,12 @@ const submitPlan = async () => {
     const payload = {
       name: form.name,
       description: form.description,
-      badge: form.badge || null,
       group_id: form.group_id as number,
-      duration_days: form.duration_days,
+      validity_days: form.validity_days,
       price: form.price,
       original_price: form.original_price || null,
       sort_order: form.sort_order,
-      is_active: form.is_active
+      for_sale: form.for_sale
     }
     if (editingPlan.value) {
       await adminAPI.payment.updatePlan(editingPlan.value.id, payload)

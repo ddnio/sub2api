@@ -37,15 +37,11 @@
           :key="plan.id"
           class="card relative overflow-hidden p-6 transition-shadow hover:shadow-md"
         >
-          <!-- 徽章 -->
-          <div v-if="plan.badge" class="absolute right-4 top-4">
-            <span class="badge badge-warning text-xs">{{ plan.badge }}</span>
-          </div>
           <h3 class="mb-1 text-base font-semibold text-gray-900 dark:text-white">{{ plan.name }}</h3>
           <p v-if="plan.description" class="mb-3 text-sm text-gray-500">{{ plan.description }}</p>
           <div class="mb-1 flex items-baseline gap-1">
             <span class="text-2xl font-bold text-primary-600 dark:text-primary-400">¥{{ plan.price.toFixed(2) }}</span>
-            <span class="text-sm text-gray-400">/ {{ plan.duration_days }} {{ t('payment.durationUnit') }}</span>
+            <span class="text-sm text-gray-400">/ {{ plan.validity_days }} {{ t('payment.durationUnit') }}</span>
           </div>
           <p v-if="plan.original_price" class="mb-4 text-sm text-gray-400 line-through">
             {{ t('payment.originalPrice') }} ¥{{ plan.original_price.toFixed(2) }}
@@ -139,16 +135,16 @@
                 <td colspan="5" class="py-12 text-center text-gray-400">{{ t('payment.noOrders') }}</td>
               </tr>
               <tr v-for="order in orders" :key="order.id" class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                <td class="px-4 py-3 font-mono text-xs text-gray-500">{{ order.order_no }}</td>
+                <td class="px-4 py-3 font-mono text-xs text-gray-500">{{ order.out_trade_no }}</td>
                 <td class="px-4 py-3">
-                  <span :class="['badge', order.type === 'plan' ? 'badge-primary' : 'badge-success']">
-                    {{ t('payment.orderType.' + order.type) }}
+                  <span :class="['badge', order.order_type === 'subscription' ? 'badge-primary' : 'badge-success']">
+                    {{ t('payment.orderType.' + order.order_type) }}
                   </span>
                 </td>
                 <td class="px-4 py-3 font-medium">¥{{ order.amount.toFixed(2) }}</td>
                 <td class="px-4 py-3">
                   <span :class="['badge', statusBadgeClass(order.status)]">
-                    {{ t('payment.orderStatus.' + order.status) }}
+                    {{ t('payment.orderStatus.' + order.status.toLowerCase()) }}
                   </span>
                 </td>
                 <td class="px-4 py-3 text-gray-500">{{ formatDateTime(order.created_at) }}</td>
@@ -229,7 +225,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import QRCode from 'qrcode'
-import { paymentAPI, type PaymentPlan, type PaymentOrder } from '@/api'
+import { paymentAPI, type PaymentPlan, type PaymentOrder, type CreateOrderResponse } from '@/api'
 import { useAppStore } from '@/stores/app'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Pagination from '@/components/common/Pagination.vue'
@@ -268,7 +264,7 @@ const topupAmount = ref<number | null>(null)
 const quickAmounts = [10, 30, 50, 100, 200, 500]
 
 // 支付方式
-const selectedProvider = ref<'wxpay'>('wxpay')
+const selectedPaymentType = ref<string>('wxpay')
 
 // 订单列表
 const orders = ref<PaymentOrder[]>([])
@@ -295,7 +291,7 @@ const handleOrderPageChange = (page: number) => loadOrders(page)
 const showPayDialog = ref(false)
 const creatingOrder = ref(false)
 const creatingPlanId = ref<number | null>(null)
-const currentOrder = ref<PaymentOrder | null>(null)
+const currentOrder = ref<CreateOrderResponse | null>(null)
 const qrCodeURL = ref('')
 const payStatus = ref<'waiting' | 'completed' | 'timeout'>('waiting')
 const countdownSec = ref(0)
@@ -308,12 +304,12 @@ const openPlanPayment = async (plan: PaymentPlan) => {
   creatingOrder.value = true
   try {
     const res = await paymentAPI.createOrder({
-      type: 'plan',
+      order_type: 'subscription',
       plan_id: plan.id,
-      provider: selectedProvider.value
+      payment_type: selectedPaymentType.value
     })
-    currentOrder.value = res.order
-    qrCodeURL.value = res.qr_code_url
+    currentOrder.value = res
+    qrCodeURL.value = res.qr_code
     openPayDialog()
   } catch (e: any) {
     appStore.showError(e?.response?.data?.message || t('common.error'))
@@ -335,12 +331,12 @@ const createTopupOrder = async () => {
   creatingOrder.value = true
   try {
     const res = await paymentAPI.createOrder({
-      type: 'topup',
+      order_type: 'balance',
       amount: topupAmount.value,
-      provider: selectedProvider.value
+      payment_type: selectedPaymentType.value
     })
-    currentOrder.value = res.order
-    qrCodeURL.value = res.qr_code_url
+    currentOrder.value = res
+    qrCodeURL.value = res.qr_code
     openPayDialog()
   } catch (e: any) {
     appStore.showError(e?.response?.data?.message || t('common.error'))
@@ -351,10 +347,9 @@ const createTopupOrder = async () => {
 
 const openPayDialog = () => {
   payStatus.value = 'waiting'
-  // M1: Use order.expired_at for accurate countdown instead of hardcoded 1800s
-  const expiredAt = currentOrder.value?.expired_at
-  countdownSec.value = expiredAt
-    ? Math.max(0, Math.floor((new Date(expiredAt).getTime() - Date.now()) / 1000))
+  const expiresAt = currentOrder.value?.expires_at
+  countdownSec.value = expiresAt
+    ? Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000))
     : 900
   showPayDialog.value = true
   nextTick(() => renderQRCode())
@@ -380,8 +375,8 @@ const startPolling = () => {
   pollTimer = setInterval(async () => {
     if (!currentOrder.value) return
     try {
-      const res = await paymentAPI.getOrderStatus(currentOrder.value.id)
-      if (res.status === 'completed') {
+      const res = await paymentAPI.getOrderStatus(currentOrder.value.order_id)
+      if (res.status === 'COMPLETED') {
         payStatus.value = 'completed'
         stopPolling()
         loadOrders()
@@ -428,12 +423,12 @@ const formatDateTime = (dt: string) => {
 
 const statusBadgeClass = (status: string) => {
   const map: Record<string, string> = {
-    pending: 'badge-warning',
-    paid: 'badge-primary',
-    completed: 'badge-success',
-    failed: 'badge-danger',
-    expired: 'badge-gray',
-    refunded: 'badge-gray'
+    PENDING: 'badge-warning',
+    PAID: 'badge-primary',
+    COMPLETED: 'badge-success',
+    FAILED: 'badge-danger',
+    EXPIRED: 'badge-gray',
+    REFUNDED: 'badge-gray'
   }
   return map[status] ?? 'badge-gray'
 }

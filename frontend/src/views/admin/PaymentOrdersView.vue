@@ -10,7 +10,7 @@
             @change="reload"
           />
           <Select
-            v-model="params.type"
+            v-model="params.order_type"
             :options="typeOptions"
             class="w-32"
             @change="reload"
@@ -61,14 +61,14 @@
       <template #table>
         <DataTable :columns="columns" :data="items" :loading="loading">
           <template #cell-amount="{ value }">¥{{ (value as number).toFixed(2) }}</template>
-          <template #cell-type="{ value }">
-            <span :class="['badge', value === 'plan' ? 'badge-primary' : 'badge-success']">
+          <template #cell-order_type="{ value }">
+            <span :class="['badge', value === 'subscription' ? 'badge-primary' : 'badge-success']">
               {{ t('payment.orderType.' + (value as string)) }}
             </span>
           </template>
           <template #cell-status="{ value }">
             <span :class="['badge', statusBadge(value as string)]">
-              {{ t('payment.orderStatus.' + (value as string)) }}
+              {{ t('payment.orderStatus.' + (value as string).toLowerCase()) }}
             </span>
           </template>
           <template #cell-created_at="{ value }">
@@ -77,14 +77,14 @@
           <template #cell-actions="{ row }">
             <div class="flex items-center gap-2">
               <button
-                v-if="(row as AdminPaymentOrder).status === 'paid'"
+                v-if="(row as AdminPaymentOrder).status === 'PAID'"
                 @click="openAction(row as AdminPaymentOrder, 'complete')"
                 class="btn btn-success btn-sm"
               >
                 {{ t('adminPayment.completeOrder') }}
               </button>
               <button
-                v-if="['paid', 'completed'].includes((row as AdminPaymentOrder).status)"
+                v-if="['PAID', 'COMPLETED'].includes((row as AdminPaymentOrder).status)"
                 @click="openAction(row as AdminPaymentOrder, 'refund')"
                 class="btn btn-danger btn-sm"
               >
@@ -117,7 +117,7 @@
           <p class="mb-3 text-sm text-gray-500">
             {{ actionType === 'complete' ? t('adminPayment.confirmComplete') : t('adminPayment.confirmRefund') }}
           </p>
-          <div class="mb-1 text-xs text-gray-400">{{ t('payment.orderNo') }}: {{ actionOrder?.order_no }}</div>
+          <div class="mb-1 text-xs text-gray-400">{{ t('payment.orderNo') }}: {{ actionOrder?.out_trade_no }}</div>
           <div class="mb-4 text-sm font-medium">¥{{ actionOrder?.amount?.toFixed(2) }}</div>
           <div class="mb-4">
             <label class="input-label">{{ t('adminPayment.adminNote') }}</label>
@@ -151,37 +151,36 @@ const { t } = useI18n()
 const appStore = useAppStore()
 
 const columns = [
-  { key: 'order_no', label: t('payment.orderNo') },
+  { key: 'out_trade_no', label: t('payment.orderNo') },
   { key: 'email', label: t('adminPayment.orderUser') },
-  { key: 'type', label: t('payment.type') },
-  { key: 'plan_name', label: t('adminPayment.orderPlan') },
+  { key: 'order_type', label: t('payment.type') },
   { key: 'amount', label: t('payment.amount') },
   { key: 'status', label: t('payment.status') },
-  { key: 'provider', label: t('payment.provider') },
+  { key: 'payment_type', label: t('payment.provider') },
   { key: 'created_at', label: t('payment.createdAt') },
   { key: 'actions', label: '' }
 ]
 
 const statusOptions = [
   { value: '', label: t('common.all') },
-  { value: 'pending', label: t('payment.orderStatus.pending') },
-  { value: 'paid', label: t('payment.orderStatus.paid') },
-  { value: 'completed', label: t('payment.orderStatus.completed') },
-  { value: 'failed', label: t('payment.orderStatus.failed') },
-  { value: 'expired', label: t('payment.orderStatus.expired') },
-  { value: 'refunded', label: t('payment.orderStatus.refunded') }
+  { value: 'PENDING', label: t('payment.orderStatus.pending') },
+  { value: 'PAID', label: t('payment.orderStatus.paid') },
+  { value: 'COMPLETED', label: t('payment.orderStatus.completed') },
+  { value: 'FAILED', label: t('payment.orderStatus.failed') },
+  { value: 'EXPIRED', label: t('payment.orderStatus.expired') },
+  { value: 'REFUNDED', label: t('payment.orderStatus.refunded') }
 ]
 
 const typeOptions = [
   { value: '', label: t('common.all') },
-  { value: 'plan', label: t('payment.orderType.plan') },
-  { value: 'topup', label: t('payment.orderType.topup') }
+  { value: 'subscription', label: t('payment.orderType.subscription') },
+  { value: 'balance', label: t('payment.orderType.balance') }
 ]
 
 const { items, loading, params, pagination, load, reload, handlePageChange } = useTableLoader({
   fetchFn: (page, pageSize, p, options) =>
     adminAPI.payment.listOrders(page, pageSize, p, options),
-  initialParams: { status: '', type: '' }
+  initialParams: { status: '', order_type: '' }
 })
 
 // 统计
@@ -231,12 +230,12 @@ const doAction = async () => {
 
 const statusBadge = (status: string) => {
   const map: Record<string, string> = {
-    pending: 'badge-warning',
-    paid: 'badge-primary',
-    completed: 'badge-success',
-    failed: 'badge-danger',
-    expired: 'badge-gray',
-    refunded: 'badge-gray'
+    PENDING: 'badge-warning',
+    PAID: 'badge-primary',
+    COMPLETED: 'badge-success',
+    FAILED: 'badge-danger',
+    EXPIRED: 'badge-gray',
+    REFUNDED: 'badge-gray'
   }
   return map[status] ?? 'badge-gray'
 }

@@ -137,13 +137,50 @@ docker logs -f sub2api-prod 2>&1 | tail -100
 - 不能有 `panic`、`ERROR`、`POSTCHECK FAILED`、`PREFLIGHT FAILED`
 - 容器启动成功 = 所有 migration 通过
 
-**若日志中有错误，立即跳到 §6 回滚**。
+**若日志中有错误，立即跳到 §7 回滚**。
 
 ---
 
-## 4. 部署后验证（必做）
+## 4. 前端变更说明（此 PR 已同步）
 
-### 4.1 容器健康检查
+### 4.1 字段名同步
+
+前端 `frontend/src/api/payment.ts`、`frontend/src/api/admin/payment.ts` 已更新，与新后端字段一致：
+
+| 旧字段 | 新字段 | 影响文件 |
+|---|---|---|
+| `order_no` | `out_trade_no` | PaymentView.vue, PaymentOrdersView.vue |
+| `type` | `order_type`（`subscription` / `balance`）| PaymentView.vue, PaymentOrdersView.vue |
+| `expired_at` | `expires_at` | PaymentView.vue |
+| `provider` | `payment_type` | PaymentView.vue, PaymentOrdersView.vue |
+| `qr_code_url` | `qr_code` | PaymentView.vue |
+| `duration_days` | `validity_days` | PaymentPlansView.vue |
+| `is_active` | `for_sale` | PaymentPlansView.vue |
+| `badge` | **已移除** | PaymentPlansView.vue |
+
+### 4.2 状态值改为大写
+
+后端返回的状态值全部为大写：`PENDING`、`PAID`、`COMPLETED`、`FAILED`、`EXPIRED`、`REFUNDED`。前端视图统一用 `.toLowerCase()` 做 i18n 查找，无需修改 i18n key。
+
+### 4.3 UI 变更
+
+- **SettingsView**：新增"支付管理" tab，包含：
+  - Provider 列表（增删改）
+  - 支付全局配置（启用/禁用、最小/最大金额、禁用余额充值）
+- **PaymentView**：移除 iframe 购买页，改为直接调用新 API 创建订单并展示二维码
+- **PaymentOrdersView**：列显示同步新字段
+- **PaymentPlansView**：表单字段同步新接口
+- **Router**：`/purchase` 路由已重定向到 `/payment`
+
+### 4.4 编译验证
+
+本地执行 `pnpm --dir frontend build` 应 0 错误通过。build 产物已包含在 PR 中（`backend/internal/web/dist/`）。
+
+---
+
+## 5. 部署后验证（必做）
+
+### 5.1 容器健康检查
 ```bash
 # 测试
 docker ps | grep sub2api-test
@@ -231,7 +268,7 @@ sudo cat /etc/sub2api/prod.yaml | grep wxpay
 - 测试：https://router-test.nanafox.com/admin
 - 生产：https://router.nanafox.com/admin
 
-进入 **支付管理 → Provider 配置 → 新增**，填入：
+进入 **设置 → 支付管理 → 新增 Provider**，填入：
 
 | 字段 | 值 | 说明 |
 |---|---|---|
@@ -273,7 +310,7 @@ SELECT id, provider_key, name, enabled, refund_enabled FROM payment_provider_ins
 
 ### 6.1 创建一笔小额测试订单
 1. 用普通用户账号登录前台
-2. 访问购买页面，选择最低价套餐或最低充值金额（建议 ¥0.01）
+2. 访问 `/payment` 页面，选择最低价套餐或最低充值金额（建议 ¥0.01）
 3. 选择微信支付
 4. 用扫码完成支付
 5. 等待 30 秒后查看订单状态
@@ -329,7 +366,7 @@ git checkout <previous-stable-commit>
 bash deploy/deploy-server.sh test
 ```
 
-> ⚠️ 代码回滚后 DB 已是新 schema，旧代码无法读写新字段 → 必须同步做 §6.1 DB 回滚。
+> ⚠️ 代码回滚后 DB 已是新 schema，旧代码无法读写新字段 → 必须同步做 §7.1 DB 回滚。
 
 ### 6.3 数据问题（已部署但数据异常）
 
@@ -341,7 +378,7 @@ SELECT * FROM payment_orders_v1_backup WHERE id = <order_id>;
 "
 ```
 
-完整回滚 → §6.1 从 pg_dump 恢复。
+完整回滚 → §7.1 从 pg_dump 恢复。
 
 ---
 
@@ -354,7 +391,7 @@ DROP TABLE IF EXISTS payment_orders_v1_backup;
 "
 ```
 
-> ⚠️ 不要急着删！只要 backup 表存在，就能用 §6.3 快速对照历史数据。
+> ⚠️ 不要急着删！只要 backup 表存在，就能用 §7.3 快速对照历史数据。
 
 ---
 
@@ -375,8 +412,8 @@ DROP TABLE IF EXISTS payment_orders_v1_backup;
 | Migration 应用数 | 27 个（091a → 112，跳过 113） |
 | 数据完整性验证 | new_orders=18, backup_orders=18 ✓<br>statuses: COMPLETED,EXPIRED,FAILED,REFUNDED（全大写）✓<br>null_expires=0, empty_otn=0 ✓<br>id_seq_last=18 = max_id ✓ |
 | HTTP /health | 200 ✓ |
-| Provider 配置时间 | 待执行（§5）|
-| 端到端测试结果 | 待执行（§6）|
+| Provider 配置时间 | 待执行（§6）|
+| 端到端测试结果 | 待执行（§7）|
 | 异常 / 备注 | 113 已从 PR 移除（commit `ac575113`），生产部署不会再遇到 |
 
 ### 生产环境部署记录
@@ -389,7 +426,7 @@ DROP TABLE IF EXISTS payment_orders_v1_backup;
 | 项 | 描述 | 缓解 |
 |---|---|---|
 | Migration 30s 停服 | 091a→092→092b→...→120a 串行执行约 30s | 选低峰部署 |
-| Provider 配置后才能下单 | 部署后到完成 §5 之间用户无法支付 | 部署完立即配置（< 5 min） |
+| Provider 配置后才能下单 | 部署后到完成 §6 之间用户无法支付 | 部署完立即配置（< 5 min） |
 | 容器 healthcheck 期间 503 | 启动期 `/health` 返回 503 | docker-compose `restart: unless-stopped` 自动恢复 |
 | backup 表占用空间 | 暂不删除（用于回滚） | 7 天后清理（§7） |
 | **拉 upstream migration 按内容判断** | 文件名含 "wechat" 不一定是支付（可能是 OAuth）；含 "auth" 一定不引入 | 测试环境实测；此 PR 已修复 113 问题 |

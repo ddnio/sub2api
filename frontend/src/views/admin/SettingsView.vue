@@ -2544,8 +2544,100 @@
           </div>
         </div>
 
+        <!-- Tab: Payment Management -->
+        <div v-show="activeTab === 'payment'" class="space-y-6">
+          <!-- Provider List -->
+          <div class="card">
+            <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t('adminPayment.providers') }}</h2>
+              <button type="button" class="btn btn-primary btn-sm" @click="openProviderDialog()">+ {{ t('common.create') }}</button>
+            </div>
+            <div class="p-6">
+              <div v-if="providersLoading" class="flex justify-center py-8">
+                <div class="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
+              </div>
+              <div v-else-if="providers.length === 0" class="py-8 text-center text-sm text-gray-500">{{ t('adminPayment.noProviders') }}</div>
+              <div v-else class="space-y-3">
+                <div v-for="p in providers" :key="p.id" class="flex items-center justify-between rounded-lg border border-gray-100 px-4 py-3 dark:border-dark-700">
+                  <div>
+                    <div class="font-medium text-gray-900 dark:text-white">{{ p.name }}</div>
+                    <div class="text-xs text-gray-400">{{ p.provider_key }} · {{ p.payment_mode || 'native' }}</div>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span :class="['badge', p.enabled ? 'badge-success' : 'badge-gray']">{{ p.enabled ? t('common.enabled') : t('common.disabled') }}</span>
+                    <button type="button" class="btn btn-secondary btn-sm" @click="openProviderDialog(p)">{{ t('common.edit') }}</button>
+                    <button type="button" class="btn btn-danger btn-sm" @click="deleteProviderById(p.id)">{{ t('common.delete') }}</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Config -->
+          <div class="card">
+            <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t('adminPayment.config') }}</h2>
+            </div>
+            <div v-if="paymentConfig" class="space-y-4 p-6">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('adminPayment.enabled') }}</span>
+                <Toggle v-model="paymentConfigForm.enabled" @update:modelValue="savePaymentConfig" />
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="input-label">{{ t('adminPayment.minAmount') }}（¥）</label>
+                  <input v-model.number="paymentConfigForm.min_amount" type="number" step="0.01" class="input" @blur="savePaymentConfig" />
+                </div>
+                <div>
+                  <label class="input-label">{{ t('adminPayment.maxAmount') }}（¥）</label>
+                  <input v-model.number="paymentConfigForm.max_amount" type="number" step="0.01" class="input" @blur="savePaymentConfig" />
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('adminPayment.balanceDisabled') }}</span>
+                <Toggle v-model="paymentConfigForm.balance_disabled" @update:modelValue="savePaymentConfig" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Provider Dialog -->
+        <Teleport to="body">
+          <div v-if="showProviderDialog" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="fixed inset-0 bg-black/50" @click="showProviderDialog = false"></div>
+            <div class="relative z-10 w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900 max-h-[90vh] overflow-y-auto">
+              <h2 class="mb-4 text-base font-semibold">{{ providerForm.id ? t('common.edit') : t('common.create') }} Provider</h2>
+              <div class="space-y-3">
+                <div>
+                  <label class="input-label">Provider Key</label>
+                  <input v-model="providerForm.provider_key" class="input" placeholder="wxpay" :disabled="!!providerForm.id" />
+                </div>
+                <div>
+                  <label class="input-label">{{ t('common.name') }}</label>
+                  <input v-model="providerForm.name" class="input" placeholder="wxpay-default" />
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('common.enabled') }}</span>
+                  <Toggle v-model="providerForm.enabled" />
+                </div>
+                <div>
+                  <label class="input-label">Config（JSON）</label>
+                  <textarea v-model="providerForm.configText" class="input font-mono text-xs" rows="8" placeholder='{"appId":"...","mchId":"..."}'></textarea>
+                  <p v-if="providerConfigError" class="mt-1 text-xs text-red-500">{{ providerConfigError }}</p>
+                </div>
+              </div>
+              <div class="mt-4 flex justify-end gap-3">
+                <button type="button" class="btn btn-secondary" @click="showProviderDialog = false">{{ t('common.cancel') }}</button>
+                <button type="button" class="btn btn-primary" :disabled="savingProvider" @click="saveProvider">
+                  {{ savingProvider ? t('common.saving') : t('common.save') }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </Teleport>
+
         <!-- Save Button -->
-        <div v-show="activeTab !== 'backup' && activeTab !== 'contact'" class="flex justify-end">
+        <div v-show="activeTab !== 'backup' && activeTab !== 'contact' && activeTab !== 'payment'" class="flex justify-end">
           <button type="submit" :disabled="saving || loadFailed" class="btn btn-primary">
             <svg v-if="saving" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle
@@ -2580,6 +2672,7 @@ import type {
   DefaultSubscriptionSetting
 } from '@/api/admin/settings'
 import type { AdminGroup, ContactChannel } from '@/types'
+import type { ProviderInstance, PaymentConfig } from '@/api/admin'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import Select from '@/components/common/Select.vue'
@@ -2602,16 +2695,17 @@ const { t } = useI18n()
 const appStore = useAppStore()
 const adminSettingsStore = useAdminSettingsStore()
 
-type SettingsTab = 'general' | 'security' | 'users' | 'gateway' | 'email' | 'backup' | 'contact'
+type SettingsTab = 'general' | 'security' | 'users' | 'gateway' | 'email' | 'backup' | 'contact' | 'payment'
 const activeTab = ref<SettingsTab>('general')
 const settingsTabs = [
-  { key: 'general'  as SettingsTab, icon: 'home'   as const },
-  { key: 'security' as SettingsTab, icon: 'shield' as const },
-  { key: 'users'    as SettingsTab, icon: 'user'   as const },
-  { key: 'gateway'  as SettingsTab, icon: 'server' as const },
-  { key: 'email'    as SettingsTab, icon: 'mail'   as const },
-  { key: 'backup'   as SettingsTab, icon: 'database' as const },
-  { key: 'contact'  as SettingsTab, icon: 'chat'   as const },
+  { key: 'general'  as SettingsTab, icon: 'home'       as const },
+  { key: 'security' as SettingsTab, icon: 'shield'     as const },
+  { key: 'users'    as SettingsTab, icon: 'user'       as const },
+  { key: 'gateway'  as SettingsTab, icon: 'server'     as const },
+  { key: 'email'    as SettingsTab, icon: 'mail'       as const },
+  { key: 'backup'   as SettingsTab, icon: 'database'   as const },
+  { key: 'contact'  as SettingsTab, icon: 'chat'       as const },
+  { key: 'payment'  as SettingsTab, icon: 'creditCard' as const },
 ]
 const { copyToClipboard } = useClipboard()
 
@@ -3537,6 +3631,118 @@ async function saveContactChannels() {
   }
 }
 
+// Payment providers
+const providers = ref<ProviderInstance[]>([])
+const providersLoading = ref(false)
+const paymentConfig = ref<PaymentConfig | null>(null)
+const paymentConfigForm = reactive({ enabled: true, min_amount: 0.01, max_amount: 10000, balance_disabled: false })
+const showProviderDialog = ref(false)
+const savingProvider = ref(false)
+const providerConfigError = ref('')
+const providerForm = reactive({ id: 0, provider_key: '', name: '', enabled: true, configText: '' })
+
+async function loadProviders() {
+  providersLoading.value = true
+  try {
+    providers.value = await adminAPI.payment.listProviders()
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    appStore.showError(`Load providers failed: ${detail}`)
+  } finally {
+    providersLoading.value = false
+  }
+}
+
+async function loadPaymentConfig() {
+  try {
+    paymentConfig.value = await adminAPI.payment.getPaymentConfig()
+    if (paymentConfig.value) {
+      paymentConfigForm.enabled = paymentConfig.value.enabled
+      paymentConfigForm.min_amount = paymentConfig.value.min_amount
+      paymentConfigForm.max_amount = paymentConfig.value.max_amount
+      paymentConfigForm.balance_disabled = paymentConfig.value.balance_disabled
+    }
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    appStore.showError(`Load payment config failed: ${detail}`)
+  }
+}
+
+function openProviderDialog(p?: ProviderInstance) {
+  providerConfigError.value = ''
+  if (p) {
+    providerForm.id = p.id
+    providerForm.provider_key = p.provider_key
+    providerForm.name = p.name
+    providerForm.enabled = p.enabled
+    providerForm.configText = JSON.stringify(p.config, null, 2)
+  } else {
+    providerForm.id = 0
+    providerForm.provider_key = ''
+    providerForm.name = ''
+    providerForm.enabled = true
+    providerForm.configText = ''
+  }
+  showProviderDialog.value = true
+}
+
+async function saveProvider() {
+  let config: Record<string, string>
+  try {
+    config = JSON.parse(providerForm.configText || '{}')
+  } catch {
+    providerConfigError.value = 'Invalid JSON'
+    return
+  }
+  savingProvider.value = true
+  try {
+    if (providerForm.id) {
+      await adminAPI.payment.updateProvider(providerForm.id, {
+        name: providerForm.name,
+        config,
+        enabled: providerForm.enabled
+      })
+    } else {
+      await adminAPI.payment.createProvider({
+        provider_key: providerForm.provider_key,
+        name: providerForm.name,
+        config,
+        enabled: providerForm.enabled
+      })
+    }
+    showProviderDialog.value = false
+    appStore.showSuccess(t('admin.settings.settingsSaved'))
+    await loadProviders()
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    appStore.showError(`${t('common.saveFailed')}: ${detail}`)
+  } finally {
+    savingProvider.value = false
+  }
+}
+
+async function deleteProviderById(id: number) {
+  if (!confirm(t('common.confirmDelete'))) return
+  try {
+    await adminAPI.payment.deleteProvider(id)
+    appStore.showSuccess(t('admin.settings.settingsSaved'))
+    await loadProviders()
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    appStore.showError(`${t('common.deleteFailed')}: ${detail}`)
+  }
+}
+
+async function savePaymentConfig() {
+  try {
+    await adminAPI.payment.updatePaymentConfig({ ...paymentConfigForm })
+    appStore.showSuccess(t('admin.settings.settingsSaved'))
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    appStore.showError(`${t('common.saveFailed')}: ${detail}`)
+  }
+}
+
 onMounted(() => {
   loadSettings()
   loadSubscriptionGroups()
@@ -3546,6 +3752,8 @@ onMounted(() => {
   loadRectifierSettings()
   loadBetaPolicySettings()
   loadContactChannels()
+  loadProviders()
+  loadPaymentConfig()
 })
 </script>
 

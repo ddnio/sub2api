@@ -91,5 +91,5 @@ export default adminAPI
 export type { BalanceHistoryItem } from './users'
 export type { ErrorPassthroughRule, CreateRuleRequest, UpdateRuleRequest } from './errorPassthrough'
 export type { BackupAgentHealth, DataManagementConfig } from './dataManagement'
-export type { AdminPaymentPlan, AdminPaymentOrder, OrderStats, StatsBreakdown } from './payment'
+export type { AdminPaymentPlan, AdminPaymentOrder, OrderStats, StatsBreakdown, ProviderInstance, PaymentConfig } from './payment'
 export type { TLSFingerprintProfile, CreateProfileRequest, UpdateProfileRequest } from './tlsFingerprintProfile'

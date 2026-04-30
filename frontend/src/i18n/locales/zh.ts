@@ -4518,6 +4518,7 @@ export default {
         backup: '数据备份',
         data: 'Sora 存储',
         contact: '联系方式',
+        payment: '支付管理',
       },
       emailTabDisabledTitle: '邮箱验证未启用',
       emailTabDisabledHint: '请在「安全与认证」选项卡中启用邮箱验证后，再配置 SMTP 设置。',
@@ -5514,7 +5515,9 @@ export default {
     noOrders: '暂无订单',
     orderType: {
       plan: '套餐订阅',
-      topup: '余额充值'
+      topup: '余额充值',
+      subscription: '套餐订阅',
+      balance: '余额充值'
     },
     orderStatus: {
       pending: '待支付',
@@ -5595,6 +5598,13 @@ export default {
     paidOrders: '已支付订单',
     paidAmount: '已支付金额',
     completedOrders: '已完成订单',
-    completedAmount: '已完成金额'
+    completedAmount: '已完成金额',
+    providers: '支付渠道',
+    noProviders: '暂无支付渠道，点击右上角添加',
+    config: '支付配置',
+    enabled: '启用支付',
+    minAmount: '最小金额',
+    maxAmount: '最大金额',
+    balanceDisabled: '禁用余额充值'
   }
 }

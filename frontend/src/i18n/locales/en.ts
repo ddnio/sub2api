@@ -4353,6 +4353,7 @@ export default {
         backup: 'Backup',
         data: 'Sora Storage',
         contact: 'Contact',
+        payment: 'Payment',
       },
       emailTabDisabledTitle: 'Email Verification Not Enabled',
       emailTabDisabledHint: 'Enable email verification in the Security tab to configure SMTP settings.',
@@ -5324,7 +5325,9 @@ export default {
     noOrders: 'No orders yet',
     orderType: {
       plan: 'Plan',
-      topup: 'Top Up'
+      topup: 'Top Up',
+      subscription: 'Subscription',
+      balance: 'Balance Top Up'
     },
     orderStatus: {
       pending: 'Pending',
@@ -5405,6 +5408,13 @@ export default {
     paidOrders: 'Paid Orders',
     paidAmount: 'Paid Amount',
     completedOrders: 'Completed',
-    completedAmount: 'Completed Amount'
+    completedAmount: 'Completed Amount',
+    providers: 'Payment Providers',
+    noProviders: 'No payment providers. Click + to add one.',
+    config: 'Payment Config',
+    enabled: 'Enable Payments',
+    minAmount: 'Min Amount',
+    maxAmount: 'Max Amount',
+    balanceDisabled: 'Disable Balance Top-up'
   }
 }
