@@ -4,13 +4,26 @@
 --
 -- Runs AFTER 092_payment_orders.sql creates the fresh table.
 -- Idempotent: WHERE NOT EXISTS prevents duplicate inserts on retry.
+-- Fresh-install safe: entire block is skipped if backup table does not exist.
+--
+-- NOTE: out_trade_no is NOT included here — column is added by 102, which runs after.
+--       See 102a_backfill_out_trade_no_from_backup.sql for the backfill.
 --
 -- Data preserved: 56 real orders (24 user + 6 admin test refunds + 26 others).
 -- Data not migrated (kept in backup only): credit_amount, currency, callback_raw,
 --   admin_note, refund_no, refunded_at — these have no upstream v2 equivalent.
 
--- Preflight: amount precision must be <= 2 decimal places for all rows.
 DO $$ BEGIN
+  -- Skip entirely if backup table does not exist (fresh install / no migration history)
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_tables
+    WHERE schemaname = 'public' AND tablename = 'payment_orders_v1_backup'
+  ) THEN
+    RAISE NOTICE '092b: payment_orders_v1_backup not found, skipping (fresh install)';
+    RETURN;
+  END IF;
+
+  -- Preflight: amount precision must be <= 2 decimal places for all rows.
   IF EXISTS (
     SELECT 1 FROM payment_orders_v1_backup
     WHERE amount != ROUND(amount::numeric, 2)
@@ -21,9 +34,7 @@ DO $$ BEGIN
 END $$;
 
 -- Restore historical data with field mapping.
--- NOTE: out_trade_no is NOT included here — column is added by 102_add_out_trade_no_to_payment_orders.sql
--- which runs after this file. The DEFAULT '' in 102 is equivalent to COALESCE(bak.order_no, '').
--- To backfill out_trade_no from backup, see the UPDATE below (runs after 102).
+-- Uses LEFT JOIN so orphan orders (user deleted outside FK) are still restored with empty email/name.
 INSERT INTO payment_orders (
   id,
   user_id,
@@ -47,8 +58,8 @@ INSERT INTO payment_orders (
 SELECT
   bak.id,                                                              -- preserve original id
   bak.user_id,
-  u.email,                                                             -- from users table
-  u.username,                                                          -- from users table
+  COALESCE(u.email, ''),                                               -- LEFT JOIN: orphan orders get ''
+  COALESCE(u.username, ''),                                            -- LEFT JOIN: orphan orders get ''
   ROUND(bak.amount::numeric, 2),                                       -- precision: 8→2
   ROUND(bak.amount::numeric, 2),                                       -- pay_amount = amount (no fee)
   COALESCE(bak.provider, ''),                                          -- provider → payment_type
@@ -64,23 +75,36 @@ SELECT
   bak.created_at,
   bak.updated_at
 FROM payment_orders_v1_backup bak
-JOIN users u ON bak.user_id = u.id
+LEFT JOIN users u ON bak.user_id = u.id                               -- LEFT JOIN preserves orphan orders
 WHERE NOT EXISTS (
   SELECT 1 FROM payment_orders WHERE id = bak.id                      -- idempotent guard
+)
+AND EXISTS (
+  SELECT 1 FROM pg_tables
+  WHERE schemaname = 'public' AND tablename = 'payment_orders_v1_backup'
 );
 
 -- Reset BIGSERIAL sequence after explicit id inserts.
 -- Without this, next auto-generated id starts at 1 and conflicts with restored ids.
+-- Using COALESCE(..., 0) so next id = 1 on empty table (not 2).
 SELECT setval(
   'payment_orders_id_seq',
-  COALESCE((SELECT MAX(id) FROM payment_orders), 1)
+  COALESCE((SELECT MAX(id) FROM payment_orders), 0)
 );
 
--- Postcheck: row counts must match.
+-- Postcheck: all backup rows must be restored (including orphans via LEFT JOIN).
 DO $$ DECLARE
   new_cnt  BIGINT;
   bak_cnt  BIGINT;
 BEGIN
+  -- Skip postcheck if backup table not present (fresh install)
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_tables
+    WHERE schemaname = 'public' AND tablename = 'payment_orders_v1_backup'
+  ) THEN
+    RETURN;
+  END IF;
+
   SELECT COUNT(*) INTO new_cnt FROM payment_orders;
   SELECT COUNT(*) INTO bak_cnt FROM payment_orders_v1_backup;
   IF new_cnt != bak_cnt THEN
