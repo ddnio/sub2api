@@ -5414,6 +5414,9 @@ export default {
     enabled: 'Enable Payments',
     minAmount: 'Min Amount',
     maxAmount: 'Max Amount',
-    balanceDisabled: 'Disable Balance Top-up'
+    balanceDisabled: 'Disable Balance Top-up',
+    providerKey: 'Provider Key',
+    providerConfig: 'Config (JSON)',
+    provider: 'Provider'
   }
 }

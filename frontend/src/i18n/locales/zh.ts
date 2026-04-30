@@ -5604,6 +5604,9 @@ export default {
     enabled: '启用支付',
     minAmount: '最小金额',
     maxAmount: '最大金额',
-    balanceDisabled: '禁用余额充值'
+    balanceDisabled: '禁用余额充值',
+    providerKey: 'Provider Key',
+    providerConfig: 'Config（JSON）',
+    provider: '支付渠道'
   }
 }

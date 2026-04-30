@@ -2606,10 +2606,10 @@
           <div v-if="showProviderDialog" class="fixed inset-0 z-50 flex items-center justify-center">
             <div class="fixed inset-0 bg-black/50" @click="showProviderDialog = false"></div>
             <div class="relative z-10 w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900 max-h-[90vh] overflow-y-auto">
-              <h2 class="mb-4 text-base font-semibold">{{ providerForm.id ? t('common.edit') : t('common.create') }} Provider</h2>
+              <h2 class="mb-4 text-base font-semibold">{{ providerForm.id ? t('common.edit') : t('common.create') }} {{ t('adminPayment.provider') }}</h2>
               <div class="space-y-3">
                 <div>
-                  <label class="input-label">Provider Key</label>
+                  <label class="input-label">{{ t('adminPayment.providerKey') }}</label>
                   <input v-model="providerForm.provider_key" class="input" placeholder="wxpay" :disabled="!!providerForm.id" />
                 </div>
                 <div>
@@ -2621,7 +2621,7 @@
                   <Toggle v-model="providerForm.enabled" />
                 </div>
                 <div>
-                  <label class="input-label">Config（JSON）</label>
+                  <label class="input-label">{{ t('adminPayment.providerConfig') }}</label>
                   <textarea v-model="providerForm.configText" class="input font-mono text-xs" rows="8" placeholder='{"appId":"...","mchId":"..."}'></textarea>
                   <p v-if="providerConfigError" class="mt-1 text-xs text-red-500">{{ providerConfigError }}</p>
                 </div>
@@ -3697,7 +3697,7 @@ async function saveProvider() {
   }
   savingProvider.value = true
   try {
-    if (providerForm.id) {
+    if (providerForm.id > 0) {
       await adminAPI.payment.updateProvider(providerForm.id, {
         name: providerForm.name,
         config,
