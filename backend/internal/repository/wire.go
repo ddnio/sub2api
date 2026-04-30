@@ -135,27 +135,10 @@ var ProviderSet = wire.NewSet(
 	NewGeminiCliCodeAssistClient,
 	NewGeminiDriveClient,
 
-	NewPaymentOrderRepository,
-	NewPaymentPlanRepository,
-	NewPaymentCache,
-	ProvidePaymentProvider,
-
 	ProvideEnt,
 	ProvideSQLDB,
 	ProvideRedis,
 )
-
-// ProvidePaymentProvider 根据配置中的 provider 字段选择支付实现。
-// 目前支持 "wxpay"（微信支付官方 Native Pay v3）和 "easypay"（易支付聚合）。
-func ProvidePaymentProvider(cfg *config.Config) (service.PaymentProvider, error) {
-	switch cfg.Payment.Provider {
-	case "wxpay":
-		return NewWxpayProvider(cfg.Payment)
-	default:
-		// 默认使用易支付，保持向后兼容
-		return NewEasyPayProvider(cfg.Payment), nil
-	}
-}
 
 // ProvideEnt 为依赖注入提供 Ent 客户端。
 //

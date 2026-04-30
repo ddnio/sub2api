@@ -490,9 +490,7 @@ func (_q *PaymentPlanQuery) loadOrders(ctx context.Context, query *PaymentOrderQ
 			init(nodes[i])
 		}
 	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(paymentorder.FieldPlanID)
-	}
+	query.withFKs = true
 	query.Where(predicate.PaymentOrder(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(paymentplan.OrdersColumn), fks...))
 	}))
@@ -501,13 +499,13 @@ func (_q *PaymentPlanQuery) loadOrders(ctx context.Context, query *PaymentOrderQ
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.PlanID
+		fk := n.payment_plan_orders
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "plan_id" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "payment_plan_orders" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "plan_id" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "payment_plan_orders" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

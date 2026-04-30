@@ -13,7 +13,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
-	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
 	"github.com/Wei-Shaw/sub2api/ent/user"
 )
@@ -26,7 +25,7 @@ type PaymentOrderQuery struct {
 	inters     []Interceptor
 	predicates []predicate.PaymentOrder
 	withUser   *UserQuery
-	withPlan   *PaymentPlanQuery
+	withFKs    bool
 	modifiers  []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -79,28 +78,6 @@ func (_q *PaymentOrderQuery) QueryUser() *UserQuery {
 			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.UserTable, paymentorder.UserColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryPlan chains the current query on the "plan" edge.
-func (_q *PaymentOrderQuery) QueryPlan() *PaymentPlanQuery {
-	query := (&PaymentPlanClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, selector),
-			sqlgraph.To(paymentplan.Table, paymentplan.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.PlanTable, paymentorder.PlanColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -301,7 +278,6 @@ func (_q *PaymentOrderQuery) Clone() *PaymentOrderQuery {
 		inters:     append([]Interceptor{}, _q.inters...),
 		predicates: append([]predicate.PaymentOrder{}, _q.predicates...),
 		withUser:   _q.withUser.Clone(),
-		withPlan:   _q.withPlan.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -319,29 +295,18 @@ func (_q *PaymentOrderQuery) WithUser(opts ...func(*UserQuery)) *PaymentOrderQue
 	return _q
 }
 
-// WithPlan tells the query-builder to eager-load the nodes that are connected to
-// the "plan" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *PaymentOrderQuery) WithPlan(opts ...func(*PaymentPlanQuery)) *PaymentOrderQuery {
-	query := (&PaymentPlanClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withPlan = query
-	return _q
-}
-
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
 // Example:
 //
 //	var v []struct {
-//		OrderNo string `json:"order_no,omitempty"`
+//		UserID int64 `json:"user_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.PaymentOrder.Query().
-//		GroupBy(paymentorder.FieldOrderNo).
+//		GroupBy(paymentorder.FieldUserID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *PaymentOrderQuery) GroupBy(field string, fields ...string) *PaymentOrderGroupBy {
@@ -359,11 +324,11 @@ func (_q *PaymentOrderQuery) GroupBy(field string, fields ...string) *PaymentOrd
 // Example:
 //
 //	var v []struct {
-//		OrderNo string `json:"order_no,omitempty"`
+//		UserID int64 `json:"user_id,omitempty"`
 //	}
 //
 //	client.PaymentOrder.Query().
-//		Select(paymentorder.FieldOrderNo).
+//		Select(paymentorder.FieldUserID).
 //		Scan(ctx, &v)
 func (_q *PaymentOrderQuery) Select(fields ...string) *PaymentOrderSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
@@ -407,12 +372,15 @@ func (_q *PaymentOrderQuery) prepareQuery(ctx context.Context) error {
 func (_q *PaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*PaymentOrder, error) {
 	var (
 		nodes       = []*PaymentOrder{}
+		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [1]bool{
 			_q.withUser != nil,
-			_q.withPlan != nil,
 		}
 	)
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, paymentorder.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*PaymentOrder).scanValues(nil, columns)
 	}
@@ -437,12 +405,6 @@ func (_q *PaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	if query := _q.withUser; query != nil {
 		if err := _q.loadUser(ctx, query, nodes, nil,
 			func(n *PaymentOrder, e *User) { n.Edges.User = e }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withPlan; query != nil {
-		if err := _q.loadPlan(ctx, query, nodes, nil,
-			func(n *PaymentOrder, e *PaymentPlan) { n.Edges.Plan = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -471,38 +433,6 @@ func (_q *PaymentOrderQuery) loadUser(ctx context.Context, query *UserQuery, nod
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "user_id" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
-}
-func (_q *PaymentOrderQuery) loadPlan(ctx context.Context, query *PaymentPlanQuery, nodes []*PaymentOrder, init func(*PaymentOrder), assign func(*PaymentOrder, *PaymentPlan)) error {
-	ids := make([]int64, 0, len(nodes))
-	nodeids := make(map[int64][]*PaymentOrder)
-	for i := range nodes {
-		if nodes[i].PlanID == nil {
-			continue
-		}
-		fk := *nodes[i].PlanID
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	query.Where(paymentplan.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "plan_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -541,9 +471,6 @@ func (_q *PaymentOrderQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withUser != nil {
 			_spec.Node.AddColumnOnce(paymentorder.FieldUserID)
-		}
-		if _q.withPlan != nil {
-			_spec.Node.AddColumnOnce(paymentorder.FieldPlanID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

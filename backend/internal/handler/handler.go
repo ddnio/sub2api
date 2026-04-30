@@ -30,8 +30,7 @@ type AdminHandlers struct {
 	TLSFingerprintProfile *admin.TLSFingerprintProfileHandler
 	APIKey                *admin.AdminAPIKeyHandler
 	ScheduledTest         *admin.ScheduledTestHandler
-	PaymentPlan           *admin.PaymentPlanHandler
-	PaymentOrder          *admin.PaymentOrderHandler
+	Payment               *admin.PaymentHandler
 	Channel               *admin.ChannelHandler
 }
 
@@ -49,9 +48,9 @@ type Handlers struct {
 	OpenAIGateway   *OpenAIGatewayHandler
 	Setting         *SettingHandler
 	Totp            *TotpHandler
-	Payment         *PaymentHandler
-	PaymentCallback *PaymentCallbackHandler
-	Pricing         *PricingHandler
+	Payment        *PaymentHandler
+	PaymentWebhook *PaymentWebhookHandler
+	Pricing        *PricingHandler
 	Referral        *ReferralHandler
 }
 

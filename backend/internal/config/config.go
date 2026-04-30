@@ -2406,3 +2406,23 @@ func warnIfInsecureURL(field, raw string) {
 		slog.Warn("url uses http scheme; use https in production to avoid token leakage", "field", field)
 	}
 }
+
+// WeChatConnectConfig holds WeChat Connect OAuth settings.
+// [fork patch] Added to support upstream payment JSAPI module.
+type WeChatConnectConfig struct {
+	Enabled         bool   `mapstructure:"enabled"`
+	AppID           string `mapstructure:"app_id"`
+	AppSecret       string `mapstructure:"app_secret"`
+	OpenAppID       string `mapstructure:"open_app_id"`
+	OpenAppSecret   string `mapstructure:"open_app_secret"`
+	MPAppID         string `mapstructure:"mp_app_id"`
+	MPAppSecret     string `mapstructure:"mp_app_secret"`
+	MobileAppID     string `mapstructure:"mobile_app_id"`
+	MobileAppSecret string `mapstructure:"mobile_app_secret"`
+	OpenEnabled     bool   `mapstructure:"open_enabled"`
+	MPEnabled       bool   `mapstructure:"mp_enabled"`
+	MobileEnabled   bool   `mapstructure:"mobile_enabled"`
+	Scopes          string `mapstructure:"scopes"`
+	RedirectURL     string `mapstructure:"redirect_url"`
+	Mode            string `mapstructure:"mode"`
+}

@@ -548,18 +548,17 @@ func registerErrorPassthroughRoutes(admin *gin.RouterGroup, h *handler.Handlers)
 func registerAdminPaymentRoutes(adminGroup *gin.RouterGroup, h *handler.Handlers) {
 	plans := adminGroup.Group("/payment/plans")
 	{
-		plans.GET("", h.Admin.PaymentPlan.List)
-		plans.POST("", h.Admin.PaymentPlan.Create)
-		plans.PUT("/:id", h.Admin.PaymentPlan.Update)
-		plans.DELETE("/:id", h.Admin.PaymentPlan.Delete)
+		plans.GET("", h.Admin.Payment.ListPlans)
+		plans.POST("", h.Admin.Payment.CreatePlan)
+		plans.PUT("/:id", h.Admin.Payment.UpdatePlan)
+		plans.DELETE("/:id", h.Admin.Payment.DeletePlan)
 	}
 	orders := adminGroup.Group("/payment/orders")
 	{
-		orders.GET("", h.Admin.PaymentOrder.List)
-		orders.GET("/stats", h.Admin.PaymentOrder.Stats) // must be before /:id
-		orders.GET("/:id", h.Admin.PaymentOrder.GetByID)
-		orders.POST("/:id/complete", h.Admin.PaymentOrder.Complete)
-		orders.POST("/:id/refund", h.Admin.PaymentOrder.Refund)
+		orders.GET("", h.Admin.Payment.ListOrders)
+		orders.GET("/stats", h.Admin.Payment.GetDashboard) // must be before /:id
+		orders.GET("/:id", h.Admin.Payment.GetOrderDetail)
+		orders.POST("/:id/refund", h.Admin.Payment.ProcessRefund)
 	}
 }
 

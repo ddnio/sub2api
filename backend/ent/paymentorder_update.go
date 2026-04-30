@@ -12,7 +12,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
-	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
 	"github.com/Wei-Shaw/sub2api/ent/user"
 )
@@ -30,20 +29,6 @@ func (_u *PaymentOrderUpdate) Where(ps ...predicate.PaymentOrder) *PaymentOrderU
 	return _u
 }
 
-// SetOrderNo sets the "order_no" field.
-func (_u *PaymentOrderUpdate) SetOrderNo(v string) *PaymentOrderUpdate {
-	_u.mutation.SetOrderNo(v)
-	return _u
-}
-
-// SetNillableOrderNo sets the "order_no" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableOrderNo(v *string) *PaymentOrderUpdate {
-	if v != nil {
-		_u.SetOrderNo(*v)
-	}
-	return _u
-}
-
 // SetUserID sets the "user_id" field.
 func (_u *PaymentOrderUpdate) SetUserID(v int64) *PaymentOrderUpdate {
 	_u.mutation.SetUserID(v)
@@ -58,37 +43,51 @@ func (_u *PaymentOrderUpdate) SetNillableUserID(v *int64) *PaymentOrderUpdate {
 	return _u
 }
 
-// SetType sets the "type" field.
-func (_u *PaymentOrderUpdate) SetType(v string) *PaymentOrderUpdate {
-	_u.mutation.SetType(v)
+// SetUserEmail sets the "user_email" field.
+func (_u *PaymentOrderUpdate) SetUserEmail(v string) *PaymentOrderUpdate {
+	_u.mutation.SetUserEmail(v)
 	return _u
 }
 
-// SetNillableType sets the "type" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableType(v *string) *PaymentOrderUpdate {
+// SetNillableUserEmail sets the "user_email" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableUserEmail(v *string) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetType(*v)
+		_u.SetUserEmail(*v)
 	}
 	return _u
 }
 
-// SetPlanID sets the "plan_id" field.
-func (_u *PaymentOrderUpdate) SetPlanID(v int64) *PaymentOrderUpdate {
-	_u.mutation.SetPlanID(v)
+// SetUserName sets the "user_name" field.
+func (_u *PaymentOrderUpdate) SetUserName(v string) *PaymentOrderUpdate {
+	_u.mutation.SetUserName(v)
 	return _u
 }
 
-// SetNillablePlanID sets the "plan_id" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillablePlanID(v *int64) *PaymentOrderUpdate {
+// SetNillableUserName sets the "user_name" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableUserName(v *string) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetPlanID(*v)
+		_u.SetUserName(*v)
 	}
 	return _u
 }
 
-// ClearPlanID clears the value of the "plan_id" field.
-func (_u *PaymentOrderUpdate) ClearPlanID() *PaymentOrderUpdate {
-	_u.mutation.ClearPlanID()
+// SetUserNotes sets the "user_notes" field.
+func (_u *PaymentOrderUpdate) SetUserNotes(v string) *PaymentOrderUpdate {
+	_u.mutation.SetUserNotes(v)
+	return _u
+}
+
+// SetNillableUserNotes sets the "user_notes" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableUserNotes(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetUserNotes(*v)
+	}
+	return _u
+}
+
+// ClearUserNotes clears the value of the "user_notes" field.
+func (_u *PaymentOrderUpdate) ClearUserNotes() *PaymentOrderUpdate {
+	_u.mutation.ClearUserNotes()
 	return _u
 }
 
@@ -113,44 +112,308 @@ func (_u *PaymentOrderUpdate) AddAmount(v float64) *PaymentOrderUpdate {
 	return _u
 }
 
-// SetCreditAmount sets the "credit_amount" field.
-func (_u *PaymentOrderUpdate) SetCreditAmount(v float64) *PaymentOrderUpdate {
-	_u.mutation.ResetCreditAmount()
-	_u.mutation.SetCreditAmount(v)
+// SetPayAmount sets the "pay_amount" field.
+func (_u *PaymentOrderUpdate) SetPayAmount(v float64) *PaymentOrderUpdate {
+	_u.mutation.ResetPayAmount()
+	_u.mutation.SetPayAmount(v)
 	return _u
 }
 
-// SetNillableCreditAmount sets the "credit_amount" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableCreditAmount(v *float64) *PaymentOrderUpdate {
+// SetNillablePayAmount sets the "pay_amount" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillablePayAmount(v *float64) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetCreditAmount(*v)
+		_u.SetPayAmount(*v)
 	}
 	return _u
 }
 
-// AddCreditAmount adds value to the "credit_amount" field.
-func (_u *PaymentOrderUpdate) AddCreditAmount(v float64) *PaymentOrderUpdate {
-	_u.mutation.AddCreditAmount(v)
+// AddPayAmount adds value to the "pay_amount" field.
+func (_u *PaymentOrderUpdate) AddPayAmount(v float64) *PaymentOrderUpdate {
+	_u.mutation.AddPayAmount(v)
 	return _u
 }
 
-// ClearCreditAmount clears the value of the "credit_amount" field.
-func (_u *PaymentOrderUpdate) ClearCreditAmount() *PaymentOrderUpdate {
-	_u.mutation.ClearCreditAmount()
+// SetFeeRate sets the "fee_rate" field.
+func (_u *PaymentOrderUpdate) SetFeeRate(v float64) *PaymentOrderUpdate {
+	_u.mutation.ResetFeeRate()
+	_u.mutation.SetFeeRate(v)
 	return _u
 }
 
-// SetCurrency sets the "currency" field.
-func (_u *PaymentOrderUpdate) SetCurrency(v string) *PaymentOrderUpdate {
-	_u.mutation.SetCurrency(v)
-	return _u
-}
-
-// SetNillableCurrency sets the "currency" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableCurrency(v *string) *PaymentOrderUpdate {
+// SetNillableFeeRate sets the "fee_rate" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableFeeRate(v *float64) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetCurrency(*v)
+		_u.SetFeeRate(*v)
 	}
+	return _u
+}
+
+// AddFeeRate adds value to the "fee_rate" field.
+func (_u *PaymentOrderUpdate) AddFeeRate(v float64) *PaymentOrderUpdate {
+	_u.mutation.AddFeeRate(v)
+	return _u
+}
+
+// SetRechargeCode sets the "recharge_code" field.
+func (_u *PaymentOrderUpdate) SetRechargeCode(v string) *PaymentOrderUpdate {
+	_u.mutation.SetRechargeCode(v)
+	return _u
+}
+
+// SetNillableRechargeCode sets the "recharge_code" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableRechargeCode(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetRechargeCode(*v)
+	}
+	return _u
+}
+
+// SetOutTradeNo sets the "out_trade_no" field.
+func (_u *PaymentOrderUpdate) SetOutTradeNo(v string) *PaymentOrderUpdate {
+	_u.mutation.SetOutTradeNo(v)
+	return _u
+}
+
+// SetNillableOutTradeNo sets the "out_trade_no" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableOutTradeNo(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetOutTradeNo(*v)
+	}
+	return _u
+}
+
+// SetPaymentType sets the "payment_type" field.
+func (_u *PaymentOrderUpdate) SetPaymentType(v string) *PaymentOrderUpdate {
+	_u.mutation.SetPaymentType(v)
+	return _u
+}
+
+// SetNillablePaymentType sets the "payment_type" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillablePaymentType(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetPaymentType(*v)
+	}
+	return _u
+}
+
+// SetPaymentTradeNo sets the "payment_trade_no" field.
+func (_u *PaymentOrderUpdate) SetPaymentTradeNo(v string) *PaymentOrderUpdate {
+	_u.mutation.SetPaymentTradeNo(v)
+	return _u
+}
+
+// SetNillablePaymentTradeNo sets the "payment_trade_no" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillablePaymentTradeNo(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetPaymentTradeNo(*v)
+	}
+	return _u
+}
+
+// SetPayURL sets the "pay_url" field.
+func (_u *PaymentOrderUpdate) SetPayURL(v string) *PaymentOrderUpdate {
+	_u.mutation.SetPayURL(v)
+	return _u
+}
+
+// SetNillablePayURL sets the "pay_url" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillablePayURL(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetPayURL(*v)
+	}
+	return _u
+}
+
+// ClearPayURL clears the value of the "pay_url" field.
+func (_u *PaymentOrderUpdate) ClearPayURL() *PaymentOrderUpdate {
+	_u.mutation.ClearPayURL()
+	return _u
+}
+
+// SetQrCode sets the "qr_code" field.
+func (_u *PaymentOrderUpdate) SetQrCode(v string) *PaymentOrderUpdate {
+	_u.mutation.SetQrCode(v)
+	return _u
+}
+
+// SetNillableQrCode sets the "qr_code" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableQrCode(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetQrCode(*v)
+	}
+	return _u
+}
+
+// ClearQrCode clears the value of the "qr_code" field.
+func (_u *PaymentOrderUpdate) ClearQrCode() *PaymentOrderUpdate {
+	_u.mutation.ClearQrCode()
+	return _u
+}
+
+// SetQrCodeImg sets the "qr_code_img" field.
+func (_u *PaymentOrderUpdate) SetQrCodeImg(v string) *PaymentOrderUpdate {
+	_u.mutation.SetQrCodeImg(v)
+	return _u
+}
+
+// SetNillableQrCodeImg sets the "qr_code_img" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableQrCodeImg(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetQrCodeImg(*v)
+	}
+	return _u
+}
+
+// ClearQrCodeImg clears the value of the "qr_code_img" field.
+func (_u *PaymentOrderUpdate) ClearQrCodeImg() *PaymentOrderUpdate {
+	_u.mutation.ClearQrCodeImg()
+	return _u
+}
+
+// SetOrderType sets the "order_type" field.
+func (_u *PaymentOrderUpdate) SetOrderType(v string) *PaymentOrderUpdate {
+	_u.mutation.SetOrderType(v)
+	return _u
+}
+
+// SetNillableOrderType sets the "order_type" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableOrderType(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetOrderType(*v)
+	}
+	return _u
+}
+
+// SetPlanID sets the "plan_id" field.
+func (_u *PaymentOrderUpdate) SetPlanID(v int64) *PaymentOrderUpdate {
+	_u.mutation.ResetPlanID()
+	_u.mutation.SetPlanID(v)
+	return _u
+}
+
+// SetNillablePlanID sets the "plan_id" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillablePlanID(v *int64) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetPlanID(*v)
+	}
+	return _u
+}
+
+// AddPlanID adds value to the "plan_id" field.
+func (_u *PaymentOrderUpdate) AddPlanID(v int64) *PaymentOrderUpdate {
+	_u.mutation.AddPlanID(v)
+	return _u
+}
+
+// ClearPlanID clears the value of the "plan_id" field.
+func (_u *PaymentOrderUpdate) ClearPlanID() *PaymentOrderUpdate {
+	_u.mutation.ClearPlanID()
+	return _u
+}
+
+// SetSubscriptionGroupID sets the "subscription_group_id" field.
+func (_u *PaymentOrderUpdate) SetSubscriptionGroupID(v int64) *PaymentOrderUpdate {
+	_u.mutation.ResetSubscriptionGroupID()
+	_u.mutation.SetSubscriptionGroupID(v)
+	return _u
+}
+
+// SetNillableSubscriptionGroupID sets the "subscription_group_id" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableSubscriptionGroupID(v *int64) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetSubscriptionGroupID(*v)
+	}
+	return _u
+}
+
+// AddSubscriptionGroupID adds value to the "subscription_group_id" field.
+func (_u *PaymentOrderUpdate) AddSubscriptionGroupID(v int64) *PaymentOrderUpdate {
+	_u.mutation.AddSubscriptionGroupID(v)
+	return _u
+}
+
+// ClearSubscriptionGroupID clears the value of the "subscription_group_id" field.
+func (_u *PaymentOrderUpdate) ClearSubscriptionGroupID() *PaymentOrderUpdate {
+	_u.mutation.ClearSubscriptionGroupID()
+	return _u
+}
+
+// SetSubscriptionDays sets the "subscription_days" field.
+func (_u *PaymentOrderUpdate) SetSubscriptionDays(v int) *PaymentOrderUpdate {
+	_u.mutation.ResetSubscriptionDays()
+	_u.mutation.SetSubscriptionDays(v)
+	return _u
+}
+
+// SetNillableSubscriptionDays sets the "subscription_days" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableSubscriptionDays(v *int) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetSubscriptionDays(*v)
+	}
+	return _u
+}
+
+// AddSubscriptionDays adds value to the "subscription_days" field.
+func (_u *PaymentOrderUpdate) AddSubscriptionDays(v int) *PaymentOrderUpdate {
+	_u.mutation.AddSubscriptionDays(v)
+	return _u
+}
+
+// ClearSubscriptionDays clears the value of the "subscription_days" field.
+func (_u *PaymentOrderUpdate) ClearSubscriptionDays() *PaymentOrderUpdate {
+	_u.mutation.ClearSubscriptionDays()
+	return _u
+}
+
+// SetProviderInstanceID sets the "provider_instance_id" field.
+func (_u *PaymentOrderUpdate) SetProviderInstanceID(v string) *PaymentOrderUpdate {
+	_u.mutation.SetProviderInstanceID(v)
+	return _u
+}
+
+// SetNillableProviderInstanceID sets the "provider_instance_id" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableProviderInstanceID(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetProviderInstanceID(*v)
+	}
+	return _u
+}
+
+// ClearProviderInstanceID clears the value of the "provider_instance_id" field.
+func (_u *PaymentOrderUpdate) ClearProviderInstanceID() *PaymentOrderUpdate {
+	_u.mutation.ClearProviderInstanceID()
+	return _u
+}
+
+// SetProviderKey sets the "provider_key" field.
+func (_u *PaymentOrderUpdate) SetProviderKey(v string) *PaymentOrderUpdate {
+	_u.mutation.SetProviderKey(v)
+	return _u
+}
+
+// SetNillableProviderKey sets the "provider_key" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableProviderKey(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetProviderKey(*v)
+	}
+	return _u
+}
+
+// ClearProviderKey clears the value of the "provider_key" field.
+func (_u *PaymentOrderUpdate) ClearProviderKey() *PaymentOrderUpdate {
+	_u.mutation.ClearProviderKey()
+	return _u
+}
+
+// SetProviderSnapshot sets the "provider_snapshot" field.
+func (_u *PaymentOrderUpdate) SetProviderSnapshot(v map[string]interface{}) *PaymentOrderUpdate {
+	_u.mutation.SetProviderSnapshot(v)
+	return _u
+}
+
+// ClearProviderSnapshot clears the value of the "provider_snapshot" field.
+func (_u *PaymentOrderUpdate) ClearProviderSnapshot() *PaymentOrderUpdate {
+	_u.mutation.ClearProviderSnapshot()
 	return _u
 }
 
@@ -168,43 +431,152 @@ func (_u *PaymentOrderUpdate) SetNillableStatus(v *string) *PaymentOrderUpdate {
 	return _u
 }
 
-// SetProvider sets the "provider" field.
-func (_u *PaymentOrderUpdate) SetProvider(v string) *PaymentOrderUpdate {
-	_u.mutation.SetProvider(v)
+// SetRefundAmount sets the "refund_amount" field.
+func (_u *PaymentOrderUpdate) SetRefundAmount(v float64) *PaymentOrderUpdate {
+	_u.mutation.ResetRefundAmount()
+	_u.mutation.SetRefundAmount(v)
 	return _u
 }
 
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableProvider(v *string) *PaymentOrderUpdate {
+// SetNillableRefundAmount sets the "refund_amount" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableRefundAmount(v *float64) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetProvider(*v)
+		_u.SetRefundAmount(*v)
 	}
 	return _u
 }
 
-// ClearProvider clears the value of the "provider" field.
-func (_u *PaymentOrderUpdate) ClearProvider() *PaymentOrderUpdate {
-	_u.mutation.ClearProvider()
+// AddRefundAmount adds value to the "refund_amount" field.
+func (_u *PaymentOrderUpdate) AddRefundAmount(v float64) *PaymentOrderUpdate {
+	_u.mutation.AddRefundAmount(v)
 	return _u
 }
 
-// SetProviderOrderNo sets the "provider_order_no" field.
-func (_u *PaymentOrderUpdate) SetProviderOrderNo(v string) *PaymentOrderUpdate {
-	_u.mutation.SetProviderOrderNo(v)
+// SetRefundReason sets the "refund_reason" field.
+func (_u *PaymentOrderUpdate) SetRefundReason(v string) *PaymentOrderUpdate {
+	_u.mutation.SetRefundReason(v)
 	return _u
 }
 
-// SetNillableProviderOrderNo sets the "provider_order_no" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableProviderOrderNo(v *string) *PaymentOrderUpdate {
+// SetNillableRefundReason sets the "refund_reason" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableRefundReason(v *string) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetProviderOrderNo(*v)
+		_u.SetRefundReason(*v)
 	}
 	return _u
 }
 
-// ClearProviderOrderNo clears the value of the "provider_order_no" field.
-func (_u *PaymentOrderUpdate) ClearProviderOrderNo() *PaymentOrderUpdate {
-	_u.mutation.ClearProviderOrderNo()
+// ClearRefundReason clears the value of the "refund_reason" field.
+func (_u *PaymentOrderUpdate) ClearRefundReason() *PaymentOrderUpdate {
+	_u.mutation.ClearRefundReason()
+	return _u
+}
+
+// SetRefundAt sets the "refund_at" field.
+func (_u *PaymentOrderUpdate) SetRefundAt(v time.Time) *PaymentOrderUpdate {
+	_u.mutation.SetRefundAt(v)
+	return _u
+}
+
+// SetNillableRefundAt sets the "refund_at" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableRefundAt(v *time.Time) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetRefundAt(*v)
+	}
+	return _u
+}
+
+// ClearRefundAt clears the value of the "refund_at" field.
+func (_u *PaymentOrderUpdate) ClearRefundAt() *PaymentOrderUpdate {
+	_u.mutation.ClearRefundAt()
+	return _u
+}
+
+// SetForceRefund sets the "force_refund" field.
+func (_u *PaymentOrderUpdate) SetForceRefund(v bool) *PaymentOrderUpdate {
+	_u.mutation.SetForceRefund(v)
+	return _u
+}
+
+// SetNillableForceRefund sets the "force_refund" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableForceRefund(v *bool) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetForceRefund(*v)
+	}
+	return _u
+}
+
+// SetRefundRequestedAt sets the "refund_requested_at" field.
+func (_u *PaymentOrderUpdate) SetRefundRequestedAt(v time.Time) *PaymentOrderUpdate {
+	_u.mutation.SetRefundRequestedAt(v)
+	return _u
+}
+
+// SetNillableRefundRequestedAt sets the "refund_requested_at" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableRefundRequestedAt(v *time.Time) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetRefundRequestedAt(*v)
+	}
+	return _u
+}
+
+// ClearRefundRequestedAt clears the value of the "refund_requested_at" field.
+func (_u *PaymentOrderUpdate) ClearRefundRequestedAt() *PaymentOrderUpdate {
+	_u.mutation.ClearRefundRequestedAt()
+	return _u
+}
+
+// SetRefundRequestReason sets the "refund_request_reason" field.
+func (_u *PaymentOrderUpdate) SetRefundRequestReason(v string) *PaymentOrderUpdate {
+	_u.mutation.SetRefundRequestReason(v)
+	return _u
+}
+
+// SetNillableRefundRequestReason sets the "refund_request_reason" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableRefundRequestReason(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetRefundRequestReason(*v)
+	}
+	return _u
+}
+
+// ClearRefundRequestReason clears the value of the "refund_request_reason" field.
+func (_u *PaymentOrderUpdate) ClearRefundRequestReason() *PaymentOrderUpdate {
+	_u.mutation.ClearRefundRequestReason()
+	return _u
+}
+
+// SetRefundRequestedBy sets the "refund_requested_by" field.
+func (_u *PaymentOrderUpdate) SetRefundRequestedBy(v string) *PaymentOrderUpdate {
+	_u.mutation.SetRefundRequestedBy(v)
+	return _u
+}
+
+// SetNillableRefundRequestedBy sets the "refund_requested_by" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableRefundRequestedBy(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetRefundRequestedBy(*v)
+	}
+	return _u
+}
+
+// ClearRefundRequestedBy clears the value of the "refund_requested_by" field.
+func (_u *PaymentOrderUpdate) ClearRefundRequestedBy() *PaymentOrderUpdate {
+	_u.mutation.ClearRefundRequestedBy()
+	return _u
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (_u *PaymentOrderUpdate) SetExpiresAt(v time.Time) *PaymentOrderUpdate {
+	_u.mutation.SetExpiresAt(v)
+	return _u
+}
+
+// SetNillableExpiresAt sets the "expires_at" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableExpiresAt(v *time.Time) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetExpiresAt(*v)
+	}
 	return _u
 }
 
@@ -248,97 +620,91 @@ func (_u *PaymentOrderUpdate) ClearCompletedAt() *PaymentOrderUpdate {
 	return _u
 }
 
-// SetRefundedAt sets the "refunded_at" field.
-func (_u *PaymentOrderUpdate) SetRefundedAt(v time.Time) *PaymentOrderUpdate {
-	_u.mutation.SetRefundedAt(v)
+// SetFailedAt sets the "failed_at" field.
+func (_u *PaymentOrderUpdate) SetFailedAt(v time.Time) *PaymentOrderUpdate {
+	_u.mutation.SetFailedAt(v)
 	return _u
 }
 
-// SetNillableRefundedAt sets the "refunded_at" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableRefundedAt(v *time.Time) *PaymentOrderUpdate {
+// SetNillableFailedAt sets the "failed_at" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableFailedAt(v *time.Time) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetRefundedAt(*v)
+		_u.SetFailedAt(*v)
 	}
 	return _u
 }
 
-// ClearRefundedAt clears the value of the "refunded_at" field.
-func (_u *PaymentOrderUpdate) ClearRefundedAt() *PaymentOrderUpdate {
-	_u.mutation.ClearRefundedAt()
+// ClearFailedAt clears the value of the "failed_at" field.
+func (_u *PaymentOrderUpdate) ClearFailedAt() *PaymentOrderUpdate {
+	_u.mutation.ClearFailedAt()
 	return _u
 }
 
-// SetExpiredAt sets the "expired_at" field.
-func (_u *PaymentOrderUpdate) SetExpiredAt(v time.Time) *PaymentOrderUpdate {
-	_u.mutation.SetExpiredAt(v)
+// SetFailedReason sets the "failed_reason" field.
+func (_u *PaymentOrderUpdate) SetFailedReason(v string) *PaymentOrderUpdate {
+	_u.mutation.SetFailedReason(v)
 	return _u
 }
 
-// SetNillableExpiredAt sets the "expired_at" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableExpiredAt(v *time.Time) *PaymentOrderUpdate {
+// SetNillableFailedReason sets the "failed_reason" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableFailedReason(v *string) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetExpiredAt(*v)
+		_u.SetFailedReason(*v)
 	}
 	return _u
 }
 
-// SetCallbackRaw sets the "callback_raw" field.
-func (_u *PaymentOrderUpdate) SetCallbackRaw(v string) *PaymentOrderUpdate {
-	_u.mutation.SetCallbackRaw(v)
+// ClearFailedReason clears the value of the "failed_reason" field.
+func (_u *PaymentOrderUpdate) ClearFailedReason() *PaymentOrderUpdate {
+	_u.mutation.ClearFailedReason()
 	return _u
 }
 
-// SetNillableCallbackRaw sets the "callback_raw" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableCallbackRaw(v *string) *PaymentOrderUpdate {
+// SetClientIP sets the "client_ip" field.
+func (_u *PaymentOrderUpdate) SetClientIP(v string) *PaymentOrderUpdate {
+	_u.mutation.SetClientIP(v)
+	return _u
+}
+
+// SetNillableClientIP sets the "client_ip" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableClientIP(v *string) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetCallbackRaw(*v)
+		_u.SetClientIP(*v)
 	}
 	return _u
 }
 
-// ClearCallbackRaw clears the value of the "callback_raw" field.
-func (_u *PaymentOrderUpdate) ClearCallbackRaw() *PaymentOrderUpdate {
-	_u.mutation.ClearCallbackRaw()
+// SetSrcHost sets the "src_host" field.
+func (_u *PaymentOrderUpdate) SetSrcHost(v string) *PaymentOrderUpdate {
+	_u.mutation.SetSrcHost(v)
 	return _u
 }
 
-// SetAdminNote sets the "admin_note" field.
-func (_u *PaymentOrderUpdate) SetAdminNote(v string) *PaymentOrderUpdate {
-	_u.mutation.SetAdminNote(v)
-	return _u
-}
-
-// SetNillableAdminNote sets the "admin_note" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableAdminNote(v *string) *PaymentOrderUpdate {
+// SetNillableSrcHost sets the "src_host" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableSrcHost(v *string) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetAdminNote(*v)
+		_u.SetSrcHost(*v)
 	}
 	return _u
 }
 
-// ClearAdminNote clears the value of the "admin_note" field.
-func (_u *PaymentOrderUpdate) ClearAdminNote() *PaymentOrderUpdate {
-	_u.mutation.ClearAdminNote()
+// SetSrcURL sets the "src_url" field.
+func (_u *PaymentOrderUpdate) SetSrcURL(v string) *PaymentOrderUpdate {
+	_u.mutation.SetSrcURL(v)
 	return _u
 }
 
-// SetRefundNo sets the "refund_no" field.
-func (_u *PaymentOrderUpdate) SetRefundNo(v string) *PaymentOrderUpdate {
-	_u.mutation.SetRefundNo(v)
-	return _u
-}
-
-// SetNillableRefundNo sets the "refund_no" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableRefundNo(v *string) *PaymentOrderUpdate {
+// SetNillableSrcURL sets the "src_url" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableSrcURL(v *string) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetRefundNo(*v)
+		_u.SetSrcURL(*v)
 	}
 	return _u
 }
 
-// ClearRefundNo clears the value of the "refund_no" field.
-func (_u *PaymentOrderUpdate) ClearRefundNo() *PaymentOrderUpdate {
-	_u.mutation.ClearRefundNo()
+// ClearSrcURL clears the value of the "src_url" field.
+func (_u *PaymentOrderUpdate) ClearSrcURL() *PaymentOrderUpdate {
+	_u.mutation.ClearSrcURL()
 	return _u
 }
 
@@ -353,11 +719,6 @@ func (_u *PaymentOrderUpdate) SetUser(v *User) *PaymentOrderUpdate {
 	return _u.SetUserID(v.ID)
 }
 
-// SetPlan sets the "plan" edge to the PaymentPlan entity.
-func (_u *PaymentOrderUpdate) SetPlan(v *PaymentPlan) *PaymentOrderUpdate {
-	return _u.SetPlanID(v.ID)
-}
-
 // Mutation returns the PaymentOrderMutation object of the builder.
 func (_u *PaymentOrderUpdate) Mutation() *PaymentOrderMutation {
 	return _u.mutation
@@ -366,12 +727,6 @@ func (_u *PaymentOrderUpdate) Mutation() *PaymentOrderMutation {
 // ClearUser clears the "user" edge to the User entity.
 func (_u *PaymentOrderUpdate) ClearUser() *PaymentOrderUpdate {
 	_u.mutation.ClearUser()
-	return _u
-}
-
-// ClearPlan clears the "plan" edge to the PaymentPlan entity.
-func (_u *PaymentOrderUpdate) ClearPlan() *PaymentOrderUpdate {
-	_u.mutation.ClearPlan()
 	return _u
 }
 
@@ -413,19 +768,49 @@ func (_u *PaymentOrderUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *PaymentOrderUpdate) check() error {
-	if v, ok := _u.mutation.OrderNo(); ok {
-		if err := paymentorder.OrderNoValidator(v); err != nil {
-			return &ValidationError{Name: "order_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_no": %w`, err)}
+	if v, ok := _u.mutation.UserEmail(); ok {
+		if err := paymentorder.UserEmailValidator(v); err != nil {
+			return &ValidationError{Name: "user_email", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.user_email": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.GetType(); ok {
-		if err := paymentorder.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.type": %w`, err)}
+	if v, ok := _u.mutation.UserName(); ok {
+		if err := paymentorder.UserNameValidator(v); err != nil {
+			return &ValidationError{Name: "user_name", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.user_name": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.Currency(); ok {
-		if err := paymentorder.CurrencyValidator(v); err != nil {
-			return &ValidationError{Name: "currency", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.currency": %w`, err)}
+	if v, ok := _u.mutation.RechargeCode(); ok {
+		if err := paymentorder.RechargeCodeValidator(v); err != nil {
+			return &ValidationError{Name: "recharge_code", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.recharge_code": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.OutTradeNo(); ok {
+		if err := paymentorder.OutTradeNoValidator(v); err != nil {
+			return &ValidationError{Name: "out_trade_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.out_trade_no": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.PaymentType(); ok {
+		if err := paymentorder.PaymentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "payment_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.payment_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.PaymentTradeNo(); ok {
+		if err := paymentorder.PaymentTradeNoValidator(v); err != nil {
+			return &ValidationError{Name: "payment_trade_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.payment_trade_no": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.OrderType(); ok {
+		if err := paymentorder.OrderTypeValidator(v); err != nil {
+			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ProviderInstanceID(); ok {
+		if err := paymentorder.ProviderInstanceIDValidator(v); err != nil {
+			return &ValidationError{Name: "provider_instance_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_instance_id": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ProviderKey(); ok {
+		if err := paymentorder.ProviderKeyValidator(v); err != nil {
+			return &ValidationError{Name: "provider_key", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_key": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Status(); ok {
@@ -433,19 +818,19 @@ func (_u *PaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.Provider(); ok {
-		if err := paymentorder.ProviderValidator(v); err != nil {
-			return &ValidationError{Name: "provider", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider": %w`, err)}
+	if v, ok := _u.mutation.RefundRequestedBy(); ok {
+		if err := paymentorder.RefundRequestedByValidator(v); err != nil {
+			return &ValidationError{Name: "refund_requested_by", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.refund_requested_by": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.ProviderOrderNo(); ok {
-		if err := paymentorder.ProviderOrderNoValidator(v); err != nil {
-			return &ValidationError{Name: "provider_order_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_order_no": %w`, err)}
+	if v, ok := _u.mutation.ClientIP(); ok {
+		if err := paymentorder.ClientIPValidator(v); err != nil {
+			return &ValidationError{Name: "client_ip", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.client_ip": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.RefundNo(); ok {
-		if err := paymentorder.RefundNoValidator(v); err != nil {
-			return &ValidationError{Name: "refund_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.refund_no": %w`, err)}
+	if v, ok := _u.mutation.SrcHost(); ok {
+		if err := paymentorder.SrcHostValidator(v); err != nil {
+			return &ValidationError{Name: "src_host", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.src_host": %w`, err)}
 		}
 	}
 	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
@@ -466,11 +851,17 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 			}
 		}
 	}
-	if value, ok := _u.mutation.OrderNo(); ok {
-		_spec.SetField(paymentorder.FieldOrderNo, field.TypeString, value)
+	if value, ok := _u.mutation.UserEmail(); ok {
+		_spec.SetField(paymentorder.FieldUserEmail, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.GetType(); ok {
-		_spec.SetField(paymentorder.FieldType, field.TypeString, value)
+	if value, ok := _u.mutation.UserName(); ok {
+		_spec.SetField(paymentorder.FieldUserName, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.UserNotes(); ok {
+		_spec.SetField(paymentorder.FieldUserNotes, field.TypeString, value)
+	}
+	if _u.mutation.UserNotesCleared() {
+		_spec.ClearField(paymentorder.FieldUserNotes, field.TypeString)
 	}
 	if value, ok := _u.mutation.Amount(); ok {
 		_spec.SetField(paymentorder.FieldAmount, field.TypeFloat64, value)
@@ -478,32 +869,140 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.AddedAmount(); ok {
 		_spec.AddField(paymentorder.FieldAmount, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.CreditAmount(); ok {
-		_spec.SetField(paymentorder.FieldCreditAmount, field.TypeFloat64, value)
+	if value, ok := _u.mutation.PayAmount(); ok {
+		_spec.SetField(paymentorder.FieldPayAmount, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.AddedCreditAmount(); ok {
-		_spec.AddField(paymentorder.FieldCreditAmount, field.TypeFloat64, value)
+	if value, ok := _u.mutation.AddedPayAmount(); ok {
+		_spec.AddField(paymentorder.FieldPayAmount, field.TypeFloat64, value)
 	}
-	if _u.mutation.CreditAmountCleared() {
-		_spec.ClearField(paymentorder.FieldCreditAmount, field.TypeFloat64)
+	if value, ok := _u.mutation.FeeRate(); ok {
+		_spec.SetField(paymentorder.FieldFeeRate, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.Currency(); ok {
-		_spec.SetField(paymentorder.FieldCurrency, field.TypeString, value)
+	if value, ok := _u.mutation.AddedFeeRate(); ok {
+		_spec.AddField(paymentorder.FieldFeeRate, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.RechargeCode(); ok {
+		_spec.SetField(paymentorder.FieldRechargeCode, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.OutTradeNo(); ok {
+		_spec.SetField(paymentorder.FieldOutTradeNo, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.PaymentType(); ok {
+		_spec.SetField(paymentorder.FieldPaymentType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.PaymentTradeNo(); ok {
+		_spec.SetField(paymentorder.FieldPaymentTradeNo, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.PayURL(); ok {
+		_spec.SetField(paymentorder.FieldPayURL, field.TypeString, value)
+	}
+	if _u.mutation.PayURLCleared() {
+		_spec.ClearField(paymentorder.FieldPayURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.QrCode(); ok {
+		_spec.SetField(paymentorder.FieldQrCode, field.TypeString, value)
+	}
+	if _u.mutation.QrCodeCleared() {
+		_spec.ClearField(paymentorder.FieldQrCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.QrCodeImg(); ok {
+		_spec.SetField(paymentorder.FieldQrCodeImg, field.TypeString, value)
+	}
+	if _u.mutation.QrCodeImgCleared() {
+		_spec.ClearField(paymentorder.FieldQrCodeImg, field.TypeString)
+	}
+	if value, ok := _u.mutation.OrderType(); ok {
+		_spec.SetField(paymentorder.FieldOrderType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.PlanID(); ok {
+		_spec.SetField(paymentorder.FieldPlanID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedPlanID(); ok {
+		_spec.AddField(paymentorder.FieldPlanID, field.TypeInt64, value)
+	}
+	if _u.mutation.PlanIDCleared() {
+		_spec.ClearField(paymentorder.FieldPlanID, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.SubscriptionGroupID(); ok {
+		_spec.SetField(paymentorder.FieldSubscriptionGroupID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedSubscriptionGroupID(); ok {
+		_spec.AddField(paymentorder.FieldSubscriptionGroupID, field.TypeInt64, value)
+	}
+	if _u.mutation.SubscriptionGroupIDCleared() {
+		_spec.ClearField(paymentorder.FieldSubscriptionGroupID, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.SubscriptionDays(); ok {
+		_spec.SetField(paymentorder.FieldSubscriptionDays, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedSubscriptionDays(); ok {
+		_spec.AddField(paymentorder.FieldSubscriptionDays, field.TypeInt, value)
+	}
+	if _u.mutation.SubscriptionDaysCleared() {
+		_spec.ClearField(paymentorder.FieldSubscriptionDays, field.TypeInt)
+	}
+	if value, ok := _u.mutation.ProviderInstanceID(); ok {
+		_spec.SetField(paymentorder.FieldProviderInstanceID, field.TypeString, value)
+	}
+	if _u.mutation.ProviderInstanceIDCleared() {
+		_spec.ClearField(paymentorder.FieldProviderInstanceID, field.TypeString)
+	}
+	if value, ok := _u.mutation.ProviderKey(); ok {
+		_spec.SetField(paymentorder.FieldProviderKey, field.TypeString, value)
+	}
+	if _u.mutation.ProviderKeyCleared() {
+		_spec.ClearField(paymentorder.FieldProviderKey, field.TypeString)
+	}
+	if value, ok := _u.mutation.ProviderSnapshot(); ok {
+		_spec.SetField(paymentorder.FieldProviderSnapshot, field.TypeJSON, value)
+	}
+	if _u.mutation.ProviderSnapshotCleared() {
+		_spec.ClearField(paymentorder.FieldProviderSnapshot, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.Provider(); ok {
-		_spec.SetField(paymentorder.FieldProvider, field.TypeString, value)
+	if value, ok := _u.mutation.RefundAmount(); ok {
+		_spec.SetField(paymentorder.FieldRefundAmount, field.TypeFloat64, value)
 	}
-	if _u.mutation.ProviderCleared() {
-		_spec.ClearField(paymentorder.FieldProvider, field.TypeString)
+	if value, ok := _u.mutation.AddedRefundAmount(); ok {
+		_spec.AddField(paymentorder.FieldRefundAmount, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.ProviderOrderNo(); ok {
-		_spec.SetField(paymentorder.FieldProviderOrderNo, field.TypeString, value)
+	if value, ok := _u.mutation.RefundReason(); ok {
+		_spec.SetField(paymentorder.FieldRefundReason, field.TypeString, value)
 	}
-	if _u.mutation.ProviderOrderNoCleared() {
-		_spec.ClearField(paymentorder.FieldProviderOrderNo, field.TypeString)
+	if _u.mutation.RefundReasonCleared() {
+		_spec.ClearField(paymentorder.FieldRefundReason, field.TypeString)
+	}
+	if value, ok := _u.mutation.RefundAt(); ok {
+		_spec.SetField(paymentorder.FieldRefundAt, field.TypeTime, value)
+	}
+	if _u.mutation.RefundAtCleared() {
+		_spec.ClearField(paymentorder.FieldRefundAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.ForceRefund(); ok {
+		_spec.SetField(paymentorder.FieldForceRefund, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.RefundRequestedAt(); ok {
+		_spec.SetField(paymentorder.FieldRefundRequestedAt, field.TypeTime, value)
+	}
+	if _u.mutation.RefundRequestedAtCleared() {
+		_spec.ClearField(paymentorder.FieldRefundRequestedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.RefundRequestReason(); ok {
+		_spec.SetField(paymentorder.FieldRefundRequestReason, field.TypeString, value)
+	}
+	if _u.mutation.RefundRequestReasonCleared() {
+		_spec.ClearField(paymentorder.FieldRefundRequestReason, field.TypeString)
+	}
+	if value, ok := _u.mutation.RefundRequestedBy(); ok {
+		_spec.SetField(paymentorder.FieldRefundRequestedBy, field.TypeString, value)
+	}
+	if _u.mutation.RefundRequestedByCleared() {
+		_spec.ClearField(paymentorder.FieldRefundRequestedBy, field.TypeString)
+	}
+	if value, ok := _u.mutation.ExpiresAt(); ok {
+		_spec.SetField(paymentorder.FieldExpiresAt, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.PaidAt(); ok {
 		_spec.SetField(paymentorder.FieldPaidAt, field.TypeTime, value)
@@ -517,32 +1016,29 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if _u.mutation.CompletedAtCleared() {
 		_spec.ClearField(paymentorder.FieldCompletedAt, field.TypeTime)
 	}
-	if value, ok := _u.mutation.RefundedAt(); ok {
-		_spec.SetField(paymentorder.FieldRefundedAt, field.TypeTime, value)
+	if value, ok := _u.mutation.FailedAt(); ok {
+		_spec.SetField(paymentorder.FieldFailedAt, field.TypeTime, value)
 	}
-	if _u.mutation.RefundedAtCleared() {
-		_spec.ClearField(paymentorder.FieldRefundedAt, field.TypeTime)
+	if _u.mutation.FailedAtCleared() {
+		_spec.ClearField(paymentorder.FieldFailedAt, field.TypeTime)
 	}
-	if value, ok := _u.mutation.ExpiredAt(); ok {
-		_spec.SetField(paymentorder.FieldExpiredAt, field.TypeTime, value)
+	if value, ok := _u.mutation.FailedReason(); ok {
+		_spec.SetField(paymentorder.FieldFailedReason, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.CallbackRaw(); ok {
-		_spec.SetField(paymentorder.FieldCallbackRaw, field.TypeString, value)
+	if _u.mutation.FailedReasonCleared() {
+		_spec.ClearField(paymentorder.FieldFailedReason, field.TypeString)
 	}
-	if _u.mutation.CallbackRawCleared() {
-		_spec.ClearField(paymentorder.FieldCallbackRaw, field.TypeString)
+	if value, ok := _u.mutation.ClientIP(); ok {
+		_spec.SetField(paymentorder.FieldClientIP, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.AdminNote(); ok {
-		_spec.SetField(paymentorder.FieldAdminNote, field.TypeString, value)
+	if value, ok := _u.mutation.SrcHost(); ok {
+		_spec.SetField(paymentorder.FieldSrcHost, field.TypeString, value)
 	}
-	if _u.mutation.AdminNoteCleared() {
-		_spec.ClearField(paymentorder.FieldAdminNote, field.TypeString)
+	if value, ok := _u.mutation.SrcURL(); ok {
+		_spec.SetField(paymentorder.FieldSrcURL, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.RefundNo(); ok {
-		_spec.SetField(paymentorder.FieldRefundNo, field.TypeString, value)
-	}
-	if _u.mutation.RefundNoCleared() {
-		_spec.ClearField(paymentorder.FieldRefundNo, field.TypeString)
+	if _u.mutation.SrcURLCleared() {
+		_spec.ClearField(paymentorder.FieldSrcURL, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentorder.FieldUpdatedAt, field.TypeTime, value)
@@ -576,35 +1072,6 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.PlanCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.PlanTable,
-			Columns: []string{paymentorder.PlanColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentplan.FieldID, field.TypeInt64),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.PlanIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.PlanTable,
-			Columns: []string{paymentorder.PlanColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentplan.FieldID, field.TypeInt64),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{paymentorder.Label}
@@ -625,20 +1092,6 @@ type PaymentOrderUpdateOne struct {
 	mutation *PaymentOrderMutation
 }
 
-// SetOrderNo sets the "order_no" field.
-func (_u *PaymentOrderUpdateOne) SetOrderNo(v string) *PaymentOrderUpdateOne {
-	_u.mutation.SetOrderNo(v)
-	return _u
-}
-
-// SetNillableOrderNo sets the "order_no" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableOrderNo(v *string) *PaymentOrderUpdateOne {
-	if v != nil {
-		_u.SetOrderNo(*v)
-	}
-	return _u
-}
-
 // SetUserID sets the "user_id" field.
 func (_u *PaymentOrderUpdateOne) SetUserID(v int64) *PaymentOrderUpdateOne {
 	_u.mutation.SetUserID(v)
@@ -653,37 +1106,51 @@ func (_u *PaymentOrderUpdateOne) SetNillableUserID(v *int64) *PaymentOrderUpdate
 	return _u
 }
 
-// SetType sets the "type" field.
-func (_u *PaymentOrderUpdateOne) SetType(v string) *PaymentOrderUpdateOne {
-	_u.mutation.SetType(v)
+// SetUserEmail sets the "user_email" field.
+func (_u *PaymentOrderUpdateOne) SetUserEmail(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetUserEmail(v)
 	return _u
 }
 
-// SetNillableType sets the "type" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableType(v *string) *PaymentOrderUpdateOne {
+// SetNillableUserEmail sets the "user_email" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableUserEmail(v *string) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetType(*v)
+		_u.SetUserEmail(*v)
 	}
 	return _u
 }
 
-// SetPlanID sets the "plan_id" field.
-func (_u *PaymentOrderUpdateOne) SetPlanID(v int64) *PaymentOrderUpdateOne {
-	_u.mutation.SetPlanID(v)
+// SetUserName sets the "user_name" field.
+func (_u *PaymentOrderUpdateOne) SetUserName(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetUserName(v)
 	return _u
 }
 
-// SetNillablePlanID sets the "plan_id" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillablePlanID(v *int64) *PaymentOrderUpdateOne {
+// SetNillableUserName sets the "user_name" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableUserName(v *string) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetPlanID(*v)
+		_u.SetUserName(*v)
 	}
 	return _u
 }
 
-// ClearPlanID clears the value of the "plan_id" field.
-func (_u *PaymentOrderUpdateOne) ClearPlanID() *PaymentOrderUpdateOne {
-	_u.mutation.ClearPlanID()
+// SetUserNotes sets the "user_notes" field.
+func (_u *PaymentOrderUpdateOne) SetUserNotes(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetUserNotes(v)
+	return _u
+}
+
+// SetNillableUserNotes sets the "user_notes" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableUserNotes(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetUserNotes(*v)
+	}
+	return _u
+}
+
+// ClearUserNotes clears the value of the "user_notes" field.
+func (_u *PaymentOrderUpdateOne) ClearUserNotes() *PaymentOrderUpdateOne {
+	_u.mutation.ClearUserNotes()
 	return _u
 }
 
@@ -708,44 +1175,308 @@ func (_u *PaymentOrderUpdateOne) AddAmount(v float64) *PaymentOrderUpdateOne {
 	return _u
 }
 
-// SetCreditAmount sets the "credit_amount" field.
-func (_u *PaymentOrderUpdateOne) SetCreditAmount(v float64) *PaymentOrderUpdateOne {
-	_u.mutation.ResetCreditAmount()
-	_u.mutation.SetCreditAmount(v)
+// SetPayAmount sets the "pay_amount" field.
+func (_u *PaymentOrderUpdateOne) SetPayAmount(v float64) *PaymentOrderUpdateOne {
+	_u.mutation.ResetPayAmount()
+	_u.mutation.SetPayAmount(v)
 	return _u
 }
 
-// SetNillableCreditAmount sets the "credit_amount" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableCreditAmount(v *float64) *PaymentOrderUpdateOne {
+// SetNillablePayAmount sets the "pay_amount" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillablePayAmount(v *float64) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetCreditAmount(*v)
+		_u.SetPayAmount(*v)
 	}
 	return _u
 }
 
-// AddCreditAmount adds value to the "credit_amount" field.
-func (_u *PaymentOrderUpdateOne) AddCreditAmount(v float64) *PaymentOrderUpdateOne {
-	_u.mutation.AddCreditAmount(v)
+// AddPayAmount adds value to the "pay_amount" field.
+func (_u *PaymentOrderUpdateOne) AddPayAmount(v float64) *PaymentOrderUpdateOne {
+	_u.mutation.AddPayAmount(v)
 	return _u
 }
 
-// ClearCreditAmount clears the value of the "credit_amount" field.
-func (_u *PaymentOrderUpdateOne) ClearCreditAmount() *PaymentOrderUpdateOne {
-	_u.mutation.ClearCreditAmount()
+// SetFeeRate sets the "fee_rate" field.
+func (_u *PaymentOrderUpdateOne) SetFeeRate(v float64) *PaymentOrderUpdateOne {
+	_u.mutation.ResetFeeRate()
+	_u.mutation.SetFeeRate(v)
 	return _u
 }
 
-// SetCurrency sets the "currency" field.
-func (_u *PaymentOrderUpdateOne) SetCurrency(v string) *PaymentOrderUpdateOne {
-	_u.mutation.SetCurrency(v)
-	return _u
-}
-
-// SetNillableCurrency sets the "currency" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableCurrency(v *string) *PaymentOrderUpdateOne {
+// SetNillableFeeRate sets the "fee_rate" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableFeeRate(v *float64) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetCurrency(*v)
+		_u.SetFeeRate(*v)
 	}
+	return _u
+}
+
+// AddFeeRate adds value to the "fee_rate" field.
+func (_u *PaymentOrderUpdateOne) AddFeeRate(v float64) *PaymentOrderUpdateOne {
+	_u.mutation.AddFeeRate(v)
+	return _u
+}
+
+// SetRechargeCode sets the "recharge_code" field.
+func (_u *PaymentOrderUpdateOne) SetRechargeCode(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetRechargeCode(v)
+	return _u
+}
+
+// SetNillableRechargeCode sets the "recharge_code" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableRechargeCode(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetRechargeCode(*v)
+	}
+	return _u
+}
+
+// SetOutTradeNo sets the "out_trade_no" field.
+func (_u *PaymentOrderUpdateOne) SetOutTradeNo(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetOutTradeNo(v)
+	return _u
+}
+
+// SetNillableOutTradeNo sets the "out_trade_no" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableOutTradeNo(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetOutTradeNo(*v)
+	}
+	return _u
+}
+
+// SetPaymentType sets the "payment_type" field.
+func (_u *PaymentOrderUpdateOne) SetPaymentType(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetPaymentType(v)
+	return _u
+}
+
+// SetNillablePaymentType sets the "payment_type" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillablePaymentType(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetPaymentType(*v)
+	}
+	return _u
+}
+
+// SetPaymentTradeNo sets the "payment_trade_no" field.
+func (_u *PaymentOrderUpdateOne) SetPaymentTradeNo(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetPaymentTradeNo(v)
+	return _u
+}
+
+// SetNillablePaymentTradeNo sets the "payment_trade_no" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillablePaymentTradeNo(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetPaymentTradeNo(*v)
+	}
+	return _u
+}
+
+// SetPayURL sets the "pay_url" field.
+func (_u *PaymentOrderUpdateOne) SetPayURL(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetPayURL(v)
+	return _u
+}
+
+// SetNillablePayURL sets the "pay_url" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillablePayURL(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetPayURL(*v)
+	}
+	return _u
+}
+
+// ClearPayURL clears the value of the "pay_url" field.
+func (_u *PaymentOrderUpdateOne) ClearPayURL() *PaymentOrderUpdateOne {
+	_u.mutation.ClearPayURL()
+	return _u
+}
+
+// SetQrCode sets the "qr_code" field.
+func (_u *PaymentOrderUpdateOne) SetQrCode(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetQrCode(v)
+	return _u
+}
+
+// SetNillableQrCode sets the "qr_code" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableQrCode(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetQrCode(*v)
+	}
+	return _u
+}
+
+// ClearQrCode clears the value of the "qr_code" field.
+func (_u *PaymentOrderUpdateOne) ClearQrCode() *PaymentOrderUpdateOne {
+	_u.mutation.ClearQrCode()
+	return _u
+}
+
+// SetQrCodeImg sets the "qr_code_img" field.
+func (_u *PaymentOrderUpdateOne) SetQrCodeImg(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetQrCodeImg(v)
+	return _u
+}
+
+// SetNillableQrCodeImg sets the "qr_code_img" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableQrCodeImg(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetQrCodeImg(*v)
+	}
+	return _u
+}
+
+// ClearQrCodeImg clears the value of the "qr_code_img" field.
+func (_u *PaymentOrderUpdateOne) ClearQrCodeImg() *PaymentOrderUpdateOne {
+	_u.mutation.ClearQrCodeImg()
+	return _u
+}
+
+// SetOrderType sets the "order_type" field.
+func (_u *PaymentOrderUpdateOne) SetOrderType(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetOrderType(v)
+	return _u
+}
+
+// SetNillableOrderType sets the "order_type" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableOrderType(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetOrderType(*v)
+	}
+	return _u
+}
+
+// SetPlanID sets the "plan_id" field.
+func (_u *PaymentOrderUpdateOne) SetPlanID(v int64) *PaymentOrderUpdateOne {
+	_u.mutation.ResetPlanID()
+	_u.mutation.SetPlanID(v)
+	return _u
+}
+
+// SetNillablePlanID sets the "plan_id" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillablePlanID(v *int64) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetPlanID(*v)
+	}
+	return _u
+}
+
+// AddPlanID adds value to the "plan_id" field.
+func (_u *PaymentOrderUpdateOne) AddPlanID(v int64) *PaymentOrderUpdateOne {
+	_u.mutation.AddPlanID(v)
+	return _u
+}
+
+// ClearPlanID clears the value of the "plan_id" field.
+func (_u *PaymentOrderUpdateOne) ClearPlanID() *PaymentOrderUpdateOne {
+	_u.mutation.ClearPlanID()
+	return _u
+}
+
+// SetSubscriptionGroupID sets the "subscription_group_id" field.
+func (_u *PaymentOrderUpdateOne) SetSubscriptionGroupID(v int64) *PaymentOrderUpdateOne {
+	_u.mutation.ResetSubscriptionGroupID()
+	_u.mutation.SetSubscriptionGroupID(v)
+	return _u
+}
+
+// SetNillableSubscriptionGroupID sets the "subscription_group_id" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableSubscriptionGroupID(v *int64) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetSubscriptionGroupID(*v)
+	}
+	return _u
+}
+
+// AddSubscriptionGroupID adds value to the "subscription_group_id" field.
+func (_u *PaymentOrderUpdateOne) AddSubscriptionGroupID(v int64) *PaymentOrderUpdateOne {
+	_u.mutation.AddSubscriptionGroupID(v)
+	return _u
+}
+
+// ClearSubscriptionGroupID clears the value of the "subscription_group_id" field.
+func (_u *PaymentOrderUpdateOne) ClearSubscriptionGroupID() *PaymentOrderUpdateOne {
+	_u.mutation.ClearSubscriptionGroupID()
+	return _u
+}
+
+// SetSubscriptionDays sets the "subscription_days" field.
+func (_u *PaymentOrderUpdateOne) SetSubscriptionDays(v int) *PaymentOrderUpdateOne {
+	_u.mutation.ResetSubscriptionDays()
+	_u.mutation.SetSubscriptionDays(v)
+	return _u
+}
+
+// SetNillableSubscriptionDays sets the "subscription_days" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableSubscriptionDays(v *int) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetSubscriptionDays(*v)
+	}
+	return _u
+}
+
+// AddSubscriptionDays adds value to the "subscription_days" field.
+func (_u *PaymentOrderUpdateOne) AddSubscriptionDays(v int) *PaymentOrderUpdateOne {
+	_u.mutation.AddSubscriptionDays(v)
+	return _u
+}
+
+// ClearSubscriptionDays clears the value of the "subscription_days" field.
+func (_u *PaymentOrderUpdateOne) ClearSubscriptionDays() *PaymentOrderUpdateOne {
+	_u.mutation.ClearSubscriptionDays()
+	return _u
+}
+
+// SetProviderInstanceID sets the "provider_instance_id" field.
+func (_u *PaymentOrderUpdateOne) SetProviderInstanceID(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetProviderInstanceID(v)
+	return _u
+}
+
+// SetNillableProviderInstanceID sets the "provider_instance_id" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableProviderInstanceID(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetProviderInstanceID(*v)
+	}
+	return _u
+}
+
+// ClearProviderInstanceID clears the value of the "provider_instance_id" field.
+func (_u *PaymentOrderUpdateOne) ClearProviderInstanceID() *PaymentOrderUpdateOne {
+	_u.mutation.ClearProviderInstanceID()
+	return _u
+}
+
+// SetProviderKey sets the "provider_key" field.
+func (_u *PaymentOrderUpdateOne) SetProviderKey(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetProviderKey(v)
+	return _u
+}
+
+// SetNillableProviderKey sets the "provider_key" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableProviderKey(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetProviderKey(*v)
+	}
+	return _u
+}
+
+// ClearProviderKey clears the value of the "provider_key" field.
+func (_u *PaymentOrderUpdateOne) ClearProviderKey() *PaymentOrderUpdateOne {
+	_u.mutation.ClearProviderKey()
+	return _u
+}
+
+// SetProviderSnapshot sets the "provider_snapshot" field.
+func (_u *PaymentOrderUpdateOne) SetProviderSnapshot(v map[string]interface{}) *PaymentOrderUpdateOne {
+	_u.mutation.SetProviderSnapshot(v)
+	return _u
+}
+
+// ClearProviderSnapshot clears the value of the "provider_snapshot" field.
+func (_u *PaymentOrderUpdateOne) ClearProviderSnapshot() *PaymentOrderUpdateOne {
+	_u.mutation.ClearProviderSnapshot()
 	return _u
 }
 
@@ -763,43 +1494,152 @@ func (_u *PaymentOrderUpdateOne) SetNillableStatus(v *string) *PaymentOrderUpdat
 	return _u
 }
 
-// SetProvider sets the "provider" field.
-func (_u *PaymentOrderUpdateOne) SetProvider(v string) *PaymentOrderUpdateOne {
-	_u.mutation.SetProvider(v)
+// SetRefundAmount sets the "refund_amount" field.
+func (_u *PaymentOrderUpdateOne) SetRefundAmount(v float64) *PaymentOrderUpdateOne {
+	_u.mutation.ResetRefundAmount()
+	_u.mutation.SetRefundAmount(v)
 	return _u
 }
 
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableProvider(v *string) *PaymentOrderUpdateOne {
+// SetNillableRefundAmount sets the "refund_amount" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableRefundAmount(v *float64) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetProvider(*v)
+		_u.SetRefundAmount(*v)
 	}
 	return _u
 }
 
-// ClearProvider clears the value of the "provider" field.
-func (_u *PaymentOrderUpdateOne) ClearProvider() *PaymentOrderUpdateOne {
-	_u.mutation.ClearProvider()
+// AddRefundAmount adds value to the "refund_amount" field.
+func (_u *PaymentOrderUpdateOne) AddRefundAmount(v float64) *PaymentOrderUpdateOne {
+	_u.mutation.AddRefundAmount(v)
 	return _u
 }
 
-// SetProviderOrderNo sets the "provider_order_no" field.
-func (_u *PaymentOrderUpdateOne) SetProviderOrderNo(v string) *PaymentOrderUpdateOne {
-	_u.mutation.SetProviderOrderNo(v)
+// SetRefundReason sets the "refund_reason" field.
+func (_u *PaymentOrderUpdateOne) SetRefundReason(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetRefundReason(v)
 	return _u
 }
 
-// SetNillableProviderOrderNo sets the "provider_order_no" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableProviderOrderNo(v *string) *PaymentOrderUpdateOne {
+// SetNillableRefundReason sets the "refund_reason" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableRefundReason(v *string) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetProviderOrderNo(*v)
+		_u.SetRefundReason(*v)
 	}
 	return _u
 }
 
-// ClearProviderOrderNo clears the value of the "provider_order_no" field.
-func (_u *PaymentOrderUpdateOne) ClearProviderOrderNo() *PaymentOrderUpdateOne {
-	_u.mutation.ClearProviderOrderNo()
+// ClearRefundReason clears the value of the "refund_reason" field.
+func (_u *PaymentOrderUpdateOne) ClearRefundReason() *PaymentOrderUpdateOne {
+	_u.mutation.ClearRefundReason()
+	return _u
+}
+
+// SetRefundAt sets the "refund_at" field.
+func (_u *PaymentOrderUpdateOne) SetRefundAt(v time.Time) *PaymentOrderUpdateOne {
+	_u.mutation.SetRefundAt(v)
+	return _u
+}
+
+// SetNillableRefundAt sets the "refund_at" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableRefundAt(v *time.Time) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetRefundAt(*v)
+	}
+	return _u
+}
+
+// ClearRefundAt clears the value of the "refund_at" field.
+func (_u *PaymentOrderUpdateOne) ClearRefundAt() *PaymentOrderUpdateOne {
+	_u.mutation.ClearRefundAt()
+	return _u
+}
+
+// SetForceRefund sets the "force_refund" field.
+func (_u *PaymentOrderUpdateOne) SetForceRefund(v bool) *PaymentOrderUpdateOne {
+	_u.mutation.SetForceRefund(v)
+	return _u
+}
+
+// SetNillableForceRefund sets the "force_refund" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableForceRefund(v *bool) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetForceRefund(*v)
+	}
+	return _u
+}
+
+// SetRefundRequestedAt sets the "refund_requested_at" field.
+func (_u *PaymentOrderUpdateOne) SetRefundRequestedAt(v time.Time) *PaymentOrderUpdateOne {
+	_u.mutation.SetRefundRequestedAt(v)
+	return _u
+}
+
+// SetNillableRefundRequestedAt sets the "refund_requested_at" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableRefundRequestedAt(v *time.Time) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetRefundRequestedAt(*v)
+	}
+	return _u
+}
+
+// ClearRefundRequestedAt clears the value of the "refund_requested_at" field.
+func (_u *PaymentOrderUpdateOne) ClearRefundRequestedAt() *PaymentOrderUpdateOne {
+	_u.mutation.ClearRefundRequestedAt()
+	return _u
+}
+
+// SetRefundRequestReason sets the "refund_request_reason" field.
+func (_u *PaymentOrderUpdateOne) SetRefundRequestReason(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetRefundRequestReason(v)
+	return _u
+}
+
+// SetNillableRefundRequestReason sets the "refund_request_reason" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableRefundRequestReason(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetRefundRequestReason(*v)
+	}
+	return _u
+}
+
+// ClearRefundRequestReason clears the value of the "refund_request_reason" field.
+func (_u *PaymentOrderUpdateOne) ClearRefundRequestReason() *PaymentOrderUpdateOne {
+	_u.mutation.ClearRefundRequestReason()
+	return _u
+}
+
+// SetRefundRequestedBy sets the "refund_requested_by" field.
+func (_u *PaymentOrderUpdateOne) SetRefundRequestedBy(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetRefundRequestedBy(v)
+	return _u
+}
+
+// SetNillableRefundRequestedBy sets the "refund_requested_by" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableRefundRequestedBy(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetRefundRequestedBy(*v)
+	}
+	return _u
+}
+
+// ClearRefundRequestedBy clears the value of the "refund_requested_by" field.
+func (_u *PaymentOrderUpdateOne) ClearRefundRequestedBy() *PaymentOrderUpdateOne {
+	_u.mutation.ClearRefundRequestedBy()
+	return _u
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (_u *PaymentOrderUpdateOne) SetExpiresAt(v time.Time) *PaymentOrderUpdateOne {
+	_u.mutation.SetExpiresAt(v)
+	return _u
+}
+
+// SetNillableExpiresAt sets the "expires_at" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableExpiresAt(v *time.Time) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetExpiresAt(*v)
+	}
 	return _u
 }
 
@@ -843,97 +1683,91 @@ func (_u *PaymentOrderUpdateOne) ClearCompletedAt() *PaymentOrderUpdateOne {
 	return _u
 }
 
-// SetRefundedAt sets the "refunded_at" field.
-func (_u *PaymentOrderUpdateOne) SetRefundedAt(v time.Time) *PaymentOrderUpdateOne {
-	_u.mutation.SetRefundedAt(v)
+// SetFailedAt sets the "failed_at" field.
+func (_u *PaymentOrderUpdateOne) SetFailedAt(v time.Time) *PaymentOrderUpdateOne {
+	_u.mutation.SetFailedAt(v)
 	return _u
 }
 
-// SetNillableRefundedAt sets the "refunded_at" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableRefundedAt(v *time.Time) *PaymentOrderUpdateOne {
+// SetNillableFailedAt sets the "failed_at" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableFailedAt(v *time.Time) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetRefundedAt(*v)
+		_u.SetFailedAt(*v)
 	}
 	return _u
 }
 
-// ClearRefundedAt clears the value of the "refunded_at" field.
-func (_u *PaymentOrderUpdateOne) ClearRefundedAt() *PaymentOrderUpdateOne {
-	_u.mutation.ClearRefundedAt()
+// ClearFailedAt clears the value of the "failed_at" field.
+func (_u *PaymentOrderUpdateOne) ClearFailedAt() *PaymentOrderUpdateOne {
+	_u.mutation.ClearFailedAt()
 	return _u
 }
 
-// SetExpiredAt sets the "expired_at" field.
-func (_u *PaymentOrderUpdateOne) SetExpiredAt(v time.Time) *PaymentOrderUpdateOne {
-	_u.mutation.SetExpiredAt(v)
+// SetFailedReason sets the "failed_reason" field.
+func (_u *PaymentOrderUpdateOne) SetFailedReason(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetFailedReason(v)
 	return _u
 }
 
-// SetNillableExpiredAt sets the "expired_at" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableExpiredAt(v *time.Time) *PaymentOrderUpdateOne {
+// SetNillableFailedReason sets the "failed_reason" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableFailedReason(v *string) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetExpiredAt(*v)
+		_u.SetFailedReason(*v)
 	}
 	return _u
 }
 
-// SetCallbackRaw sets the "callback_raw" field.
-func (_u *PaymentOrderUpdateOne) SetCallbackRaw(v string) *PaymentOrderUpdateOne {
-	_u.mutation.SetCallbackRaw(v)
+// ClearFailedReason clears the value of the "failed_reason" field.
+func (_u *PaymentOrderUpdateOne) ClearFailedReason() *PaymentOrderUpdateOne {
+	_u.mutation.ClearFailedReason()
 	return _u
 }
 
-// SetNillableCallbackRaw sets the "callback_raw" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableCallbackRaw(v *string) *PaymentOrderUpdateOne {
+// SetClientIP sets the "client_ip" field.
+func (_u *PaymentOrderUpdateOne) SetClientIP(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetClientIP(v)
+	return _u
+}
+
+// SetNillableClientIP sets the "client_ip" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableClientIP(v *string) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetCallbackRaw(*v)
+		_u.SetClientIP(*v)
 	}
 	return _u
 }
 
-// ClearCallbackRaw clears the value of the "callback_raw" field.
-func (_u *PaymentOrderUpdateOne) ClearCallbackRaw() *PaymentOrderUpdateOne {
-	_u.mutation.ClearCallbackRaw()
+// SetSrcHost sets the "src_host" field.
+func (_u *PaymentOrderUpdateOne) SetSrcHost(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetSrcHost(v)
 	return _u
 }
 
-// SetAdminNote sets the "admin_note" field.
-func (_u *PaymentOrderUpdateOne) SetAdminNote(v string) *PaymentOrderUpdateOne {
-	_u.mutation.SetAdminNote(v)
-	return _u
-}
-
-// SetNillableAdminNote sets the "admin_note" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableAdminNote(v *string) *PaymentOrderUpdateOne {
+// SetNillableSrcHost sets the "src_host" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableSrcHost(v *string) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetAdminNote(*v)
+		_u.SetSrcHost(*v)
 	}
 	return _u
 }
 
-// ClearAdminNote clears the value of the "admin_note" field.
-func (_u *PaymentOrderUpdateOne) ClearAdminNote() *PaymentOrderUpdateOne {
-	_u.mutation.ClearAdminNote()
+// SetSrcURL sets the "src_url" field.
+func (_u *PaymentOrderUpdateOne) SetSrcURL(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetSrcURL(v)
 	return _u
 }
 
-// SetRefundNo sets the "refund_no" field.
-func (_u *PaymentOrderUpdateOne) SetRefundNo(v string) *PaymentOrderUpdateOne {
-	_u.mutation.SetRefundNo(v)
-	return _u
-}
-
-// SetNillableRefundNo sets the "refund_no" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableRefundNo(v *string) *PaymentOrderUpdateOne {
+// SetNillableSrcURL sets the "src_url" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableSrcURL(v *string) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetRefundNo(*v)
+		_u.SetSrcURL(*v)
 	}
 	return _u
 }
 
-// ClearRefundNo clears the value of the "refund_no" field.
-func (_u *PaymentOrderUpdateOne) ClearRefundNo() *PaymentOrderUpdateOne {
-	_u.mutation.ClearRefundNo()
+// ClearSrcURL clears the value of the "src_url" field.
+func (_u *PaymentOrderUpdateOne) ClearSrcURL() *PaymentOrderUpdateOne {
+	_u.mutation.ClearSrcURL()
 	return _u
 }
 
@@ -948,11 +1782,6 @@ func (_u *PaymentOrderUpdateOne) SetUser(v *User) *PaymentOrderUpdateOne {
 	return _u.SetUserID(v.ID)
 }
 
-// SetPlan sets the "plan" edge to the PaymentPlan entity.
-func (_u *PaymentOrderUpdateOne) SetPlan(v *PaymentPlan) *PaymentOrderUpdateOne {
-	return _u.SetPlanID(v.ID)
-}
-
 // Mutation returns the PaymentOrderMutation object of the builder.
 func (_u *PaymentOrderUpdateOne) Mutation() *PaymentOrderMutation {
 	return _u.mutation
@@ -961,12 +1790,6 @@ func (_u *PaymentOrderUpdateOne) Mutation() *PaymentOrderMutation {
 // ClearUser clears the "user" edge to the User entity.
 func (_u *PaymentOrderUpdateOne) ClearUser() *PaymentOrderUpdateOne {
 	_u.mutation.ClearUser()
-	return _u
-}
-
-// ClearPlan clears the "plan" edge to the PaymentPlan entity.
-func (_u *PaymentOrderUpdateOne) ClearPlan() *PaymentOrderUpdateOne {
-	_u.mutation.ClearPlan()
 	return _u
 }
 
@@ -1021,19 +1844,49 @@ func (_u *PaymentOrderUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *PaymentOrderUpdateOne) check() error {
-	if v, ok := _u.mutation.OrderNo(); ok {
-		if err := paymentorder.OrderNoValidator(v); err != nil {
-			return &ValidationError{Name: "order_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_no": %w`, err)}
+	if v, ok := _u.mutation.UserEmail(); ok {
+		if err := paymentorder.UserEmailValidator(v); err != nil {
+			return &ValidationError{Name: "user_email", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.user_email": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.GetType(); ok {
-		if err := paymentorder.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.type": %w`, err)}
+	if v, ok := _u.mutation.UserName(); ok {
+		if err := paymentorder.UserNameValidator(v); err != nil {
+			return &ValidationError{Name: "user_name", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.user_name": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.Currency(); ok {
-		if err := paymentorder.CurrencyValidator(v); err != nil {
-			return &ValidationError{Name: "currency", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.currency": %w`, err)}
+	if v, ok := _u.mutation.RechargeCode(); ok {
+		if err := paymentorder.RechargeCodeValidator(v); err != nil {
+			return &ValidationError{Name: "recharge_code", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.recharge_code": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.OutTradeNo(); ok {
+		if err := paymentorder.OutTradeNoValidator(v); err != nil {
+			return &ValidationError{Name: "out_trade_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.out_trade_no": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.PaymentType(); ok {
+		if err := paymentorder.PaymentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "payment_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.payment_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.PaymentTradeNo(); ok {
+		if err := paymentorder.PaymentTradeNoValidator(v); err != nil {
+			return &ValidationError{Name: "payment_trade_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.payment_trade_no": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.OrderType(); ok {
+		if err := paymentorder.OrderTypeValidator(v); err != nil {
+			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ProviderInstanceID(); ok {
+		if err := paymentorder.ProviderInstanceIDValidator(v); err != nil {
+			return &ValidationError{Name: "provider_instance_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_instance_id": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ProviderKey(); ok {
+		if err := paymentorder.ProviderKeyValidator(v); err != nil {
+			return &ValidationError{Name: "provider_key", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_key": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Status(); ok {
@@ -1041,19 +1894,19 @@ func (_u *PaymentOrderUpdateOne) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.Provider(); ok {
-		if err := paymentorder.ProviderValidator(v); err != nil {
-			return &ValidationError{Name: "provider", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider": %w`, err)}
+	if v, ok := _u.mutation.RefundRequestedBy(); ok {
+		if err := paymentorder.RefundRequestedByValidator(v); err != nil {
+			return &ValidationError{Name: "refund_requested_by", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.refund_requested_by": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.ProviderOrderNo(); ok {
-		if err := paymentorder.ProviderOrderNoValidator(v); err != nil {
-			return &ValidationError{Name: "provider_order_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_order_no": %w`, err)}
+	if v, ok := _u.mutation.ClientIP(); ok {
+		if err := paymentorder.ClientIPValidator(v); err != nil {
+			return &ValidationError{Name: "client_ip", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.client_ip": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.RefundNo(); ok {
-		if err := paymentorder.RefundNoValidator(v); err != nil {
-			return &ValidationError{Name: "refund_no", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.refund_no": %w`, err)}
+	if v, ok := _u.mutation.SrcHost(); ok {
+		if err := paymentorder.SrcHostValidator(v); err != nil {
+			return &ValidationError{Name: "src_host", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.src_host": %w`, err)}
 		}
 	}
 	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
@@ -1091,11 +1944,17 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 			}
 		}
 	}
-	if value, ok := _u.mutation.OrderNo(); ok {
-		_spec.SetField(paymentorder.FieldOrderNo, field.TypeString, value)
+	if value, ok := _u.mutation.UserEmail(); ok {
+		_spec.SetField(paymentorder.FieldUserEmail, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.GetType(); ok {
-		_spec.SetField(paymentorder.FieldType, field.TypeString, value)
+	if value, ok := _u.mutation.UserName(); ok {
+		_spec.SetField(paymentorder.FieldUserName, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.UserNotes(); ok {
+		_spec.SetField(paymentorder.FieldUserNotes, field.TypeString, value)
+	}
+	if _u.mutation.UserNotesCleared() {
+		_spec.ClearField(paymentorder.FieldUserNotes, field.TypeString)
 	}
 	if value, ok := _u.mutation.Amount(); ok {
 		_spec.SetField(paymentorder.FieldAmount, field.TypeFloat64, value)
@@ -1103,32 +1962,140 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	if value, ok := _u.mutation.AddedAmount(); ok {
 		_spec.AddField(paymentorder.FieldAmount, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.CreditAmount(); ok {
-		_spec.SetField(paymentorder.FieldCreditAmount, field.TypeFloat64, value)
+	if value, ok := _u.mutation.PayAmount(); ok {
+		_spec.SetField(paymentorder.FieldPayAmount, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.AddedCreditAmount(); ok {
-		_spec.AddField(paymentorder.FieldCreditAmount, field.TypeFloat64, value)
+	if value, ok := _u.mutation.AddedPayAmount(); ok {
+		_spec.AddField(paymentorder.FieldPayAmount, field.TypeFloat64, value)
 	}
-	if _u.mutation.CreditAmountCleared() {
-		_spec.ClearField(paymentorder.FieldCreditAmount, field.TypeFloat64)
+	if value, ok := _u.mutation.FeeRate(); ok {
+		_spec.SetField(paymentorder.FieldFeeRate, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.Currency(); ok {
-		_spec.SetField(paymentorder.FieldCurrency, field.TypeString, value)
+	if value, ok := _u.mutation.AddedFeeRate(); ok {
+		_spec.AddField(paymentorder.FieldFeeRate, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.RechargeCode(); ok {
+		_spec.SetField(paymentorder.FieldRechargeCode, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.OutTradeNo(); ok {
+		_spec.SetField(paymentorder.FieldOutTradeNo, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.PaymentType(); ok {
+		_spec.SetField(paymentorder.FieldPaymentType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.PaymentTradeNo(); ok {
+		_spec.SetField(paymentorder.FieldPaymentTradeNo, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.PayURL(); ok {
+		_spec.SetField(paymentorder.FieldPayURL, field.TypeString, value)
+	}
+	if _u.mutation.PayURLCleared() {
+		_spec.ClearField(paymentorder.FieldPayURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.QrCode(); ok {
+		_spec.SetField(paymentorder.FieldQrCode, field.TypeString, value)
+	}
+	if _u.mutation.QrCodeCleared() {
+		_spec.ClearField(paymentorder.FieldQrCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.QrCodeImg(); ok {
+		_spec.SetField(paymentorder.FieldQrCodeImg, field.TypeString, value)
+	}
+	if _u.mutation.QrCodeImgCleared() {
+		_spec.ClearField(paymentorder.FieldQrCodeImg, field.TypeString)
+	}
+	if value, ok := _u.mutation.OrderType(); ok {
+		_spec.SetField(paymentorder.FieldOrderType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.PlanID(); ok {
+		_spec.SetField(paymentorder.FieldPlanID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedPlanID(); ok {
+		_spec.AddField(paymentorder.FieldPlanID, field.TypeInt64, value)
+	}
+	if _u.mutation.PlanIDCleared() {
+		_spec.ClearField(paymentorder.FieldPlanID, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.SubscriptionGroupID(); ok {
+		_spec.SetField(paymentorder.FieldSubscriptionGroupID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedSubscriptionGroupID(); ok {
+		_spec.AddField(paymentorder.FieldSubscriptionGroupID, field.TypeInt64, value)
+	}
+	if _u.mutation.SubscriptionGroupIDCleared() {
+		_spec.ClearField(paymentorder.FieldSubscriptionGroupID, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.SubscriptionDays(); ok {
+		_spec.SetField(paymentorder.FieldSubscriptionDays, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedSubscriptionDays(); ok {
+		_spec.AddField(paymentorder.FieldSubscriptionDays, field.TypeInt, value)
+	}
+	if _u.mutation.SubscriptionDaysCleared() {
+		_spec.ClearField(paymentorder.FieldSubscriptionDays, field.TypeInt)
+	}
+	if value, ok := _u.mutation.ProviderInstanceID(); ok {
+		_spec.SetField(paymentorder.FieldProviderInstanceID, field.TypeString, value)
+	}
+	if _u.mutation.ProviderInstanceIDCleared() {
+		_spec.ClearField(paymentorder.FieldProviderInstanceID, field.TypeString)
+	}
+	if value, ok := _u.mutation.ProviderKey(); ok {
+		_spec.SetField(paymentorder.FieldProviderKey, field.TypeString, value)
+	}
+	if _u.mutation.ProviderKeyCleared() {
+		_spec.ClearField(paymentorder.FieldProviderKey, field.TypeString)
+	}
+	if value, ok := _u.mutation.ProviderSnapshot(); ok {
+		_spec.SetField(paymentorder.FieldProviderSnapshot, field.TypeJSON, value)
+	}
+	if _u.mutation.ProviderSnapshotCleared() {
+		_spec.ClearField(paymentorder.FieldProviderSnapshot, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.Provider(); ok {
-		_spec.SetField(paymentorder.FieldProvider, field.TypeString, value)
+	if value, ok := _u.mutation.RefundAmount(); ok {
+		_spec.SetField(paymentorder.FieldRefundAmount, field.TypeFloat64, value)
 	}
-	if _u.mutation.ProviderCleared() {
-		_spec.ClearField(paymentorder.FieldProvider, field.TypeString)
+	if value, ok := _u.mutation.AddedRefundAmount(); ok {
+		_spec.AddField(paymentorder.FieldRefundAmount, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.ProviderOrderNo(); ok {
-		_spec.SetField(paymentorder.FieldProviderOrderNo, field.TypeString, value)
+	if value, ok := _u.mutation.RefundReason(); ok {
+		_spec.SetField(paymentorder.FieldRefundReason, field.TypeString, value)
 	}
-	if _u.mutation.ProviderOrderNoCleared() {
-		_spec.ClearField(paymentorder.FieldProviderOrderNo, field.TypeString)
+	if _u.mutation.RefundReasonCleared() {
+		_spec.ClearField(paymentorder.FieldRefundReason, field.TypeString)
+	}
+	if value, ok := _u.mutation.RefundAt(); ok {
+		_spec.SetField(paymentorder.FieldRefundAt, field.TypeTime, value)
+	}
+	if _u.mutation.RefundAtCleared() {
+		_spec.ClearField(paymentorder.FieldRefundAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.ForceRefund(); ok {
+		_spec.SetField(paymentorder.FieldForceRefund, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.RefundRequestedAt(); ok {
+		_spec.SetField(paymentorder.FieldRefundRequestedAt, field.TypeTime, value)
+	}
+	if _u.mutation.RefundRequestedAtCleared() {
+		_spec.ClearField(paymentorder.FieldRefundRequestedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.RefundRequestReason(); ok {
+		_spec.SetField(paymentorder.FieldRefundRequestReason, field.TypeString, value)
+	}
+	if _u.mutation.RefundRequestReasonCleared() {
+		_spec.ClearField(paymentorder.FieldRefundRequestReason, field.TypeString)
+	}
+	if value, ok := _u.mutation.RefundRequestedBy(); ok {
+		_spec.SetField(paymentorder.FieldRefundRequestedBy, field.TypeString, value)
+	}
+	if _u.mutation.RefundRequestedByCleared() {
+		_spec.ClearField(paymentorder.FieldRefundRequestedBy, field.TypeString)
+	}
+	if value, ok := _u.mutation.ExpiresAt(); ok {
+		_spec.SetField(paymentorder.FieldExpiresAt, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.PaidAt(); ok {
 		_spec.SetField(paymentorder.FieldPaidAt, field.TypeTime, value)
@@ -1142,32 +2109,29 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	if _u.mutation.CompletedAtCleared() {
 		_spec.ClearField(paymentorder.FieldCompletedAt, field.TypeTime)
 	}
-	if value, ok := _u.mutation.RefundedAt(); ok {
-		_spec.SetField(paymentorder.FieldRefundedAt, field.TypeTime, value)
+	if value, ok := _u.mutation.FailedAt(); ok {
+		_spec.SetField(paymentorder.FieldFailedAt, field.TypeTime, value)
 	}
-	if _u.mutation.RefundedAtCleared() {
-		_spec.ClearField(paymentorder.FieldRefundedAt, field.TypeTime)
+	if _u.mutation.FailedAtCleared() {
+		_spec.ClearField(paymentorder.FieldFailedAt, field.TypeTime)
 	}
-	if value, ok := _u.mutation.ExpiredAt(); ok {
-		_spec.SetField(paymentorder.FieldExpiredAt, field.TypeTime, value)
+	if value, ok := _u.mutation.FailedReason(); ok {
+		_spec.SetField(paymentorder.FieldFailedReason, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.CallbackRaw(); ok {
-		_spec.SetField(paymentorder.FieldCallbackRaw, field.TypeString, value)
+	if _u.mutation.FailedReasonCleared() {
+		_spec.ClearField(paymentorder.FieldFailedReason, field.TypeString)
 	}
-	if _u.mutation.CallbackRawCleared() {
-		_spec.ClearField(paymentorder.FieldCallbackRaw, field.TypeString)
+	if value, ok := _u.mutation.ClientIP(); ok {
+		_spec.SetField(paymentorder.FieldClientIP, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.AdminNote(); ok {
-		_spec.SetField(paymentorder.FieldAdminNote, field.TypeString, value)
+	if value, ok := _u.mutation.SrcHost(); ok {
+		_spec.SetField(paymentorder.FieldSrcHost, field.TypeString, value)
 	}
-	if _u.mutation.AdminNoteCleared() {
-		_spec.ClearField(paymentorder.FieldAdminNote, field.TypeString)
+	if value, ok := _u.mutation.SrcURL(); ok {
+		_spec.SetField(paymentorder.FieldSrcURL, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.RefundNo(); ok {
-		_spec.SetField(paymentorder.FieldRefundNo, field.TypeString, value)
-	}
-	if _u.mutation.RefundNoCleared() {
-		_spec.ClearField(paymentorder.FieldRefundNo, field.TypeString)
+	if _u.mutation.SrcURLCleared() {
+		_spec.ClearField(paymentorder.FieldSrcURL, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentorder.FieldUpdatedAt, field.TypeTime, value)
@@ -1194,35 +2158,6 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.PlanCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.PlanTable,
-			Columns: []string{paymentorder.PlanColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentplan.FieldID, field.TypeInt64),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.PlanIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.PlanTable,
-			Columns: []string{paymentorder.PlanColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentplan.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

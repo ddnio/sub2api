@@ -33,8 +33,7 @@ func ProvideAdminHandlers(
 	tlsFingerprintProfileHandler *admin.TLSFingerprintProfileHandler,
 	apiKeyHandler *admin.AdminAPIKeyHandler,
 	scheduledTestHandler *admin.ScheduledTestHandler,
-	paymentPlanHandler *admin.PaymentPlanHandler,
-	paymentOrderHandler *admin.PaymentOrderHandler,
+	paymentHandler *admin.PaymentHandler,
 	channelHandler *admin.ChannelHandler,
 ) *AdminHandlers {
 	return &AdminHandlers{
@@ -62,8 +61,7 @@ func ProvideAdminHandlers(
 		TLSFingerprintProfile: tlsFingerprintProfileHandler,
 		APIKey:                apiKeyHandler,
 		ScheduledTest:         scheduledTestHandler,
-		PaymentPlan:           paymentPlanHandler,
-		PaymentOrder:          paymentOrderHandler,
+		Payment:               paymentHandler,
 		Channel:               channelHandler,
 	}
 }
@@ -95,27 +93,27 @@ func ProvideHandlers(
 	_ *service.IdempotencyCoordinator,
 	_ *service.IdempotencyCleanupService,
 	paymentHandler *PaymentHandler,
-	paymentCallbackHandler *PaymentCallbackHandler,
+	paymentWebhookHandler *PaymentWebhookHandler,
 	pricingHandler *PricingHandler,
 	referralHandler *ReferralHandler,
 ) *Handlers {
 	return &Handlers{
-		Auth:            authHandler,
-		User:            userHandler,
-		APIKey:          apiKeyHandler,
-		Usage:           usageHandler,
-		Redeem:          redeemHandler,
-		Subscription:    subscriptionHandler,
-		Announcement:    announcementHandler,
-		Admin:           adminHandlers,
-		Gateway:         gatewayHandler,
-		OpenAIGateway:   openaiGatewayHandler,
-		Setting:         settingHandler,
-		Totp:            totpHandler,
-		Payment:         paymentHandler,
-		PaymentCallback: paymentCallbackHandler,
-		Pricing:         pricingHandler,
-		Referral:        referralHandler,
+		Auth:           authHandler,
+		User:           userHandler,
+		APIKey:         apiKeyHandler,
+		Usage:          usageHandler,
+		Redeem:         redeemHandler,
+		Subscription:   subscriptionHandler,
+		Announcement:   announcementHandler,
+		Admin:          adminHandlers,
+		Gateway:        gatewayHandler,
+		OpenAIGateway:  openaiGatewayHandler,
+		Setting:        settingHandler,
+		Totp:           totpHandler,
+		Payment:        paymentHandler,
+		PaymentWebhook: paymentWebhookHandler,
+		Pricing:        pricingHandler,
+		Referral:       referralHandler,
 	}
 }
 
@@ -159,13 +157,12 @@ var ProviderSet = wire.NewSet(
 	admin.NewTLSFingerprintProfileHandler,
 	admin.NewAdminAPIKeyHandler,
 	admin.NewScheduledTestHandler,
-	admin.NewPaymentPlanHandler,
-	admin.NewPaymentOrderHandler,
+	admin.NewPaymentHandler,
 	admin.NewChannelHandler,
 
 	// User-facing payment handlers
 	NewPaymentHandler,
-	NewPaymentCallbackHandler,
+	NewPaymentWebhookHandler,
 	NewPricingHandler,
 
 	// AdminHandlers and Handlers constructors

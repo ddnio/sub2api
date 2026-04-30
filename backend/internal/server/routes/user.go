@@ -112,17 +112,20 @@ func RegisterUserRoutes(
 func registerPaymentRoutes(authenticated *gin.RouterGroup, h *handler.Handlers) {
 	payment := authenticated.Group("/payment")
 	{
-		payment.GET("/plans", h.Payment.ListPlans)
+		payment.GET("/plans", h.Payment.GetPlans)
 		payment.POST("/orders", h.Payment.CreateOrder)
-		payment.GET("/orders", h.Payment.ListOrders)
-		payment.GET("/orders/:id/status", h.Payment.GetOrderStatus)
+		payment.GET("/orders", h.Payment.GetMyOrders)
+		payment.GET("/orders/:id", h.Payment.GetOrder)
 	}
 }
 
-// RegisterPaymentCallbackRoutes registers the payment callback route (no JWT required)
+// RegisterPaymentCallbackRoutes registers the payment webhook routes (no JWT required)
 func RegisterPaymentCallbackRoutes(v1 *gin.RouterGroup, h *handler.Handlers) {
 	paymentCb := v1.Group("/payment")
 	{
-		paymentCb.POST("/callback/:provider", h.PaymentCallback.Handle)
+		paymentCb.POST("/webhook/wxpay", h.PaymentWebhook.WxpayNotify)
+		paymentCb.POST("/webhook/alipay", h.PaymentWebhook.AlipayNotify)
+		paymentCb.POST("/webhook/easypay", h.PaymentWebhook.EasyPayNotify)
+		paymentCb.POST("/webhook/stripe", h.PaymentWebhook.StripeWebhook)
 	}
 }

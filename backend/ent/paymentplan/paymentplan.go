@@ -58,7 +58,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "paymentorder" package.
 	OrdersInverseTable = "payment_orders"
 	// OrdersColumn is the table column denoting the orders relation/edge.
-	OrdersColumn = "plan_id"
+	OrdersColumn = "payment_plan_orders"
 )
 
 // Columns holds all SQL columns for paymentplan fields.

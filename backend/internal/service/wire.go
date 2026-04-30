@@ -7,6 +7,7 @@ import (
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/payment"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/google/wire"
 	"github.com/redis/go-redis/v9"
@@ -379,34 +380,15 @@ func ProvideSettingService(settingRepo SettingRepository, groupRepo GroupReposit
 	return svc
 }
 
-// ProvidePaymentService creates PaymentService with config-driven parameters
-func ProvidePaymentService(
-	orderRepo PaymentOrderRepository,
-	planRepo PaymentPlanRepository,
-	provider PaymentProvider,
-	cache PaymentCache,
-	userService *UserService,
-	subscriptionService *SubscriptionService,
-	billingCacheService *BillingCacheService,
-	entClient *dbent.Client,
-	referralService *ReferralService,
-	cfg *config.Config,
-) *PaymentService {
-	return NewPaymentService(
-		orderRepo, planRepo, provider, cache,
-		userService, subscriptionService, billingCacheService, entClient,
-		referralService,
-		cfg.Payment.OrderExpirySec, cfg.Payment.MinTopupAmount, cfg.Payment.MaxTopupAmount,
-	)
+// ProvidePaymentConfigService wraps NewPaymentConfigService to accept the named
+// payment.EncryptionKey type instead of raw []byte, avoiding Wire ambiguity.
+func ProvidePaymentConfigService(entClient *dbent.Client, settingRepo SettingRepository, key payment.EncryptionKey) *PaymentConfigService {
+	return NewPaymentConfigService(entClient, settingRepo, []byte(key))
 }
 
-// ProvidePaymentExpiryService creates and starts PaymentExpiryService
-func ProvidePaymentExpiryService(orderRepo PaymentOrderRepository, cfg *config.Config) *PaymentExpiryService {
-	interval := time.Duration(cfg.Payment.ExpiryTickSec) * time.Second
-	if interval <= 0 {
-		interval = time.Minute
-	}
-	svc := NewPaymentExpiryService(orderRepo, interval)
+// ProvidePaymentOrderExpiryService creates and starts PaymentOrderExpiryService.
+func ProvidePaymentOrderExpiryService(paymentSvc *PaymentService) *PaymentOrderExpiryService {
+	svc := NewPaymentOrderExpiryService(paymentSvc, 60*time.Second)
 	svc.Start()
 	return svc
 }
@@ -491,8 +473,9 @@ var ProviderSet = wire.NewSet(
 	ProvideScheduledTestService,
 	ProvideScheduledTestRunnerService,
 	NewGroupCapacityService,
-	ProvidePaymentService,
-	ProvidePaymentExpiryService,
+	ProvidePaymentConfigService,
+	NewPaymentService,
+	ProvidePaymentOrderExpiryService,
 	NewChannelService,
 	NewModelPricingResolver,
 )

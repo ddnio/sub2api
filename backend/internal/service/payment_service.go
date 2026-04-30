@@ -1,661 +1,363 @@
-// backend/internal/service/payment_service.go
 package service
 
 import (
+	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"log"
-	"net/http"
+	"log/slog"
+	"math/rand/v2"
+	"os"
+	"strings"
+	"sync"
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
-	"github.com/Wei-Shaw/sub2api/internal/domain"
-	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
-	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
+	"github.com/Wei-Shaw/sub2api/ent/paymentproviderinstance"
+	"github.com/Wei-Shaw/sub2api/internal/payment"
+	"github.com/Wei-Shaw/sub2api/internal/payment/provider"
 )
 
-// Errors
-var (
-	ErrPaymentOrderNotFound  = infraerrors.NotFound("PAYMENT_ORDER_NOT_FOUND", "payment order not found")
-	ErrPaymentPlanNotFound   = infraerrors.NotFound("PAYMENT_PLAN_NOT_FOUND", "payment plan not found")
-	ErrPaymentPlanInactive   = infraerrors.BadRequest("PAYMENT_PLAN_INACTIVE", "payment plan is not active")
-	ErrPaymentOrderExpired   = infraerrors.BadRequest("PAYMENT_ORDER_EXPIRED", "payment order has expired")
-	ErrPaymentAmountMismatch = infraerrors.BadRequest("PAYMENT_AMOUNT_MISMATCH", "callback amount does not match order amount")
-	ErrPaymentOrderProcessed = infraerrors.Conflict("PAYMENT_ORDER_PROCESSED", "payment order already processed")
-	ErrPaymentRateLimited    = infraerrors.TooManyRequests("PAYMENT_RATE_LIMITED", "too many payment orders, please try again later")
-	ErrPaymentAmountInvalid  = infraerrors.BadRequest("PAYMENT_AMOUNT_INVALID", "payment amount out of allowed range")
-	ErrPaymentProviderError  = infraerrors.InternalServer("PAYMENT_PROVIDER_ERROR", "payment provider error")
-	ErrPaymentDeliveryFailed = infraerrors.InternalServer("PAYMENT_DELIVERY_FAILED", "failed to deliver payment benefits")
-	ErrPaymentInvalidStatus  = infraerrors.BadRequest("PAYMENT_INVALID_STATUS", "invalid order status for this operation")
+// --- Order Status Constants ---
+
+const (
+	OrderStatusPending           = payment.OrderStatusPending
+	OrderStatusPaid              = payment.OrderStatusPaid
+	OrderStatusRecharging        = payment.OrderStatusRecharging
+	OrderStatusCompleted         = payment.OrderStatusCompleted
+	OrderStatusExpired           = payment.OrderStatusExpired
+	OrderStatusCancelled         = payment.OrderStatusCancelled
+	OrderStatusFailed            = payment.OrderStatusFailed
+	OrderStatusRefundRequested   = payment.OrderStatusRefundRequested
+	OrderStatusRefunding         = payment.OrderStatusRefunding
+	OrderStatusPartiallyRefunded = payment.OrderStatusPartiallyRefunded
+	OrderStatusRefunded          = payment.OrderStatusRefunded
+	OrderStatusRefundFailed      = payment.OrderStatusRefundFailed
 )
 
 const (
-	paymentMaxOrdersPerHour = 10
-	paymentLockDuration     = 30 * time.Second
+	// defaultMaxPendingOrders and defaultOrderTimeoutMin are defined in
+	// payment_config_service.go alongside other payment configuration defaults.
+	paymentGraceMinutes = 5
+
+	defaultPageSize    = 20
+	maxPageSize        = 100
+	topUsersLimit      = 10
+	amountToleranceCNY = 0.01
+
+	orderIDPrefix = "sub2_"
 )
 
-// --- Domain Types ---
+const paymentResumeSigningKeyEnv = "PAYMENT_RESUME_SIGNING_KEY"
 
-type PaymentPlan struct {
-	ID            int64
-	Name          string
-	Description   string
-	Badge         *string
-	GroupID       int64
-	GroupName     string
-	DurationDays  int
-	Price         float64
-	OriginalPrice *float64
-	SortOrder     int
-	IsActive      bool
-	// Group limits (joined)
-	DailyLimitUSD   float64
-	WeeklyLimitUSD  float64
-	MonthlyLimitUSD float64
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+// --- Types ---
+
+// generateOutTradeNo creates a unique external order ID for payment providers.
+// Format: sub2_20250409aB3kX9mQ (prefix + date + 8-char random)
+func generateOutTradeNo() string {
+	date := time.Now().Format("20060102")
+	rnd := generateRandomString(8)
+	return orderIDPrefix + date + rnd
 }
 
-type PaymentOrder struct {
-	ID              int64
-	OrderNo         string
+func generateRandomString(n int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = charset[rand.IntN(len(charset))]
+	}
+	return string(b)
+}
+
+type CreateOrderRequest struct {
 	UserID          int64
-	Type            string
-	PlanID          *int64
 	Amount          float64
-	CreditAmount    *float64
-	Currency        string
-	Status          string
-	Provider        *string
-	ProviderOrderNo *string
-	PaidAt          *time.Time
-	CompletedAt     *time.Time
-	RefundedAt      *time.Time
-	ExpiredAt       time.Time
-	CallbackRaw     *string
-	AdminNote       *string
-	RefundNo        *string
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	// Joined
-	Plan *PaymentPlan
-	User *User
+	PaymentType     string
+	OpenID          string
+	ClientIP        string
+	IsMobile        bool
+	IsWeChatBrowser bool
+	SrcHost         string
+	SrcURL          string
+	ReturnURL       string
+	PaymentSource   string
+	OrderType       string
+	PlanID          int64
 }
 
-type CreateOrderInput struct {
-	UserID   int64
-	Type     string  // plan / topup
-	PlanID   *int64  // for plan orders
-	Amount   float64 // for topup orders
-	Provider string  // alipay / wxpay
+type CreateOrderResponse struct {
+	OrderID      int64                           `json:"order_id"`
+	Amount       float64                         `json:"amount"`
+	PayAmount    float64                         `json:"pay_amount"`
+	FeeRate      float64                         `json:"fee_rate"`
+	Status       string                          `json:"status"`
+	ResultType   payment.CreatePaymentResultType `json:"result_type,omitempty"`
+	PaymentType  string                          `json:"payment_type"`
+	OutTradeNo   string                          `json:"out_trade_no,omitempty"`
+	PayURL       string                          `json:"pay_url,omitempty"`
+	QRCode       string                          `json:"qr_code,omitempty"`
+	ClientSecret string                          `json:"client_secret,omitempty"`
+	OAuth        *payment.WechatOAuthInfo        `json:"oauth,omitempty"`
+	JSAPI        *payment.WechatJSAPIPayload     `json:"jsapi,omitempty"`
+	JSAPIPayload *payment.WechatJSAPIPayload     `json:"jsapi_payload,omitempty"`
+	ExpiresAt    time.Time                       `json:"expires_at"`
+	PaymentMode  string                          `json:"payment_mode,omitempty"`
+	ResumeToken  string                          `json:"resume_token,omitempty"`
 }
 
-type OrderFilter struct {
-	Status string
-	Type   string
-	UserID *int64
-	Search string
+type OrderListParams struct {
+	Page        int
+	PageSize    int
+	Status      string
+	OrderType   string
+	PaymentType string
+	Keyword     string
 }
 
-type StatsFilter struct {
-	StartDate string
-	EndDate   string
-	GroupBy   string // day / month
+type RefundPlan struct {
+	OrderID         int64
+	Order           *dbent.PaymentOrder
+	RefundAmount    float64
+	GatewayAmount   float64
+	Reason          string
+	Force           bool
+	DeductBalance   bool
+	DeductionType   string
+	BalanceToDeduct float64
+	SubDaysToDeduct int
+	SubscriptionID  int64
 }
 
-type OrderStats struct {
-	TotalAmount     float64          `json:"total_amount"`
-	TotalOrders     int              `json:"total_orders"`
-	PaidAmount      float64          `json:"paid_amount"`
-	PaidOrders      int              `json:"paid_orders"`
-	CompletedAmount float64          `json:"completed_amount"`
-	CompletedOrders int              `json:"completed_orders"`
-	Breakdown       []StatsBreakdown `json:"breakdown"`
+type RefundResult struct {
+	Success         bool    `json:"success"`
+	Warning         string  `json:"warning,omitempty"`
+	RequireForce    bool    `json:"require_force,omitempty"`
+	BalanceDeducted float64 `json:"balance_deducted,omitempty"`
+	SubDaysDeducted int     `json:"subscription_days_deducted,omitempty"`
 }
 
-type StatsBreakdown struct {
+type DashboardStats struct {
+	TodayAmount   float64 `json:"today_amount"`
+	TotalAmount   float64 `json:"total_amount"`
+	TodayCount    int     `json:"today_count"`
+	TotalCount    int     `json:"total_count"`
+	AvgAmount     float64 `json:"avg_amount"`
+	PendingOrders int     `json:"pending_orders"`
+
+	DailySeries    []DailyStats        `json:"daily_series"`
+	PaymentMethods []PaymentMethodStat `json:"payment_methods"`
+	TopUsers       []TopUserStat       `json:"top_users"`
+}
+
+type DailyStats struct {
 	Date   string  `json:"date"`
 	Amount float64 `json:"amount"`
 	Count  int     `json:"count"`
 }
 
-// --- Interfaces ---
-
-type PaymentProvider interface {
-	CreatePayment(ctx context.Context, req PaymentRequest) (*PaymentResult, error)
-	ParseCallback(r *http.Request) (*CallbackResult, error)
-	Refund(ctx context.Context, req RefundRequest) (*RefundResult, error)
+type PaymentMethodStat struct {
+	Type   string  `json:"type"`
+	Amount float64 `json:"amount"`
+	Count  int     `json:"count"`
 }
 
-type PaymentRequest struct {
-	OrderNo  string
-	Amount   float64
-	Provider string // alipay / wxpay
-	Subject  string
-}
-
-type PaymentResult struct {
-	QRCodeURL string
-}
-
-type RefundRequest struct {
-	OrderNo         string  // 商户订单号（out_trade_no）
-	ProviderOrderNo string  // 微信支付订单号（transaction_id），可为空
-	RefundNo        string  // 商户退款单号（out_refund_no）
-	Amount          float64 // 退款金额（元）
-	Reason          string  // 退款原因
-}
-
-type RefundResult struct {
-	ProviderRefundNo string // 微信退款单号
-	Status           string // 退款状态（SUCCESS / PROCESSING）
-}
-
-type CallbackResult struct {
-	OrderNo         string
-	ProviderOrderNo string
-	Amount          float64
-	Raw             string
-}
-
-type PaymentCache interface {
-	AcquireCallbackLock(ctx context.Context, orderNo string, ttl time.Duration) (bool, error)
-	ReleaseCallbackLock(ctx context.Context, orderNo string) error
-	GetOrderCreateCount(ctx context.Context, userID int64) (int, error)
-	IncrementOrderCreateCount(ctx context.Context, userID int64) error
-}
-
-type PaymentOrderRepository interface {
-	Create(ctx context.Context, order *PaymentOrder) error
-	GetByOrderNo(ctx context.Context, orderNo string) (*PaymentOrder, error)
-	GetByID(ctx context.Context, id int64) (*PaymentOrder, error)
-	UpdateStatusAtomically(ctx context.Context, orderNo string, fromStatuses []string, toStatus string, updates map[string]any) (int, error)
-	ListByUser(ctx context.Context, userID int64, filter OrderFilter, params pagination.PaginationParams) ([]PaymentOrder, *pagination.PaginationResult, error)
-	ListAll(ctx context.Context, filter OrderFilter, params pagination.PaginationParams) ([]PaymentOrder, *pagination.PaginationResult, error)
-	ExpirePendingOrders(ctx context.Context) (int, error)
-	Stats(ctx context.Context, filter StatsFilter) (*OrderStats, error)
-}
-
-type PaymentPlanRepository interface {
-	Create(ctx context.Context, plan *PaymentPlan) error
-	Update(ctx context.Context, id int64, updates map[string]any) (*PaymentPlan, error)
-	GetByID(ctx context.Context, id int64) (*PaymentPlan, error)
-	GetByIDActive(ctx context.Context, id int64) (*PaymentPlan, error)
-	ListActive(ctx context.Context) ([]PaymentPlan, error)
-	ListAll(ctx context.Context, params pagination.PaginationParams) ([]PaymentPlan, *pagination.PaginationResult, error)
-	SoftDelete(ctx context.Context, id int64) error
+type TopUserStat struct {
+	UserID int64   `json:"user_id"`
+	Email  string  `json:"email"`
+	Amount float64 `json:"amount"`
 }
 
 // --- Service ---
 
 type PaymentService struct {
-	orderRepo           PaymentOrderRepository
-	planRepo            PaymentPlanRepository
-	provider            PaymentProvider
-	cache               PaymentCache
-	userService         *UserService
-	subscriptionService *SubscriptionService
-	billingCacheService *BillingCacheService
-	entClient           *dbent.Client
-	referralService     *ReferralService
-	orderExpirySec      int
-	minTopupAmount      float64
-	maxTopupAmount      float64
+	providerMu       sync.Mutex
+	providersLoaded  bool
+	entClient        *dbent.Client
+	registry         *payment.Registry
+	loadBalancer     payment.LoadBalancer
+	redeemService    *RedeemService
+	subscriptionSvc  *SubscriptionService
+	configService    *PaymentConfigService
+	userRepo         UserRepository
+	groupRepo        GroupRepository
+	resumeService    *PaymentResumeService
+	affiliateService *AffiliateService
 }
 
-func NewPaymentService(
-	orderRepo PaymentOrderRepository,
-	planRepo PaymentPlanRepository,
-	provider PaymentProvider,
-	cache PaymentCache,
-	userService *UserService,
-	subscriptionService *SubscriptionService,
-	billingCacheService *BillingCacheService,
-	entClient *dbent.Client,
-	referralService *ReferralService,
-	orderExpirySec int,
-	minTopupAmount float64,
-	maxTopupAmount float64,
-) *PaymentService {
-	if orderExpirySec <= 0 {
-		orderExpirySec = 900
-	}
-	if minTopupAmount <= 0 {
-		minTopupAmount = 10.0
-	}
-	if maxTopupAmount <= 0 {
-		maxTopupAmount = 10000.0
-	}
-	return &PaymentService{
-		orderRepo:           orderRepo,
-		planRepo:            planRepo,
-		provider:            provider,
-		cache:               cache,
-		userService:         userService,
-		subscriptionService: subscriptionService,
-		billingCacheService: billingCacheService,
-		entClient:           entClient,
-		referralService:     referralService,
-		orderExpirySec:      orderExpirySec,
-		minTopupAmount:      minTopupAmount,
-		maxTopupAmount:      maxTopupAmount,
+func NewPaymentService(entClient *dbent.Client, registry *payment.Registry, loadBalancer payment.LoadBalancer, redeemService *RedeemService, subscriptionSvc *SubscriptionService, configService *PaymentConfigService, userRepo UserRepository, groupRepo GroupRepository, affiliateService *AffiliateService) *PaymentService {
+	svc := &PaymentService{entClient: entClient, registry: registry, loadBalancer: newVisibleMethodLoadBalancer(loadBalancer, configService), redeemService: redeemService, subscriptionSvc: subscriptionSvc, configService: configService, userRepo: userRepo, groupRepo: groupRepo, affiliateService: affiliateService}
+	svc.resumeService = psNewPaymentResumeService(configService)
+	return svc
+}
+
+// --- Provider Registry ---
+
+// EnsureProviders lazily initializes the provider registry on first call.
+func (s *PaymentService) EnsureProviders(ctx context.Context) {
+	s.providerMu.Lock()
+	defer s.providerMu.Unlock()
+	if !s.providersLoaded {
+		s.loadProviders(ctx)
+		s.providersLoaded = true
 	}
 }
 
-// --- Order Number Generation ---
-
-func generateOrderNo() string {
-	ts := time.Now().Format("20060102150405")
-	b := make([]byte, 9) // 18 hex chars
-	_, _ = rand.Read(b)
-	return ts + hex.EncodeToString(b) // 14 + 18 = 32 chars
+// RefreshProviders clears and re-registers all providers from the database.
+func (s *PaymentService) RefreshProviders(ctx context.Context) {
+	s.providerMu.Lock()
+	defer s.providerMu.Unlock()
+	s.registry.Clear()
+	s.loadProviders(ctx)
+	s.providersLoaded = true
 }
 
-// --- Plan Methods ---
-
-func (s *PaymentService) ListActivePlans(ctx context.Context) ([]PaymentPlan, error) {
-	return s.planRepo.ListActive(ctx)
-}
-
-func (s *PaymentService) GetPlan(ctx context.Context, id int64) (*PaymentPlan, error) {
-	plan, err := s.planRepo.GetByID(ctx, id)
+func (s *PaymentService) loadProviders(ctx context.Context) {
+	instances, err := s.entClient.PaymentProviderInstance.Query().
+		Where(paymentproviderinstance.EnabledEQ(true)).
+		All(ctx)
 	if err != nil {
-		return nil, err
+		slog.Error("[PaymentService] failed to query provider instances", "error", err)
+		return
 	}
-	if plan == nil {
-		return nil, ErrPaymentPlanNotFound
-	}
-	return plan, nil
-}
-
-func (s *PaymentService) ListAllPlans(ctx context.Context, params pagination.PaginationParams) ([]PaymentPlan, *pagination.PaginationResult, error) {
-	return s.planRepo.ListAll(ctx, params)
-}
-
-func (s *PaymentService) CreatePlan(ctx context.Context, plan *PaymentPlan) error {
-	return s.planRepo.Create(ctx, plan)
-}
-
-func (s *PaymentService) UpdatePlan(ctx context.Context, id int64, updates map[string]any) (*PaymentPlan, error) {
-	return s.planRepo.Update(ctx, id, updates)
-}
-
-func (s *PaymentService) DeletePlan(ctx context.Context, id int64) error {
-	return s.planRepo.SoftDelete(ctx, id)
-}
-
-// --- Order Methods ---
-
-func (s *PaymentService) CreateOrder(ctx context.Context, input CreateOrderInput) (*PaymentOrder, *PaymentResult, error) {
-	// Rate limit check
-	if s.cache != nil {
-		count, err := s.cache.GetOrderCreateCount(ctx, input.UserID)
-		if err == nil && count >= paymentMaxOrdersPerHour {
-			return nil, nil, ErrPaymentRateLimited
-		}
-	}
-
-	var amount float64
-	var subject string
-	var planID *int64
-
-	// C1: Validate provider
-	if input.Provider != "wxpay" && input.Provider != "alipay" {
-		return nil, nil, infraerrors.BadRequest("PAYMENT_INVALID_PROVIDER", "invalid payment provider, must be wxpay or alipay")
-	}
-
-	switch input.Type {
-	case domain.PaymentOrderTypePlan:
-		if input.PlanID == nil {
-			return nil, nil, infraerrors.BadRequest("PAYMENT_PLAN_REQUIRED", "plan_id is required for plan orders")
-		}
-		plan, err := s.planRepo.GetByIDActive(ctx, *input.PlanID)
+	for _, inst := range instances {
+		cfg, err := s.loadBalancer.GetInstanceConfig(ctx, int64(inst.ID))
 		if err != nil {
-			return nil, nil, err
+			slog.Warn("[PaymentService] failed to decrypt config for instance", "instanceID", inst.ID, "error", err)
+			continue
 		}
-		if plan == nil {
-			return nil, nil, ErrPaymentPlanNotFound
+		if inst.PaymentMode != "" {
+			cfg["paymentMode"] = inst.PaymentMode
 		}
-		amount = plan.Price
-		subject = fmt.Sprintf("订阅套餐: %s", plan.Name)
-		planID = &plan.ID
+		instID := fmt.Sprintf("%d", inst.ID)
+		p, err := provider.CreateProvider(inst.ProviderKey, instID, cfg)
+		if err != nil {
+			slog.Warn("[PaymentService] failed to create provider for instance", "instanceID", inst.ID, "key", inst.ProviderKey, "error", err)
+			continue
+		}
+		s.registry.Register(p)
+	}
+}
 
-	case domain.PaymentOrderTypeTopup:
-		if input.Amount < s.minTopupAmount || input.Amount > s.maxTopupAmount {
-			return nil, nil, ErrPaymentAmountInvalid
-		}
-		amount = input.Amount
-		subject = fmt.Sprintf("余额充值: ¥%.2f", amount)
+// --- Helpers ---
 
+func psIsRefundStatus(s string) bool {
+	switch s {
+	case OrderStatusRefundRequested, OrderStatusRefunding, OrderStatusPartiallyRefunded, OrderStatusRefunded, OrderStatusRefundFailed:
+		return true
+	}
+	return false
+}
+
+func psErrMsg(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
+}
+
+func psNilIfEmpty(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func (s *PaymentService) paymentResume() *PaymentResumeService {
+	if s.resumeService != nil {
+		return s.resumeService
+	}
+	return psNewPaymentResumeService(s.configService)
+}
+
+func NewLegacyAwarePaymentResumeService(legacyKey []byte) *PaymentResumeService {
+	return newLegacyAwarePaymentResumeService(legacyKey)
+}
+
+func psNewPaymentResumeService(configService *PaymentConfigService) *PaymentResumeService {
+	return newLegacyAwarePaymentResumeService(psResumeLegacyVerificationKey(configService))
+}
+
+func newLegacyAwarePaymentResumeService(legacyKey []byte) *PaymentResumeService {
+	signingKey, verifyFallbacks := resolvePaymentResumeSigningKeys(legacyKey)
+	return NewPaymentResumeService(signingKey, verifyFallbacks...)
+}
+
+func psResumeLegacyVerificationKey(configService *PaymentConfigService) []byte {
+	if configService == nil {
+		return nil
+	}
+	return configService.encryptionKey
+}
+
+func resolvePaymentResumeSigningKeys(legacyKey []byte) ([]byte, [][]byte) {
+	signingKey := parsePaymentResumeSigningKey(os.Getenv(paymentResumeSigningKeyEnv))
+	if len(signingKey) == 0 {
+		if len(legacyKey) == 0 {
+			return nil, nil
+		}
+		return legacyKey, nil
+	}
+	if len(legacyKey) == 0 || bytes.Equal(legacyKey, signingKey) {
+		return signingKey, nil
+	}
+	return signingKey, [][]byte{legacyKey}
+}
+
+func parsePaymentResumeSigningKey(raw string) []byte {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	if len(raw) >= 64 && len(raw)%2 == 0 {
+		if decoded, err := hex.DecodeString(raw); err == nil && len(decoded) > 0 {
+			return decoded
+		}
+	}
+	return []byte(raw)
+}
+
+func psSliceContains(sl []string, s string) bool {
+	for _, v := range sl {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+// Subscription validity period unit constants.
+const (
+	validityUnitWeek  = "week"
+	validityUnitMonth = "month"
+)
+
+func psComputeValidityDays(days int, unit string) int {
+	switch unit {
+	case validityUnitWeek:
+		return days * 7
+	case validityUnitMonth:
+		return days * 30
 	default:
-		return nil, nil, infraerrors.BadRequest("PAYMENT_INVALID_TYPE", "invalid order type")
-	}
-
-	orderNo := generateOrderNo()
-	expiredAt := time.Now().Add(time.Duration(s.orderExpirySec) * time.Second)
-
-	order := &PaymentOrder{
-		OrderNo:   orderNo,
-		UserID:    input.UserID,
-		Type:      input.Type,
-		PlanID:    planID,
-		Amount:    amount,
-		Currency:  domain.PaymentCurrencyCNY,
-		Status:    domain.PaymentStatusPending,
-		Provider:  &input.Provider,
-		ExpiredAt: expiredAt,
-	}
-
-	if err := s.orderRepo.Create(ctx, order); err != nil {
-		return nil, nil, err
-	}
-
-	// Call payment provider
-	result, err := s.provider.CreatePayment(ctx, PaymentRequest{
-		OrderNo:  orderNo,
-		Amount:   amount,
-		Provider: input.Provider,
-		Subject:  subject,
-	})
-	if err != nil {
-		// I7: Mark order as failed immediately so no orphan pending records accumulate
-		_, _ = s.orderRepo.UpdateStatusAtomically(ctx, orderNo,
-			[]string{domain.PaymentStatusPending},
-			domain.PaymentStatusFailed,
-			map[string]any{},
-		)
-		log.Printf("[Payment] Provider error for order %s: %v", orderNo, err)
-		return nil, nil, ErrPaymentProviderError
-	}
-
-	// Increment rate limit counter
-	if s.cache != nil {
-		_ = s.cache.IncrementOrderCreateCount(ctx, input.UserID)
-	}
-
-	return order, result, nil
-}
-
-func (s *PaymentService) GetOrderStatus(ctx context.Context, userID int64, orderID int64) (string, error) {
-	order, err := s.orderRepo.GetByID(ctx, orderID)
-	if err != nil {
-		return "", err
-	}
-	if order == nil || order.UserID != userID {
-		return "", ErrPaymentOrderNotFound
-	}
-	return order.Status, nil
-}
-
-func (s *PaymentService) ListUserOrders(ctx context.Context, userID int64, filter OrderFilter, params pagination.PaginationParams) ([]PaymentOrder, *pagination.PaginationResult, error) {
-	return s.orderRepo.ListByUser(ctx, userID, filter, params)
-}
-
-func (s *PaymentService) ListAllOrders(ctx context.Context, filter OrderFilter, params pagination.PaginationParams) ([]PaymentOrder, *pagination.PaginationResult, error) {
-	return s.orderRepo.ListAll(ctx, filter, params)
-}
-
-func (s *PaymentService) GetOrder(ctx context.Context, id int64) (*PaymentOrder, error) {
-	order, err := s.orderRepo.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if order == nil {
-		return nil, ErrPaymentOrderNotFound
-	}
-	return order, nil
-}
-
-func (s *PaymentService) GetOrderStats(ctx context.Context, filter StatsFilter) (*OrderStats, error) {
-	return s.orderRepo.Stats(ctx, filter)
-}
-
-// --- Callback Processing ---
-
-func (s *PaymentService) ProcessCallback(ctx context.Context, r *http.Request) error {
-	// 1. Parse and verify callback
-	result, err := s.provider.ParseCallback(r)
-	if err != nil {
-		return infraerrors.BadRequest("PAYMENT_CALLBACK_INVALID", "invalid payment callback: "+err.Error())
-	}
-
-	// 2. Lookup order
-	order, err := s.orderRepo.GetByOrderNo(ctx, result.OrderNo)
-	if err != nil {
-		return err
-	}
-	if order == nil {
-		return ErrPaymentOrderNotFound
-	}
-
-	// 3. Verify amount
-	if fmt.Sprintf("%.2f", result.Amount) != fmt.Sprintf("%.2f", order.Amount) {
-		log.Printf("[Payment] Amount mismatch for order %s: callback=%.2f, order=%.2f", order.OrderNo, result.Amount, order.Amount)
-		return ErrPaymentAmountMismatch
-	}
-
-	// 4. Acquire distributed lock (degrade if Redis unavailable)
-	if s.cache != nil {
-		locked, lockErr := s.cache.AcquireCallbackLock(ctx, order.OrderNo, paymentLockDuration)
-		if lockErr == nil && !locked {
-			return nil // Another worker is processing, return success
-		}
-		if lockErr == nil {
-			defer s.cache.ReleaseCallbackLock(ctx, order.OrderNo)
-		}
-		// If lockErr != nil, degrade: proceed without lock, rely on DB optimistic lock
-	}
-
-	// 5. Atomically transition status (optimistic lock)
-	now := time.Now()
-	affected, err := s.orderRepo.UpdateStatusAtomically(ctx, order.OrderNo,
-		[]string{domain.PaymentStatusPending, domain.PaymentStatusExpired},
-		domain.PaymentStatusPaid,
-		map[string]any{
-			"paid_at":           now,
-			"provider_order_no": result.ProviderOrderNo,
-			"callback_raw":      result.Raw,
-		},
-	)
-	if err != nil {
-		return err
-	}
-	if affected == 0 {
-		return nil // Already processed, idempotent success
-	}
-
-	// 6. Deliver benefits in transaction
-	deliverErr := s.deliverBenefits(ctx, order)
-	if deliverErr != nil {
-		log.Printf("[Payment] Failed to deliver benefits for order %s: %v", order.OrderNo, deliverErr)
-		// Order stays at 'paid', admin can manually complete
-		_, _ = s.orderRepo.UpdateStatusAtomically(ctx, order.OrderNo,
-			[]string{domain.PaymentStatusPaid},
-			domain.PaymentStatusFailed,
-			map[string]any{},
-		)
-		return nil // Return success to payment provider to stop retries
-	}
-
-	// 7. Mark completed
-	completedAt := time.Now()
-	_, _ = s.orderRepo.UpdateStatusAtomically(ctx, order.OrderNo,
-		[]string{domain.PaymentStatusPaid},
-		domain.PaymentStatusCompleted,
-		map[string]any{"completed_at": completedAt},
-	)
-
-	return nil
-}
-
-func (s *PaymentService) deliverBenefits(ctx context.Context, order *PaymentOrder) error {
-	switch order.Type {
-	case domain.PaymentOrderTypeTopup:
-		creditAmount := order.Amount // v1: credit_amount == amount
-		err := s.userService.UpdateBalance(ctx, order.UserID, creditAmount)
-		if err != nil {
-			return fmt.Errorf("update balance: %w", err)
-		}
-		// 首次付款触发邀请奖励（幂等，原子 UPDATE 保证只发一次）
-		if s.referralService != nil {
-			if err := s.referralService.GrantFirstRechargeReward(ctx, order.UserID); err != nil {
-				log.Printf("[Payment] Failed to grant referral reward for user %d: %v", order.UserID, err)
-			}
-		}
-		// Update credit_amount on order
-		_, _ = s.orderRepo.UpdateStatusAtomically(ctx, order.OrderNo,
-			[]string{domain.PaymentStatusPaid},
-			domain.PaymentStatusPaid,
-			map[string]any{"credit_amount": creditAmount},
-		)
-		s.asyncInvalidateCache(order.UserID)
-		return nil
-
-	case domain.PaymentOrderTypePlan:
-		if order.PlanID == nil {
-			return fmt.Errorf("plan order missing plan_id")
-		}
-		plan, err := s.planRepo.GetByID(ctx, *order.PlanID)
-		if err != nil || plan == nil {
-			return fmt.Errorf("get plan: %w", err)
-		}
-		_, _, err = s.subscriptionService.AssignOrExtendSubscription(ctx, &AssignSubscriptionInput{
-			UserID:       order.UserID,
-			GroupID:      plan.GroupID,
-			ValidityDays: plan.DurationDays,
-			AssignedBy:   0,
-			Notes:        fmt.Sprintf("Payment order: %s", order.OrderNo),
-		})
-		if err != nil {
-			return fmt.Errorf("assign subscription: %w", err)
-		}
-		s.asyncInvalidateCache(order.UserID)
-		return nil
-
-	default:
-		return fmt.Errorf("unknown order type: %s", order.Type)
+		return days
 	}
 }
 
-func (s *PaymentService) asyncInvalidateCache(userID int64) {
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if s.billingCacheService != nil {
-			_ = s.billingCacheService.InvalidateUserBalance(ctx, userID)
-		}
-	}()
+func psStartOfDayUTC(t time.Time) time.Time {
+	y, m, d := t.UTC().Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
 
-// --- Admin Operations ---
-
-func (s *PaymentService) AdminCompleteOrder(ctx context.Context, orderID int64, adminNote string) error {
-	order, err := s.orderRepo.GetByID(ctx, orderID)
-	if err != nil {
-		return err
+func applyPagination(pageSize, page int) (size, pg int) {
+	size = pageSize
+	if size <= 0 {
+		size = defaultPageSize
 	}
-	if order == nil {
-		return ErrPaymentOrderNotFound
+	if size > maxPageSize {
+		size = maxPageSize
 	}
-	// Only allow completing "failed" orders. "paid" orders may have already had benefits
-	// delivered (crash between deliverBenefits and status→completed), so re-running
-	// deliverBenefits on them risks double-crediting. Failed orders have never had benefits
-	// delivered, making them safe to complete manually.
-	if order.Status != domain.PaymentStatusFailed {
-		return ErrPaymentInvalidStatus
+	pg = page
+	if pg < 1 {
+		pg = 1
 	}
-
-	log.Printf("[Payment] AdminCompleteOrder: order=%s status=%s", order.OrderNo, order.Status)
-	deliverErr := s.deliverBenefits(ctx, order)
-	if deliverErr != nil {
-		return ErrPaymentDeliveryFailed
-	}
-
-	completedAt := time.Now()
-	_, err = s.orderRepo.UpdateStatusAtomically(ctx, order.OrderNo,
-		[]string{domain.PaymentStatusFailed},
-		domain.PaymentStatusCompleted,
-		map[string]any{
-			"completed_at": completedAt,
-			"admin_note":   adminNote,
-		},
-	)
-	return err
-}
-
-func (s *PaymentService) AdminRefundOrder(ctx context.Context, orderID int64, adminNote string) error {
-	order, err := s.orderRepo.GetByID(ctx, orderID)
-	if err != nil {
-		return err
-	}
-	if order == nil {
-		return ErrPaymentOrderNotFound
-	}
-	if order.Status != domain.PaymentStatusCompleted && order.Status != domain.PaymentStatusPaid {
-		return ErrPaymentInvalidStatus
-	}
-
-	// 1. Build refund request
-	refundNo := "R" + order.OrderNo
-	providerOrderNo := ""
-	if order.ProviderOrderNo != nil {
-		providerOrderNo = *order.ProviderOrderNo
-	}
-
-	reason := "管理员退款"
-	if adminNote != "" {
-		reason = adminNote
-	}
-
-	// 2. Call payment provider refund API
-	_, err = s.provider.Refund(ctx, RefundRequest{
-		OrderNo:         order.OrderNo,
-		ProviderOrderNo: providerOrderNo,
-		RefundNo:        refundNo,
-		Amount:          order.Amount,
-		Reason:          reason,
-	})
-	if err != nil {
-		log.Printf("[Payment] Refund API failed for order %s: %v", order.OrderNo, err)
-		return ErrPaymentProviderError
-	}
-
-	// 3. Mark as refunded + store refund_no (before balance deduction — wxpay refund is irreversible)
-	refundedAt := time.Now()
-	affected, err := s.orderRepo.UpdateStatusAtomically(ctx, order.OrderNo,
-		[]string{domain.PaymentStatusCompleted, domain.PaymentStatusPaid},
-		domain.PaymentStatusRefunded,
-		map[string]any{
-			"refunded_at": refundedAt,
-			"admin_note":  adminNote,
-			"refund_no":   refundNo,
-		},
-	)
-	if err != nil {
-		log.Printf("[Payment] CRITICAL: Refund API succeeded but DB update failed for order %s: %v", order.OrderNo, err)
-		return err
-	}
-	if affected == 0 {
-		// Order status already changed (concurrent request), wxpay idempotent refund_no prevents double refund
-		return nil
-	}
-
-	// 4. Reverse benefits (after status is persisted)
-	if order.Status == domain.PaymentStatusCompleted && order.Type == domain.PaymentOrderTypeTopup {
-		creditAmount := order.Amount
-		if order.CreditAmount != nil {
-			creditAmount = *order.CreditAmount
-		}
-		if err := s.userService.UpdateBalance(ctx, order.UserID, -creditAmount); err != nil {
-			log.Printf("[Payment] WARN: Refund succeeded but balance deduction failed for order %s: %v — requires manual fix", order.OrderNo, err)
-			// Don't return error — refund already committed, balance issue needs manual resolution
-		}
-		s.asyncInvalidateCache(order.UserID)
-	} else if order.Status == domain.PaymentStatusCompleted && order.Type == domain.PaymentOrderTypePlan {
-		log.Printf("[Payment] WARN: Refunding plan order %s - subscription benefits not reversed automatically, handle manually", order.OrderNo)
-	}
-
-	return nil
+	return size, pg
 }
