@@ -2665,6 +2665,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useDebounceFn } from '@vueuse/core'
 import { adminAPI } from '@/api'
 import type {
   SystemSettings,
@@ -3733,7 +3734,7 @@ async function deleteProviderById(id: number) {
   }
 }
 
-async function savePaymentConfig() {
+const savePaymentConfig = useDebounceFn(async () => {
   try {
     await adminAPI.payment.updatePaymentConfig({ ...paymentConfigForm })
     appStore.showSuccess(t('admin.settings.settingsSaved'))
@@ -3741,7 +3742,7 @@ async function savePaymentConfig() {
     const detail = e instanceof Error ? e.message : String(e)
     appStore.showError(`${t('common.saveFailed')}: ${detail}`)
   }
-}
+}, 500)
 
 onMounted(() => {
   loadSettings()

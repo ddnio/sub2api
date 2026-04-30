@@ -5382,7 +5382,6 @@ export default {
     confirmDelete: 'Delete plan "{name}"? This cannot be undone.',
     planName: 'Plan Name',
     planDescription: 'Description',
-    planBadge: 'Badge (e.g. Recommended, Popular)',
     planGroup: 'Group',
     planDuration: 'Duration (days)',
     planPrice: 'Price (CNY)',

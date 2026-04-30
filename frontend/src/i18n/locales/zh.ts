@@ -5572,7 +5572,6 @@ export default {
     confirmDelete: '确定要删除套餐「{name}」吗？此操作不可撤销。',
     planName: '套餐名称',
     planDescription: '套餐描述',
-    planBadge: '徽章标签（如：推荐、热门）',
     planGroup: '关联分组',
     planDuration: '有效天数',
     planPrice: '价格（元）',

@@ -3,6 +3,7 @@ import type { BasePaginationResponse, FetchOptions } from '@/types'
 import type { PaymentPlan, PaymentOrder } from '../payment'
 
 export interface AdminPaymentPlan extends PaymentPlan {
+  group_name: string
   deleted_at: string | null
 }
 
