@@ -7,8 +7,8 @@ import type { ContactChannel } from '@/types'
 
 const FIRST_HINT_SEEN_KEY = 'contact_first_hint_seen'
 
-// 排除路径前缀（admin / 安装向导 / 登录注册）— 避免遮挡管理界面与表单流
-const EXCLUDED_PATH_PREFIXES = ['/admin', '/setup', '/login', '/register']
+// 排除路径前缀（admin / 安装向导 / 登录注册 / 支付流）— 避免遮挡管理界面、表单和支付确认按钮
+const EXCLUDED_PATH_PREFIXES = ['/admin', '/setup', '/login', '/register', '/purchase', '/payment']
 
 const route = useRoute()
 const appStore = useAppStore()
