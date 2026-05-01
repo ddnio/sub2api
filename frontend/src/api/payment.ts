@@ -1,126 +1,120 @@
+/**
+ * User Payment API endpoints
+ * Handles payment operations for regular users
+ */
+
 import { apiClient } from './client'
+import type {
+  PaymentConfig,
+  SubscriptionPlan,
+  PaymentChannel,
+  MethodLimitsResponse,
+  CheckoutInfoResponse,
+  CreateOrderRequest,
+  CreateOrderResult,
+  PaymentOrder
+} from '@/types/payment'
 import type { BasePaginationResponse, FetchOptions } from '@/types'
 
-export interface PaymentPlan {
-  id: number
-  group_id: number
-  group_platform: string
-  name: string
-  description: string
-  price: number
-  original_price: number | null
-  validity_days: number
-  validity_unit: string
-  features: string
-  product_name: string
-  for_sale: boolean
-  sort_order: number
-}
-
-export interface PaymentOrder {
-  id: number
-  out_trade_no: string
-  order_type: string
-  plan_id: number | null
-  amount: number
-  pay_amount: number
-  payment_type: string
-  payment_trade_no: string | null
-  qr_code: string | null
-  pay_url: string | null
-  status: string
-  paid_at: string | null
-  completed_at: string | null
-  expires_at: string
-  created_at: string
-}
-
-export interface CreateOrderResponse {
-  order_id: number
-  amount: number
-  pay_amount: number
-  fee_rate: number
-  status: string
-  result_type: string
-  payment_type: string
-  out_trade_no: string
-  pay_url: string
-  qr_code: string
-  expires_at: string
-  payment_mode: string
-}
-
+export type PaymentPlan = SubscriptionPlan
+export type { PaymentOrder }
+export type CreateOrderResponse = CreateOrderResult
 export interface OrderStatusResponse {
   status: string
 }
 
-export interface PaymentCheckoutInfo {
-  methods: Record<string, {
-    payment_type: string
-    fee_rate: number
-    daily_limit: number
-    single_min: number
-    single_max: number
-  }>
-  global_min: number
-  global_max: number
-  plans: PaymentPlan[]
-  balance_disabled: boolean
-  balance_recharge_multiplier: number
-  recharge_fee_rate: number
-  help_text: string
-  help_image_url: string
-  stripe_publishable_key: string
-}
-
-async function listPlans(): Promise<PaymentPlan[]> {
-  const { data } = await apiClient.get('/payment/plans')
-  return data
-}
-
-async function getCheckoutInfo(): Promise<PaymentCheckoutInfo> {
-  const { data } = await apiClient.get('/payment/checkout-info')
-  return data
-}
-
-async function createOrder(params: {
-  order_type: 'balance' | 'subscription'
-  plan_id?: number
-  amount?: number
-  payment_type: string
-}): Promise<CreateOrderResponse> {
-  const { data } = await apiClient.post('/payment/orders', params)
-  return data
-}
-
-async function listOrders(
-  page: number,
-  pageSize: number,
-  params: { status?: string; order_type?: string },
-  options?: FetchOptions
-): Promise<BasePaginationResponse<PaymentOrder>> {
-  const { data } = await apiClient.get('/payment/orders/my', {
-    params: { page, page_size: pageSize, ...params },
-    signal: options?.signal
-  })
-  return data
-}
-
-async function getOrder(id: number): Promise<PaymentOrder> {
-  const { data } = await apiClient.get(`/payment/orders/${id}`)
-  return data
-}
-
-async function getOrderStatus(id: number): Promise<OrderStatusResponse> {
-  const order = await getOrder(id)
-  return { status: order.status }
-}
-
 export const paymentAPI = {
-  listPlans,
-  getCheckoutInfo,
-  createOrder,
-  listOrders,
-  getOrder,
-  getOrderStatus
+  /** Get payment configuration (enabled types, limits, etc.) */
+  getConfig() {
+    return apiClient.get<PaymentConfig>('/payment/config')
+  },
+
+  /** Get available subscription plans */
+  getPlans() {
+    return apiClient.get<SubscriptionPlan[]>('/payment/plans')
+  },
+
+  /** Get available payment channels */
+  getChannels() {
+    return apiClient.get<PaymentChannel[]>('/payment/channels')
+  },
+
+  /** Get all checkout page data in a single call */
+  getCheckoutInfo() {
+    return apiClient.get<CheckoutInfoResponse>('/payment/checkout-info')
+  },
+
+  /** Get payment method limits and fee rates */
+  getLimits() {
+    return apiClient.get<MethodLimitsResponse>('/payment/limits')
+  },
+
+  /** Create a new payment order */
+  createOrder(data: CreateOrderRequest) {
+    return apiClient.post<CreateOrderResult>('/payment/orders', data)
+  },
+
+  /** Get current user's orders */
+  getMyOrders(params?: { page?: number; page_size?: number; status?: string }) {
+    return apiClient.get<BasePaginationResponse<PaymentOrder>>('/payment/orders/my', { params })
+  },
+
+  /** Get a specific order by ID */
+  getOrder(id: number) {
+    return apiClient.get<PaymentOrder>(`/payment/orders/${id}`)
+  },
+
+  /** Cancel a pending order */
+  cancelOrder(id: number) {
+    return apiClient.post(`/payment/orders/${id}/cancel`)
+  },
+
+  /** Verify order payment status with upstream provider */
+  verifyOrder(outTradeNo: string) {
+    return apiClient.post<PaymentOrder>('/payment/orders/verify', { out_trade_no: outTradeNo })
+  },
+
+  /** Legacy-compatible public order lookup by out_trade_no */
+  verifyOrderPublic(outTradeNo: string) {
+    return apiClient.post<PaymentOrder>('/payment/public/orders/verify', { out_trade_no: outTradeNo })
+  },
+
+  /** Resolve an order from a signed resume token without auth */
+  resolveOrderPublicByResumeToken(resumeToken: string) {
+    return apiClient.post<PaymentOrder>('/payment/public/orders/resolve', { resume_token: resumeToken })
+  },
+
+  /** Request a refund for a completed order */
+  requestRefund(id: number, data: { reason: string }) {
+    return apiClient.post(`/payment/orders/${id}/refund-request`, data)
+  },
+
+  /** Get provider instance IDs that allow user refund */
+  getRefundEligibleProviders() {
+    return apiClient.get<{ provider_instance_ids: string[] }>('/payment/orders/refund-eligible-providers')
+  },
+
+  // Legacy aliases kept for existing fork tests/imports.
+  async listPlans(): Promise<PaymentPlan[]> {
+    const res = await apiClient.get<PaymentPlan[]>('/payment/plans')
+    return res.data
+  },
+
+  async listOrders(
+    page: number,
+    pageSize: number,
+    params: { status?: string; order_type?: string },
+    options?: FetchOptions
+  ): Promise<BasePaginationResponse<PaymentOrder>> {
+    const res = await apiClient.get<BasePaginationResponse<PaymentOrder>>('/payment/orders/my', {
+      params: { page, page_size: pageSize, ...params },
+      signal: options?.signal
+    })
+    return res.data
+  },
+
+  async getOrderStatus(id: number): Promise<OrderStatusResponse> {
+    const res = await apiClient.get<PaymentOrder>(`/payment/orders/${id}`)
+    return { status: res.data.status }
+  }
 }

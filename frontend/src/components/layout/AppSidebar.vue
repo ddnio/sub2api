@@ -517,10 +517,15 @@ const userNavItems = computed((): NavItem[] => {
             label: t('nav.buySubscription'),
             icon: RechargeSubscriptionIcon,
             hideInSimpleMode: true
+          },
+          {
+            path: '/orders',
+            label: t('nav.myOrders'),
+            icon: CreditCardIcon,
+            hideInSimpleMode: true
           }
         ]
       : []),
-    { path: '/payment', label: t('nav.payment'), icon: CreditCardIcon, hideInSimpleMode: true },
     { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
     ...(appStore.cachedPublicSettings?.referral_enabled
       ? [{ path: '/referral', label: t('nav.referral'), icon: UsersIcon, hideInSimpleMode: true }]
@@ -550,10 +555,15 @@ const personalNavItems = computed((): NavItem[] => {
             label: t('nav.buySubscription'),
             icon: RechargeSubscriptionIcon,
             hideInSimpleMode: true
+          },
+          {
+            path: '/orders',
+            label: t('nav.myOrders'),
+            icon: CreditCardIcon,
+            hideInSimpleMode: true
           }
         ]
       : []),
-    { path: '/payment', label: t('nav.payment'), icon: CreditCardIcon, hideInSimpleMode: true },
     { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
     ...(appStore.cachedPublicSettings?.referral_enabled
       ? [{ path: '/referral', label: t('nav.referral'), icon: UsersIcon, hideInSimpleMode: true }]
@@ -597,8 +607,9 @@ const adminNavItems = computed((): NavItem[] => {
     { path: '/admin/accounts', label: t('nav.accounts'), icon: GlobeIcon },
     { path: '/admin/announcements', label: t('nav.announcements'), icon: BellIcon },
     { path: '/admin/proxies', label: t('nav.proxies'), icon: ServerIcon },
-    { path: '/admin/payment/plans', label: t('nav.paymentManagement'), icon: CreditCardIcon, hideInSimpleMode: true },
-    { path: '/admin/payment/orders', label: t('adminPayment.ordersTitle'), icon: CreditCardIcon, hideInSimpleMode: true },
+    { path: '/admin/payment/dashboard', label: t('nav.paymentDashboard'), icon: ChartIcon, hideInSimpleMode: true },
+    { path: '/admin/payment/orders', label: t('nav.orderManagement'), icon: CreditCardIcon, hideInSimpleMode: true },
+    { path: '/admin/payment/plans', label: t('nav.paymentPlans'), icon: CreditCardIcon, hideInSimpleMode: true },
     { path: '/admin/redeem', label: t('nav.redeemCodes'), icon: TicketIcon, hideInSimpleMode: true },
     { path: '/admin/promo-codes', label: t('nav.promoCodes'), icon: GiftIcon, hideInSimpleMode: true },
     { path: '/admin/usage', label: t('nav.usage'), icon: ChartIcon }

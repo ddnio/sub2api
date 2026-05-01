@@ -45,7 +45,7 @@ describe('payment API contracts', () => {
     const result = await paymentAPI.getCheckoutInfo()
 
     expect(mockedClient.get).toHaveBeenCalledWith('/payment/checkout-info')
-    expect(result.global_min).toBe(1)
+    expect(result.data.global_min).toBe(1)
   })
 
   it('uses upstream admin order operations', async () => {

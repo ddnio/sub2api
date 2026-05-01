@@ -3,7 +3,7 @@
 **文档目的**：将 fork payment 模块迁移到 upstream payment v2 架构的部署步骤清单。  
 **适用范围**：测试环境（test）和生产环境（prod），步骤一致，参数不同。  
 **关联 PR**：[#18](https://github.com/ddnio/sub2api/pull/18)  
-**最后更新**：2026-04-30
+**最后更新**：2026-05-01
 
 ---
 
@@ -32,11 +32,12 @@
 ```bash
 cd frontend
 pnpm exec vue-tsc --noEmit
+pnpm vitest run src/api/__tests__/payment-contract.spec.ts src/components/payment/__tests__ src/views/user/__tests__/PaymentView.spec.ts src/views/user/__tests__/PaymentResultView.spec.ts src/views/user/__tests__/paymentUx.spec.ts src/views/user/__tests__/paymentWechatResume.spec.ts src/utils/__tests__/device.spec.ts
 pnpm build
 
 cd ../backend
 GOCACHE="$PWD/../.cache/go-build" go test ./internal/payment ./internal/handler/admin ./internal/handler/dto ./internal/server/routes
-GOCACHE="$PWD/../.cache/go-build" go test ./internal/service -run 'Test.*Payment|Test.*Wechat|Test.*WeChat|Test.*Provider|Test.*Order|Test.*Refund|Test.*Fulfillment|Test.*Config'
+GOCACHE="$PWD/../.cache/go-build" go test ./internal/service -run 'Test.*PaymentConfig|Test.*Limits|Test.*Order'
 ```
 
 说明：
@@ -211,7 +212,7 @@ WHERE sp.for_sale = true
 
 ## 6. 配置 wxpay Provider
 
-当前后台 UI 可以录入 `provider_key`、`name`、`enabled`、`config`，但不完整暴露 `supported_types`、`payment_mode`、`refund_enabled`、`allow_user_refund`。首次部署建议使用 Admin API 创建，避免字段缺失。
+后台支付配置 UI 已迁移 upstream Provider 组件，可录入 `provider_key`、`name`、`supported_types`、`payment_mode`、`refund_enabled`、`allow_user_refund`、单笔/每日限额和 `config`。首次部署仍建议准备好 JSON，再通过 UI 粘贴/核对；如 UI 不可用，使用 Admin API 创建，避免字段缺失。
 
 从服务器配置读取 wxpay 值（只读，不写入文档）：
 
@@ -267,10 +268,11 @@ FROM payment_provider_instances;
 ## 7. 端到端测试
 
 1. 普通用户登录 `https://router-test.nanafox.com`。
-2. 进入 `/payment`。
+2. 进入 `/purchase`。
 3. 选择最低价套餐或小额余额充值。
 4. 选择微信支付并扫码完成支付。
 5. 等待订单从 `PENDING` 流转到 `PAID` / `COMPLETED`。
+6. 进入 `/orders`，确认订单中心能看到新订单；后台进入 `/admin/payment/orders` 和 `/admin/payment/dashboard` 复核订单与看板数据。
 
 数据库复核：
 

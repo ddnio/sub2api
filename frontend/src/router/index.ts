@@ -103,6 +103,16 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/auth/wechat/payment/callback',
+    name: 'WeChatPaymentOAuthCallback',
+    component: () => import('@/views/auth/WechatPaymentCallbackView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'WeChat Payment Callback',
+      titleKey: 'auth.wechatPaymentCallbackPageTitle'
+    }
+  },
+  {
     path: '/forgot-password',
     name: 'ForgotPassword',
     component: () => import('@/views/auth/ForgotPasswordView.vue'),
@@ -246,7 +256,69 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/purchase',
-    redirect: '/payment'
+    name: 'PurchaseSubscription',
+    component: () => import('@/views/user/PaymentView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Purchase Subscription',
+      titleKey: 'nav.buySubscription',
+      descriptionKey: 'purchase.description'
+    }
+  },
+  {
+    path: '/orders',
+    name: 'OrderList',
+    component: () => import('@/views/user/UserOrdersView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'My Orders',
+      titleKey: 'nav.myOrders'
+    }
+  },
+  {
+    path: '/payment/qrcode',
+    name: 'PaymentQRCode',
+    component: () => import('@/views/user/PaymentQRCodeView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Payment',
+      titleKey: 'payment.qr.scanToPay'
+    }
+  },
+  {
+    path: '/payment/result',
+    name: 'PaymentResult',
+    component: () => import('@/views/user/PaymentResultView.vue'),
+    meta: {
+      requiresAuth: false,
+      requiresAdmin: false,
+      title: 'Payment Result',
+      titleKey: 'payment.result.success'
+    }
+  },
+  {
+    path: '/payment/stripe',
+    name: 'StripePayment',
+    component: () => import('@/views/user/StripePaymentView.vue'),
+    meta: {
+      requiresAuth: false,
+      requiresAdmin: false,
+      title: 'Stripe Payment',
+      titleKey: 'payment.stripePay'
+    }
+  },
+  {
+    path: '/payment/stripe-popup',
+    name: 'StripePopup',
+    component: () => import('@/views/user/StripePopupView.vue'),
+    meta: {
+      requiresAuth: false,
+      requiresAdmin: false,
+      title: 'Payment'
+    }
   },
   {
     path: '/custom/:id',
@@ -376,7 +448,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/admin/payment/plans',
     name: 'AdminPaymentPlans',
-    component: () => import('@/views/admin/PaymentPlansView.vue'),
+    component: () => import('@/views/admin/orders/AdminPaymentPlansView.vue'),
     meta: {
       requiresAuth: true,
       requiresAdmin: true,
@@ -387,12 +459,23 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/admin/payment/orders',
     name: 'AdminPaymentOrders',
-    component: () => import('@/views/admin/PaymentOrdersView.vue'),
+    component: () => import('@/views/admin/orders/AdminOrdersView.vue'),
     meta: {
       requiresAuth: true,
       requiresAdmin: true,
       title: 'Payment Orders',
       titleKey: 'adminPayment.ordersTitle'
+    }
+  },
+  {
+    path: '/admin/payment/dashboard',
+    name: 'AdminPaymentDashboard',
+    component: () => import('@/views/admin/orders/AdminPaymentDashboardView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Payment Dashboard',
+      titleKey: 'nav.paymentDashboard'
     }
   },
   {
@@ -480,7 +563,7 @@ let authInitialized = false
 const navigationLoading = useNavigationLoadingState()
 // 延迟初始化预加载，传入 router 实例
 let routePrefetch: ReturnType<typeof useRoutePrefetch> | null = null
-const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup']
+const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result', '/payment/stripe', '/payment/stripe-popup', '/auth/wechat/payment/callback']
 
 router.beforeEach((to, _from, next) => {
   // 开始导航加载状态

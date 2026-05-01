@@ -28,8 +28,53 @@ func (s *PaymentConfigService) GetAvailableMethodLimits(ctx context.Context) (*M
 		ml := pcAggregateMethodLimits(pt, insts)
 		resp.Methods[ml.PaymentType] = ml
 	}
+	s.applyGlobalRechargeRange(ctx, resp)
 	resp.GlobalMin, resp.GlobalMax = pcComputeGlobalRange(resp.Methods)
 	return resp, nil
+}
+
+func (s *PaymentConfigService) applyGlobalRechargeRange(ctx context.Context, resp *MethodLimitsResponse) {
+	if resp == nil || len(resp.Methods) == 0 {
+		return
+	}
+	minAmount, maxAmount := defaultEffectiveRechargeRange(ctx, s)
+	for paymentType, limits := range resp.Methods {
+		limits.SingleMin = applyEffectiveMin(limits.SingleMin, minAmount)
+		limits.SingleMax = applyEffectiveMax(limits.SingleMax, maxAmount)
+		resp.Methods[paymentType] = limits
+	}
+}
+
+func defaultEffectiveRechargeRange(ctx context.Context, s *PaymentConfigService) (minAmount, maxAmount float64) {
+	minAmount = 1
+	if s == nil || s.settingRepo == nil {
+		return minAmount, 0
+	}
+	vals, err := s.settingRepo.GetMultiple(ctx, []string{SettingMinRechargeAmount, SettingMaxRechargeAmount})
+	if err != nil {
+		return minAmount, 0
+	}
+	return pcParseFloat(vals[SettingMinRechargeAmount], 1), pcParseFloat(vals[SettingMaxRechargeAmount], 0)
+}
+
+func applyEffectiveMin(providerMin, globalMin float64) float64 {
+	if globalMin <= 0 {
+		return providerMin
+	}
+	if providerMin <= 0 || globalMin > providerMin {
+		return globalMin
+	}
+	return providerMin
+}
+
+func applyEffectiveMax(providerMax, globalMax float64) float64 {
+	if globalMax <= 0 {
+		return providerMax
+	}
+	if providerMax <= 0 || globalMax < providerMax {
+		return globalMax
+	}
+	return providerMax
 }
 
 func (s *PaymentConfigService) pcApplyEnabledVisibleMethodInstances(ctx context.Context, typeInstances map[string][]*dbent.PaymentProviderInstance, instances []*dbent.PaymentProviderInstance) map[string][]*dbent.PaymentProviderInstance {
