@@ -79,13 +79,15 @@
                 </p>
               </div>
             </div>
-            <button :class="['btn w-full py-3 text-base font-medium', paymentButtonClass]" :disabled="!canSubmit || submitting" @click="handleSubmitRecharge">
-              <span v-if="submitting" class="flex items-center justify-center gap-2">
-                <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-                {{ t('common.processing') }}
-              </span>
-              <span v-else>{{ t('payment.createOrder') }} ¥{{ totalAmount.toFixed(2) }}</span>
-            </button>
+            <div class="sticky bottom-4 z-20 rounded-xl bg-gray-50/95 py-2 backdrop-blur dark:bg-dark-950/95">
+              <button :class="['btn w-full py-3 text-base font-medium', paymentButtonClass]" :disabled="!canSubmit || submitting" @click="handleSubmitRecharge">
+                <span v-if="submitting" class="flex items-center justify-center gap-2">
+                  <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                  {{ t('common.processing') }}
+                </span>
+                <span v-else>{{ t('payment.createOrder') }} ¥{{ totalAmount.toFixed(2) }}</span>
+              </button>
+            </div>
             </template>
           </template>
           <!-- Subscribe Tab -->
@@ -161,14 +163,16 @@
                   </div>
                 </div>
               </div>
-              <button :class="['btn w-full py-3 text-base font-medium', paymentButtonClass]" :disabled="!canSubmitSubscription || submitting" @click="confirmSubscribe">
-                <span v-if="submitting" class="flex items-center justify-center gap-2">
-                  <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-                  {{ t('common.processing') }}
-                </span>
-                <span v-else>{{ t('payment.createOrder') }} ¥{{ formatAmount(feeRate > 0 ? subTotalAmount : selectedPlan.price) }}</span>
-              </button>
-              <button class="btn btn-secondary w-full" @click="selectedPlan = null">{{ t('common.cancel') }}</button>
+              <div class="sticky bottom-4 z-20 space-y-3 rounded-xl bg-gray-50/95 py-2 backdrop-blur dark:bg-dark-950/95">
+                <button :class="['btn w-full py-3 text-base font-medium', paymentButtonClass]" :disabled="!canSubmitSubscription || submitting" @click="confirmSubscribe">
+                  <span v-if="submitting" class="flex items-center justify-center gap-2">
+                    <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                    {{ t('common.processing') }}
+                  </span>
+                  <span v-else>{{ t('payment.createOrder') }} ¥{{ formatAmount(feeRate > 0 ? subTotalAmount : selectedPlan.price) }}</span>
+                </button>
+                <button class="btn btn-secondary w-full" @click="selectedPlan = null">{{ t('common.cancel') }}</button>
+              </div>
             </template>
             <!-- Plan list -->
             <template v-else>
