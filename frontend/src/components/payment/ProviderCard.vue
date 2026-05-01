@@ -7,11 +7,11 @@
     :title="!enabled ? t('admin.settings.payment.typeDisabled') + ' — ' + t('admin.settings.payment.enableTypesFirst') : undefined"
   >
     <div :class="[
-      'flex items-center justify-between px-4 py-2.5',
+      'flex flex-col gap-3 px-4 py-2.5 lg:flex-row lg:items-center lg:justify-between',
       !enabled && 'pointer-events-none',
     ]">
       <!-- Left: icon + name + key badge + type badges -->
-      <div class="flex items-center gap-3">
+      <div class="flex min-w-0 flex-wrap items-center gap-3">
         <div :class="[
           'rounded-md p-1.5',
           provider.enabled && enabled ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-dark-700',
@@ -43,7 +43,7 @@
       </div>
 
       <!-- Right: toggles + actions -->
-      <div class="flex items-center gap-4">
+      <div class="flex flex-wrap items-center gap-3 lg:justify-end">
         <ToggleSwitch :label="t('common.enabled')" :checked="provider.enabled" @toggle="emit('toggleField', 'enabled')" />
         <ToggleSwitch :label="t('admin.settings.payment.refundEnabled')" :checked="provider.refund_enabled" @toggle="emit('toggleField', 'refund_enabled')" />
         <ToggleSwitch v-if="provider.refund_enabled" :label="t('admin.settings.payment.allowUserRefund')" :checked="provider.allow_user_refund" @toggle="emit('toggleField', 'allow_user_refund')" />

@@ -181,6 +181,14 @@ func (s *PaymentConfigService) UpdatePlan(ctx context.Context, id int64, req Upd
 		if err := s.validatePlanGroup(ctx, *req.GroupID); err != nil {
 			return nil, err
 		}
+	} else if req.ForSale != nil && *req.ForSale {
+		plan, err := s.entClient.SubscriptionPlan.Get(ctx, id)
+		if err != nil {
+			return nil, infraerrors.NotFound("PLAN_NOT_FOUND", "subscription plan not found")
+		}
+		if err := s.validatePlanGroup(ctx, plan.GroupID); err != nil {
+			return nil, err
+		}
 	}
 	u := s.entClient.SubscriptionPlan.UpdateOneID(id)
 	if req.GroupID != nil {

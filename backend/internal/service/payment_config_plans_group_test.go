@@ -90,3 +90,31 @@ func TestPaymentConfigServiceUpdatePlanRejectsStandardGroup(t *testing.T) {
 		t.Fatalf("error reason = %q, want PLAN_GROUP_INVALID", got)
 	}
 }
+
+func TestPaymentConfigServiceUpdatePlanRejectsSellingExistingStandardGroup(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	standardGroup := client.Group.Create().
+		SetName("standard-existing").
+		SetSubscriptionType(domain.SubscriptionTypeStandard).
+		SaveX(ctx)
+	plan := client.SubscriptionPlan.Create().
+		SetGroupID(int64(standardGroup.ID)).
+		SetName("Legacy Pro").
+		SetPrice(10).
+		SetValidityDays(30).
+		SetValidityUnit("day").
+		SetForSale(false).
+		SaveX(ctx)
+	svc := &PaymentConfigService{entClient: client}
+	forSale := true
+
+	_, err := svc.UpdatePlan(ctx, plan.ID, UpdatePlanRequest{ForSale: &forSale})
+
+	if err == nil {
+		t.Fatal("expected re-selling a standard-group plan to be rejected")
+	}
+	if got := infraerrors.Reason(err); got != "PLAN_GROUP_INVALID" {
+		t.Fatalf("error reason = %q, want PLAN_GROUP_INVALID", got)
+	}
+}
