@@ -182,7 +182,7 @@ docker logs -f sub2api-prod
 
 日志检查：
 - 不能出现 `panic`、`ERROR`、`POSTCHECK FAILED`、`PREFLIGHT FAILED`。
-- payment migration 应包含 `091a`、`092`、`092b`、`093`、`093a`、`094`、`095`、`095a`、`096`、`096a`、`098`、`099`、`100`、`101`、`102`、`102a`、`103`、`111`、`112`、`117`、`119`、`120`、`120a`、`120b`。
+- payment migration 应包含 `091a`、`092`、`092b`、`093`、`093a`、`094`、`095`、`095a`、`096`、`096a`、`098`、`099`、`100`、`101`、`102`、`102a`、`103`、`111`、`112`、`117`、`119`、`120`、`120a`、`120b`、`121`、`122`、`123`。
 - `113_normalize_legacy_wechat_provider_key.sql` 属于 upstream auth identity 迁移，不在本 PR 中引入。
 
 ## 5. 部署后验证
@@ -250,12 +250,12 @@ SELECT MAX(id) FROM payment_orders;
 - `empty_otn = 0`；`paymentorder_out_trade_no` 必须 `indisvalid=true` 且 `indisready=true`。
 - `custom_menu` 中应能看到 `/purchase` 和 `/orders` 入口；如果管理员自定义菜单被覆盖或缓存未刷新，需要在后台菜单配置里复核并刷新前端。
 - `payment_provider_instances` 首次部署后通常为 0，配置 Provider 后应增加。
-- `subscription_plans` 是 payment v2 当前套餐表；`120b` 会把旧 `payment_plans` 中未删除且绑定 active subscription 分组的套餐补进 `subscription_plans`。
+- `subscription_plans` 是 payment v2 当前套餐表；`120b` 会把旧 `payment_plans` 中未删除的套餐补进 `subscription_plans`，`123` 会把不满足 active subscription 分组要求的套餐下架。
 - `payment_orders_id_seq.last_value >= MAX(payment_orders.id)`。
 
 ## 5.1 旧套餐数据处理
 
-payment v2 的用户套餐页和管理套餐页读取 `subscription_plans`。旧表 `payment_plans` 只保留历史数据；`120b` 会按 `group_id + name` 幂等补齐到新表，但只回填绑定 active subscription 分组的旧套餐。旧版允许套餐绑定任意分组；payment v2 下单会拒绝普通分组或停用分组，因此无效旧套餐需要人工改绑到正确订阅分组后再上架。
+payment v2 的用户套餐页和管理套餐页读取 `subscription_plans`。旧表 `payment_plans` 只保留历史数据；`120b` 会按 `group_id + name` 幂等补齐到新表，`123` 会把绑定普通分组、停用分组或缺失分组的在售套餐设为 `for_sale=false`。旧版允许套餐绑定任意分组；payment v2 下单会拒绝普通分组或停用分组，因此无效旧套餐需要人工改绑到正确订阅分组后再上架。
 
 部署后如果 `payment_plans > 0` 且 `subscription_plans = 0`，说明 `120b` 未执行或执行失败，需要先查 `schema_migrations` 和容器启动日志，不要直接部署生产。
 
@@ -283,7 +283,7 @@ WHERE sp.for_sale = true
 "
 ```
 
-列出 `120b` 跳过的旧套餐，供人工判断是否需要改绑到 active subscription 分组后重新上架：
+列出仍未迁移到 `subscription_plans` 的旧套餐，供人工判断是否需要改绑到 active subscription 分组后重新上架：
 
 ```bash
 docker exec sub2api-postgres psql -U sub2api -d sub2api_test -c "

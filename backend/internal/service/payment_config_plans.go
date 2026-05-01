@@ -118,7 +118,27 @@ func (s *PaymentConfigService) ListPlans(ctx context.Context) ([]*dbent.Subscrip
 }
 
 func (s *PaymentConfigService) ListPlansForSale(ctx context.Context) ([]*dbent.SubscriptionPlan, error) {
-	return s.entClient.SubscriptionPlan.Query().Where(subscriptionplan.ForSaleEQ(true)).Order(subscriptionplan.BySortOrder()).All(ctx)
+	groups, err := s.entClient.Group.Query().
+		Where(
+			group.StatusEQ(domain.StatusActive),
+			group.SubscriptionTypeEQ(domain.SubscriptionTypeSubscription),
+		).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("query subscription groups: %w", err)
+	}
+	groupIDs := make([]int64, 0, len(groups))
+	for _, g := range groups {
+		groupIDs = append(groupIDs, int64(g.ID))
+	}
+	if len(groupIDs) == 0 {
+		return []*dbent.SubscriptionPlan{}, nil
+	}
+	return s.entClient.SubscriptionPlan.Query().
+		Where(subscriptionplan.ForSaleEQ(true)).
+		Where(subscriptionplan.GroupIDIn(groupIDs...)).
+		Order(subscriptionplan.BySortOrder()).
+		All(ctx)
 }
 
 func (s *PaymentConfigService) validatePlanGroup(ctx context.Context, groupID int64) error {
