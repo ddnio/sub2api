@@ -506,6 +506,38 @@ describe('PaymentView WeChat JSAPI flow', () => {
     }))
   })
 
+  it('shows an inline error when recharge order creation fails', async () => {
+    routeState.query = {}
+    createOrder.mockRejectedValue({ reason: 'PAYMENT_GATEWAY_ERROR' })
+
+    const wrapper = shallowMount(PaymentView, {
+      global: {
+        stubs: {
+          AppLayout: { template: '<div><slot /></div>' },
+          AmountInput: {
+            emits: ['update:modelValue'],
+            template: '<button data-test="choose-amount" @click="$emit(\'update:modelValue\', 1)">amount</button>',
+          },
+          PaymentMethodSelector: true,
+          PaymentStatusPanel: true,
+          Teleport: true,
+          Transition: false,
+        },
+      },
+    })
+    await flushPromises()
+    await wrapper.find('[data-test="choose-amount"]').trigger('click')
+    await flushPromises()
+
+    const confirm = wrapper.findAll('button').find(button => button.text().includes('payment.createOrder'))
+    expect(confirm, 'confirm button').toBeTruthy()
+    await confirm!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('payment.errors.wechatUnavailable')
+    expect(wrapper.text()).toContain('payment.errors.wechatOpenInWeChatHint')
+  })
+
   it('creates a subscription order when the subscription confirm button is clicked', async () => {
     routeState.query = {}
     getCheckoutInfo.mockResolvedValue(checkoutInfoWithPlansFixture())

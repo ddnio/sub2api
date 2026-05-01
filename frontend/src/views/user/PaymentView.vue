@@ -80,6 +80,10 @@
               </div>
             </div>
             <div class="sticky bottom-4 z-20 rounded-xl bg-gray-50/95 py-2 backdrop-blur dark:bg-dark-950/95">
+              <div v-if="errorMessage" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200" role="alert">
+                <p class="font-medium">{{ errorMessage }}</p>
+                <p v-if="errorHintMessage" class="mt-1 text-xs text-red-600 dark:text-red-300">{{ errorHintMessage }}</p>
+              </div>
               <button :class="['btn w-full py-3 text-base font-medium', paymentButtonClass]" :disabled="!canSubmit || submitting" @click="handleSubmitRecharge">
                 <span v-if="submitting" class="flex items-center justify-center gap-2">
                   <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
@@ -164,6 +168,10 @@
                 </div>
               </div>
               <div class="sticky bottom-4 z-20 space-y-3 rounded-xl bg-gray-50/95 py-2 backdrop-blur dark:bg-dark-950/95">
+                <div v-if="errorMessage" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200" role="alert">
+                  <p class="font-medium">{{ errorMessage }}</p>
+                  <p v-if="errorHintMessage" class="mt-1 text-xs text-red-600 dark:text-red-300">{{ errorHintMessage }}</p>
+                </div>
                 <button :class="['btn w-full py-3 text-base font-medium', paymentButtonClass]" :disabled="!canSubmitSubscription || submitting" @click="confirmSubscribe">
                   <span v-if="submitting" class="flex items-center justify-center gap-2">
                     <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
