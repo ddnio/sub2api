@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCreateProviderInstanceEncryptsStoredConfig(t *testing.T) {
+func TestCreateProviderInstanceStoresPlaintextConfigAndMasksResponse(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -35,9 +35,21 @@ func TestCreateProviderInstanceEncryptsStoredConfig(t *testing.T) {
 
 	saved, err := client.PaymentProviderInstance.Get(ctx, instance.ID)
 	require.NoError(t, err)
-	require.NotContains(t, saved.Config, "secret-pkey")
+	require.JSONEq(t, `{
+		"pid":"1001",
+		"pkey":"secret-pkey",
+		"apiBase":"https://pay.example.com",
+		"notifyUrl":"https://merchant.example.com/notify",
+		"returnUrl":"https://merchant.example.com/return"
+	}`, saved.Config)
 
 	cfg, err := svc.decryptConfig(saved.Config)
 	require.NoError(t, err)
 	require.Equal(t, "secret-pkey", cfg["pkey"])
+
+	listed, err := svc.ListProviderInstancesWithConfig(ctx)
+	require.NoError(t, err)
+	require.Len(t, listed, 1)
+	require.NotContains(t, listed[0].Config, "pkey")
+	require.Equal(t, "1001", listed[0].Config["pid"])
 }

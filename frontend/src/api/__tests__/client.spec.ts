@@ -113,7 +113,13 @@ describe('API Client', () => {
     it('code!=0 时拒绝并返回结构化错误', async () => {
       const adapter = vi.fn().mockResolvedValue({
         status: 200,
-        data: { code: 1001, message: '参数错误', data: null },
+        data: {
+          code: 1001,
+          message: '参数错误',
+          data: null,
+          reason: 'TOO_MANY_PENDING',
+          metadata: { max: '3' },
+        },
         headers: {},
         config: {},
         statusText: 'OK',
@@ -124,6 +130,34 @@ describe('API Client', () => {
         expect.objectContaining({
           code: 1001,
           message: '参数错误',
+          reason: 'TOO_MANY_PENDING',
+          metadata: { max: '3' },
+        })
+      )
+    })
+
+    it('HTTP 错误透传 reason 和 metadata', async () => {
+      const adapter = vi.fn().mockRejectedValue({
+        response: {
+          status: 400,
+          data: {
+            code: 'INVALID_AMOUNT',
+            message: 'Amount out of range',
+            reason: 'CANCEL_RATE_LIMITED',
+            metadata: { window: '1', unit: 'day' },
+          },
+        },
+        config: { url: '/test' },
+        code: 'ERR_BAD_REQUEST',
+      })
+      apiClient.defaults.adapter = adapter
+
+      await expect(apiClient.get('/test')).rejects.toEqual(
+        expect.objectContaining({
+          code: 'INVALID_AMOUNT',
+          message: 'Amount out of range',
+          reason: 'CANCEL_RATE_LIMITED',
+          metadata: { window: '1', unit: 'day' },
         })
       )
     })

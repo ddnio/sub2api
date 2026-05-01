@@ -315,8 +315,12 @@ func (lb *DefaultLoadBalancer) buildSelection(selected *dbent.PaymentProviderIns
 }
 
 // decryptConfig parses a stored provider config.
-// New records are AES-256-GCM ciphertext; plaintext JSON remains readable for
-// deployments that temporarily saved unencrypted provider config.
+// New records are plaintext JSON; legacy records are AES-256-GCM ciphertext.
+// Unreadable values are treated as empty so admins can re-enter config.
+//
+// TODO(deprecated-legacy-ciphertext): The AES fallback branch is a transitional
+// shim for pre-plaintext records. Remove it after live deployments have
+// re-saved provider configs through the admin UI.
 func (lb *DefaultLoadBalancer) decryptConfig(stored string) (map[string]string, error) {
 	if stored == "" {
 		return nil, nil
@@ -325,7 +329,9 @@ func (lb *DefaultLoadBalancer) decryptConfig(stored string) (map[string]string, 
 	if err := json.Unmarshal([]byte(stored), &config); err == nil {
 		return config, nil
 	}
+	// Deprecated: legacy AES-256-GCM ciphertext fallback, scheduled for removal.
 	if len(lb.encryptionKey) == AES256KeySize {
+		//nolint:staticcheck // SA1019: intentional legacy fallback during migration.
 		if plaintext, err := Decrypt(stored, lb.encryptionKey); err == nil {
 			if err := json.Unmarshal([]byte(plaintext), &config); err == nil {
 				return config, nil
