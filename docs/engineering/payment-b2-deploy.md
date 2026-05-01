@@ -225,11 +225,6 @@ SELECT COUNT(*) FROM payment_provider_instances;
 SELECT COUNT(*) FROM subscription_plans;
 SELECT COUNT(*) FROM payment_plans;
 
-SELECT id, label, path, icon, enabled, sort_order
-FROM custom_menu
-WHERE path IN ('/purchase', '/orders') OR path LIKE '%purchase%'
-ORDER BY sort_order, id;
-
 SELECT conname
 FROM pg_constraint
 WHERE conrelid='payment_provider_instances'::regclass;
@@ -252,6 +247,21 @@ SELECT MAX(id) FROM payment_orders;
 - `payment_provider_instances` 首次部署后通常为 0，配置 Provider 后应增加。
 - `subscription_plans` 是 payment v2 当前套餐表；`120b` 会把旧 `payment_plans` 中未删除的套餐补进 `subscription_plans`，`123` 会把不满足 active subscription 分组要求的套餐下架。
 - `payment_orders_id_seq.last_value >= MAX(payment_orders.id)`。
+
+如果环境存在 `custom_menu` 表，再验证 `/purchase` 和 `/orders` 入口；没有该表的环境可跳过：
+
+```bash
+docker exec sub2api-postgres psql -U sub2api -d sub2api_test -c "
+DO \$\$
+BEGIN
+  IF to_regclass('public.custom_menu') IS NULL THEN
+    RAISE NOTICE 'custom_menu table not present; skipping menu check';
+  ELSE
+    PERFORM 1 FROM custom_menu WHERE path IN ('/purchase', '/orders') OR path LIKE '%purchase%';
+  END IF;
+END \$\$;
+"
+```
 
 ## 5.1 旧套餐数据处理
 
