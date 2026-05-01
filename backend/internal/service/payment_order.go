@@ -706,6 +706,8 @@ func (s *PaymentService) GetUserOrders(ctx context.Context, userID int64, p Orde
 
 // AdminListOrders returns a paginated list of orders. If userID > 0, filters by user.
 func (s *PaymentService) AdminListOrders(ctx context.Context, userID int64, p OrderListParams) ([]*dbent.PaymentOrder, int, error) {
+	const maxAdminOrderKeywordRunes = 64
+
 	q := s.entClient.PaymentOrder.Query()
 	if userID > 0 {
 		q = q.Where(paymentorder.UserIDEQ(userID))
@@ -719,11 +721,15 @@ func (s *PaymentService) AdminListOrders(ctx context.Context, userID int64, p Or
 	if p.PaymentType != "" {
 		q = q.Where(paymentorder.PaymentTypeEQ(p.PaymentType))
 	}
-	if p.Keyword != "" {
+	keyword := strings.TrimSpace(p.Keyword)
+	if len([]rune(keyword)) > maxAdminOrderKeywordRunes {
+		return nil, 0, infraerrors.BadRequest("INVALID_KEYWORD", "keyword is too long")
+	}
+	if keyword != "" {
 		q = q.Where(paymentorder.Or(
-			paymentorder.OutTradeNoContainsFold(p.Keyword),
-			paymentorder.UserEmailContainsFold(p.Keyword),
-			paymentorder.UserNameContainsFold(p.Keyword),
+			paymentorder.OutTradeNoContainsFold(keyword),
+			paymentorder.UserEmailContainsFold(keyword),
+			paymentorder.UserNameContainsFold(keyword),
 		))
 	}
 	total, err := q.Clone().Count(ctx)

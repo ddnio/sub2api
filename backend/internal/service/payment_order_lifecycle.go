@@ -42,7 +42,7 @@ func (s *PaymentService) checkCancelRateLimit(ctx context.Context, userID int64,
 		).Count(ctx)
 	if err != nil {
 		slog.Error("check cancel rate limit failed", "userID", userID, "error", err)
-		return nil // fail open
+		return fmt.Errorf("check cancel rate limit: %w", err)
 	}
 	if count >= cfg.CancelRateLimitMax {
 		return infraerrors.TooManyRequests("CANCEL_RATE_LIMITED", "cancel rate limited").
