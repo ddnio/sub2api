@@ -176,12 +176,12 @@ SELECT MAX(id) FROM payment_orders;
 - `status` 全部为大写状态。
 - `null_expires = 0`。
 - `payment_provider_instances` 首次部署后通常为 0，配置 Provider 后应增加。
-- `subscription_plans` 是 payment v2 当前套餐表；`120b` 会把旧 `payment_plans` 中未删除的套餐补进 `subscription_plans`。
+- `subscription_plans` 是 payment v2 当前套餐表；`120b` 会把旧 `payment_plans` 中未删除且绑定 active subscription 分组的套餐补进 `subscription_plans`。
 - `payment_orders_id_seq.last_value >= MAX(payment_orders.id)`。
 
 ## 5.1 旧套餐数据处理
 
-payment v2 的用户套餐页和管理套餐页读取 `subscription_plans`。旧表 `payment_plans` 只保留历史数据；`120b` 会按 `group_id + name` 幂等补齐到新表。
+payment v2 的用户套餐页和管理套餐页读取 `subscription_plans`。旧表 `payment_plans` 只保留历史数据；`120b` 会按 `group_id + name` 幂等补齐到新表，但只回填绑定 active subscription 分组的旧套餐。旧版允许套餐绑定任意分组；payment v2 下单会拒绝普通分组或停用分组，因此无效旧套餐需要人工改绑到正确订阅分组后再上架。
 
 部署后如果 `payment_plans > 0` 且 `subscription_plans = 0`，说明 `120b` 未执行或执行失败，需要先查 `schema_migrations` 和容器启动日志，不要直接部署生产。
 
@@ -194,6 +194,18 @@ docker exec sub2api-postgres psql -U sub2api -d sub2api_test -c "
 SELECT id, group_id, name, price, original_price, validity_days, validity_unit, for_sale, sort_order
 FROM subscription_plans
 ORDER BY sort_order, id;
+"
+```
+
+确认没有在售套餐绑定无效分组：
+
+```bash
+docker exec sub2api-postgres psql -U sub2api -d sub2api_test -c "
+SELECT count(*) AS invalid_for_sale_plans
+FROM subscription_plans sp
+LEFT JOIN groups g ON g.id = sp.group_id
+WHERE sp.for_sale = true
+  AND (g.id IS NULL OR g.status <> 'active' OR g.subscription_type <> 'subscription');
 "
 ```
 
