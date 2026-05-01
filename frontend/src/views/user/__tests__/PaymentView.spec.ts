@@ -180,6 +180,21 @@ function oauthOrderFixture() {
   }
 }
 
+function qrOrderFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    order_id: 789,
+    amount: 1,
+    pay_amount: 1,
+    fee_rate: 0,
+    expires_at: '2099-01-01T00:10:00.000Z',
+    payment_type: 'wxpay',
+    result_type: 'qr_code' as const,
+    qr_code: 'weixin://wxpay/bizpayurl?pr=test',
+    out_trade_no: 'sub2_qr_789',
+    ...overrides,
+  }
+}
+
 describe('PaymentView WeChat JSAPI flow', () => {
   beforeEach(() => {
     routeState.path = '/purchase'
@@ -454,5 +469,83 @@ describe('PaymentView WeChat JSAPI flow', () => {
     const amountInput = wrapper.find('[data-test="amount-input"]')
     expect(amountInput.attributes('data-min')).toBe('10')
     expect(amountInput.attributes('data-max')).toBe('10000')
+  })
+
+  it('creates a balance order when the recharge confirm button is clicked', async () => {
+    routeState.query = {}
+    createOrder.mockResolvedValue(qrOrderFixture())
+
+    const wrapper = shallowMount(PaymentView, {
+      global: {
+        stubs: {
+          AppLayout: { template: '<div><slot /></div>' },
+          AmountInput: {
+            emits: ['update:modelValue'],
+            template: '<button data-test="choose-amount" @click="$emit(\'update:modelValue\', 1)">amount</button>',
+          },
+          PaymentMethodSelector: true,
+          PaymentStatusPanel: true,
+          Teleport: true,
+          Transition: false,
+        },
+      },
+    })
+    await flushPromises()
+    await wrapper.find('[data-test="choose-amount"]').trigger('click')
+    await flushPromises()
+
+    const confirm = wrapper.findAll('button').find(button => button.text().includes('payment.createOrder'))
+    expect(confirm, 'confirm button').toBeTruthy()
+    await confirm!.trigger('click')
+    await flushPromises()
+
+    expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
+      amount: 1,
+      order_type: 'balance',
+      payment_type: 'wxpay',
+    }))
+  })
+
+  it('creates a subscription order when the subscription confirm button is clicked', async () => {
+    routeState.query = {}
+    getCheckoutInfo.mockResolvedValue(checkoutInfoWithPlansFixture())
+    createOrder.mockResolvedValue(qrOrderFixture({ amount: 128, pay_amount: 128 }))
+
+    const wrapper = shallowMount(PaymentView, {
+      global: {
+        stubs: {
+          AppLayout: { template: '<div><slot /></div>' },
+          SubscriptionPlanCard: {
+            props: ['plan'],
+            emits: ['select'],
+            template: '<button data-test="select-plan" @click="$emit(\'select\', plan)">select plan</button>',
+          },
+          PaymentMethodSelector: true,
+          PaymentStatusPanel: true,
+          Teleport: true,
+          Transition: false,
+        },
+      },
+    })
+    await flushPromises()
+
+    const subscriptionTab = wrapper.findAll('button').find(button => button.text() === 'payment.tabSubscribe')
+    expect(subscriptionTab, 'subscription tab').toBeTruthy()
+    await subscriptionTab!.trigger('click')
+    await flushPromises()
+    await wrapper.find('[data-test="select-plan"]').trigger('click')
+    await flushPromises()
+
+    const confirm = wrapper.findAll('button').find(button => button.text().includes('payment.createOrder'))
+    expect(confirm, 'confirm button').toBeTruthy()
+    await confirm!.trigger('click')
+    await flushPromises()
+
+    expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
+      amount: 128,
+      order_type: 'subscription',
+      plan_id: 7,
+      payment_type: 'wxpay',
+    }))
   })
 })

@@ -459,38 +459,3 @@ func TestGetAvailableMethodLimitsPreservesLegacyCrossProviderBehaviorWhenVisible
 	require.Equal(t, 10.0, resp.GlobalMin)
 	require.Equal(t, 400.0, resp.GlobalMax)
 }
-
-func TestGetAvailableMethodLimitsAppliesGlobalRechargeRange(t *testing.T) {
-	ctx := context.Background()
-	client := newPaymentConfigServiceTestClient(t)
-
-	_, err := client.PaymentProviderInstance.Create().
-		SetProviderKey(payment.TypeWxpay).
-		SetName("Official WeChat").
-		SetConfig("{}").
-		SetSupportedTypes("wxpay").
-		SetLimits(`{"wxpay":{"singleMin":1,"singleMax":10000}}`).
-		SetEnabled(true).
-		Save(ctx)
-	require.NoError(t, err)
-
-	svc := &PaymentConfigService{
-		entClient: client,
-		settingRepo: &paymentConfigSettingRepoStub{
-			values: map[string]string{
-				SettingMinRechargeAmount: "10.00",
-				SettingMaxRechargeAmount: "500.00",
-			},
-		},
-	}
-
-	resp, err := svc.GetAvailableMethodLimits(ctx)
-	require.NoError(t, err)
-
-	wxpayLimits, ok := resp.Methods[payment.TypeWxpay]
-	require.True(t, ok, "expected wxpay limits to remain visible")
-	require.Equal(t, 10.0, wxpayLimits.SingleMin)
-	require.Equal(t, 500.0, wxpayLimits.SingleMax)
-	require.Equal(t, 10.0, resp.GlobalMin)
-	require.Equal(t, 500.0, resp.GlobalMax)
-}

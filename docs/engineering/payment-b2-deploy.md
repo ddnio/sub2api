@@ -12,8 +12,9 @@
 1. **必须先部署测试环境并完成真实支付端到端验证**，再部署生产。
 2. **必须先做 pg_dump 备份**。091a 会备份并重建旧 `payment_orders`，失败回滚依赖 pg_dump。
 3. 微信支付回调 URL 由 provider config 的 `notifyUrl` 控制，不在微信商户平台单独配置。
-4. 部署期间容器会重启并执行 migration，预期有短暂不可用窗口。
-5. 文档不得保存服务器密码、支付密钥、token；凭据从团队密码库或运维交接渠道获取。
+4. 前台充值页展示的起付金额来自 provider instance `limits`。如果系统设置里 `MIN_RECHARGE_AMOUNT=0.10`，但 wxpay provider 仍配置 `singleMin:1`，用户侧会显示/限制 1 元起付；部署前必须同步 provider `singleMin`。
+5. 部署期间容器会重启并执行 migration，预期有短暂不可用窗口。
+6. 文档不得保存服务器密码、支付密钥、token；凭据从团队密码库或运维交接渠道获取。
 
 ## 1. 环境信息
 
@@ -43,6 +44,13 @@ GOCACHE="$PWD/../.cache/go-build" go test ./internal/service -run 'Test.*Payment
 说明：
 - 前端 build 产物由 Dockerfile 的 multi-stage build 生成并复制到镜像内的 `backend/internal/web/dist`，不需要把 dist 提交进 PR。
 - `go test ./internal/service` 全包测试在本地沙箱中可能被非 payment 的 `httptest.NewServer` 用例阻断；至少必须单独验证 payment 相关用例和编译状态。
+
+本轮 payment 前端修复还必须包含：
+
+```bash
+cd frontend
+pnpm exec vitest run src/i18n/__tests__/paymentAdminLocales.spec.ts src/views/user/__tests__/PaymentView.spec.ts
+```
 
 ## 3. 服务器备份与 Preflight
 
@@ -141,6 +149,29 @@ END \$\$;
 ```
 
 生产环境将 `sub2api_test` 替换为 `sub2api`。
+
+Provider 限额复核（测试环境示例）：
+
+```bash
+docker exec sub2api-postgres psql -U sub2api -d sub2api_test -c "
+SELECT id, name, provider_key, supported_types, payment_mode, limits
+FROM payment_provider_instances
+ORDER BY id;
+"
+```
+
+如果希望微信 0.1 元可付，`wxpay` 对应实例的 `limits` 不能保留 `singleMin:1`。可在管理后台“支付设置 -> 服务商管理 -> 编辑服务商 -> 限额配置”修改；测试环境也可以用 SQL 修正：
+
+```bash
+docker exec sub2api-postgres psql -U sub2api -d sub2api_test -c "
+UPDATE payment_provider_instances
+SET limits = jsonb_set(COALESCE(NULLIF(limits, '')::jsonb, '{}'::jsonb), '{wxpay,singleMin}', '0.1'::jsonb, true)::text
+WHERE provider_key = 'wxpay'
+  AND supported_types LIKE '%wxpay%';
+"
+```
+
+生产环境执行前必须先备份，并把库名替换为 `sub2api`。
 
 如果库里已经存在 `payment_orders_v1_backup`，部署前额外确认旧空单号数量，便于解释历史订单回调行为：
 

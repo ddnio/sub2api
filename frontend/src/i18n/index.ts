@@ -42,6 +42,30 @@ export const i18n = createI18n({
 
 const loadedLocales = new Set<LocaleCode>()
 
+export function normalizeLocaleMessages(messages: LocaleMessages): LocaleMessages {
+  const admin = messages.admin
+  const payment = messages.payment
+  if (
+    admin
+    && typeof admin === 'object'
+    && payment
+    && typeof payment === 'object'
+  ) {
+    const settings = (admin as LocaleMessages).settings
+    const paymentAdmin = (payment as LocaleMessages).admin
+    if (
+      settings
+      && typeof settings === 'object'
+      && paymentAdmin
+      && typeof paymentAdmin === 'object'
+      && !(settings as LocaleMessages).payment
+    ) {
+      ;(settings as LocaleMessages).payment = paymentAdmin
+    }
+  }
+  return messages
+}
+
 export async function loadLocaleMessages(locale: LocaleCode): Promise<void> {
   if (loadedLocales.has(locale)) {
     return
@@ -49,7 +73,7 @@ export async function loadLocaleMessages(locale: LocaleCode): Promise<void> {
 
   const loader = localeLoaders[locale]
   const module = await loader()
-  i18n.global.setLocaleMessage(locale, module.default)
+  i18n.global.setLocaleMessage(locale, normalizeLocaleMessages(module.default))
   loadedLocales.add(locale)
 }
 
