@@ -84,7 +84,7 @@ WHERE amount != ROUND(amount::numeric, 2);
 
 SELECT COUNT(*) AS null_expired
 FROM payment_orders
-WHERE expired_at IS NULL;
+WHERE expires_at IS NULL;
 
 SELECT COUNT(*) AS orphan_orders
 FROM payment_orders po
