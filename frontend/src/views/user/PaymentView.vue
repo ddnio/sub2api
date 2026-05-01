@@ -7,7 +7,7 @@
       <template v-else>
         <!-- Tab Switcher (hide during payment and subscription confirm) -->
         <div v-if="tabs.length > 1 && paymentPhase === 'select' && !selectedPlan" class="flex space-x-1 rounded-xl bg-gray-100 p-1 dark:bg-dark-800">
-          <button v-for="tab in tabs" :key="tab.key"
+          <button v-for="tab in tabs" :key="tab.key" type="button"
             class="flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-all"
             :class="activeTab === tab.key ? 'bg-white text-gray-900 shadow dark:bg-dark-700 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
             @click="activeTab = tab.key">{{ tab.label }}</button>
@@ -84,7 +84,7 @@
                 <p class="font-medium">{{ errorMessage }}</p>
                 <p v-if="errorHintMessage" class="mt-1 text-xs text-red-600 dark:text-red-300">{{ errorHintMessage }}</p>
               </div>
-              <button :class="['btn w-full py-3 text-base font-medium', paymentButtonClass]" :disabled="!canSubmit || submitting" @click="handleSubmitRecharge">
+              <button type="button" :class="['btn w-full py-3 text-base font-medium', paymentButtonClass]" :disabled="!canSubmit || submitting" @click="handleSubmitRecharge">
                 <span v-if="submitting" class="flex items-center justify-center gap-2">
                   <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
                   {{ t('common.processing') }}
@@ -172,14 +172,14 @@
                   <p class="font-medium">{{ errorMessage }}</p>
                   <p v-if="errorHintMessage" class="mt-1 text-xs text-red-600 dark:text-red-300">{{ errorHintMessage }}</p>
                 </div>
-                <button :class="['btn w-full py-3 text-base font-medium', paymentButtonClass]" :disabled="!canSubmitSubscription || submitting" @click="confirmSubscribe">
+                <button type="button" :class="['btn w-full py-3 text-base font-medium', paymentButtonClass]" :disabled="!canSubmitSubscription || submitting" @click="confirmSubscribe">
                   <span v-if="submitting" class="flex items-center justify-center gap-2">
                     <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
                     {{ t('common.processing') }}
                   </span>
                   <span v-else>{{ t('payment.createOrder') }} ¥{{ formatAmount(feeRate > 0 ? subTotalAmount : selectedPlan.price) }}</span>
                 </button>
-                <button class="btn btn-secondary w-full" @click="selectedPlan = null">{{ t('common.cancel') }}</button>
+                <button type="button" class="btn btn-secondary w-full" @click="selectedPlan = null">{{ t('common.cancel') }}</button>
               </div>
             </template>
             <!-- Plan list -->
@@ -233,7 +233,7 @@
         <div v-if="showRenewalModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" @click.self="closeRenewalModal">
           <div class="relative w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-dark-700 dark:bg-dark-900">
             <!-- Close button -->
-            <button class="absolute right-4 top-4 rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-700 dark:hover:text-gray-200" @click="closeRenewalModal">
+            <button type="button" class="absolute right-4 top-4 rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-700 dark:hover:text-gray-200" @click="closeRenewalModal">
               <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ t('payment.selectPlan') }}</h3>
@@ -256,7 +256,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -765,6 +765,8 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
     paymentState.value = decision.paymentState
     paymentPhase.value = 'paying'
     persistRecoverySnapshot(decision.recovery)
+    await nextTick()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
 
     if (decision.kind === 'stripe_popup') {
       openWindow(decision.paymentState.payUrl)

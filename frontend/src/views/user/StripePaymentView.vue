@@ -10,7 +10,7 @@
         </div>
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t('payment.stripeLoadFailed') }}</h3>
         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ initError }}</p>
-        <button class="btn btn-primary mt-6" @click="router.push('/purchase')">{{ t('payment.result.backToRecharge') }}</button>
+        <button type="button" class="btn btn-primary mt-6" @click="router.push('/purchase')">{{ t('payment.result.backToRecharge') }}</button>
       </div>
       <template v-else>
         <!-- Amount header -->
@@ -70,7 +70,7 @@
           <div class="card p-6">
             <div id="stripe-payment-element" class="min-h-[200px]"></div>
             <p v-if="stripeError" class="mt-4 text-sm text-red-600 dark:text-red-400">{{ stripeError }}</p>
-            <button class="btn btn-stripe mt-6 w-full py-3 text-base" :disabled="stripeSubmitting || !stripeReady" @click="handleGenericPay">
+            <button type="button" class="btn btn-stripe mt-6 w-full py-3 text-base" :disabled="stripeSubmitting || !stripeReady" @click="handleGenericPay">
               <span v-if="stripeSubmitting" class="flex items-center justify-center gap-2">
                 <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
                 {{ t('common.processing') }}
@@ -79,14 +79,14 @@
             </button>
           </div>
           <div class="text-center">
-            <button class="btn btn-secondary" @click="router.push('/purchase')">{{ t('payment.result.backToRecharge') }}</button>
+            <button type="button" class="btn btn-secondary" @click="router.push('/purchase')">{{ t('payment.result.backToRecharge') }}</button>
           </div>
         </template>
 
         <!-- Error -->
         <div v-if="stripeError && !showPaymentElement" class="card p-4">
           <p class="text-sm text-red-600 dark:text-red-400">{{ stripeError }}</p>
-          <button class="btn btn-secondary mt-3 w-full" @click="router.push('/purchase')">{{ t('payment.result.backToRecharge') }}</button>
+          <button type="button" class="btn btn-secondary mt-3 w-full" @click="router.push('/purchase')">{{ t('payment.result.backToRecharge') }}</button>
         </div>
       </template>
     </div>

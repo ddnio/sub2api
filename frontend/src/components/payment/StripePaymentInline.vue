@@ -5,7 +5,7 @@
     </div>
     <div v-else-if="initError" class="card p-6 text-center">
       <p class="text-sm text-red-600 dark:text-red-400">{{ initError }}</p>
-      <button class="btn btn-secondary mt-4" @click="$emit('back')">{{ t('payment.result.backToRecharge') }}</button>
+      <button type="button" class="btn btn-secondary mt-4" @click="$emit('back')">{{ t('payment.result.backToRecharge') }}</button>
     </div>
     <!-- Success -->
     <template v-else-if="success">
@@ -31,7 +31,7 @@
               </div>
             </div>
           </div>
-          <button class="btn btn-primary" @click="$emit('done')">{{ t('common.confirm') }}</button>
+          <button type="button" class="btn btn-primary" @click="$emit('done')">{{ t('common.confirm') }}</button>
         </div>
       </div>
     </template>
@@ -47,7 +47,7 @@
       <div class="card p-6">
         <div ref="stripeMount" class="min-h-[200px]"></div>
         <p v-if="error" class="mt-4 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
-        <button class="btn btn-stripe mt-6 w-full py-3 text-base" :disabled="submitting || !ready" @click="handlePay">
+        <button type="button" class="btn btn-stripe mt-6 w-full py-3 text-base" :disabled="submitting || !ready" @click="handlePay">
           <span v-if="submitting" class="flex items-center justify-center gap-2">
             <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
             {{ t('common.processing') }}
@@ -56,7 +56,7 @@
         </button>
       </div>
       <!-- Cancel order -->
-      <button class="btn btn-secondary w-full" :disabled="cancelling" @click="handleCancel">
+      <button type="button" class="btn btn-secondary w-full" :disabled="cancelling" @click="handleCancel">
         {{ cancelling ? t('common.processing') : t('payment.qr.cancelOrder') }}
       </button>
     </template>

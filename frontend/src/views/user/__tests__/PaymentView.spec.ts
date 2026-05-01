@@ -19,6 +19,7 @@ const showInfo = vi.hoisted(() => vi.fn())
 const showWarning = vi.hoisted(() => vi.fn())
 const getCheckoutInfo = vi.hoisted(() => vi.fn())
 const bridgeInvoke = vi.hoisted(() => vi.fn())
+const scrollTo = vi.hoisted(() => vi.fn())
 
 vi.mock('vue-router', async () => {
   const actual = await vi.importActual<typeof import('vue-router')>('vue-router')
@@ -213,6 +214,11 @@ describe('PaymentView WeChat JSAPI flow', () => {
     showWarning.mockReset()
     getCheckoutInfo.mockReset().mockResolvedValue(checkoutInfoFixture())
     bridgeInvoke.mockReset()
+    scrollTo.mockReset()
+    Object.defineProperty(window, 'scrollTo', {
+      value: scrollTo,
+      writable: true,
+    })
     window.localStorage.clear()
     ;(window as Window & { WeixinJSBridge?: { invoke: typeof bridgeInvoke } }).WeixinJSBridge = {
       invoke: bridgeInvoke,
@@ -496,6 +502,8 @@ describe('PaymentView WeChat JSAPI flow', () => {
 
     const confirm = wrapper.findAll('button').find(button => button.text().includes('payment.createOrder'))
     expect(confirm, 'confirm button').toBeTruthy()
+    expect(confirm!.attributes('type')).toBe('button')
+    expect(confirm!.classes()).toContain('btn-wxpay')
     await confirm!.trigger('click')
     await flushPromises()
 
@@ -504,6 +512,76 @@ describe('PaymentView WeChat JSAPI flow', () => {
       order_type: 'balance',
       payment_type: 'wxpay',
     }))
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
+  })
+
+  it('uses provider-specific payment button classes after method selection', async () => {
+    routeState.query = {}
+    getCheckoutInfo.mockResolvedValue({
+      data: {
+        ...checkoutInfoFixture().data,
+        methods: {
+          wxpay: checkoutInfoFixture().data.methods.wxpay,
+          alipay: {
+            daily_limit: 0,
+            daily_used: 0,
+            daily_remaining: 0,
+            single_min: 0,
+            single_max: 0,
+            fee_rate: 0,
+            available: true,
+          },
+          stripe: {
+            daily_limit: 0,
+            daily_used: 0,
+            daily_remaining: 0,
+            single_min: 0,
+            single_max: 0,
+            fee_rate: 0,
+            available: true,
+          },
+        },
+      },
+    })
+
+    const wrapper = shallowMount(PaymentView, {
+      global: {
+        stubs: {
+          AppLayout: { template: '<div><slot /></div>' },
+          AmountInput: {
+            emits: ['update:modelValue'],
+            template: '<button data-test="choose-amount" @click="$emit(\'update:modelValue\', 10)">amount</button>',
+          },
+          PaymentMethodSelector: {
+            emits: ['select'],
+            template: `
+              <div>
+                <button data-test="select-alipay" @click="$emit('select', 'alipay')">alipay</button>
+                <button data-test="select-stripe" @click="$emit('select', 'stripe')">stripe</button>
+              </div>
+            `,
+          },
+          PaymentStatusPanel: true,
+          Teleport: true,
+          Transition: false,
+        },
+      },
+    })
+    await flushPromises()
+    await wrapper.find('[data-test="choose-amount"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.find('[data-test="select-alipay"]').trigger('click')
+    await flushPromises()
+    let confirm = wrapper.findAll('button').find(button => button.text().includes('payment.createOrder'))
+    expect(confirm, 'alipay confirm button').toBeTruthy()
+    expect(confirm!.classes()).toContain('btn-alipay')
+
+    await wrapper.find('[data-test="select-stripe"]').trigger('click')
+    await flushPromises()
+    confirm = wrapper.findAll('button').find(button => button.text().includes('payment.createOrder'))
+    expect(confirm, 'stripe confirm button').toBeTruthy()
+    expect(confirm!.classes()).toContain('btn-stripe')
   })
 
   it('shows an inline error when recharge order creation fails', async () => {
@@ -531,6 +609,8 @@ describe('PaymentView WeChat JSAPI flow', () => {
 
     const confirm = wrapper.findAll('button').find(button => button.text().includes('payment.createOrder'))
     expect(confirm, 'confirm button').toBeTruthy()
+    expect(confirm!.attributes('type')).toBe('button')
+    expect(confirm!.classes()).toContain('btn-wxpay')
     await confirm!.trigger('click')
     await flushPromises()
 
@@ -579,5 +659,6 @@ describe('PaymentView WeChat JSAPI flow', () => {
       plan_id: 7,
       payment_type: 'wxpay',
     }))
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
   })
 })
