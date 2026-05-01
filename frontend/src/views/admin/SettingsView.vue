@@ -2547,31 +2547,22 @@
         <!-- Tab: Payment Management -->
         <div v-show="activeTab === 'payment'" class="space-y-6">
           <!-- Provider List -->
-          <div class="card">
-            <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-dark-700">
-              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t('adminPayment.providers') }}</h2>
-              <button type="button" class="btn btn-primary btn-sm" @click="openProviderDialog()">+ {{ t('common.create') }}</button>
-            </div>
-            <div class="p-6">
-              <div v-if="providersLoading" class="flex justify-center py-8">
-                <div class="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
-              </div>
-              <div v-else-if="providers.length === 0" class="py-8 text-center text-sm text-gray-500">{{ t('adminPayment.noProviders') }}</div>
-              <div v-else class="space-y-3">
-                <div v-for="p in providers" :key="p.id" class="flex items-center justify-between rounded-lg border border-gray-100 px-4 py-3 dark:border-dark-700">
-                  <div>
-                    <div class="font-medium text-gray-900 dark:text-white">{{ p.name }}</div>
-                    <div class="text-xs text-gray-400">{{ p.provider_key }} · {{ p.payment_mode || 'native' }}</div>
-                  </div>
-                  <div class="flex items-center gap-3">
-                    <span :class="['badge', p.enabled ? 'badge-success' : 'badge-gray']">{{ p.enabled ? t('common.enabled') : t('common.disabled') }}</span>
-                    <button type="button" class="btn btn-secondary btn-sm" @click="openProviderDialog(p)">{{ t('common.edit') }}</button>
-                    <button type="button" class="btn btn-danger btn-sm" @click="deleteProviderById(p.id)">{{ t('common.delete') }}</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <PaymentProviderList
+            v-if="paymentConfigForm.enabled"
+            :providers="providers"
+            :loading="providersLoading"
+            :can-create="hasAnyPaymentTypeEnabled"
+            :enabled-payment-types="enabledPaymentTypes"
+            :all-payment-types="allPaymentTypes"
+            :redirect-label="t('admin.settings.payment.easypayRedirect')"
+            @refresh="loadProviders"
+            @create="openCreateProvider"
+            @edit="openEditProvider"
+            @delete="confirmDeleteProvider"
+            @toggle-field="handleToggleField"
+            @toggle-type="handleToggleType"
+            @reorder="handleReorderProviders"
+          />
 
           <!-- Payment Config -->
           <div class="card">
@@ -2582,6 +2573,26 @@
               <div class="flex items-center justify-between">
                 <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('adminPayment.enabled') }}</span>
                 <Toggle v-model="paymentConfigForm.enabled" @update:modelValue="savePaymentConfig" />
+              </div>
+              <div>
+                <label class="input-label">{{ t('admin.settings.payment.enabledPaymentTypes') }}</label>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <button
+                    v-for="pt in allPaymentTypes"
+                    :key="pt.value"
+                    type="button"
+                    @click="toggleEnabledPaymentType(pt.value)"
+                    :class="[
+                      'rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
+                      enabledPaymentTypes.includes(pt.value)
+                        ? 'border-primary-500 bg-primary-500 text-white'
+                        : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:border-dark-600 dark:bg-dark-800 dark:text-gray-300 dark:hover:border-dark-500',
+                    ]"
+                  >
+                    {{ pt.label }}
+                  </button>
+                </div>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('admin.settings.payment.enabledPaymentTypesHint') }}</p>
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div>
@@ -2601,40 +2612,28 @@
           </div>
         </div>
 
-        <!-- Provider Dialog -->
-        <Teleport to="body">
-          <div v-if="showProviderDialog" class="fixed inset-0 z-50 flex items-center justify-center">
-            <div class="fixed inset-0 bg-black/50" @click="showProviderDialog = false"></div>
-            <div class="relative z-10 w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900 max-h-[90vh] overflow-y-auto">
-              <h2 class="mb-4 text-base font-semibold">{{ providerForm.id ? t('common.edit') : t('common.create') }} {{ t('adminPayment.provider') }}</h2>
-              <div class="space-y-3">
-                <div>
-                  <label class="input-label">{{ t('adminPayment.providerKey') }}</label>
-                  <input v-model="providerForm.provider_key" class="input" placeholder="wxpay" :disabled="!!providerForm.id" />
-                </div>
-                <div>
-                  <label class="input-label">{{ t('common.name') }}</label>
-                  <input v-model="providerForm.name" class="input" placeholder="wxpay-default" />
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('common.enabled') }}</span>
-                  <Toggle v-model="providerForm.enabled" />
-                </div>
-                <div>
-                  <label class="input-label">{{ t('adminPayment.providerConfig') }}</label>
-                  <textarea v-model="providerForm.configText" class="input font-mono text-xs" rows="8" placeholder='{"appId":"...","mchId":"..."}'></textarea>
-                  <p v-if="providerConfigError" class="mt-1 text-xs text-red-500">{{ providerConfigError }}</p>
-                </div>
-              </div>
-              <div class="mt-4 flex justify-end gap-3">
-                <button type="button" class="btn btn-secondary" @click="showProviderDialog = false">{{ t('common.cancel') }}</button>
-                <button type="button" class="btn btn-primary" :disabled="savingProvider" @click="saveProvider">
-                  {{ savingProvider ? t('common.saving') : t('common.save') }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </Teleport>
+        <!-- Provider dialogs are outside the settings form to prevent submit bubbling. -->
+        <PaymentProviderDialog
+          ref="providerDialogRef"
+          :show="showProviderDialog"
+          :saving="providerSaving"
+          :editing="editingProvider"
+          :all-key-options="providerKeyOptions"
+          :enabled-key-options="enabledProviderKeyOptions"
+          :all-payment-types="allPaymentTypes"
+          :redirect-label="t('admin.settings.payment.easypayRedirect')"
+          @close="showProviderDialog = false"
+          @save="handleSaveProvider"
+        />
+        <ConfirmDialog
+          :show="showDeleteProviderDialog"
+          :title="t('admin.settings.payment.deleteProvider')"
+          :message="t('admin.settings.payment.deleteProviderConfirm')"
+          :confirm-text="t('common.delete')"
+          danger
+          @confirm="handleDeleteProvider"
+          @cancel="showDeleteProviderDialog = false"
+        />
 
         <!-- Save Button -->
         <div v-show="activeTab !== 'backup' && activeTab !== 'contact' && activeTab !== 'payment'" class="flex justify-end">
@@ -2673,7 +2672,9 @@ import type {
   DefaultSubscriptionSetting
 } from '@/api/admin/settings'
 import type { AdminGroup, ContactChannel } from '@/types'
-import type { ProviderInstance, PaymentConfig } from '@/api/admin'
+import type { PaymentConfig } from '@/api/admin'
+import type { ProviderInstance } from '@/types/payment'
+import type { TypeOption } from '@/components/payment/providerConfig'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import Select from '@/components/common/Select.vue'
@@ -2682,6 +2683,9 @@ import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
 import Toggle from '@/components/common/Toggle.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import BackupSettings from '@/views/admin/BackupView.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import PaymentProviderList from '@/components/payment/PaymentProviderList.vue'
+import PaymentProviderDialog from '@/components/payment/PaymentProviderDialog.vue'
 import { useClipboard } from '@/composables/useClipboard'
 import { useAppStore } from '@/stores'
 import { useAdminSettingsStore } from '@/stores/adminSettings'
@@ -3635,12 +3639,38 @@ async function saveContactChannels() {
 // Payment providers
 const providers = ref<ProviderInstance[]>([])
 const providersLoading = ref(false)
+const providerSaving = ref(false)
 const paymentConfig = ref<PaymentConfig | null>(null)
-const paymentConfigForm = reactive({ enabled: true, min_amount: 0.01, max_amount: 10000, balance_disabled: false })
+const paymentConfigForm = reactive({
+  enabled: true,
+  min_amount: 0.01,
+  max_amount: 10000,
+  balance_disabled: false,
+  enabled_payment_types: [] as string[],
+})
 const showProviderDialog = ref(false)
-const savingProvider = ref(false)
-const providerConfigError = ref('')
-const providerForm = reactive({ id: 0, provider_key: '', name: '', enabled: true, configText: '' })
+const showDeleteProviderDialog = ref(false)
+const editingProvider = ref<ProviderInstance | null>(null)
+const deletingProviderId = ref<number | null>(null)
+const providerDialogRef = ref<InstanceType<typeof PaymentProviderDialog> | null>(null)
+
+const allPaymentTypes = computed<TypeOption[]>(() => [
+  { value: 'easypay', label: t('admin.settings.payment.providerEasypay') },
+  { value: 'alipay', label: t('admin.settings.payment.providerAlipay') },
+  { value: 'wxpay', label: t('admin.settings.payment.providerWxpay') },
+  { value: 'stripe', label: t('admin.settings.payment.providerStripe') },
+])
+
+const providerKeyOptions = computed<TypeOption[]>(() => allPaymentTypes.value)
+
+const enabledPaymentTypes = computed(() => paymentConfigForm.enabled_payment_types)
+
+const hasAnyPaymentTypeEnabled = computed(() => enabledPaymentTypes.value.length > 0)
+
+const enabledProviderKeyOptions = computed(() => {
+  const enabled = new Set(enabledPaymentTypes.value)
+  return providerKeyOptions.value.filter((opt) => enabled.has(opt.value))
+})
 
 async function loadProviders() {
   providersLoading.value = true
@@ -3662,6 +3692,7 @@ async function loadPaymentConfig() {
       paymentConfigForm.min_amount = paymentConfig.value.min_amount
       paymentConfigForm.max_amount = paymentConfig.value.max_amount
       paymentConfigForm.balance_disabled = paymentConfig.value.balance_disabled
+      paymentConfigForm.enabled_payment_types = [...(paymentConfig.value.enabled_payment_types || [])]
     }
   } catch (e: unknown) {
     const detail = e instanceof Error ? e.message : String(e)
@@ -3669,47 +3700,97 @@ async function loadPaymentConfig() {
   }
 }
 
-function openProviderDialog(p?: ProviderInstance) {
-  providerConfigError.value = ''
-  if (p) {
-    providerForm.id = p.id
-    providerForm.provider_key = p.provider_key
-    providerForm.name = p.name
-    providerForm.enabled = p.enabled
-    providerForm.configText = JSON.stringify(p.config, null, 2)
+function toggleEnabledPaymentType(type: string) {
+  if (paymentConfigForm.enabled_payment_types.includes(type)) {
+    paymentConfigForm.enabled_payment_types = paymentConfigForm.enabled_payment_types.filter((item) => item !== type)
   } else {
-    providerForm.id = 0
-    providerForm.provider_key = ''
-    providerForm.name = ''
-    providerForm.enabled = true
-    providerForm.configText = ''
+    paymentConfigForm.enabled_payment_types = [...paymentConfigForm.enabled_payment_types, type]
   }
+  savePaymentConfig()
+}
+
+function openCreateProvider() {
+  editingProvider.value = null
+  providerDialogRef.value?.reset(enabledProviderKeyOptions.value[0]?.value || 'easypay')
   showProviderDialog.value = true
 }
 
-async function saveProvider() {
-  let config: Record<string, string>
-  try {
-    config = JSON.parse(providerForm.configText || '{}')
-  } catch {
-    providerConfigError.value = 'Invalid JSON'
-    return
+function openEditProvider(provider: ProviderInstance) {
+  editingProvider.value = provider
+  providerDialogRef.value?.loadProvider(provider)
+  showProviderDialog.value = true
+}
+
+type ProviderEnablementCandidate = Pick<ProviderInstance, 'id' | 'provider_key' | 'supported_types' | 'enabled' | 'name'>
+
+function normalizeVisiblePaymentMethod(type: string): 'alipay' | 'wxpay' | '' {
+  if (type === 'alipay' || type === 'alipay_direct') return 'alipay'
+  if (type === 'wxpay' || type === 'wxpay_direct') return 'wxpay'
+  return ''
+}
+
+function getProviderVisibleMethods(provider: ProviderEnablementCandidate): Array<'alipay' | 'wxpay'> {
+  if (!provider.enabled) return []
+
+  const supportedTypes = Array.isArray(provider.supported_types) ? provider.supported_types : []
+  const methods = new Set<'alipay' | 'wxpay'>()
+  const addMethod = (type: string) => {
+    const method = normalizeVisiblePaymentMethod(type)
+    if (method) methods.add(method)
   }
-  savingProvider.value = true
+
+  if (provider.provider_key === 'alipay') {
+    if (supportedTypes.length === 0) methods.add('alipay')
+    else supportedTypes.forEach(addMethod)
+  } else if (provider.provider_key === 'wxpay') {
+    if (supportedTypes.length === 0) methods.add('wxpay')
+    else supportedTypes.forEach(addMethod)
+  } else if (provider.provider_key === 'easypay') {
+    supportedTypes.forEach(addMethod)
+  }
+
+  return Array.from(methods)
+}
+
+function findProviderEnablementConflict(candidate: ProviderEnablementCandidate): { method: 'alipay' | 'wxpay'; conflicting: ProviderInstance } | null {
+  const claimedMethods = getProviderVisibleMethods(candidate)
+  if (claimedMethods.length === 0) return null
+
+  for (const other of providers.value) {
+    if (other.id === candidate.id || !other.enabled) continue
+    const matchedMethod = claimedMethods.find((method) => getProviderVisibleMethods(other).includes(method))
+    if (matchedMethod) return { method: matchedMethod, conflicting: other }
+  }
+  return null
+}
+
+function showProviderEnablementConflict(conflict: { method: 'alipay' | 'wxpay'; conflicting: ProviderInstance }) {
+  appStore.showError(t('admin.settings.payment.enableConflict', {
+    method: t(`payment.methods.${conflict.method}`),
+    provider: conflict.conflicting.name,
+  }))
+}
+
+async function handleSaveProvider(payload: Partial<ProviderInstance>) {
+  providerSaving.value = true
   try {
-    if (providerForm.id > 0) {
-      await adminAPI.payment.updateProvider(providerForm.id, {
-        name: providerForm.name,
-        config,
-        enabled: providerForm.enabled
-      })
+    const candidate: ProviderEnablementCandidate = {
+      id: editingProvider.value?.id ?? 0,
+      provider_key: payload.provider_key ?? editingProvider.value?.provider_key ?? '',
+      supported_types: payload.supported_types ?? editingProvider.value?.supported_types ?? [],
+      enabled: payload.enabled ?? editingProvider.value?.enabled ?? false,
+      name: payload.name ?? editingProvider.value?.name ?? '',
+    }
+    const conflict = findProviderEnablementConflict(candidate)
+    if (conflict) {
+      showProviderEnablementConflict(conflict)
+      return
+    }
+
+    if (editingProvider.value) {
+      await adminAPI.payment.updateProvider(editingProvider.value.id, payload)
     } else {
-      await adminAPI.payment.createProvider({
-        provider_key: providerForm.provider_key,
-        name: providerForm.name,
-        config,
-        enabled: providerForm.enabled
-      })
+      await adminAPI.payment.createProvider(payload)
     }
     showProviderDialog.value = false
     appStore.showSuccess(t('admin.settings.settingsSaved'))
@@ -3718,15 +3799,94 @@ async function saveProvider() {
     const detail = e instanceof Error ? e.message : String(e)
     appStore.showError(`${t('common.saveFailed')}: ${detail}`)
   } finally {
-    savingProvider.value = false
+    providerSaving.value = false
   }
 }
 
-async function deleteProviderById(id: number) {
-  if (!confirm(t('common.confirmDelete'))) return
+async function handleToggleField(provider: ProviderInstance, field: 'enabled' | 'refund_enabled' | 'allow_user_refund') {
+  let newValue: boolean
+  if (field === 'enabled') newValue = !provider.enabled
+  else if (field === 'refund_enabled') newValue = !provider.refund_enabled
+  else newValue = !provider.allow_user_refund
+
+  if (field === 'enabled' && newValue) {
+    const conflict = findProviderEnablementConflict({
+      id: provider.id,
+      provider_key: provider.provider_key,
+      supported_types: provider.supported_types,
+      enabled: true,
+      name: provider.name,
+    })
+    if (conflict) {
+      showProviderEnablementConflict(conflict)
+      return
+    }
+  }
+
+  const payload: Partial<ProviderInstance> = { [field]: newValue }
+  if (field === 'refund_enabled' && !newValue) {
+    payload.allow_user_refund = false
+  }
+
   try {
-    await adminAPI.payment.deleteProvider(id)
+    await adminAPI.payment.updateProvider(provider.id, payload)
+    await loadProviders()
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    appStore.showError(`${t('common.saveFailed')}: ${detail}`)
+  }
+}
+
+async function handleToggleType(provider: ProviderInstance, type: string) {
+  const supportedTypes = Array.isArray(provider.supported_types) ? provider.supported_types : []
+  const updated = supportedTypes.includes(type)
+    ? supportedTypes.filter((item) => item !== type)
+    : [...supportedTypes, type]
+
+  const conflict = findProviderEnablementConflict({
+    id: provider.id,
+    provider_key: provider.provider_key,
+    supported_types: updated,
+    enabled: provider.enabled,
+    name: provider.name,
+  })
+  if (conflict) {
+    showProviderEnablementConflict(conflict)
+    return
+  }
+
+  try {
+    await adminAPI.payment.updateProvider(provider.id, { supported_types: updated })
+    await loadProviders()
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    appStore.showError(`${t('common.saveFailed')}: ${detail}`)
+  }
+}
+
+async function handleReorderProviders(updates: { id: number; sort_order: number }[]) {
+  try {
+    await Promise.all(updates.map((item) => adminAPI.payment.updateProvider(item.id, { sort_order: item.sort_order })))
+    await loadProviders()
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    appStore.showError(`${t('common.saveFailed')}: ${detail}`)
+    loadProviders()
+  }
+}
+
+function confirmDeleteProvider(provider: ProviderInstance) {
+  deletingProviderId.value = provider.id
+  showDeleteProviderDialog.value = true
+}
+
+async function handleDeleteProvider() {
+  if (!deletingProviderId.value) return
+  try {
+    await adminAPI.payment.deleteProvider(deletingProviderId.value)
     appStore.showSuccess(t('admin.settings.settingsSaved'))
+    showDeleteProviderDialog.value = false
+    deletingProviderId.value = null
     await loadProviders()
   } catch (e: unknown) {
     const detail = e instanceof Error ? e.message : String(e)

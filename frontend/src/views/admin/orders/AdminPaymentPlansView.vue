@@ -29,8 +29,8 @@
         </template>
         <template #cell-price="{ value, row }">
           <div class="text-sm">
-            <span class="font-medium text-gray-900 dark:text-white">${{ (value ?? 0).toFixed(2) }}</span>
-            <span v-if="row.original_price" class="ml-1 text-xs text-gray-400 line-through">${{ row.original_price.toFixed(2) }}</span>
+            <span class="font-medium text-gray-900 dark:text-white">¥{{ formatCny(value) }}</span>
+            <span v-if="row.original_price" class="ml-1 text-xs text-gray-400 line-through">¥{{ formatCny(row.original_price) }}</span>
           </div>
         </template>
         <template #cell-validity_days="{ value, row }">
@@ -43,6 +43,7 @@
               'relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
               value ? 'bg-primary-500' : 'bg-gray-300 dark:bg-dark-600'
             ]"
+            :disabled="togglingPlanIds.has(row.id)"
             @click="toggleForSale(row)"
           >
             <span :class="[
@@ -126,6 +127,7 @@ const showPlanDialog = ref(false)
 const showDeletePlanDialog = ref(false)
 const editingPlan = ref<SubscriptionPlan | null>(null)
 const deletingPlanId = ref<number | null>(null)
+const togglingPlanIds = ref(new Set<number>())
 
 const planColumns = computed((): Column[] => [
   { key: 'id', label: 'ID' },
@@ -159,14 +161,25 @@ function openPlanEdit(plan: SubscriptionPlan | null) {
   showPlanDialog.value = true
 }
 
+function formatCny(value: unknown): string {
+  const n = Number(value ?? 0)
+  return Number.isFinite(n) ? n.toFixed(2) : '0.00'
+}
 
 /** Quick toggle for_sale from the list */
 async function toggleForSale(plan: SubscriptionPlan) {
+  if (togglingPlanIds.value.has(plan.id)) return
+  const nextForSale = !plan.for_sale
+  togglingPlanIds.value = new Set(togglingPlanIds.value).add(plan.id)
   try {
-    await adminPaymentAPI.updatePlan(plan.id, { for_sale: !plan.for_sale })
-    plan.for_sale = !plan.for_sale
+    await adminPaymentAPI.updatePlan(plan.id, { for_sale: nextForSale })
+    plan.for_sale = nextForSale
   } catch (err: unknown) {
     appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error')))
+  } finally {
+    const next = new Set(togglingPlanIds.value)
+    next.delete(plan.id)
+    togglingPlanIds.value = next
   }
 }
 

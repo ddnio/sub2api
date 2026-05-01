@@ -37,7 +37,7 @@ pnpm build
 
 cd ../backend
 GOCACHE="$PWD/../.cache/go-build" go test ./internal/payment ./internal/handler/admin ./internal/handler/dto ./internal/server/routes
-GOCACHE="$PWD/../.cache/go-build" go test ./internal/service -run 'Test.*PaymentConfig|Test.*Limits|Test.*Order'
+GOCACHE="$PWD/../.cache/go-build" go test ./internal/service -run 'Test.*Payment|Test.*Wechat|Test.*WeChat|Test.*Provider|Test.*Order|Test.*Refund|Test.*Fulfillment|Test.*Config'
 ```
 
 说明：
@@ -55,6 +55,7 @@ cd /data/service/sub2api
 
 ```bash
 TS=$(date +%Y%m%d-%H%M)
+mkdir -p /data/backups
 docker exec sub2api-postgres pg_dump -U sub2api sub2api_test \
   > /data/backups/sub2api_test_pre_b2_${TS}.sql
 ls -lh /data/backups/sub2api_test_pre_b2_${TS}.sql

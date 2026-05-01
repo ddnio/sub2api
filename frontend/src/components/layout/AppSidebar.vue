@@ -510,22 +510,8 @@ const userNavItems = computed((): NavItem[] => {
     { path: '/pricing', label: t('nav.pricing'), icon: TagIcon, hideInSimpleMode: true },
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true },
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true },
-    ...(appStore.cachedPublicSettings?.purchase_subscription_enabled
-      ? [
-          {
-            path: '/purchase',
-            label: t('nav.buySubscription'),
-            icon: RechargeSubscriptionIcon,
-            hideInSimpleMode: true
-          },
-          {
-            path: '/orders',
-            label: t('nav.myOrders'),
-            icon: CreditCardIcon,
-            hideInSimpleMode: true
-          }
-        ]
-      : []),
+    { path: '/purchase', label: t('nav.payment'), icon: RechargeSubscriptionIcon, hideInSimpleMode: true },
+    { path: '/orders', label: t('nav.myOrders'), icon: CreditCardIcon, hideInSimpleMode: true },
     { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
     ...(appStore.cachedPublicSettings?.referral_enabled
       ? [{ path: '/referral', label: t('nav.referral'), icon: UsersIcon, hideInSimpleMode: true }]
@@ -548,22 +534,8 @@ const personalNavItems = computed((): NavItem[] => {
     { path: '/pricing', label: t('nav.pricing'), icon: TagIcon, hideInSimpleMode: true },
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true },
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true },
-    ...(appStore.cachedPublicSettings?.purchase_subscription_enabled
-      ? [
-          {
-            path: '/purchase',
-            label: t('nav.buySubscription'),
-            icon: RechargeSubscriptionIcon,
-            hideInSimpleMode: true
-          },
-          {
-            path: '/orders',
-            label: t('nav.myOrders'),
-            icon: CreditCardIcon,
-            hideInSimpleMode: true
-          }
-        ]
-      : []),
+    { path: '/purchase', label: t('nav.payment'), icon: RechargeSubscriptionIcon, hideInSimpleMode: true },
+    { path: '/orders', label: t('nav.myOrders'), icon: CreditCardIcon, hideInSimpleMode: true },
     { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
     ...(appStore.cachedPublicSettings?.referral_enabled
       ? [{ path: '/referral', label: t('nav.referral'), icon: UsersIcon, hideInSimpleMode: true }]

@@ -57,7 +57,7 @@ pnpm vitest run src/api/__tests__/payment-contract.spec.ts src/components/paymen
 
 cd ../backend
 GOCACHE="$PWD/../.cache/go-build" go test ./internal/payment ./internal/handler/admin ./internal/handler/dto ./internal/server/routes
-GOCACHE="$PWD/../.cache/go-build" go test ./internal/service -run 'Test.*PaymentConfig|Test.*Limits|Test.*Order'
+GOCACHE="$PWD/../.cache/go-build" go test ./internal/service -run 'Test.*Payment|Test.*Wechat|Test.*WeChat|Test.*Provider|Test.*Order|Test.*Refund|Test.*Fulfillment|Test.*Config'
 ```
 
 说明：`internal/service` 全包测试在本地沙箱可能被非 payment 的 `httptest.NewServer` 用例阻断；复核 payment 相关测试时使用更窄的 `-run` 范围。
