@@ -142,7 +142,7 @@
                     {{ t('payment.orderType.' + order.order_type) }}
                   </span>
                 </td>
-                <td class="px-4 py-3 font-medium">¥{{ order.amount.toFixed(2) }}</td>
+                <td class="px-4 py-3 font-medium">¥{{ formatMoney(order.amount) }}</td>
                 <td class="px-4 py-3">
                   <span :class="['badge', statusBadgeClass(order.status)]">
                     {{ t('payment.orderStatus.' + order.status.toLowerCase()) }}
@@ -203,7 +203,7 @@
               {{ t('payment.scanQRCode', { provider: t('payment.wxpay') }) }}
             </p>
             <p class="mb-4 text-sm text-gray-500">
-              ¥{{ currentOrder?.amount?.toFixed(2) }}
+              ¥{{ formatMoney(currentOrder?.amount) }}
             </p>
             <!-- QR 码 canvas -->
             <div class="flex justify-center">
@@ -302,6 +302,7 @@ const loadOrders = async (page = 1) => {
 }
 
 const handleOrderPageChange = (page: number) => loadOrders(page)
+const formatMoney = (value: unknown) => Number(value || 0).toFixed(2)
 
 // 创建订单 & 支付弹窗
 const showPayDialog = ref(false)

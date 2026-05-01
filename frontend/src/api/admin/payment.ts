@@ -9,6 +9,8 @@ export interface AdminPaymentPlan extends PaymentPlan {
 
 export interface AdminPaymentOrder extends PaymentOrder {
   user_id: number
+  user_email?: string
+  user_name?: string
   email: string
   admin_note: string | null
   refunded_at: string | null
@@ -108,12 +110,15 @@ async function listOrders(
     params: { page, page_size: pageSize, ...params },
     signal: options?.signal
   })
-  return data
+  return {
+    ...data,
+    items: (data.items || []).map(normalizeAdminOrder)
+  }
 }
 
 async function getOrder(id: number): Promise<AdminPaymentOrder> {
   const { data } = await apiClient.get(`/admin/payment/orders/${id}`)
-  return data
+  return normalizeAdminOrder(data)
 }
 
 async function retryOrder(id: number): Promise<void> {
@@ -134,6 +139,15 @@ async function getDashboard(days?: number): Promise<DashboardStats> {
     params: days ? { days } : undefined
   })
   return data
+}
+
+function normalizeAdminOrder(order: AdminPaymentOrder): AdminPaymentOrder {
+  return {
+    ...order,
+    email: order.email || order.user_email || order.user_name || '',
+    amount: Number(order.amount || 0),
+    pay_amount: Number(order.pay_amount || 0)
+  }
 }
 
 async function listProviders(): Promise<ProviderInstance[]> {

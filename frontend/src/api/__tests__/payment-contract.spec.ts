@@ -66,6 +66,24 @@ describe('payment API contracts', () => {
     })
   })
 
+  it('normalizes legacy admin orders with missing amount and user_email', async () => {
+    mockedClient.get.mockResolvedValueOnce({
+      data: {
+        items: [{ id: 55, user_email: 'user@example.com', status: 'FAILED' }],
+        total: 1,
+        page: 1,
+        page_size: 20,
+        pages: 1
+      }
+    })
+
+    const result = await adminPaymentAPI.listOrders(1, 20, {})
+
+    expect(result.items[0].email).toBe('user@example.com')
+    expect(result.items[0].amount).toBe(0)
+    expect(result.items[0].pay_amount).toBe(0)
+  })
+
   it('admin plans API returns the array contract from /admin/payment/plans', async () => {
     const plans = [{ id: 1, name: 'Basic' }]
     mockedClient.get.mockResolvedValueOnce({ data: plans })

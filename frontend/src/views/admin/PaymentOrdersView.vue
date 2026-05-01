@@ -60,7 +60,7 @@
 
       <template #table>
         <DataTable :columns="columns" :data="items" :loading="loading">
-          <template #cell-amount="{ value }">¥{{ (value as number).toFixed(2) }}</template>
+          <template #cell-amount="{ value }">¥{{ formatMoney(value) }}</template>
           <template #cell-order_type="{ value }">
             <span :class="['badge', value === 'subscription' ? 'badge-primary' : 'badge-success']">
               {{ t('payment.orderType.' + (value as string)) }}
@@ -118,7 +118,7 @@
             {{ actionType === 'retry' ? t('adminPayment.confirmRetry') : t('adminPayment.confirmRefund') }}
           </p>
           <div class="mb-1 text-xs text-gray-400">{{ t('payment.orderNo') }}: {{ actionOrder?.out_trade_no }}</div>
-          <div class="mb-4 text-sm font-medium">¥{{ actionOrder?.amount?.toFixed(2) }}</div>
+          <div class="mb-4 text-sm font-medium">¥{{ formatMoney(actionOrder?.amount) }}</div>
           <div class="mb-4">
             <label class="input-label">{{ actionType === 'retry' ? t('adminPayment.adminNote') : t('adminPayment.refundReason') }}</label>
             <input v-model="actionNote" class="input" :placeholder="actionType === 'retry' ? t('adminPayment.adminNote') : t('adminPayment.refundReason')" />
@@ -245,6 +245,7 @@ const statusBadge = (status: string) => {
 }
 
 const formatDate = (dt: string) => new Date(dt).toLocaleString()
+const formatMoney = (value: unknown) => Number(value || 0).toFixed(2)
 
 onMounted(() => {
   load()
