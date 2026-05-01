@@ -416,14 +416,9 @@ func (s *PaymentConfigService) mergeConfig(ctx context.Context, id int64, newCon
 }
 
 // decryptConfig parses a stored provider config.
-// New records are plaintext JSON; legacy records are AES-256-GCM ciphertext
-// ("iv:authTag:ciphertext"). Values that cannot be parsed as either — including
-// legacy ciphertext with no/invalid TOTP_ENCRYPTION_KEY — are treated as empty,
-// letting the admin re-enter the config via the UI to complete the migration.
-//
-// TODO(deprecated-legacy-ciphertext): The AES fallback branch is a transitional
-// shim for pre-plaintext records. Remove it (and the encryptionKey field) after
-// a few releases once all live deployments have re-saved their provider configs.
+// New records are AES-256-GCM ciphertext ("iv:authTag:ciphertext"). Plaintext
+// JSON is still accepted so deployments that temporarily saved unencrypted
+// provider config remain readable after upgrading.
 func (s *PaymentConfigService) decryptConfig(stored string) (map[string]string, error) {
 	if stored == "" {
 		return nil, nil
@@ -432,9 +427,7 @@ func (s *PaymentConfigService) decryptConfig(stored string) (map[string]string, 
 	if err := json.Unmarshal([]byte(stored), &cfg); err == nil {
 		return cfg, nil
 	}
-	// Deprecated: legacy AES-256-GCM ciphertext fallback — scheduled for removal.
 	if len(s.encryptionKey) == payment.AES256KeySize {
-		//nolint:staticcheck // SA1019: intentional legacy fallback, scheduled for removal
 		if plaintext, err := payment.Decrypt(stored, s.encryptionKey); err == nil {
 			if err := json.Unmarshal([]byte(plaintext), &cfg); err == nil {
 				return cfg, nil
@@ -459,12 +452,15 @@ func (s *PaymentConfigService) DeleteProviderInstance(ctx context.Context, id in
 }
 
 // encryptConfig serialises a provider config for storage.
-// New records are written as plaintext JSON; the historical AES-GCM wrapping
-// has been dropped but decryptConfig still accepts old ciphertext during migration.
+// Valid AES-256 keys write ciphertext. If the deployment has no valid key,
+// return an error instead of silently storing payment credentials in plaintext.
 func (s *PaymentConfigService) encryptConfig(cfg map[string]string) (string, error) {
 	data, err := json.Marshal(cfg)
 	if err != nil {
 		return "", fmt.Errorf("marshal config: %w", err)
 	}
-	return string(data), nil
+	if len(s.encryptionKey) != payment.AES256KeySize {
+		return "", fmt.Errorf("payment provider config encryption key must be %d bytes, got %d", payment.AES256KeySize, len(s.encryptionKey))
+	}
+	return payment.Encrypt(string(data), s.encryptionKey)
 }

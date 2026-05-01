@@ -74,7 +74,7 @@ chmod 600 /home/nio/backups/sub2api_test_pre_b2_${TS}.sql
 
 生产环境将库名和文件名前缀替换为 `sub2api` / `sub2api_prod`。
 
-Preflight SQL（全部必须为 0）：
+Preflight SQL（COUNT 结果全部必须为 0；DO block 不能抛异常）：
 
 ```bash
 docker exec sub2api-postgres psql -U sub2api -d sub2api_test -c "
@@ -93,10 +93,66 @@ WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = po.user_id);
 SELECT COUNT(*) AS fk_to_payment
 FROM pg_constraint
 WHERE confrelid = 'payment_orders'::regclass AND contype = 'f';
+
+SELECT COUNT(*) AS invalid_payment_order_index
+FROM pg_class idx
+JOIN pg_index i ON i.indexrelid = idx.oid
+JOIN pg_class tbl ON tbl.oid = i.indrelid
+JOIN pg_namespace ns ON ns.oid = tbl.relnamespace
+WHERE ns.nspname = 'public'
+  AND tbl.relname = 'payment_orders'
+  AND idx.relname IN ('paymentorder_out_trade_no', 'paymentorder_out_trade_no_unique')
+  AND (NOT i.indisvalid OR NOT i.indisready);
+"
+```
+
+如果环境已经跑过 `102_add_out_trade_no_to_payment_orders.sql`，额外检查 `out_trade_no` 重复；未跑过时该 block 会自动跳过：
+
+```bash
+docker exec sub2api-postgres psql -U sub2api -d sub2api_test -c "
+DO \$\$
+DECLARE duplicate_count bigint := 0;
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'payment_orders'
+      AND column_name = 'out_trade_no'
+  ) THEN
+    EXECUTE '
+      SELECT COUNT(*)
+      FROM (
+        SELECT out_trade_no
+        FROM payment_orders
+        WHERE COALESCE(out_trade_no, '''') <> ''''
+        GROUP BY out_trade_no
+        HAVING COUNT(*) > 1
+      ) d
+    ' INTO duplicate_count;
+  END IF;
+
+  RAISE NOTICE 'duplicate_out_trade_no=%', duplicate_count;
+  IF duplicate_count <> 0 THEN
+    RAISE EXCEPTION 'duplicate out_trade_no exists before payment B-2 deployment';
+  END IF;
+END \$\$;
 "
 ```
 
 生产环境将 `sub2api_test` 替换为 `sub2api`。
+
+如果库里已经存在 `payment_orders_v1_backup`，部署前额外确认旧空单号数量，便于解释历史订单回调行为：
+
+```bash
+docker exec sub2api-postgres psql -U sub2api -d sub2api_test -c "
+SELECT COUNT(*) AS legacy_empty_order_no
+FROM payment_orders_v1_backup
+WHERE COALESCE(order_no, '') = '';
+"
+```
+
+`102a` 会把这些历史空单号回填为 `sub2_<id>`，用于兼容旧回调单号格式；如果外部支付平台实际使用了其他单号，需要人工按平台记录修正。
 
 ## 4. 部署
 
@@ -155,10 +211,24 @@ SELECT COUNT(*) AS empty_otn
 FROM payment_orders
 WHERE out_trade_no = '';
 
+SELECT idx.relname, i.indisvalid, i.indisready
+FROM pg_class idx
+JOIN pg_index i ON i.indexrelid = idx.oid
+JOIN pg_class tbl ON tbl.oid = i.indrelid
+JOIN pg_namespace ns ON ns.oid = tbl.relnamespace
+WHERE ns.nspname = 'public'
+  AND tbl.relname = 'payment_orders'
+  AND idx.relname LIKE 'paymentorder_out_trade_no%';
+
 SELECT COUNT(*) FROM payment_audit_logs;
 SELECT COUNT(*) FROM payment_provider_instances;
 SELECT COUNT(*) FROM subscription_plans;
 SELECT COUNT(*) FROM payment_plans;
+
+SELECT id, label, path, icon, enabled, sort_order
+FROM custom_menu
+WHERE path IN ('/purchase', '/orders') OR path LIKE '%purchase%'
+ORDER BY sort_order, id;
 
 SELECT conname
 FROM pg_constraint
@@ -177,6 +247,8 @@ SELECT MAX(id) FROM payment_orders;
 - `new_orders` 与 `backup_orders` 相等。
 - `status` 全部为大写状态。
 - `null_expires = 0`。
+- `empty_otn = 0`；`paymentorder_out_trade_no` 必须 `indisvalid=true` 且 `indisready=true`。
+- `custom_menu` 中应能看到 `/purchase` 和 `/orders` 入口；如果管理员自定义菜单被覆盖或缓存未刷新，需要在后台菜单配置里复核并刷新前端。
 - `payment_provider_instances` 首次部署后通常为 0，配置 Provider 后应增加。
 - `subscription_plans` 是 payment v2 当前套餐表；`120b` 会把旧 `payment_plans` 中未删除且绑定 active subscription 分组的套餐补进 `subscription_plans`。
 - `payment_orders_id_seq.last_value >= MAX(payment_orders.id)`。
@@ -211,9 +283,28 @@ WHERE sp.for_sale = true
 "
 ```
 
+列出 `120b` 跳过的旧套餐，供人工判断是否需要改绑到 active subscription 分组后重新上架：
+
+```bash
+docker exec sub2api-postgres psql -U sub2api -d sub2api_test -c "
+SELECT pp.id, pp.name, pp.group_id, pp.price, pp.is_active,
+       g.name AS group_name, g.status, g.subscription_type
+FROM payment_plans pp
+LEFT JOIN groups g ON g.id = pp.group_id
+LEFT JOIN subscription_plans sp ON sp.group_id = pp.group_id AND sp.name = pp.name
+WHERE pp.deleted_at IS NULL
+  AND sp.id IS NULL
+ORDER BY pp.id;
+"
+```
+
 ## 6. 配置 wxpay Provider
 
 后台支付配置 UI 已迁移 upstream Provider 组件，可录入 `provider_key`、`name`、`supported_types`、`payment_mode`、`refund_enabled`、`allow_user_refund`、单笔/每日限额和 `config`。首次部署仍建议准备好 JSON，再通过 UI 粘贴/核对；如 UI 不可用，使用 Admin API 创建，避免字段缺失。
+
+Provider config 新写入会使用 `TOTP_ENCRYPTION_KEY` 做 AES-256-GCM 加密；部署前确认 test/prod 配置中的该 key 为 32 字节并已备份在安全渠道。备份文件会包含加密后的支付配置，仍必须 `chmod 600` 且不要外传。
+
+微信 Provider 的 `appId`、`mchId`、`certSerial`、`publicKeyId` 属于商户身份字段。生产环境不要在有历史订单需要退款时直接替换这些字段；如果确实要换商户或证书，建议保留旧 Provider instance 用于历史订单退款，再新增新 Provider 承接新订单。
 
 从服务器配置读取 wxpay 值（只读，不写入文档）：
 
@@ -267,6 +358,14 @@ FROM payment_provider_instances;
 ```
 
 ## 7. 端到端测试
+
+测试前确认后端模式不是 maintenance / read-only，否则普通用户支付路由会被 `BackendModeUserGuard` 拦截：
+
+```bash
+docker exec sub2api-postgres psql -U sub2api -d sub2api_test -c "
+SELECT key, value FROM settings WHERE key ILIKE '%backend%mode%';
+"
+```
 
 1. 普通用户登录 `https://router-test.nanafox.com`。
 2. 进入 `/purchase`。
