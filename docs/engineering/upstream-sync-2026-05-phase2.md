@@ -242,6 +242,7 @@ For each deployment-impacting slice, record:
 | 2026-05-02 | Kimi | Revised plan + tracking docs | Do not block; ready to commit | Commit docs, then run Task 0 baseline verification |
 | 2026-05-02 | Kimi | Request body decoding code diff | No blockers; suggested direct dependency, typed limit error, extra gzip tests, comment update | Addressed suggestions and re-ran tests |
 | 2026-05-02 | Kimi | Final request body decoding diff | No blockers | Commit after recording deployment note |
+| 2026-05-02 | Kimi | PR #22 OpenAI/Codex OAuth request normalization | No blockers | Merge and deploy test/prod; note comment/test edge cases as non-blocking |
 
 ## Test Deployment Log
 
@@ -321,6 +322,42 @@ docker logs --since 10m sub2api-test 2>&1 | egrep "\t(ERROR|FATAL|PANIC)\t|panic
 # no output
 ```
 
+### 2026-05-02 OpenAI/Codex OAuth Request Normalization
+
+- Host: `108.160.133.141`
+- Environment: `test`
+- Branch: `main`
+- Commit deployed: `14241fe4 Merge PR #22: normalize Codex OAuth requests`
+- Runtime change: `50b8db8f sync(openai): normalize Codex OAuth requests`
+- Backup: not taken; this slice has no migration, schema, config, env var, frontend localStorage, or data change.
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+bash deploy/deploy-server.sh test
+```
+
+- Container result: `sub2api-test` healthy on `127.0.0.1:8081->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8081/health
+curl -fsS https://router-test.nanafox.com/health
+# {"status":"ok"}
+```
+
+- OpenAI/Codex normalization smoke:
+  - `/v1/responses` request containing unsupported passthrough fields (`user`, `metadata`, `safety_identifier`, `stream_options`) plus a `type:"reasoning"` input item returned HTTP 200 with model `gpt-5.5`.
+- Log check:
+
+```bash
+docker logs --since 5m sub2api-test 2>&1 | egrep "\t(ERROR|FATAL|PANIC)\t|panic|POSTCHECK FAILED|PREFLIGHT FAILED|migration failed" || true
+# no output
+```
+
 ## Production Deployment Log
 
 ### 2026-05-02 Runtime Request Body Decoding
@@ -396,6 +433,42 @@ curl -fsS https://router.nanafox.com/health
 
 ```bash
 docker logs --since 10m sub2api-prod 2>&1 | egrep "\t(ERROR|FATAL|PANIC)\t|panic|POSTCHECK FAILED|PREFLIGHT FAILED|migration failed|ERROR" || true
+# no output
+```
+
+### 2026-05-02 OpenAI/Codex OAuth Request Normalization
+
+- Host: `108.160.133.141`
+- Environment: `prod`
+- Branch: `main`
+- Commit deployed: `14241fe4 Merge PR #22: normalize Codex OAuth requests`
+- Runtime change: `50b8db8f sync(openai): normalize Codex OAuth requests`
+- Backup: not taken; this slice has no migration, schema, config, env var, frontend localStorage, or data change.
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git checkout main
+git pull --ff-only origin main
+bash deploy/deploy-server.sh prod
+```
+
+- Container result: `sub2api-prod` healthy on `127.0.0.1:8080->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8080/health
+curl -fsS https://router.nanafox.com/health
+# {"status":"ok"}
+```
+
+- OpenAI/Codex normalization smoke:
+  - `/v1/responses` request containing unsupported passthrough fields (`user`, `metadata`, `safety_identifier`, `stream_options`) plus a `type:"reasoning"` input item returned HTTP 200 with model `gpt-5.5`.
+  - First prod smoke attempt returned HTTP 401 because the verification script passed a literal shell substitution as the API key; rerunning with a key fetched in the shell layer succeeded.
+- Log check:
+
+```bash
+docker logs --since 5m sub2api-prod 2>&1 | egrep "\t(ERROR|FATAL|PANIC)\t|panic|POSTCHECK FAILED|PREFLIGHT FAILED|migration failed" || true
 # no output
 ```
 
