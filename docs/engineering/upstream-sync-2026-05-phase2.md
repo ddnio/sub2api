@@ -38,7 +38,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | --- | --- | --- | --- | --- | --- |
 | Task 0 | Baseline verification | Complete | Not required; command evidence only | Passed with drift findings recorded | None |
 | Task 1 | Plan + tracking docs | Ready to commit | Passed after revisions | Doc review only | None |
-| Task 2 | Runtime safety: request decoding + scheduler | Pending | Not started | Not started | TBD |
+| Task 2 | Runtime safety: request decoding + scheduler | Request decoding sub-slice complete; scheduler pending | Kimi no blockers | httputil, handler, payment tests passed | Image rebuild required; no config or DB change |
 | Task 3 | OpenAI Responses / Codex compatibility | Pending | Not started | Not started | TBD |
 | Task 4 | Anthropic / Claude compatibility | Pending | Not started | Not started | TBD |
 | Task 5 | Admin/frontend low-risk UX | Pending | Not started | Not started | TBD |
@@ -61,6 +61,29 @@ These upstream areas are intentionally held for later phases unless separately a
 ## Deployment Notes
 
 No deployment-impacting change has been accepted in Phase 2 yet.
+
+Accepted deployment-impacting changes:
+
+### Runtime request body decoding
+
+- Slice and commit: Task 2 request decoding sub-slice, commit pending
+- What changed: request body reader now decodes `Content-Encoding: zstd`, `gzip`, `x-gzip`, and `deflate`; unsupported or malformed encodings return errors; decompressed bodies above 64 MiB return `http.MaxBytesError`.
+- Diff-size note: slightly above the soft 300-line gate because the helper change includes focused unit coverage; production code is limited to one helper file and the rest is tests/docs.
+- Migration files added or changed: none
+- Ent schema or generated-code impact: none
+- New config keys, setting names, or env vars: none
+- New frontend `localStorage` keys: none
+- External API / customer-facing behavior change: clients may now send compressed request bodies to existing gateway endpoints; oversized decompressed bodies receive existing 413 handling.
+- Fresh install affected: no
+- Existing DB upgrade affected: no
+- Required backup command: not required for this sub-slice
+- Docker image rebuild required: yes
+- Safe for rolling deploy: yes
+- Expected downtime window: normal rolling restart only
+- Monitoring/alerting impact: watch 400/413 rates on gateway routes after deploy
+- Exact test environment verification: local unit tests only so far
+- Customer-facing changelog/API note required: optional; useful if announcing compressed request-body support
+- Rollback notes: revert the request decoding commit and redeploy; no DB rollback
 
 When a slice changes migrations, config defaults, service startup behavior, payment behavior, or externally visible routes, record:
 
@@ -104,6 +127,8 @@ For each deployment-impacting slice, record:
 | --- | --- | --- | --- | --- |
 | 2026-05-02 | Kimi | Plan + tracking docs | First review found missing dependency, Ent/migration, race, contract, deployment, and rollback gates | Addressed in plan and tracking doc |
 | 2026-05-02 | Kimi | Revised plan + tracking docs | Do not block; ready to commit | Commit docs, then run Task 0 baseline verification |
+| 2026-05-02 | Kimi | Request body decoding code diff | No blockers; suggested direct dependency, typed limit error, extra gzip tests, comment update | Addressed suggestions and re-ran tests |
+| 2026-05-02 | Kimi | Final request body decoding diff | No blockers | Commit after recording deployment note |
 
 ## Task 0 Baseline Results
 
