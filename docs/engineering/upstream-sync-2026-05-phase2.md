@@ -373,6 +373,7 @@ For each deployment-impacting slice, record:
 | 2026-05-02 | Kimi | Final request body decoding diff | No blockers | Commit after recording deployment note |
 | 2026-05-02 | Kimi | PR #22 OpenAI/Codex OAuth request normalization | No blockers | Merge and deploy test/prod; note comment/test edge cases as non-blocking |
 | 2026-05-02 | Kimi | PR #24 Chat Completions to Responses tool output name | No blockers | Merge and deploy test/prod; optional follow-up tests for unmatched tool IDs and array-content name assertion |
+| 2026-05-02 | Kimi | PR #26 Anthropic Claude Code mimicry gate | No blockers | Merge and deploy test/prod; count_tokens UA-only handler fast path remains a documented non-blocking limitation |
 
 ## Test Deployment Log
 
@@ -524,6 +525,42 @@ docker logs --since 2m sub2api-test 2>&1 | egrep -i "panic|fatal|error|migration
 # no output
 ```
 
+### 2026-05-02 Anthropic Claude Code Mimicry Gate
+
+- Host: `108.160.133.141`
+- Environment: `test`
+- Branch: `main`
+- Commit deployed: `244c3f15 Merge PR #26: preserve Claude Code prompt caching`
+- Runtime change: `211e41f1 sync(anthropic): preserve Claude Code prompt caching`
+- Backup: not taken; this slice has no migration, schema, config, env var, frontend localStorage, or data change.
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+bash deploy/deploy-server.sh test
+```
+
+- Container result: `sub2api-test` healthy on `127.0.0.1:8081->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8081/health
+# {"status":"ok"}
+
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8081/v1/models
+# 401
+```
+
+- Log check:
+
+```bash
+docker logs --since 2m sub2api-test 2>&1 | egrep -i "panic|fatal|error|migration|failed|traceback|异常" || true
+# no output
+```
+
 ## Production Deployment Log
 
 ### 2026-05-02 Runtime Request Body Decoding
@@ -645,6 +682,41 @@ docker logs --since 5m sub2api-prod 2>&1 | egrep "\t(ERROR|FATAL|PANIC)\t|panic|
 - Branch: `main`
 - Commit deployed: `3bfd5fb7 Merge PR #24: include tool output names`
 - Runtime change: `23e4c054 sync(openai): include tool output names`
+- Backup: not taken; this slice has no migration, schema, config, env var, frontend localStorage, or data change.
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git checkout main
+git pull --ff-only origin main
+bash deploy/deploy-server.sh prod
+```
+
+- Container result: `sub2api-prod` healthy on `127.0.0.1:8080->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8080/health
+# {"status":"ok"}
+
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/v1/models
+# 401
+```
+
+- Log check:
+
+```bash
+docker logs --since 2m sub2api-prod 2>&1 | egrep -i "panic|fatal|error|migration|failed|traceback|异常" || true
+# no output
+```
+
+### 2026-05-02 Anthropic Claude Code Mimicry Gate
+
+- Host: `108.160.133.141`
+- Environment: `prod`
+- Branch: `main`
+- Commit deployed: `244c3f15 Merge PR #26: preserve Claude Code prompt caching`
+- Runtime change: `211e41f1 sync(anthropic): preserve Claude Code prompt caching`
 - Backup: not taken; this slice has no migration, schema, config, env var, frontend localStorage, or data change.
 - Deploy command:
 
