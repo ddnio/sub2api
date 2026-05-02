@@ -124,7 +124,7 @@ Accepted deployment-impacting changes:
 
 ### Scheduler snapshot race fix, CAS grace TTL, and rebuild lock release
 
-- Slice and commit: Task 2A scheduler sub-slice, commit pending
+- Slice and commit: Task 2A scheduler sub-slice, `412340a3 sync(scheduler): harden snapshot activation`, merged via PR #19 as `fe210978 Merge PR #19: upstream sync phase 2 runtime safety slices`
 - What changed: scheduler snapshot activation uses Redis Lua CAS to avoid active-version rollback; old scheduler snapshot keys receive a 60-second grace TTL instead of immediate deletion; scheduler rebuild locks are explicitly released after rebuild completion.
 - Scope split evidence: backend subset from `8bf2a7b8` applied independently; `frontend/src/utils/usageLoadQueue.ts` is absent in this fork and was skipped; sticky-session account-selection changes from `733627cf` remain held for Task 2B.
 - Migration files added or changed: none
@@ -140,7 +140,7 @@ Accepted deployment-impacting changes:
 - Expected downtime window: normal rolling restart only
 - Monitoring/alerting impact: watch gateway 5xx, scheduler cache miss/fallback logs, account selection anomalies, and Redis key growth for `sched:*:v*` during the 60-second grace window
 - Exact local verification: repository compile-only run passed; repository integration scheduler tests passed; repository integration scheduler tests passed with `-race`; service scheduler/sticky tests passed after allowing `httptest` listeners; handler warmup/scheduler target tests passed; payment package and payment-related service regressions passed.
-- Exact test environment verification: pending
+- Exact test environment verification: deployed to `sub2api-test` on 2026-05-02 from `origin/main` at `fe210978`; local health and public health checks returned `{"status":"ok"}`; gzip-compressed `/v1/responses` with model `gpt-5.5` returned HTTP 200; gzip body decompressing above 64 MiB returned HTTP 413 with `Request body too large, limit is 64MB`; Redis `sched:*` keys were present after startup; post-deploy severe log check found no `ERROR`, `FATAL`, `PANIC`, `POSTCHECK FAILED`, or `PREFLIGHT FAILED`.
 - Customer-facing changelog/API note required: no
 - Rollback notes: revert the scheduler sub-slice and redeploy; no DB rollback. Redis old snapshot keys expire automatically; if emergency cleanup is needed, inspect `sched:*` keys before deleting.
 
@@ -225,6 +225,45 @@ curl -fsS https://router-test.nanafox.com/health
 
 ```bash
 docker logs --since 5m sub2api-test 2>&1 | egrep "\t(ERROR|FATAL|PANIC)\t|panic|POSTCHECK FAILED|PREFLIGHT FAILED" || true
+# no output
+```
+
+### 2026-05-02 Scheduler Snapshot Hardening
+
+- Host: `108.160.133.141`
+- Environment: `test`
+- Branch: `main`
+- Commit deployed: `fe210978 Merge PR #19: upstream sync phase 2 runtime safety slices`
+- Runtime change: `412340a3 sync(scheduler): harden snapshot activation`
+- Backup: `/home/nio/backups/sub2api_test_pre_phase2_runtime_scheduler_20260502-093632.sql` (58M)
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+bash deploy/deploy-server.sh test
+```
+
+- Container result: `sub2api-test` healthy on `127.0.0.1:8081->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8081/health
+curl -fsS https://router-test.nanafox.com/health
+# {"status":"ok"}
+```
+
+- Compressed request smoke:
+  - gzip `/v1/responses` with model `gpt-5.5` returned HTTP 200.
+  - gzip request that decompresses above 64 MiB returned HTTP 413 and `Request body too large, limit is 64MB`.
+- Scheduler smoke:
+  - Redis `sched:*` keys were present after startup, including `sched:active:*`, `sched:ready:*`, `sched:ver:*`, `sched:acc:*`, and `sched:meta:*`.
+- Log check:
+
+```bash
+docker logs --since 10m sub2api-test 2>&1 | egrep "\t(ERROR|FATAL|PANIC)\t|panic|POSTCHECK FAILED|PREFLIGHT FAILED|migration failed|ERROR" || true
 # no output
 ```
 
