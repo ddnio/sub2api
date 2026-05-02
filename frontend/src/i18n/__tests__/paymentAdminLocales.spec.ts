@@ -17,6 +17,12 @@ describe('payment admin locale namespace', () => {
     'admin.settings.payment.enabledPaymentTypes',
     'admin.settings.payment.modeQRCode',
     'admin.settings.payment.limitSingleMin',
+    'payment.admin.day',
+    'payment.admin.days',
+    'payment.admin.week',
+    'payment.admin.weeks',
+    'payment.admin.month',
+    'payment.admin.months',
   ]
 
   it.each([

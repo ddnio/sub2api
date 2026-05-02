@@ -157,7 +157,7 @@
             </td>
           </tr>
           <tr
-            v-for="virtualRow in virtualItems"
+            v-for="virtualRow in renderedRows"
             :key="resolveRowKey(sortedData[virtualRow.index], virtualRow.index)"
             :data-row-id="resolveRowKey(sortedData[virtualRow.index], virtualRow.index)"
             :data-index="virtualRow.index"
@@ -581,6 +581,18 @@ const rowVirtualizer = useVirtualizer(computed(() => ({
 })))
 
 const virtualItems = computed(() => rowVirtualizer.value.getVirtualItems())
+
+const renderedRows = computed(() => {
+  const items = virtualItems.value
+  if (items.length > 0 || (sortedData.value?.length ?? 0) === 0) return items
+
+  // The table is often used in page-level layouts where the wrapper is not a
+  // fixed-height scroll container. In that case TanStack's virtualizer can
+  // report no visible items in jsdom and some browsers, even though data exists.
+  // Fall back to rendering the current page so pagination never shows records
+  // while the table body is blank.
+  return (sortedData.value || []).map((_, index) => ({ index }))
+})
 
 const virtualPaddingTop = computed(() => {
   const items = virtualItems.value
