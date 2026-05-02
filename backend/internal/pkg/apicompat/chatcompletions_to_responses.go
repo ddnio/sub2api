@@ -104,9 +104,21 @@ func ChatCompletionsToResponses(req *ChatCompletionsRequest) (*ResponsesRequest,
 // convertChatMessagesToResponsesInput converts the Chat Completions messages
 // array into a Responses API input items array.
 func convertChatMessagesToResponsesInput(msgs []ChatMessage) ([]ResponsesInputItem, error) {
+	toolCallNames := make(map[string]string)
+	for _, m := range msgs {
+		if m.Role != "assistant" {
+			continue
+		}
+		for _, tc := range m.ToolCalls {
+			if tc.ID != "" && tc.Function.Name != "" {
+				toolCallNames[tc.ID] = tc.Function.Name
+			}
+		}
+	}
+
 	var out []ResponsesInputItem
 	for _, m := range msgs {
-		items, err := chatMessageToResponsesItems(m)
+		items, err := chatMessageToResponsesItems(m, toolCallNames)
 		if err != nil {
 			return nil, err
 		}
@@ -117,7 +129,7 @@ func convertChatMessagesToResponsesInput(msgs []ChatMessage) ([]ResponsesInputIt
 
 // chatMessageToResponsesItems converts a single ChatMessage into one or more
 // ResponsesInputItem values.
-func chatMessageToResponsesItems(m ChatMessage) ([]ResponsesInputItem, error) {
+func chatMessageToResponsesItems(m ChatMessage, toolCallNames map[string]string) ([]ResponsesInputItem, error) {
 	switch m.Role {
 	case "system":
 		return chatSystemToResponses(m)
@@ -126,7 +138,7 @@ func chatMessageToResponsesItems(m ChatMessage) ([]ResponsesInputItem, error) {
 	case "assistant":
 		return chatAssistantToResponses(m)
 	case "tool":
-		return chatToolToResponses(m)
+		return chatToolToResponses(m, toolCallNames)
 	case "function":
 		return chatFunctionToResponses(m)
 	default:
@@ -273,7 +285,7 @@ func parseAssistantContent(raw json.RawMessage) (string, error) {
 
 // chatToolToResponses converts a tool result message (role=tool) into a
 // function_call_output item.
-func chatToolToResponses(m ChatMessage) ([]ResponsesInputItem, error) {
+func chatToolToResponses(m ChatMessage, toolCallNames map[string]string) ([]ResponsesInputItem, error) {
 	output, err := parseChatContent(m.Content)
 	if err != nil {
 		return nil, err
@@ -284,6 +296,7 @@ func chatToolToResponses(m ChatMessage) ([]ResponsesInputItem, error) {
 	return []ResponsesInputItem{{
 		Type:   "function_call_output",
 		CallID: m.ToolCallID,
+		Name:   toolCallNames[m.ToolCallID],
 		Output: output,
 	}}, nil
 }
