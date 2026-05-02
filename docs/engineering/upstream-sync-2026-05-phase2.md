@@ -36,7 +36,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 
 | Slice | Scope | Status | Kimi review | Verification | Deploy notes |
 | --- | --- | --- | --- | --- | --- |
-| Task 0 | Baseline verification | Pending | Not started | Not started | None |
+| Task 0 | Baseline verification | Complete | Not required; command evidence only | Passed with drift findings recorded | None |
 | Task 1 | Plan + tracking docs | Ready to commit | Passed after revisions | Doc review only | None |
 | Task 2 | Runtime safety: request decoding + scheduler | Pending | Not started | Not started | TBD |
 | Task 3 | OpenAI Responses / Codex compatibility | Pending | Not started | Not started | TBD |
@@ -104,3 +104,46 @@ For each deployment-impacting slice, record:
 | --- | --- | --- | --- | --- |
 | 2026-05-02 | Kimi | Plan + tracking docs | First review found missing dependency, Ent/migration, race, contract, deployment, and rollback gates | Addressed in plan and tracking doc |
 | 2026-05-02 | Kimi | Revised plan + tracking docs | Do not block; ready to commit | Commit docs, then run Task 0 baseline verification |
+
+## Task 0 Baseline Results
+
+Recorded on 2026-05-02 from `feature/upstream-sync-2026-05-phase2`.
+
+Refs:
+
+- `HEAD`: `43ed49c9`
+- `origin/main`: `010a662e`
+- `upstream/main`: `48912014`
+
+Dependency drift:
+
+- `backend/go.mod`
+- `backend/go.sum`
+- `frontend/package.json`
+- `frontend/pnpm-lock.yaml`
+
+Ent and migration drift:
+
+- Upstream has broad Ent generated-code drift, including auth identity, pending auth session, channel monitor, group/user changes, and payment plan removals.
+- Upstream migration drift is broad and risky: auth identity, channel monitor, affiliate, account stats, notify settings, and deletions of several fork payment-b2 migrations appear in the diff.
+- Any slice that touches these areas must classify migrations before code is ported. Direct upstream merge remains blocked.
+
+Baseline verification:
+
+```bash
+cd backend
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/payment
+# ok github.com/Wei-Shaw/sub2api/internal/payment 2.552s
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/service -run 'Test.*Payment|Test.*Order|Test.*Provider|Test.*Refund|Test.*Fulfillment|Test.*Config'
+# ok github.com/Wei-Shaw/sub2api/internal/service 1.516s
+
+cd ../frontend
+pnpm install --frozen-lockfile
+pnpm exec vitest run src/__tests__/buttonClasses.spec.ts src/components/payment/__tests__/paymentFlow.spec.ts src/views/user/__tests__/PaymentView.spec.ts
+# 3 files passed, 27 tests passed
+```
+
+Frontend bootstrap note:
+
+- The new worktree had no `node_modules`; `pnpm install --frozen-lockfile` reused the existing store and downloaded 0 packages.
