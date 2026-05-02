@@ -1,5 +1,29 @@
 # Payment B-2 部署记录
 
+## 2026-05-02 生产环境：final provider review gaps 最终版部署
+
+| 字段 | 值 |
+|---|---|
+| 环境 | prod |
+| 部署时间 | 2026-05-02 10:06-10:09 Asia/Shanghai |
+| 部署人 | Codex |
+| 部署分支/commit | `worktree-payment-b2` / `bb682796`（业务代码最终变更为 `d36a1b18`，`bb682796` 为部署记录文档提交） |
+| pg_dump 备份文件 | `/home/nio/backups/sub2api_prod_pre_payment_b2_final_20260502-020621.sql`，949M，权限 `600` |
+| Kimi 生产前 review | 无代码/数据 P0；唯一硬门槛为生产 pg_dump 备份，已完成。P1 gate：Alipay/Stripe 未启用前不阻塞；用户自助退款保持 `allow_user_refund=false`；部署后需人工视觉复核 |
+| 部署命令 | `bash deploy/deploy-server.sh prod` |
+| 代码拉取 | 服务器从 `d36a1b18` fast-forward 到 `bb682796` |
+| HTTP /health | `http://127.0.0.1:8080/health` 返回 `{"status":"ok"}` |
+| 容器状态 | `sub2api-prod` healthy，`127.0.0.1:8080->8080/tcp`；`sub2api-test` 和 `sub2api-postgres` 仍 healthy |
+| 日志扫描 | `docker logs --tail 300 sub2api-prod` 未发现 `panic`、`fatal`、`postcheck failed`、`preflight failed`、`migration failed`、`error` |
+| Postcheck | `bad_amount=0`、`null_expired=0`、`orphan_orders=0`、`invalid_payment_order_index=0`、`null_expires=0`、`empty_otn=0`、`duplicate_out_trade_no=0` |
+| Provider 配置结果 | `wxpay-default` enabled，`payment_mode=qrcode`，`refund_enabled=true`，`allow_user_refund=false`，`limits={"wxpay":{"singleMin":1,"singleMax":10000}}`，`notifyUrl` 为生产域名 |
+| 数据完整性验证 | `payment_orders=57`、`payment_orders_v1_backup=56`、`payment_orders_id_seq=57`、`MAX(payment_orders.id)=57`；差值 1 为 2026-05-01 09:35 创建的合法 wxpay `COMPLETED` 订单 `id=57`，`out_trade_no` 非空 |
+| 套餐验证 | `subscription_plans=4`，`invalid_for_sale_plans=0` |
+| 静态前端验证 | `/purchase`、`/orders`、`/admin/payment/orders`、`/admin/payment/dashboard`、`/admin/payment/plans` HTTP 200；入口资源已切换到 `/assets/index-DmPQiWlR.js`、`/assets/index-sWXccaJK.css` |
+| 样式验证 | CSS 包含 `btn-wxpay`、`btn-alipay`、`btn-stripe`、`btn-outline-danger`、`btn-xs` |
+| 端到端测试结果 | 部署后尚未执行生产真实扫码支付；测试环境已有 wxpay 余额充值和订阅真实支付 `COMPLETED` 证据。生产建议立即人工做一笔小额 wxpay 订单验证 |
+| 异常 / 备注 | 当前生产保持 1 元起付：`MIN_RECHARGE_AMOUNT=1.00` 与 provider `singleMin=1` 一致；若后续改 0.1 元，必须同步改全局设置和 provider limits |
+
 ## 2026-05-02 生产环境：部署前只读复核
 
 | 字段 | 值 |
