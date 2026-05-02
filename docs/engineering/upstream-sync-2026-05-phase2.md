@@ -41,7 +41,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | Task 1 | Plan + tracking docs | Ready to commit | Passed after revisions | Doc review only | None |
 | Task 2 | Runtime safety: request decoding + scheduler | Request decoding sub-slice deployed; scheduler 2A implemented locally | Kimi no blockers for decoding; scheduler code review pending | httputil, handler, scheduler, payment tests passed | Test/prod images rebuilt for decoding; scheduler 2A not deployed |
 | Task 3 | OpenAI Responses / Codex compatibility | Task 3A and Task 3B deployed | Kimi no blockers for PR #22 and PR #24 | apicompat, targeted service, and payment tests passed | Test/prod images rebuilt; no DB backup because no DB/config/frontend impact |
-| Task 4 | Anthropic / Claude compatibility | Pending | Not started | Not started | TBD |
+| Task 4 | Anthropic / Claude compatibility | Task 4A Claude Code mimicry gate implemented locally | Pending | service, apicompat, and payment tests passed | No DB/config/frontend impact expected |
 | Task 5 | Admin/frontend low-risk UX | Pending | Not started | Not started | TBD |
 | Task 6 | Payment residual audit only | Pending | Not started | Not started | TBD |
 | Task 7 | Integration smoke gate | Pending | Not started | Not started | TBD |
@@ -197,6 +197,62 @@ GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/service -run 'C
 
 GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/payment
 # ok github.com/Wei-Shaw/sub2api/internal/payment
+```
+
+### Task 4A Anthropic / Claude Code Mimicry Gate
+
+Batching decision: keep this slice to one Anthropic OAuth gateway behavior fix. The broader stream failover and cache TTL setting work are not mixed into this batch.
+
+Missing-fix matrix:
+
+| Upstream source | Area | Local state | Action | Notes |
+| --- | --- | --- | --- | --- |
+| `496469ac` | Skip body-level Claude mimicry for real Claude Code clients | Missing | Port | Real Claude Code clients already send long system prompts and cache breakpoints; body mimicry replaces that prompt and can break prompt caching. |
+| `30220903` / PR #1996 | Drop empty `Read.pages` in Responses -> Anthropic tool input | Present | Skip | Local `sanitizeAnthropicToolUseInput` and streaming/non-streaming tests already exist. |
+| `b17704d6` / PR #1970 | Anthropic cache token usage semantics | Present | Skip | Local `anthropicUsageFromResponsesUsage` subtracts cached tokens from input tokens and covers streaming/non-streaming. |
+| `63275735` / PR #2066 | Anthropic stream EOF failover before client output | Present | Skip | Local stream tests already cover `UpstreamFailoverError` before output and passthrough after output. |
+| `4c474616` | Anthropic-standard SSE error event and failover body | Present | Skip | Local `sendErrorEvent(reason, message)` emits standard `type:error` shape; tests assert the standard error frame. |
+| `73b87299` | Anthropic cache TTL injection setting | Present enough / separate feature | Skip for Task 4A | Account-level Cache TTL Override UI/backend already exist locally; no system-setting/config slice is needed in this batch. |
+
+Current local implementation:
+
+- Make `claude-cli/*` user-agent detection case-insensitive.
+- Require `metadata.user_id` to parse as a Claude Code legacy or JSON user id before treating a request as a real Claude Code client.
+- Skip body-level Claude mimicry for real Claude Code clients on `/v1/messages` and `count_tokens`.
+- Preserve full mimicry for non-Claude Code third-party OAuth clients.
+- Kimi non-blocking note: `count_tokens` handler context detection still has an existing UA-only fast path before service-layer `metadata.user_id` validation. This was not changed in Task 4A because real Claude Code `count_tokens` requests do not carry the full messages system prompt; handler tests confirm existing behavior is preserved. Consider a separate follow-up only if a reliable count_tokens validation signal is available.
+
+Impact:
+
+- Migration files added or changed: none
+- Ent schema or generated-code impact: none
+- New config keys, setting names, or env vars: none
+- New frontend `localStorage` keys: none
+- External API / customer-facing behavior change: restores real Claude Code prompt-cache behavior for Anthropic OAuth requests; non-Claude Code OAuth clients still receive full mimicry.
+- Fresh install affected: no
+- Existing DB upgrade affected: no
+- Required backup command: not required by schema or data impact
+- Docker image rebuild required: yes for deployment
+- Safe for rolling deploy: yes
+- Expected downtime window: normal rolling restart only
+- Monitoring/alerting impact: watch Anthropic OAuth 400/502 rates and prompt-cache/cache-read usage for Claude Code traffic.
+- Rollback notes: revert the Task 4A commit and redeploy; no DB rollback.
+
+Verification so far:
+
+```bash
+cd backend
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/service -run 'TestIsClaudeCodeClient|TestSystemIncludesClaudeCodePrompt|TestHandleStreamingResponse|TestForwardAsResponses|TestForwardAsChatCompletions|TestMetadataUserID|TestClaudeCode'
+# ok github.com/Wei-Shaw/sub2api/internal/service
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/pkg/apicompat
+# ok github.com/Wei-Shaw/sub2api/internal/pkg/apicompat
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/payment
+# ok github.com/Wei-Shaw/sub2api/internal/payment
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/handler -run 'TestSetClaudeCodeClientContext|TestGatewayCountTokens|CountTokens|ClaudeCode'
+# ok github.com/Wei-Shaw/sub2api/internal/handler
 ```
 
 ## Deployment Notes

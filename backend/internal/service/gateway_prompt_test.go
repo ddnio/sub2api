@@ -9,6 +9,9 @@ import (
 )
 
 func TestIsClaudeCodeClient(t *testing.T) {
+	legacyUserID := "user_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2_account_550e8400-e29b-41d4-a716-446655440000_session_123e4567-e89b-12d3-a456-426614174000"
+	jsonUserID := `{"device_id":"a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2","account_uuid":"550e8400-e29b-41d4-a716-446655440000","session_id":"123e4567-e89b-12d3-a456-426614174000"}`
+
 	tests := []struct {
 		name           string
 		userAgent      string
@@ -16,15 +19,21 @@ func TestIsClaudeCodeClient(t *testing.T) {
 		want           bool
 	}{
 		{
-			name:           "Claude Code client",
+			name:           "Claude Code client with legacy user_id",
 			userAgent:      "claude-cli/1.0.62 (darwin; arm64)",
-			metadataUserID: "session_123e4567-e89b-12d3-a456-426614174000",
+			metadataUserID: legacyUserID,
 			want:           true,
 		},
 		{
-			name:           "Claude Code without version suffix",
-			userAgent:      "claude-cli/2.0.0",
-			metadataUserID: "session_abc",
+			name:           "Claude Code client with JSON user_id",
+			userAgent:      "claude-cli/2.1.92 (external, cli)",
+			metadataUserID: jsonUserID,
+			want:           true,
+		},
+		{
+			name:           "Claude Code case insensitive UA",
+			userAgent:      "Claude-CLI/2.0.0",
+			metadataUserID: legacyUserID,
 			want:           true,
 		},
 		{
@@ -34,21 +43,33 @@ func TestIsClaudeCodeClient(t *testing.T) {
 			want:           false,
 		},
 		{
-			name:           "Different user agent",
+			name:           "Claude CLI UA with invalid user_id format",
+			userAgent:      "claude-cli/2.0.0",
+			metadataUserID: "fake-user-id-12345",
+			want:           false,
+		},
+		{
+			name:           "Different user agent with valid user_id",
 			userAgent:      "curl/7.68.0",
-			metadataUserID: "user123",
+			metadataUserID: legacyUserID,
 			want:           false,
 		},
 		{
 			name:           "Empty user agent",
 			userAgent:      "",
-			metadataUserID: "user123",
+			metadataUserID: legacyUserID,
 			want:           false,
 		},
 		{
 			name:           "Similar but not Claude CLI",
 			userAgent:      "claude-api/1.0.0",
-			metadataUserID: "user123",
+			metadataUserID: legacyUserID,
+			want:           false,
+		},
+		{
+			name:           "Opencode spoofing UA with arbitrary user_id",
+			userAgent:      "claude-cli/2.1.92",
+			metadataUserID: "session_abc",
 			want:           false,
 		},
 	}

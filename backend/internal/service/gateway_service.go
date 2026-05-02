@@ -337,7 +337,7 @@ func isClaudeCodeCredentialScopeError(msg string) bool {
 // Some upstream APIs return non-standard "data:" without space (should be "data: ").
 var (
 	sseDataRe            = regexp.MustCompile(`^data:\s*`)
-	claudeCliUserAgentRe = regexp.MustCompile(`^claude-cli/\d+\.\d+\.\d+`)
+	claudeCliUserAgentRe = regexp.MustCompile(`(?i)^claude-cli/\d+\.\d+\.\d+`)
 
 	// claudeCodePromptPrefixes 用于检测 Claude Code 系统提示词的前缀列表
 	// 支持多种变体：标准版、Agent SDK 版、Explore Agent 版、Compact 版等
@@ -3723,13 +3723,14 @@ func sleepWithContext(ctx context.Context, d time.Duration) error {
 	}
 }
 
-// isClaudeCodeClient 判断请求是否来自 Claude Code 客户端
-// 简化判断：User-Agent 匹配 + metadata.user_id 存在
+// isClaudeCodeClient 判断请求是否来自真正的 Claude Code 客户端。
+// 第三方工具可能伪造 claude-cli/* UA，因此 metadata.user_id 也必须符合
+// Claude Code 的 legacy 或 JSON 格式。
 func isClaudeCodeClient(userAgent string, metadataUserID string) bool {
-	if metadataUserID == "" {
+	if !claudeCliUserAgentRe.MatchString(userAgent) {
 		return false
 	}
-	return claudeCliUserAgentRe.MatchString(userAgent)
+	return ParseMetadataUserID(metadataUserID) != nil
 }
 
 func isClaudeCodeRequest(ctx context.Context, c *gin.Context, parsed *ParsedRequest) bool {
@@ -4163,12 +4164,10 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 		})
 	}
 
-	// OAuth 账号无条件走完整 mimicry，与 Parrot 对齐。
-	// 不再检查 isClaudeCodeRequest —— 即使客户端自称 Claude Code（opencode 等
-	// 第三方工具会伪装 UA / X-App / system prompt），它的伪装往往不完整（缺 billing
-	// block / 工具名混淆 / cache 策略等），被 Anthropic 判为 third-party。
-	// 无条件覆盖不会对真正的 Claude Code 造成问题，因为我们的伪装更完整。
-	shouldMimicClaudeCode := account.IsOAuth()
+	// 真实 Claude Code 客户端自带完整 system prompt、cache_control 断点和 header。
+	// 对它做 body 级 mimicry 会替换长 system prompt，破坏 prompt caching。
+	// 非 Claude Code 的第三方 OAuth 客户端仍走完整 mimicry。
+	shouldMimicClaudeCode := account.IsOAuth() && !isClaudeCodeRequest(ctx, c, parsed)
 
 	if shouldMimicClaudeCode {
 		// 与 Parrot 对齐：OAuth 账号无条件重写 system（即使客户端已发了 Claude Code
@@ -8377,7 +8376,7 @@ func (s *GatewayService) ForwardCountTokens(ctx context.Context, c *gin.Context,
 	// Pre-filter: strip empty text blocks to prevent upstream 400.
 	body = StripEmptyTextBlocks(body)
 
-	shouldMimicClaudeCode := account.IsOAuth()
+	shouldMimicClaudeCode := account.IsOAuth() && !isClaudeCodeRequest(ctx, c, parsed)
 
 	if shouldMimicClaudeCode {
 		normalizeOpts := claudeOAuthNormalizeOptions{stripSystemCacheControl: true}
