@@ -143,6 +143,7 @@
       <template #table>
         <AccountBulkActionsBar
           :selected-ids="selIds"
+          :has-active-filters="hasActiveBulkEditFilters"
           @delete="handleBulkDelete"
           @reset-status="handleBulkResetStatus"
           @refresh-token="handleBulkRefreshToken"
@@ -1157,6 +1158,8 @@ const buildBulkEditFilterSnapshot = () => {
 
 const hasBulkEditFilters = (filters: ReturnType<typeof buildBulkEditFilterSnapshot>) =>
   Object.values(filters).some((value) => String(value).trim() !== '')
+
+const hasActiveBulkEditFilters = computed(() => hasBulkEditFilters(buildBulkEditFilterSnapshot()))
 
 const collectFilterMetadata = (filters: ReturnType<typeof buildBulkEditFilterSnapshot>) => {
   return {

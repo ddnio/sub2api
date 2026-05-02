@@ -203,6 +203,40 @@ func TestAdminService_BulkUpdateAccounts_MixedChannelPreCheckBlocksOnExistingCon
 	require.Empty(t, repo.bindGroupsCalls)
 }
 
+func TestAdminService_BulkUpdateAccounts_FilterTargetMixedChannelPreCheckBlocks(t *testing.T) {
+	repo := &accountRepoStubForBulkUpdate{
+		listData: []Account{
+			{ID: 1},
+		},
+		listResult: &pagination.PaginationResult{Total: 1},
+		getByIDsAccounts: []*Account{
+			{ID: 1, Platform: PlatformAntigravity},
+		},
+		listByGroupData: map[int64][]Account{
+			10: {{ID: 99, Platform: PlatformAnthropic}},
+		},
+	}
+	svc := &adminServiceImpl{
+		accountRepo: repo,
+		groupRepo:   &groupRepoStubForAdmin{getByID: &Group{ID: 10, Name: "target-group"}},
+	}
+
+	groupIDs := []int64{10}
+	input := &BulkUpdateAccountsInput{
+		Filters:  &BulkUpdateAccountFilters{Platform: PlatformAntigravity},
+		GroupIDs: &groupIDs,
+	}
+
+	result, err := svc.BulkUpdateAccounts(context.Background(), input)
+	require.Nil(t, result)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "mixed channel")
+	require.True(t, repo.listCalled)
+	require.Equal(t, []int64{1}, repo.getByIDsIDs)
+	require.Empty(t, repo.bulkUpdateIDs)
+	require.Empty(t, repo.bindGroupsCalls)
+}
+
 func TestAdminServiceBulkUpdateAccounts_ResolvesIDsFromFilters(t *testing.T) {
 	repo := &accountRepoStubForBulkUpdate{
 		listData: []Account{
