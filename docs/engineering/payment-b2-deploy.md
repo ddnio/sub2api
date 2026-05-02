@@ -3,7 +3,7 @@
 **文档目的**：将 fork payment 模块迁移到 upstream payment v2 架构的部署步骤清单。  
 **适用范围**：测试环境（test）和生产环境（prod），步骤一致，参数不同。  
 **关联 PR**：[#18](https://github.com/ddnio/sub2api/pull/18)  
-**最后更新**：2026-05-01
+**最后更新**：2026-05-02
 
 ---
 
@@ -37,7 +37,7 @@ pnpm vitest run src/api/__tests__/payment-contract.spec.ts src/components/paymen
 pnpm build
 
 cd ../backend
-GOCACHE="$PWD/../.cache/go-build" go test ./internal/payment ./internal/handler/admin ./internal/handler/dto ./internal/server/routes
+GOCACHE="$PWD/../.cache/go-build" go test ./internal/payment ./internal/payment/provider ./internal/handler/admin ./internal/handler/dto ./internal/server/routes
 GOCACHE="$PWD/../.cache/go-build" go test ./internal/service -run 'Test.*Payment|Test.*Wechat|Test.*WeChat|Test.*Provider|Test.*Order|Test.*Refund|Test.*Fulfillment|Test.*Config'
 ```
 

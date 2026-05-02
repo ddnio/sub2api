@@ -2,7 +2,7 @@
 
 Date: 2026-05-01
 Branch: `worktree-payment-b2`
-Local HEAD: `05593a1b`
+Local HEAD: `d36a1b18`
 Upstream baseline: `upstream/main` at `48912014`
 
 ## Goal And Scope
@@ -177,7 +177,7 @@ Kimi reviewed this matrix on 2026-05-01 and found:
 
 Manual review additionally found the `fd0c9a13`/`61a008f7` provider config write path was not actually applied; this was fixed before further deployment.
 
-Final Kimi review on 2026-05-01 found no P0. Follow-up actions:
+Final Kimi review on 2026-05-01 found no P0. A follow-up Kimi documentation review on 2026-05-02 confirmed commit `d36a1b18` did not introduce a new P0; it found one blocking documentation gap in the handoff verification command, now fixed by adding `./internal/payment/provider`. Follow-up actions:
 
 - P1 Stripe provider-level unit coverage gap: fixed by adding `backend/internal/payment/provider/stripe_test.go`, covering config validation, publishable key, supported types, sub-method mapping, signed webhook success/failure/ignore handling, and missing webhook configuration errors.
 - P1 WeChat-browser wxpay risk found in Kimi follow-up: fixed by avoiding JSAPI/OAuth selection for WeChat-browser requests that do not carry an OpenID. This fork still treats actual OpenID/JSAPI requests as requiring JSAPI-compatible configuration, but normal H5/native wxpay can proceed.
@@ -259,18 +259,19 @@ After local verification, deploy to test only after backing up test DB. Producti
 
 ## Test Deployment Verification
 
-Final test deployment on 2026-05-01 used commit `05593a1b`.
+Final test deployment on 2026-05-02 used commit `d36a1b18`.
 
-- Backup: `/home/nio/backups/sub2api_test_pre_payment_b2_audit_20260501-153107.sql` (59M).
+- Backup: `/home/nio/backups/sub2api_test_pre_payment_b2_final_review_20260502-013941.sql` (57M, mode `600`).
 - Test container: `sub2api-test` healthy on `127.0.0.1:8081`.
 - Production container: `sub2api-prod` remained healthy on `127.0.0.1:8080`; production was not deployed.
 - Health: test and prod both returned `{"status":"ok"}`.
 - Logs: no `panic`, `fatal`, `preflight failed`, `postcheck failed`, `migration failed`, or `error` found in recent test logs.
-- DB postcheck: `bad_amount=0`, `null_expired=0`, `orphan_orders=0`, `fk_to_payment=0`, `invalid_payment_order_index=0`, `duplicate_out_trade_no=0`.
-- Provider: wxpay provider enabled with `singleMin=0.1` and `singleMax=10000`.
-- Plans: `subscription_plans=3`, two plans for sale, `invalid_for_sale_plans=0`, no unmigrated old `payment_plans`.
-- Real payment result: order `35` balance 0.10 wxpay and order `36` subscription 0.10 wxpay both reached `COMPLETED`; audit logs include `ORDER_PAID`, `RECHARGE_SUCCESS`, and `SUBSCRIPTION_SUCCESS`.
-- Static frontend verification: deployed index references latest payment chunks and CSS includes `btn-wxpay`, `btn-alipay`, `btn-stripe`, `btn-outline-danger`, and `btn-xs`.
+- DB postcheck: `bad_amount=0`, `null_expired=0`, `orphan_orders=0`, `invalid_payment_order_index=0`, `null_expires=0`, `empty_otn=0`, `duplicate_out_trade_no=0`.
+- Provider: `wxpay-default` enabled with `singleMin=0.1` and `singleMax=10000`.
+- Plans: `subscription_plans=3`, `invalid_for_sale_plans=0`.
+- Static frontend verification: `/purchase` and `/orders` returned HTTP 200; deployed index references `/assets/index-DmPQiWlR.js` and `/assets/index-sWXccaJK.css`.
+- Real payment evidence from the previous test deploy remains valid for the wxpay user flow: order `35` balance 0.10 wxpay and order `36` subscription 0.10 wxpay both reached `COMPLETED`; audit logs include `ORDER_PAID`, `RECHARGE_SUCCESS`, and `SUBSCRIPTION_SUCCESS`.
+- No new browser-automation click run was performed after `d36a1b18` because the browser automation session was unstable; final validation used health checks, static route checks, database postchecks, log scanning, and the existing real wxpay payment evidence. Production preflight should include a short manual visual pass on `/purchase`, `/orders`, and admin payment pages.
 
 ## Current Change List And Impact
 
