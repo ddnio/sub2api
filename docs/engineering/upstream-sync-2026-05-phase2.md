@@ -40,7 +40,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | Task 0 | Baseline verification | Complete | Not required; command evidence only | Passed with drift findings recorded | None |
 | Task 1 | Plan + tracking docs | Ready to commit | Passed after revisions | Doc review only | None |
 | Task 2 | Runtime safety: request decoding + scheduler | Request decoding sub-slice deployed; scheduler 2A implemented locally | Kimi no blockers for decoding; scheduler code review pending | httputil, handler, scheduler, payment tests passed | Test/prod images rebuilt for decoding; scheduler 2A not deployed |
-| Task 3 | OpenAI Responses / Codex compatibility | In progress: Codex OAuth request normalization sub-batch implemented locally | Pending | Targeted Codex transform tests passed | No DB/config/frontend impact expected |
+| Task 3 | OpenAI Responses / Codex compatibility | Task 3A deployed; Task 3B function_call_output name implemented locally | Pending | Task 3A passed; Task 3B tests pending | No DB/config/frontend impact expected |
 | Task 4 | Anthropic / Claude compatibility | Pending | Not started | Not started | TBD |
 | Task 5 | Admin/frontend low-risk UX | Pending | Not started | Not started | TBD |
 | Task 6 | Payment residual audit only | Pending | Not started | Not started | TBD |
@@ -143,6 +143,56 @@ GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/service -run 'T
 
 GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/pkg/apicompat ./internal/service -run 'Codex|Tool|OAuth|Responses'
 # ok github.com/Wei-Shaw/sub2api/internal/pkg/apicompat
+# ok github.com/Wei-Shaw/sub2api/internal/service
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/payment
+# ok github.com/Wei-Shaw/sub2api/internal/payment
+```
+
+### Task 3B Chat Completions to Responses Tool Output Name
+
+Batching decision: keep this as a small `apicompat` sub-batch because the remaining stream failover and WebSocket continuation candidates affect account stickiness, failover, and connection reuse.
+
+Missing-fix matrix:
+
+| Upstream source | Area | Local state | Action | Notes |
+| --- | --- | --- | --- | --- |
+| `f6fcafa9` | Set `name` on `function_call_output` items for Responses API | Missing | Port | gpt-5.2+ Responses API requires `name` on tool output items; Chat Completions tool-result messages only carry `tool_call_id`, so infer the function name from prior assistant `tool_calls`. |
+| `1a597725` | Forward `response_format` through CC -> Responses -> Anthropic | Present | Skip | Local `ChatCompletionsRequest.ResponseFormat`, `ResponsesTextConfig`, and Anthropic output format mapping are already present. |
+| `855841a8` / PR #2058 | Flat Responses function `tool_choice` | Present | Skip | Local `apicompat` already flattens Chat Completions and Anthropic function tool choices; Task 3A covered Codex OAuth transform. |
+| `dac6e520` / PR #1960 | Responses stream keepalive during pre-output failover | Not directly portable | HOLD | Needs upstream `clientOutputStarted` / pre-output failover buffering structure; handle with stream failover batch. |
+| `094e1171` | Infer previous response for item references in WebSocket ingress | Partially present | HOLD | Touches WebSocket continuation, connection reuse, and account stickiness; handle with WS continuation batch. |
+
+Current local implementation:
+
+- Pre-scan assistant Chat Completions messages to build `tool_call_id -> function_name`.
+- Add the inferred `name` to role `tool` -> Responses `function_call_output` items.
+- Preserve existing behavior for legacy role `function` messages.
+
+Impact:
+
+- Migration files added or changed: none
+- Ent schema or generated-code impact: none
+- New config keys, setting names, or env vars: none
+- New frontend `localStorage` keys: none
+- External API / customer-facing behavior change: improves Chat Completions compatibility when forwarding multi-turn tool-call conversations through Responses; no response schema change.
+- Fresh install affected: no
+- Existing DB upgrade affected: no
+- Required backup command: not required by schema or data impact
+- Docker image rebuild required: yes for deployment
+- Safe for rolling deploy: yes
+- Expected downtime window: normal rolling restart only
+- Monitoring/alerting impact: watch OpenAI Chat Completions and Responses upstream 400/502 rates for tool-call conversations.
+- Rollback notes: revert the Task 3B commit and redeploy; no DB rollback.
+
+Verification so far:
+
+```bash
+cd backend
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/pkg/apicompat
+# ok github.com/Wei-Shaw/sub2api/internal/pkg/apicompat
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/service -run 'Codex|Tool|OAuth|Responses|ChatCompletions'
 # ok github.com/Wei-Shaw/sub2api/internal/service
 
 GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/payment
