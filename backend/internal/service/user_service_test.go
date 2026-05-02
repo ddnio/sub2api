@@ -19,10 +19,16 @@ import (
 type mockUserRepo struct {
 	updateBalanceErr error
 	updateBalanceFn  func(ctx context.Context, id int64, amount float64) error
+	getByIDUser      *User
 }
 
-func (m *mockUserRepo) Create(context.Context, *User) error               { return nil }
-func (m *mockUserRepo) GetByID(context.Context, int64) (*User, error)     { return &User{}, nil }
+func (m *mockUserRepo) Create(context.Context, *User) error { return nil }
+func (m *mockUserRepo) GetByID(context.Context, int64) (*User, error) {
+	if m.getByIDUser != nil {
+		return m.getByIDUser, nil
+	}
+	return &User{}, nil
+}
 func (m *mockUserRepo) GetByEmail(context.Context, string) (*User, error) { return &User{}, nil }
 func (m *mockUserRepo) GetFirstAdmin(context.Context) (*User, error)      { return &User{}, nil }
 func (m *mockUserRepo) Update(context.Context, *User) error               { return nil }

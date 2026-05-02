@@ -161,3 +161,83 @@ func TestGatewaySelectAccountWithLoadAwareness_HydratesSelectedAccountFromSchedu
 		t.Fatalf("expected hydrated api key, got %q", got)
 	}
 }
+
+func TestGatewaySelectAccountWithLoadAwareness_StickySnapshotAccountWithoutGroups(t *testing.T) {
+	cache := &snapshotHydrationCache{
+		snapshot: []*Account{
+			{
+				ID:          1,
+				Platform:    PlatformAnthropic,
+				Type:        AccountTypeAPIKey,
+				Status:      StatusActive,
+				Schedulable: true,
+				Concurrency: 1,
+				Priority:    10,
+			},
+			{
+				ID:          2,
+				Platform:    PlatformAnthropic,
+				Type:        AccountTypeAPIKey,
+				Status:      StatusActive,
+				Schedulable: true,
+				Concurrency: 1,
+				Priority:    1,
+			},
+		},
+		accounts: map[int64]*Account{
+			1: {
+				ID:          1,
+				Platform:    PlatformAnthropic,
+				Type:        AccountTypeAPIKey,
+				Status:      StatusActive,
+				Schedulable: true,
+				Concurrency: 1,
+				Priority:    10,
+			},
+			2: {
+				ID:          2,
+				Platform:    PlatformAnthropic,
+				Type:        AccountTypeAPIKey,
+				Status:      StatusActive,
+				Schedulable: true,
+				Concurrency: 1,
+				Priority:    1,
+			},
+		},
+	}
+
+	schedulerSnapshot := NewSchedulerSnapshotService(cache, nil, nil, nil, nil)
+	sessionHash := "snapshot-sticky"
+	groupID := int64(7)
+	cfg := testConfig()
+	cfg.Gateway.Scheduling.LoadBatchEnabled = true
+	svc := &GatewayService{
+		schedulerSnapshot: schedulerSnapshot,
+		groupRepo: &mockGroupRepoForGateway{
+			groups: map[int64]*Group{
+				groupID: {
+					ID:       groupID,
+					Platform: PlatformAnthropic,
+					Status:   StatusActive,
+					Hydrated: true,
+				},
+			},
+		},
+		cache: &mockGatewayCacheForPlatform{
+			sessionBindings: map[string]int64{sessionHash: 1},
+		},
+		cfg:                cfg,
+		concurrencyService: NewConcurrencyService(&mockConcurrencyCache{}),
+	}
+
+	result, err := svc.SelectAccountWithLoadAwareness(context.Background(), &groupID, sessionHash, "claude-3-5-sonnet-20241022", nil, "", 0)
+	if err != nil {
+		t.Fatalf("SelectAccountWithLoadAwareness error: %v", err)
+	}
+	if result == nil || result.Account == nil {
+		t.Fatalf("expected selected account")
+	}
+	if result.Account.ID != 1 {
+		t.Fatalf("expected sticky snapshot account 1, got %d", result.Account.ID)
+	}
+}
