@@ -1,5 +1,24 @@
 # Payment B-2 部署记录
 
+## 2026-05-02 生产环境：旧订单 0 金额响应热修
+
+| 字段 | 值 |
+|---|---|
+| 环境 | prod |
+| 部署时间 | 2026-05-02 11:21-11:25 Asia/Shanghai |
+| 部署人 | Codex |
+| 部署分支/commit | `worktree-payment-b2` / `6518510b` |
+| pg_dump 备份文件 | `/home/nio/backups/sub2api_prod_pre_payment_b2_order_zero_amount_hotfix_20260502-032144.sql`，950M，权限 `600` |
+| 根因 | 生产用户 `id=3` 的旧订单 `id=55` 在 DB 中 `amount=0.00`、`pay_amount=0.00`；后端直接返回 ent `PaymentOrder`，金额字段 JSON tag 带 `omitempty`，导致 API 响应省略 `amount/pay_amount/fee_rate/refund_amount`；前端订单表对 `pay_amount` 执行 `toFixed(2)` 时遇到 `undefined`，表格渲染中断，表现为分页显示 9 条但表体空白 |
+| 变更范围 | `sanitizePaymentOrderForResponse` 返回 map 并显式补齐 `amount`、`pay_amount`、`fee_rate`、`refund_amount` 的 0 值；继续移除 `provider_snapshot`；新增单测覆盖 0 金额旧订单响应 |
+| 本地验证 | `go test -tags unit -count=1 ./internal/handler -run TestSanitizePaymentOrderForResponseKeepsZeroMoneyFields` passed；`go test -tags unit -count=1 ./internal/handler ./internal/server/routes -run 'Test.*Payment\|TestSanitizePaymentOrderForResponseKeepsZeroMoneyFields\|Test.*Order'` passed；`go test -count=1 ./internal/payment ./internal/service -run 'Test.*Payment\|Test.*Wechat\|Test.*WeChat\|Test.*Provider\|Test.*Order\|Test.*Refund\|Test.*Fulfillment\|Test.*Config\|Test.*Resume\|Test.*Visible\|Test.*Webhook'` passed；`go test -count=1 ./internal/handler ./internal/server/routes ./internal/payment ./internal/service` passed after rerun outside sandbox because httptest needs local port binding；`git diff --check` passed |
+| 部署命令 | `git fetch origin worktree-payment-b2 && git merge --ff-only origin/worktree-payment-b2 && bash deploy/deploy-server.sh prod` |
+| HTTP /health | `https://router.nanafox.com/health` 返回 `{"status":"ok"}` |
+| 容器状态 | `sub2api-prod` healthy，当前服务器工作树 `6518510b` |
+| 生产 API 验证 | `GET /api/v1/payment/orders/my?page=1&page_size=20` 中订单 `id=55` 已返回 `{"amount":0,"pay_amount":0,"fee_rate":0,"refund_amount":0}` |
+| 日志扫描 | `docker logs --tail 80 sub2api-prod` 中 `/api/v1/payment/orders/my` HTTP 200，无 panic/fatal/error |
+| 备注 | 本次修复只改变用户侧订单 API 响应的 0 值字段稳定性，不修改订单数据、不修改支付创建/回调/套餐逻辑 |
+
 ## 2026-05-02 生产环境：订单表格与金额限额热修
 
 | 字段 | 值 |
