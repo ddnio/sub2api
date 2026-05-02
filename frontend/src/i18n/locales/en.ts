@@ -4536,6 +4536,15 @@ export default {
         apiBaseUrlPlaceholder: 'https://api.example.com',
         apiBaseUrlHint:
           'Used for "Use Key" and "Import to CC Switch" features. Leave empty to use current site URL.',
+        tablePreferencesTitle: 'Table Pagination Settings',
+        tablePreferencesDescription: 'Configure default page size and selectable page-size options for admin tables',
+        tableDefaultPageSize: 'Default Page Size',
+        tableDefaultPageSizeHint: 'Default number of rows per page for newly opened tables, from {min} to {max}',
+        tablePageSizeOptions: 'Page Size Options',
+        tablePageSizeOptionsPlaceholder: '10, 20, 50',
+        tablePageSizeOptionsHint: 'Separate options with commas. Values must be between {min} and {max}; the default page size is added automatically.',
+        tableDefaultPageSizeRangeError: 'Default page size must be between {min} and {max}',
+        tablePageSizeOptionsFormatError: 'Page size options must be comma-separated integers between {min} and {max}',
         customEndpoints: {
           title: 'Custom Endpoints',
           description: 'Add additional API endpoint URLs for users to quickly copy on the API Keys page',
