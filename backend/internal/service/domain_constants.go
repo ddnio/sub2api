@@ -51,10 +51,10 @@ const (
 
 // Admin adjustment type constants
 const (
-	AdjustmentTypeAdminBalance        = domain.AdjustmentTypeAdminBalance     // 管理员调整余额
-	AdjustmentTypeAdminConcurrency    = domain.AdjustmentTypeAdminConcurrency // 管理员调整并发数
-	AdjustmentTypeReferralInviter     = "ref_inviter"                         // 邀请人奖励
-	AdjustmentTypeReferralInvitee     = "ref_invitee"                         // 被邀请人奖励
+	AdjustmentTypeAdminBalance     = domain.AdjustmentTypeAdminBalance     // 管理员调整余额
+	AdjustmentTypeAdminConcurrency = domain.AdjustmentTypeAdminConcurrency // 管理员调整并发数
+	AdjustmentTypeReferralInviter  = "ref_inviter"                         // 邀请人奖励
+	AdjustmentTypeReferralInvitee  = "ref_invitee"                         // 被邀请人奖励
 )
 
 // Group subscription type constants
@@ -145,6 +145,8 @@ const (
 	SettingKeyHideCcsImportButton         = "hide_ccs_import_button"        // 是否隐藏 API Keys 页面的导入 CCS 按钮
 	SettingKeyPurchaseSubscriptionEnabled = "purchase_subscription_enabled" // 是否展示"购买订阅"页面入口
 	SettingKeyPurchaseSubscriptionURL     = "purchase_subscription_url"     // "购买订阅"页面 URL（作为 iframe src）
+	SettingKeyTableDefaultPageSize        = "table_default_page_size"       // 表格默认每页条数
+	SettingKeyTablePageSizeOptions        = "table_page_size_options"       // 表格每页条数选项（JSON 数组）
 	SettingKeyCustomMenuItems             = "custom_menu_items"             // 自定义菜单项（JSON 数组）
 	SettingKeyCustomEndpoints             = "custom_endpoints"              // 自定义端点列表（JSON 数组）
 	SettingKeyContactChannels             = "contact_channels"              // 悬浮联系按钮渠道列表（JSON 数组）
@@ -159,8 +161,8 @@ const (
 
 	// 推荐码
 	SettingKeyReferralEnabled       = "referral_enabled"        // 推荐码功能总开关
-	SettingKeyReferralInviterAmount = "referral_inviter_amount"  // 邀请人奖励金额
-	SettingKeyReferralInviteeAmount = "referral_invitee_amount"  // 被邀请人额外奖励金额
+	SettingKeyReferralInviterAmount = "referral_inviter_amount" // 邀请人奖励金额
+	SettingKeyReferralInviteeAmount = "referral_invitee_amount" // 被邀请人额外奖励金额
 
 	// Gemini 配额策略（JSON）
 	SettingKeyGeminiQuotaPolicy = "gemini_quota_policy"
