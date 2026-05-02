@@ -40,7 +40,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | Task 0 | Baseline verification | Complete | Not required; command evidence only | Passed with drift findings recorded | None |
 | Task 1 | Plan + tracking docs | Ready to commit | Passed after revisions | Doc review only | None |
 | Task 2 | Runtime safety: request decoding + scheduler | Request decoding sub-slice deployed; scheduler 2A implemented locally | Kimi no blockers for decoding; scheduler code review pending | httputil, handler, scheduler, payment tests passed | Test/prod images rebuilt for decoding; scheduler 2A not deployed |
-| Task 3 | OpenAI Responses / Codex compatibility | Task 3A deployed; Task 3B function_call_output name implemented locally | Pending | Task 3A passed; Task 3B tests pending | No DB/config/frontend impact expected |
+| Task 3 | OpenAI Responses / Codex compatibility | Task 3A and Task 3B deployed | Kimi no blockers for PR #22 and PR #24 | apicompat, targeted service, and payment tests passed | Test/prod images rebuilt; no DB backup because no DB/config/frontend impact |
 | Task 4 | Anthropic / Claude compatibility | Pending | Not started | Not started | TBD |
 | Task 5 | Admin/frontend low-risk UX | Pending | Not started | Not started | TBD |
 | Task 6 | Payment residual audit only | Pending | Not started | Not started | TBD |
@@ -248,6 +248,29 @@ Accepted deployment-impacting changes:
 - Customer-facing changelog/API note required: no
 - Rollback notes: revert the scheduler sub-slice and redeploy; no DB rollback. Redis old snapshot keys expire automatically; if emergency cleanup is needed, inspect `sched:*` keys before deleting.
 
+### Chat Completions to Responses tool output name
+
+- Slice and commit: Task 3B, `23e4c054 sync(openai): include tool output names`, merged via PR #24 as `3bfd5fb7 Merge PR #24: include tool output names`
+- What changed: Chat Completions to Responses conversion now pre-scans assistant `tool_calls` to infer `tool_call_id -> function_name` and includes the inferred `name` on role `tool` `function_call_output` items.
+- Scope split evidence: only the small `apicompat` tool-output-name fix from `f6fcafa9` was ported; stream pre-output failover and WebSocket continuation candidates remain HOLD because they affect failover, account stickiness, and connection reuse.
+- Migration files added or changed: none
+- Ent schema or generated-code impact: none
+- New config keys, setting names, or env vars: none
+- New frontend `localStorage` keys: none
+- External API / customer-facing behavior change: improves Chat Completions compatibility for multi-turn tool-call conversations forwarded through Responses; existing fallback behavior is preserved when the function name cannot be inferred.
+- Fresh install affected: no schema/config impact expected
+- Existing DB upgrade affected: no DB impact expected
+- Required backup command: not required; no test or production DB backup was taken because this slice has no migration, schema, config, env var, frontend localStorage, or data change.
+- Docker image rebuild required: yes
+- Safe for rolling deploy: yes
+- Expected downtime window: normal rolling restart only
+- Monitoring/alerting impact: watch OpenAI Chat Completions and Responses upstream 400/502 rates for tool-call conversations.
+- Exact local verification: `go test -count=1 ./internal/pkg/apicompat`, targeted service tests for `Codex|Tool|OAuth|Responses|ChatCompletions`, and `go test -count=1 ./internal/payment` passed.
+- Exact test environment verification: deployed to `sub2api-test` on 2026-05-02 from `origin/main` at `3bfd5fb7`; container was healthy on `127.0.0.1:8081`; local `/health` returned `{"status":"ok"}`; unauthenticated `/v1/models` returned HTTP 401 as expected; post-deploy severe log check found no `panic`, `fatal`, `error`, `migration`, `failed`, `traceback`, or `异常`.
+- Exact production environment verification: deployed to `sub2api-prod` on 2026-05-02 from `origin/main` at `3bfd5fb7`; container was healthy on `127.0.0.1:8080`; local `/health` returned `{"status":"ok"}`; unauthenticated `/v1/models` returned HTTP 401 as expected; post-deploy severe log check found no `panic`, `fatal`, `error`, `migration`, `failed`, `traceback`, or `异常`.
+- Customer-facing changelog/API note required: no
+- Rollback notes: revert PR #24 / commit `23e4c054` and redeploy; no DB rollback.
+
 When a slice changes migrations, config defaults, service startup behavior, payment behavior, or externally visible routes, record:
 
 - slice and commit
@@ -293,6 +316,7 @@ For each deployment-impacting slice, record:
 | 2026-05-02 | Kimi | Request body decoding code diff | No blockers; suggested direct dependency, typed limit error, extra gzip tests, comment update | Addressed suggestions and re-ran tests |
 | 2026-05-02 | Kimi | Final request body decoding diff | No blockers | Commit after recording deployment note |
 | 2026-05-02 | Kimi | PR #22 OpenAI/Codex OAuth request normalization | No blockers | Merge and deploy test/prod; note comment/test edge cases as non-blocking |
+| 2026-05-02 | Kimi | PR #24 Chat Completions to Responses tool output name | No blockers | Merge and deploy test/prod; optional follow-up tests for unmatched tool IDs and array-content name assertion |
 
 ## Test Deployment Log
 
@@ -408,6 +432,42 @@ docker logs --since 5m sub2api-test 2>&1 | egrep "\t(ERROR|FATAL|PANIC)\t|panic|
 # no output
 ```
 
+### 2026-05-02 Chat Completions to Responses Tool Output Name
+
+- Host: `108.160.133.141`
+- Environment: `test`
+- Branch: `main`
+- Commit deployed: `3bfd5fb7 Merge PR #24: include tool output names`
+- Runtime change: `23e4c054 sync(openai): include tool output names`
+- Backup: not taken; this slice has no migration, schema, config, env var, frontend localStorage, or data change.
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+bash deploy/deploy-server.sh test
+```
+
+- Container result: `sub2api-test` healthy on `127.0.0.1:8081->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8081/health
+# {"status":"ok"}
+
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8081/v1/models
+# 401
+```
+
+- Log check:
+
+```bash
+docker logs --since 2m sub2api-test 2>&1 | egrep -i "panic|fatal|error|migration|failed|traceback|异常" || true
+# no output
+```
+
 ## Production Deployment Log
 
 ### 2026-05-02 Runtime Request Body Decoding
@@ -519,6 +579,41 @@ curl -fsS https://router.nanafox.com/health
 
 ```bash
 docker logs --since 5m sub2api-prod 2>&1 | egrep "\t(ERROR|FATAL|PANIC)\t|panic|POSTCHECK FAILED|PREFLIGHT FAILED|migration failed" || true
+# no output
+```
+
+### 2026-05-02 Chat Completions to Responses Tool Output Name
+
+- Host: `108.160.133.141`
+- Environment: `prod`
+- Branch: `main`
+- Commit deployed: `3bfd5fb7 Merge PR #24: include tool output names`
+- Runtime change: `23e4c054 sync(openai): include tool output names`
+- Backup: not taken; this slice has no migration, schema, config, env var, frontend localStorage, or data change.
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git checkout main
+git pull --ff-only origin main
+bash deploy/deploy-server.sh prod
+```
+
+- Container result: `sub2api-prod` healthy on `127.0.0.1:8080->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8080/health
+# {"status":"ok"}
+
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/v1/models
+# 401
+```
+
+- Log check:
+
+```bash
+docker logs --since 2m sub2api-prod 2>&1 | egrep -i "panic|fatal|error|migration|failed|traceback|异常" || true
 # no output
 ```
 
