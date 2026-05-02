@@ -86,6 +86,23 @@ type codexTransformResult struct {
 	PromptCacheKey  string
 }
 
+var openAIChatGPTInternalUnsupportedFields = []string{
+	"user",
+	"metadata",
+	"prompt_cache_retention",
+	"safety_identifier",
+	"stream_options",
+}
+
+var openAICodexOAuthUnsupportedFields = append([]string{
+	"max_output_tokens",
+	"max_completion_tokens",
+	"temperature",
+	"top_p",
+	"frequency_penalty",
+	"presence_penalty",
+}, openAIChatGPTInternalUnsupportedFields...)
+
 func applyCodexOAuthTransform(reqBody map[string]any, isCodexCLI bool, isCompact bool) codexTransformResult {
 	result := codexTransformResult{}
 	// 工具续链需求会影响存储策略与 input 过滤逻辑。
@@ -126,23 +143,8 @@ func applyCodexOAuthTransform(reqBody map[string]any, isCodexCLI bool, isCompact
 		}
 	}
 
-	// Strip parameters unsupported by codex models via the Responses API.
-	for _, key := range []string{
-		"max_output_tokens",
-		"max_completion_tokens",
-		"temperature",
-		"top_p",
-		"frequency_penalty",
-		"presence_penalty",
-		// prompt_cache_retention is a newer Responses API parameter (cache TTL).
-		// The ChatGPT internal Codex endpoint rejects it with
-		// "Unsupported parameter: prompt_cache_retention". Defense-in-depth
-		// for any OAuth path that reaches this transform — the Cursor
-		// Responses-shape short-circuit in ForwardAsChatCompletions strips
-		// it earlier too, but we keep this line so other OAuth callers are
-		// equally protected.
-		"prompt_cache_retention",
-	} {
+	// Strip parameters unsupported by ChatGPT internal Codex endpoint.
+	for _, key := range openAICodexOAuthUnsupportedFields {
 		if _, ok := reqBody[key]; ok {
 			delete(reqBody, key)
 			result.Modified = true
@@ -174,9 +176,7 @@ func applyCodexOAuthTransform(reqBody map[string]any, isCodexCLI bool, isCompact
 			if name, ok := fcObj["name"].(string); ok && strings.TrimSpace(name) != "" {
 				reqBody["tool_choice"] = map[string]any{
 					"type": "function",
-					"function": map[string]any{
-						"name": name,
-					},
+					"name": name,
 				}
 			}
 		}
@@ -249,8 +249,37 @@ func normalizeCodexToolChoice(reqBody map[string]any) bool {
 		return false
 	}
 	choiceType := strings.TrimSpace(firstNonEmptyString(choiceMap["type"]))
-	if choiceType == "" || codexToolsContainType(reqBody["tools"], choiceType) {
+	if choiceType == "" {
 		return false
+	}
+	modified := false
+	if choiceType == "function" {
+		name := strings.TrimSpace(firstNonEmptyString(choiceMap["name"]))
+		if name == "" {
+			if function, ok := choiceMap["function"].(map[string]any); ok {
+				name = strings.TrimSpace(firstNonEmptyString(function["name"]))
+			}
+		}
+		if name == "" {
+			reqBody["tool_choice"] = "auto"
+			return true
+		}
+		if strings.TrimSpace(firstNonEmptyString(choiceMap["name"])) != name {
+			choiceMap["name"] = name
+			modified = true
+		}
+		if _, ok := choiceMap["function"]; ok {
+			delete(choiceMap, "function")
+			modified = true
+		}
+		if !codexToolsContainFunctionName(reqBody["tools"], name) {
+			reqBody["tool_choice"] = "auto"
+			return true
+		}
+		return modified
+	}
+	if codexToolsContainType(reqBody["tools"], choiceType) {
+		return modified
 	}
 	reqBody["tool_choice"] = "auto"
 	return true
@@ -267,6 +296,33 @@ func codexToolsContainType(rawTools any, toolType string) bool {
 			continue
 		}
 		if strings.TrimSpace(firstNonEmptyString(tool["type"])) == toolType {
+			return true
+		}
+	}
+	return false
+}
+
+func codexToolsContainFunctionName(rawTools any, name string) bool {
+	tools, ok := rawTools.([]any)
+	if !ok || strings.TrimSpace(name) == "" {
+		return false
+	}
+	normalizedName := strings.TrimSpace(name)
+	for _, rawTool := range tools {
+		tool, ok := rawTool.(map[string]any)
+		if !ok {
+			continue
+		}
+		if strings.TrimSpace(firstNonEmptyString(tool["type"])) != "function" {
+			continue
+		}
+		toolName := strings.TrimSpace(firstNonEmptyString(tool["name"]))
+		if toolName == "" {
+			if function, ok := tool["function"].(map[string]any); ok {
+				toolName = strings.TrimSpace(firstNonEmptyString(function["name"]))
+			}
+		}
+		if toolName == normalizedName {
 			return true
 		}
 	}
@@ -640,6 +696,13 @@ func filterCodexInput(input []any, preserveReferences bool) []any {
 			continue
 		}
 		typ, _ := m["type"].(string)
+
+		// chatgpt.com codex backend (OAuth path) does not persist reasoning
+		// items because applyCodexOAuthTransform forces store=false. Any rs_*
+		// reference replayed in input is guaranteed to 404 upstream.
+		if typ == "reasoning" {
+			continue
+		}
 
 		// 仅修正真正的 tool/function call 标识，避免误改普通 message/reasoning id；
 		// 若 item_reference 指向 legacy call_* 标识，则仅修正该引用本身。

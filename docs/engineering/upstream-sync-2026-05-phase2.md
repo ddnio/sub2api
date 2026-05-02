@@ -40,7 +40,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | Task 0 | Baseline verification | Complete | Not required; command evidence only | Passed with drift findings recorded | None |
 | Task 1 | Plan + tracking docs | Ready to commit | Passed after revisions | Doc review only | None |
 | Task 2 | Runtime safety: request decoding + scheduler | Request decoding sub-slice deployed; scheduler 2A implemented locally | Kimi no blockers for decoding; scheduler code review pending | httputil, handler, scheduler, payment tests passed | Test/prod images rebuilt for decoding; scheduler 2A not deployed |
-| Task 3 | OpenAI Responses / Codex compatibility | Pending | Not started | Not started | TBD |
+| Task 3 | OpenAI Responses / Codex compatibility | In progress: Codex OAuth request normalization sub-batch implemented locally | Pending | Targeted Codex transform tests passed | No DB/config/frontend impact expected |
 | Task 4 | Anthropic / Claude compatibility | Pending | Not started | Not started | TBD |
 | Task 5 | Admin/frontend low-risk UX | Pending | Not started | Not started | TBD |
 | Task 6 | Payment residual audit only | Pending | Not started | Not started | TBD |
@@ -95,6 +95,59 @@ These upstream areas are intentionally held for later phases unless separately a
   - separate correctness hunks from upstream debug-only log additions
   - record account-selection, wait-plan, failover, and sticky-session TTL behavior changes
   - Kimi review the plan before editing
+
+### Task 3A OpenAI/Codex Request Normalization Batch
+
+Batching decision: this task intentionally groups small, same-path OpenAI/Codex compatibility fixes instead of one PR per upstream patch.
+
+Missing-fix matrix:
+
+| Upstream source | Area | Local state | Action | Notes |
+| --- | --- | --- | --- | --- |
+| `7452fad8` / PR #2068 | Drop `reasoning` items from Codex OAuth `/v1/responses` input | Missing | Port | OAuth transform forces `store=false`; replayed `rs_*` reasoning items are not persisted upstream and can 404. |
+| `9fe02bba` / PR #2005 | Strip ChatGPT internal unsupported passthrough fields | Partial | Port | Local stripped sampling/max-token fields and `prompt_cache_retention`; missing `user`, `metadata`, `safety_identifier`, and `stream_options`. |
+| `04b2866f` / PR #2058 | Responses-compatible flat function `tool_choice` | Partial | Port Codex transform only | `backend/internal/pkg/apicompat` already has flat conversion locally; Codex OAuth transform still emitted/accepted nested `function.name`. |
+| `5e54d492` | Codex transform test assertion lint | Missing as test does not exist locally yet | Port with new test | Use two-value type assertion in the new reasoning-item regression test. |
+| `dac6e520` / PR #1960 | Responses stream keepalive during pre-output failover | Not directly portable | HOLD | Current fork lacks the upstream `clientOutputStarted` / pre-output failover buffering structure this patch relies on; needs a separate stream failover batch. |
+| `094e1171` | Infer previous response for item references in WebSocket ingress | Appears partially present in local WS forwarder | HOLD for separate WS batch | Touches WebSocket continuation/account stickiness; separate from request normalization. |
+
+Current local implementation:
+
+- Extend Codex OAuth unsupported-field stripping to remove `user`, `metadata`, `safety_identifier`, and `stream_options`.
+- Convert legacy `function_call: {"name": ...}` and nested `tool_choice: {"type":"function","function":{"name":...}}` to Responses flat format `{"type":"function","name":...}`.
+- Downgrade function `tool_choice` to `auto` when the chosen function name is absent from `tools`.
+- Drop `type:"reasoning"` input items on the Codex OAuth path while preserving non-reasoning continuation items.
+
+Impact:
+
+- Migration files added or changed: none
+- Ent schema or generated-code impact: none
+- New config keys, setting names, or env vars: none
+- New frontend `localStorage` keys: none
+- External API / customer-facing behavior change: narrows upstream request payloads for Codex OAuth compatibility; no local response schema change.
+- Fresh install affected: no
+- Existing DB upgrade affected: no
+- Required backup command: not required by schema or data impact
+- Docker image rebuild required: yes for deployment
+- Safe for rolling deploy: yes
+- Expected downtime window: normal rolling restart only
+- Monitoring/alerting impact: watch OpenAI/Codex OAuth 400/502 rates and request-normalization related upstream errors.
+- Rollback notes: revert the Task 3A commit and redeploy; no DB rollback.
+
+Verification so far:
+
+```bash
+cd backend
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/service -run 'TestApplyCodexOAuthTransform|TestFilterCodexInput'
+# ok github.com/Wei-Shaw/sub2api/internal/service
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/pkg/apicompat ./internal/service -run 'Codex|Tool|OAuth|Responses'
+# ok github.com/Wei-Shaw/sub2api/internal/pkg/apicompat
+# ok github.com/Wei-Shaw/sub2api/internal/service
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/payment
+# ok github.com/Wei-Shaw/sub2api/internal/payment
+```
 
 ## Deployment Notes
 
