@@ -1,5 +1,25 @@
 # Payment B-2 部署记录
 
+## 2026-05-02 生产环境：订单表格与金额限额热修
+
+| 字段 | 值 |
+|---|---|
+| 环境 | prod |
+| 部署时间 | 2026-05-02 10:27-10:32 Asia/Shanghai |
+| 部署人 | Codex |
+| 部署分支/commit | `worktree-payment-b2` / `4076fd09` |
+| pg_dump 备份文件 | `/home/nio/backups/sub2api_prod_pre_payment_b2_table_hotfix_20260502-022748.sql`，950M，权限 `600` |
+| 变更范围 | 修复通用 `DataTable` 在桌面虚拟滚动无可见项时出现“分页有 total 但表体空白”的问题；补齐 payment admin 套餐有效期 `day/week/month` 单数翻译；生产 wxpay provider `singleMin` 同步为 `0.1` |
+| 本地验证 | `pnpm exec vitest run src/components/common/__tests__/DataTable.spec.ts src/i18n/__tests__/paymentAdminLocales.spec.ts` passed；`pnpm exec vue-tsc --noEmit` passed；`pnpm build` passed；`git diff --check` passed |
+| 部署命令 | `bash deploy/deploy-server.sh prod` |
+| HTTP /health | `http://127.0.0.1:8080/health` 返回 `{"status":"ok"}` |
+| 容器状态 | `sub2api-prod` healthy |
+| 静态前端验证 | `/purchase` 入口资源已切换为 `/assets/index-HWdbZwIh.js`、`/assets/index-sWXccaJK.css` |
+| Provider 配置结果 | `wxpay-default` limits 为 `{"wxpay":{"singleMax":10000,"singleMin":0.1}}`；全局 `MIN_RECHARGE_AMOUNT=0.10`、`MAX_RECHARGE_AMOUNT=10000.00` |
+| 数据完整性验证 | `bad_amount=0`、`duplicate_out_trade_no=0` |
+| 日志扫描 | `docker logs --tail 260 sub2api-prod` 无 payment/migration/panic/fatal 相关错误；Gemini Drive API 403 为非支付模块告警 |
+| 异常 / 备注 | 部署 shell 会话输出未正常结束，但服务器无残留 `deploy-server.sh` / `docker build` 进程，生产容器和镜像均已更新 |
+
 ## 2026-05-02 生产环境：final provider review gaps 最终版部署
 
 | 字段 | 值 |
