@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -239,6 +240,7 @@ type UpdateAccountInput struct {
 // BulkUpdateAccountsInput describes the payload for bulk updating accounts.
 type BulkUpdateAccountsInput struct {
 	AccountIDs     []int64
+	Filters        *BulkUpdateAccountFilters
 	Name           string
 	ProxyID        *int64
 	Concurrency    *int
@@ -253,6 +255,15 @@ type BulkUpdateAccountsInput struct {
 	// SkipMixedChannelCheck skips the mixed channel risk check when binding groups.
 	// This should only be set when the caller has explicitly confirmed the risk.
 	SkipMixedChannelCheck bool
+}
+
+type BulkUpdateAccountFilters struct {
+	Platform    string
+	Type        string
+	Status      string
+	Group       string
+	Search      string
+	PrivacyMode string
 }
 
 // BulkUpdateAccountResult captures the result for a single account update.
@@ -1723,6 +1734,14 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 // BulkUpdateAccounts updates multiple accounts in one request.
 // It merges credentials/extra keys instead of overwriting the whole object.
 func (s *adminServiceImpl) BulkUpdateAccounts(ctx context.Context, input *BulkUpdateAccountsInput) (*BulkUpdateAccountsResult, error) {
+	if len(input.AccountIDs) == 0 && input.Filters != nil {
+		accountIDs, err := s.resolveBulkUpdateTargetIDs(ctx, input.Filters)
+		if err != nil {
+			return nil, err
+		}
+		input.AccountIDs = accountIDs
+	}
+
 	result := &BulkUpdateAccountsResult{
 		SuccessIDs: make([]int64, 0, len(input.AccountIDs)),
 		FailedIDs:  make([]int64, 0, len(input.AccountIDs)),
@@ -1836,6 +1855,63 @@ func (s *adminServiceImpl) BulkUpdateAccounts(ctx context.Context, input *BulkUp
 	}
 
 	return result, nil
+}
+
+func (s *adminServiceImpl) resolveBulkUpdateTargetIDs(ctx context.Context, filters *BulkUpdateAccountFilters) ([]int64, error) {
+	if filters == nil {
+		return nil, nil
+	}
+	filters.Platform = strings.TrimSpace(filters.Platform)
+	filters.Type = strings.TrimSpace(filters.Type)
+	filters.Status = strings.TrimSpace(filters.Status)
+	filters.Group = strings.TrimSpace(filters.Group)
+	filters.Search = strings.TrimSpace(filters.Search)
+	filters.PrivacyMode = strings.TrimSpace(filters.PrivacyMode)
+	if filters.Platform == "" && filters.Type == "" && filters.Status == "" &&
+		filters.Group == "" && filters.Search == "" && filters.PrivacyMode == "" {
+		return nil, fmt.Errorf("account_ids or filters is required")
+	}
+
+	groupID := int64(0)
+	switch filters.Group {
+	case "":
+	case "ungrouped":
+		groupID = AccountListGroupUngrouped
+	default:
+		parsedGroupID, err := strconv.ParseInt(strings.TrimSpace(filters.Group), 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid group filter: %w", err)
+		}
+		groupID = parsedGroupID
+	}
+
+	const pageSize = 500
+	page := 1
+	accountIDs := make([]int64, 0, pageSize)
+
+	for {
+		accounts, total, err := s.ListAccounts(
+			ctx,
+			page,
+			pageSize,
+			filters.Platform,
+			filters.Type,
+			filters.Status,
+			filters.Search,
+			groupID,
+			filters.PrivacyMode,
+		)
+		if err != nil {
+			return nil, err
+		}
+		for _, account := range accounts {
+			accountIDs = append(accountIDs, account.ID)
+		}
+		if int64(len(accountIDs)) >= total || len(accounts) == 0 {
+			return accountIDs, nil
+		}
+		page++
+	}
 }
 
 func (s *adminServiceImpl) DeleteAccount(ctx context.Context, id int64) error {

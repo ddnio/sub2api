@@ -307,7 +307,8 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: false,
       requiresAdmin: false,
       title: 'Stripe Payment',
-      titleKey: 'payment.stripePay'
+      titleKey: 'payment.stripePay',
+      requiresPayment: false
     }
   },
   {
@@ -317,7 +318,8 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: false,
       requiresAdmin: false,
-      title: 'Payment'
+      title: 'Payment',
+      requiresPayment: false
     }
   },
   {
