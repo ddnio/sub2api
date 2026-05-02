@@ -39,7 +39,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | --- | --- | --- | --- | --- | --- |
 | Task 0 | Baseline verification | Complete | Not required; command evidence only | Passed with drift findings recorded | None |
 | Task 1 | Plan + tracking docs | Ready to commit | Passed after revisions | Doc review only | None |
-| Task 2 | Runtime safety: request decoding + scheduler | Request decoding sub-slice deployed to test and production; scheduler split planned | Kimi no blockers for decoding; scheduler plan pending review | httputil, handler, payment tests, test/prod smoke passed | Test/prod images rebuilt for decoding; scheduler will be deployment-impacting |
+| Task 2 | Runtime safety: request decoding + scheduler | Request decoding sub-slice deployed; scheduler 2A implemented locally | Kimi no blockers for decoding; scheduler code review pending | httputil, handler, scheduler, payment tests passed | Test/prod images rebuilt for decoding; scheduler 2A not deployed |
 | Task 3 | OpenAI Responses / Codex compatibility | Pending | Not started | Not started | TBD |
 | Task 4 | Anthropic / Claude compatibility | Pending | Not started | Not started | TBD |
 | Task 5 | Admin/frontend low-risk UX | Pending | Not started | Not started | TBD |
@@ -121,6 +121,28 @@ Accepted deployment-impacting changes:
 - Exact production environment verification: deployed to `sub2api-prod` on 2026-05-02; local and public health checks returned `{"status":"ok"}`; gzip-compressed `/v1/responses` with model `gpt-5.5` returned HTTP 200; gzip body decompressing above 64 MiB returned HTTP 413 with `Request body too large, limit is 64MB`; post-deploy severe log check found no `FATAL`, `PANIC`, `POSTCHECK FAILED`, or `PREFLIGHT FAILED`.
 - Customer-facing changelog/API note required: optional; useful if announcing compressed request-body support
 - Rollback notes: revert the request decoding commit and redeploy; no DB rollback
+
+### Scheduler snapshot race fix, CAS grace TTL, and rebuild lock release
+
+- Slice and commit: Task 2A scheduler sub-slice, commit pending
+- What changed: scheduler snapshot activation uses Redis Lua CAS to avoid active-version rollback; old scheduler snapshot keys receive a 60-second grace TTL instead of immediate deletion; scheduler rebuild locks are explicitly released after rebuild completion.
+- Scope split evidence: backend subset from `8bf2a7b8` applied independently; `frontend/src/utils/usageLoadQueue.ts` is absent in this fork and was skipped; sticky-session account-selection changes from `733627cf` remain held for Task 2B.
+- Migration files added or changed: none
+- Ent schema or generated-code impact: none
+- New config keys, setting names, or env vars: none
+- New frontend `localStorage` keys: none
+- External API / customer-facing behavior change: no request/response shape change; account selection cache behavior may become more stable during scheduler snapshot rebuilds.
+- Fresh install affected: no schema/config impact expected
+- Existing DB upgrade affected: no DB impact expected
+- Required backup command: not required by schema; take a DB backup before deployment if deploying with normal production gate
+- Docker image rebuild required: yes
+- Safe for rolling deploy: yes, assuming Redis is shared only by the active deployment and no mixed-version rollback is in progress
+- Expected downtime window: normal rolling restart only
+- Monitoring/alerting impact: watch gateway 5xx, scheduler cache miss/fallback logs, account selection anomalies, and Redis key growth for `sched:*:v*` during the 60-second grace window
+- Exact local verification: repository compile-only run passed; repository integration scheduler tests passed; repository integration scheduler tests passed with `-race`; service scheduler/sticky tests passed after allowing `httptest` listeners; handler warmup/scheduler target tests passed; payment package and payment-related service regressions passed.
+- Exact test environment verification: pending
+- Customer-facing changelog/API note required: no
+- Rollback notes: revert the scheduler sub-slice and redeploy; no DB rollback. Redis old snapshot keys expire automatically; if emergency cleanup is needed, inspect `sched:*` keys before deleting.
 
 When a slice changes migrations, config defaults, service startup behavior, payment behavior, or externally visible routes, record:
 
