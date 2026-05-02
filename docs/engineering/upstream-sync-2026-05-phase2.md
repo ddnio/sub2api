@@ -60,8 +60,6 @@ These upstream areas are intentionally held for later phases unless separately a
 
 ## Deployment Notes
 
-No deployment-impacting change has been accepted in Phase 2 yet.
-
 Accepted deployment-impacting changes:
 
 ### Runtime request body decoding
