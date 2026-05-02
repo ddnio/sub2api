@@ -21,7 +21,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 - No direct merge from `upstream/main`.
 - Port small slices only.
 - Kimi review is required before committing each plan or code slice.
-- Production deployment is out of scope unless a separate deployment gate is approved.
+- Production deployment is out of scope unless a separate deployment gate is approved and recorded.
 - Payment-b2 is a protected baseline. Payment changes require proof that the upstream behavior is missing locally.
 - Slices should stay under about 300 changed lines and 5 touched files. Larger slices must be split or justified before review.
 - Every slice must record config, env var, migration, Ent, API contract, and frontend localStorage impact.
@@ -38,7 +38,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | --- | --- | --- | --- | --- | --- |
 | Task 0 | Baseline verification | Complete | Not required; command evidence only | Passed with drift findings recorded | None |
 | Task 1 | Plan + tracking docs | Ready to commit | Passed after revisions | Doc review only | None |
-| Task 2 | Runtime safety: request decoding + scheduler | Request decoding sub-slice deployed to test; scheduler pending | Kimi no blockers | httputil, handler, payment tests, test smoke passed | Test image rebuilt; no config or DB change |
+| Task 2 | Runtime safety: request decoding + scheduler | Request decoding sub-slice deployed to test and production; scheduler pending | Kimi no blockers | httputil, handler, payment tests, test/prod smoke passed | Test/prod images rebuilt; no config or DB change |
 | Task 3 | OpenAI Responses / Codex compatibility | Pending | Not started | Not started | TBD |
 | Task 4 | Anthropic / Claude compatibility | Pending | Not started | Not started | TBD |
 | Task 5 | Admin/frontend low-risk UX | Pending | Not started | Not started | TBD |
@@ -74,12 +74,13 @@ Accepted deployment-impacting changes:
 - External API / customer-facing behavior change: clients may now send compressed request bodies to existing gateway endpoints; oversized decompressed bodies receive existing 413 handling.
 - Fresh install affected: no
 - Existing DB upgrade affected: no
-- Required backup command: not required for this sub-slice
+- Required backup command: not required by schema; test and production DB backups were still taken before deployment
 - Docker image rebuild required: yes
 - Safe for rolling deploy: yes
 - Expected downtime window: normal rolling restart only
 - Monitoring/alerting impact: watch 400/413 rates on gateway routes after deploy
 - Exact test environment verification: deployed to `sub2api-test` on 2026-05-02; local health and public health checks returned `{"status":"ok"}`; gzip-compressed `/v1/responses` request returned HTTP 200; gzip body decompressing above 64 MiB returned HTTP 413 with `Request body too large, limit is 64MB`; post-deploy log-level check found no `ERROR`, `FATAL`, `PANIC`, `POSTCHECK FAILED`, or `PREFLIGHT FAILED`.
+- Exact production environment verification: deployed to `sub2api-prod` on 2026-05-02; local and public health checks returned `{"status":"ok"}`; gzip-compressed `/v1/responses` with model `gpt-5.5` returned HTTP 200; gzip body decompressing above 64 MiB returned HTTP 413 with `Request body too large, limit is 64MB`; post-deploy severe log check found no `FATAL`, `PANIC`, `POSTCHECK FAILED`, or `PREFLIGHT FAILED`.
 - Customer-facing changelog/API note required: optional; useful if announcing compressed request-body support
 - Rollback notes: revert the request decoding commit and redeploy; no DB rollback
 
@@ -165,6 +166,45 @@ curl -fsS https://router-test.nanafox.com/health
 ```bash
 docker logs --since 5m sub2api-test 2>&1 | egrep "\t(ERROR|FATAL|PANIC)\t|panic|POSTCHECK FAILED|PREFLIGHT FAILED" || true
 # no output
+```
+
+## Production Deployment Log
+
+### 2026-05-02 Runtime Request Body Decoding
+
+- Host: `108.160.133.141`
+- Environment: `prod`
+- Branch: `feature/upstream-sync-2026-05-phase2`
+- Commit deployed: `e43c2c0a docs(upstream-sync): clarify deployment note status`; runtime change is `0f7a2042 sync(runtime): decode compressed request bodies`
+- Backup: `/home/nio/backups/sub2api_prod_pre_runtime_decode_20260502-082636.sql` (969M)
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git fetch origin
+git checkout feature/upstream-sync-2026-05-phase2
+git pull --ff-only origin feature/upstream-sync-2026-05-phase2
+bash deploy/deploy-server.sh prod
+```
+
+- Container result: `sub2api-prod` healthy on `127.0.0.1:8080->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8080/health
+curl -fsS https://router.nanafox.com/health
+# {"status":"ok"}
+```
+
+- Compressed request smoke:
+  - gzip `/v1/responses` with model `gpt-5.5` returned HTTP 200.
+  - gzip request that decompresses above 64 MiB returned HTTP 413 and `Request body too large, limit is 64MB`.
+  - gzip `/v1/responses` with model `gpt-4.1-mini` returned HTTP 502 because production mapped it to `gpt-5.1`, which the selected upstream account rejected; logs showed this as an upstream model/account configuration issue, not a request decoding failure.
+- Log check:
+
+```bash
+docker logs --since 10m sub2api-prod 2>&1 | egrep "\t(ERROR|FATAL|PANIC)\t|panic|POSTCHECK FAILED|PREFLIGHT FAILED" || true
+# only the expected upstream 400/502 from the gpt-4.1-mini smoke appeared; no panic/startup/preflight failure
 ```
 
 ## Task 0 Baseline Results
