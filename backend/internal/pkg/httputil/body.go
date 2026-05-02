@@ -2,16 +2,25 @@ package httputil
 
 import (
 	"bytes"
+	"compress/gzip"
+	"compress/zlib"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"strings"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 const (
 	requestBodyReadInitCap    = 512
 	requestBodyReadMaxInitCap = 1 << 20
+	maxDecompressedBodySize   = 64 << 20
 )
 
 // ReadRequestBodyWithPrealloc reads request body with preallocated buffer based on content length.
+// It also decodes supported Content-Encoding values and updates request headers after decoding.
 func ReadRequestBodyWithPrealloc(req *http.Request) ([]byte, error) {
 	if req == nil || req.Body == nil {
 		return nil, nil
@@ -33,5 +42,61 @@ func ReadRequestBodyWithPrealloc(req *http.Request) ([]byte, error) {
 	if _, err := io.Copy(buf, req.Body); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+	raw := buf.Bytes()
+
+	enc := strings.ToLower(strings.TrimSpace(req.Header.Get("Content-Encoding")))
+	if enc == "" || enc == "identity" {
+		return raw, nil
+	}
+
+	decoded, err := decompressRequestBody(enc, raw)
+	if err != nil {
+		return nil, fmt.Errorf("decode Content-Encoding %q: %w", enc, err)
+	}
+
+	req.Header.Del("Content-Encoding")
+	req.Header.Del("Content-Length")
+	req.ContentLength = int64(len(decoded))
+
+	return decoded, nil
+}
+
+func decompressRequestBody(encoding string, raw []byte) ([]byte, error) {
+	switch encoding {
+	case "zstd":
+		dec, err := zstd.NewReader(bytes.NewReader(raw))
+		if err != nil {
+			return nil, err
+		}
+		defer dec.Close()
+		return readAllLimited(dec, maxDecompressedBodySize)
+	case "gzip", "x-gzip":
+		gr, err := gzip.NewReader(bytes.NewReader(raw))
+		if err != nil {
+			return nil, err
+		}
+		defer func() { _ = gr.Close() }()
+		return readAllLimited(gr, maxDecompressedBodySize)
+	case "deflate":
+		zr, err := zlib.NewReader(bytes.NewReader(raw))
+		if err != nil {
+			return nil, err
+		}
+		defer func() { _ = zr.Close() }()
+		return readAllLimited(zr, maxDecompressedBodySize)
+	default:
+		return nil, errors.New("unsupported Content-Encoding")
+	}
+}
+
+func readAllLimited(r io.Reader, limit int64) ([]byte, error) {
+	limited := io.LimitReader(r, limit+1)
+	body, err := io.ReadAll(limited)
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(body)) > limit {
+		return nil, &http.MaxBytesError{Limit: limit}
+	}
+	return body, nil
 }
