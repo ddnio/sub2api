@@ -118,7 +118,7 @@ Accepted deployment-impacting changes:
 - Expected downtime window: normal rolling restart only
 - Monitoring/alerting impact: watch 400/413 rates on gateway routes after deploy
 - Exact test environment verification: deployed to `sub2api-test` on 2026-05-02; local health and public health checks returned `{"status":"ok"}`; gzip-compressed `/v1/responses` request returned HTTP 200; gzip body decompressing above 64 MiB returned HTTP 413 with `Request body too large, limit is 64MB`; post-deploy log-level check found no `ERROR`, `FATAL`, `PANIC`, `POSTCHECK FAILED`, or `PREFLIGHT FAILED`.
-- Exact production environment verification: deployed to `sub2api-prod` on 2026-05-02; local and public health checks returned `{"status":"ok"}`; gzip-compressed `/v1/responses` with model `gpt-5.5` returned HTTP 200; gzip body decompressing above 64 MiB returned HTTP 413 with `Request body too large, limit is 64MB`; post-deploy severe log check found no `FATAL`, `PANIC`, `POSTCHECK FAILED`, or `PREFLIGHT FAILED`.
+- Exact production environment verification: deployed to `sub2api-prod` on 2026-05-02; local and public health checks returned `{"status":"ok"}`; gzip-compressed `/v1/responses` with model `gpt-5.5` returned HTTP 200; gzip body decompressing above 64 MiB returned HTTP 413 with `Request body too large, limit is 64MB`; post-deploy severe log checks found no `ERROR`, `FATAL`, `PANIC`, `POSTCHECK FAILED`, or `PREFLIGHT FAILED`.
 - Customer-facing changelog/API note required: optional; useful if announcing compressed request-body support
 - Rollback notes: revert the request decoding commit and redeploy; no DB rollback
 
@@ -134,13 +134,14 @@ Accepted deployment-impacting changes:
 - External API / customer-facing behavior change: no request/response shape change; account selection cache behavior may become more stable during scheduler snapshot rebuilds.
 - Fresh install affected: no schema/config impact expected
 - Existing DB upgrade affected: no DB impact expected
-- Required backup command: not required by schema; take a DB backup before deployment if deploying with normal production gate
+- Required backup command: not required by schema; no production DB backup was taken for this slice because it has no DB change and backup storage was already 5.4G
 - Docker image rebuild required: yes
 - Safe for rolling deploy: yes, assuming Redis is shared only by the active deployment and no mixed-version rollback is in progress
 - Expected downtime window: normal rolling restart only
 - Monitoring/alerting impact: watch gateway 5xx, scheduler cache miss/fallback logs, account selection anomalies, and Redis key growth for `sched:*:v*` during the 60-second grace window
 - Exact local verification: repository compile-only run passed; repository integration scheduler tests passed; repository integration scheduler tests passed with `-race`; service scheduler/sticky tests passed after allowing `httptest` listeners; handler warmup/scheduler target tests passed; payment package and payment-related service regressions passed.
 - Exact test environment verification: deployed to `sub2api-test` on 2026-05-02 from `origin/main` at `fe210978`; local health and public health checks returned `{"status":"ok"}`; gzip-compressed `/v1/responses` with model `gpt-5.5` returned HTTP 200; gzip body decompressing above 64 MiB returned HTTP 413 with `Request body too large, limit is 64MB`; Redis `sched:*` keys were present after startup; post-deploy severe log check found no `ERROR`, `FATAL`, `PANIC`, `POSTCHECK FAILED`, or `PREFLIGHT FAILED`.
+- Exact production environment verification: deployed to `sub2api-prod` on 2026-05-02 from `origin/main` at `0f8aeb4b`; no DB backup was taken because this slice has no migration/schema/data change; local and public health checks returned `{"status":"ok"}`; gzip-compressed `/v1/responses` with model `gpt-5.5` returned HTTP 200; gzip body decompressing above 64 MiB returned HTTP 413 with `Request body too large, limit is 64MB`; Redis `sched:*` keys were present after startup; post-deploy severe log check found no `ERROR`, `FATAL`, `PANIC`, `POSTCHECK FAILED`, or `PREFLIGHT FAILED`.
 - Customer-facing changelog/API note required: no
 - Rollback notes: revert the scheduler sub-slice and redeploy; no DB rollback. Redis old snapshot keys expire automatically; if emergency cleanup is needed, inspect `sched:*` keys before deleting.
 
@@ -304,6 +305,45 @@ curl -fsS https://router.nanafox.com/health
 ```bash
 docker logs --since 10m sub2api-prod 2>&1 | egrep "\t(ERROR|FATAL|PANIC)\t|panic|POSTCHECK FAILED|PREFLIGHT FAILED" || true
 # only the expected upstream 400/502 from the gpt-4.1-mini smoke appeared; no panic/startup/preflight failure
+```
+
+### 2026-05-02 Scheduler Snapshot Hardening
+
+- Host: `108.160.133.141`
+- Environment: `prod`
+- Branch: `main`
+- Commit deployed: `0f8aeb4b Merge PR #20: record scheduler test deploy`
+- Runtime change: `412340a3 sync(scheduler): harden snapshot activation`
+- Backup: not taken; this slice has no migration, schema, config, or data change. Disk before deploy was 81% used with 8.7G free and `/home/nio/backups` at 5.4G.
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+bash deploy/deploy-server.sh prod
+```
+
+- Container result: `sub2api-prod` healthy on `127.0.0.1:8080->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8080/health
+curl -fsS https://router.nanafox.com/health
+# {"status":"ok"}
+```
+
+- Compressed request smoke:
+  - gzip `/v1/responses` with model `gpt-5.5` returned HTTP 200.
+  - gzip request that decompresses above 64 MiB returned HTTP 413 and `Request body too large, limit is 64MB`.
+- Scheduler smoke:
+  - Redis `sched:*` keys were present after startup, including `sched:active:*`, `sched:ready:*`, `sched:ver:*`, versioned `sched:*:v*`, `sched:acc:*`, and `sched:meta:*`.
+- Log check:
+
+```bash
+docker logs --since 10m sub2api-prod 2>&1 | egrep "\t(ERROR|FATAL|PANIC)\t|panic|POSTCHECK FAILED|PREFLIGHT FAILED|migration failed|ERROR" || true
+# no output
 ```
 
 ## Task 0 Baseline Results
