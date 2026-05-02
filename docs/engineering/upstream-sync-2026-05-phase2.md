@@ -31,6 +31,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 - Backend protocol/API contract changes must land before frontend UX-only slices that depend on those shapes.
 - If a protocol slice changes a frontend-consumed response shape, either include the minimal frontend compatibility patch in the same reviewed slice or explicitly schedule it immediately after.
 - Scheduler changes must re-run payment fulfillment tests before commit.
+- Scheduler remaining work is tentatively split into Task 2A scheduler snapshot race/CAS/grace-TTL/lock-release and Task 2B sticky session scheduling audit. First prove `8bf2a7b8` can be separated from `733627cf`; do not cherry-pick both as one batch.
 
 ## Slice Status
 
@@ -38,7 +39,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | --- | --- | --- | --- | --- | --- |
 | Task 0 | Baseline verification | Complete | Not required; command evidence only | Passed with drift findings recorded | None |
 | Task 1 | Plan + tracking docs | Ready to commit | Passed after revisions | Doc review only | None |
-| Task 2 | Runtime safety: request decoding + scheduler | Request decoding sub-slice deployed to test and production; scheduler pending | Kimi no blockers | httputil, handler, payment tests, test/prod smoke passed | Test/prod images rebuilt; no config or DB change |
+| Task 2 | Runtime safety: request decoding + scheduler | Request decoding sub-slice deployed to test and production; scheduler split planned | Kimi no blockers for decoding; scheduler plan pending review | httputil, handler, payment tests, test/prod smoke passed | Test/prod images rebuilt for decoding; scheduler will be deployment-impacting |
 | Task 3 | OpenAI Responses / Codex compatibility | Pending | Not started | Not started | TBD |
 | Task 4 | Anthropic / Claude compatibility | Pending | Not started | Not started | TBD |
 | Task 5 | Admin/frontend low-risk UX | Pending | Not started | Not started | TBD |
@@ -57,6 +58,43 @@ These upstream areas are intentionally held for later phases unless separately a
 - OpenAI Fast/Flex policy
 - license / CLA workflow changes
 - sponsor/readme churn
+
+## Next Slice Plan
+
+### Task 2A Scheduler Snapshot Race Fix, CAS Grace TTL, and Rebuild Lock Release
+
+- Candidate upstream source: backend portions of `8bf2a7b8 fix(scheduler): resolve SetSnapshot race conditions and remove usage throttle`.
+- Precondition:
+  - prove the backend-only subset is coherent in this fork
+  - prove it does not depend on sticky-session changes from `733627cf`
+- Candidate intended scope:
+  - Redis CAS activation for scheduler snapshot versions
+  - old snapshot grace TTL instead of immediate delete
+  - `UnlockBucket` so rebuild locks are released after successful rebuild
+  - focused repository/service tests only
+- Explicit skips:
+  - usage throttle removal in `frontend/src/utils/usageLoadQueue.ts`, because this file does not exist in the fork.
+  - any unrelated scheduler or gateway sticky-session logic from `733627cf`.
+- Impact:
+  - No migration, Ent, config, env var, request/response shape, or frontend localStorage change expected.
+  - Account selection cache behavior may change because scheduler snapshot activation and lock release behavior change.
+  - Deployment-impacting because Redis scheduler keys and account selection cache behavior change.
+- Verification gate:
+  - separate deployment gate approved and recorded before any test or production deploy
+  - scheduler cache/snapshot tests, with `-race` where practical
+  - gateway scheduler/sticky tests touched by the slice
+  - payment fulfillment regression before commit
+  - Kimi review of diff and test output before commit
+
+### Task 2B Sticky Session Scheduling Audit
+
+- Candidate upstream source: `733627cf fix: improve sticky session scheduling`.
+- Current finding: this patch is too broad for direct cherry-pick; it touches handler account selection, gateway load-aware selection, scheduler cache, and tests.
+- Required before code:
+  - prove the local sticky-session bug exists or is partially fixed
+  - separate correctness hunks from upstream debug-only log additions
+  - record account-selection, wait-plan, failover, and sticky-session TTL behavior changes
+  - Kimi review the plan before editing
 
 ## Deployment Notes
 

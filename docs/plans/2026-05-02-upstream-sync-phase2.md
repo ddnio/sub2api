@@ -22,7 +22,7 @@
 ## Guardrails
 
 - Do not merge `upstream/main` directly.
-- Do not deploy production during this phase unless a separate deployment gate is approved.
+- Do not deploy production during this phase unless a separate deployment gate is approved and recorded.
 - Do not rewrite payment-b2 unless the upstream fix is proven missing and low-risk.
 - Any produced plan, code change, or deployment-impacting doc change must be reviewed by Kimi before merge.
 - Any deployment-impacting change must update `docs/engineering/upstream-sync-2026-05-phase2.md`.
@@ -133,6 +133,23 @@ Then send the plan and tracking doc as evidence to Kimi. Expected: Kimi either a
 - PR #1990 zstd request decompression
 - `8bf2a7b8 fix(scheduler): resolve SetSnapshot race conditions and remove usage throttle`
 - `733627cf fix: improve sticky session scheduling`
+
+**Current status after request decoding sub-slice:**
+- Request body decoding was ported, tested, reviewed by Kimi, deployed to test, then deployed to production after explicit approval.
+- Production deployment evidence is recorded in `docs/engineering/upstream-sync-2026-05-phase2.md`.
+- The remaining scheduler work must be split; do not cherry-pick both scheduler commits together.
+
+**Scheduler split plan, subject to inspection:**
+- First prove `8bf2a7b8` can be separated from `733627cf` and that its backend-only subset is coherent in this fork. If the split depends on sticky-session changes, stop and re-plan before editing.
+- Task 2A candidate: Scheduler snapshot race fix, CAS grace TTL, and rebuild lock release from `8bf2a7b8`.
+  - Candidate hunks: `scheduler_cache.go`, `SchedulerCache.UnlockBucket`, `SchedulerSnapshotService.rebuildBucket` lock release, and focused scheduler cache tests.
+  - Usage throttle removal is out of scope for this fork because upstream changed `frontend/src/utils/usageLoadQueue.ts`, and that file is absent locally.
+  - Verification gate starts with a separate deployment gate approved and recorded, then scheduler cache/snapshot tests, `-race` where practical, and payment fulfillment regression.
+- Task 2B candidate: Audit `733627cf` sticky session scheduling separately.
+  - The upstream patch is larger and touches `gateway_handler.go`, `gateway_service.go`, scheduler cache, and tests.
+  - Before porting, remove or avoid upstream debug-only log additions unless they are required for correctness.
+  - Prove the local bug exists with tests or code-path evidence before changing gateway account selection.
+  - Treat this as deployment-impacting because it can change account selection, sticky-session TTL behavior, wait-plan binding, and failover behavior.
 
 **Step 1: Inspect candidate patches**
 
