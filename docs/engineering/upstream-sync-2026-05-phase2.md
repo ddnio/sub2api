@@ -38,7 +38,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | --- | --- | --- | --- | --- | --- |
 | Task 0 | Baseline verification | Complete | Not required; command evidence only | Passed with drift findings recorded | None |
 | Task 1 | Plan + tracking docs | Ready to commit | Passed after revisions | Doc review only | None |
-| Task 2 | Runtime safety: request decoding + scheduler | Request decoding sub-slice complete; scheduler pending | Kimi no blockers | httputil, handler, payment tests passed | Image rebuild required; no config or DB change |
+| Task 2 | Runtime safety: request decoding + scheduler | Request decoding sub-slice deployed to test; scheduler pending | Kimi no blockers | httputil, handler, payment tests, test smoke passed | Test image rebuilt; no config or DB change |
 | Task 3 | OpenAI Responses / Codex compatibility | Pending | Not started | Not started | TBD |
 | Task 4 | Anthropic / Claude compatibility | Pending | Not started | Not started | TBD |
 | Task 5 | Admin/frontend low-risk UX | Pending | Not started | Not started | TBD |
@@ -66,7 +66,7 @@ Accepted deployment-impacting changes:
 
 ### Runtime request body decoding
 
-- Slice and commit: Task 2 request decoding sub-slice, commit pending
+- Slice and commit: Task 2 request decoding sub-slice, `0f7a2042 sync(runtime): decode compressed request bodies`
 - What changed: request body reader now decodes `Content-Encoding: zstd`, `gzip`, `x-gzip`, and `deflate`; unsupported or malformed encodings return errors; decompressed bodies above 64 MiB return `http.MaxBytesError`.
 - Diff-size note: slightly above the soft 300-line gate because the helper change includes focused unit coverage; production code is limited to one helper file and the rest is tests/docs.
 - Migration files added or changed: none
@@ -81,7 +81,7 @@ Accepted deployment-impacting changes:
 - Safe for rolling deploy: yes
 - Expected downtime window: normal rolling restart only
 - Monitoring/alerting impact: watch 400/413 rates on gateway routes after deploy
-- Exact test environment verification: local unit tests only so far
+- Exact test environment verification: deployed to `sub2api-test` on 2026-05-02; local health and public health checks returned `{"status":"ok"}`; gzip-compressed `/v1/responses` request returned HTTP 200; gzip body decompressing above 64 MiB returned HTTP 413 with `Request body too large, limit is 64MB`; post-deploy log-level check found no `ERROR`, `FATAL`, `PANIC`, `POSTCHECK FAILED`, or `PREFLIGHT FAILED`.
 - Customer-facing changelog/API note required: optional; useful if announcing compressed request-body support
 - Rollback notes: revert the request decoding commit and redeploy; no DB rollback
 
@@ -129,6 +129,45 @@ For each deployment-impacting slice, record:
 | 2026-05-02 | Kimi | Revised plan + tracking docs | Do not block; ready to commit | Commit docs, then run Task 0 baseline verification |
 | 2026-05-02 | Kimi | Request body decoding code diff | No blockers; suggested direct dependency, typed limit error, extra gzip tests, comment update | Addressed suggestions and re-ran tests |
 | 2026-05-02 | Kimi | Final request body decoding diff | No blockers | Commit after recording deployment note |
+
+## Test Deployment Log
+
+### 2026-05-02 Runtime Request Body Decoding
+
+- Host: `108.160.133.141`
+- Environment: `test`
+- Branch: `feature/upstream-sync-2026-05-phase2`
+- Commit deployed: `0f7a2042 sync(runtime): decode compressed request bodies`
+- Backup: `/home/nio/backups/sub2api_test_pre_runtime_decode_20260502-072241.sql` (58M)
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git fetch origin
+git checkout feature/upstream-sync-2026-05-phase2
+git pull --ff-only origin feature/upstream-sync-2026-05-phase2
+bash deploy/deploy-server.sh test
+```
+
+- Container result: `sub2api-test` healthy on `127.0.0.1:8081->8080/tcp`
+- Production impact: `sub2api-prod` remained running and healthy; production was not redeployed.
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8081/health
+curl -fsS https://router-test.nanafox.com/health
+# {"status":"ok"}
+```
+
+- Compressed request smoke:
+  - gzip `/v1/responses` with a test API key returned HTTP 200.
+  - gzip request that decompresses above 64 MiB returned HTTP 413 and `Request body too large, limit is 64MB`.
+- Log check:
+
+```bash
+docker logs --since 5m sub2api-test 2>&1 | egrep "\t(ERROR|FATAL|PANIC)\t|panic|POSTCHECK FAILED|PREFLIGHT FAILED" || true
+# no output
+```
 
 ## Task 0 Baseline Results
 
