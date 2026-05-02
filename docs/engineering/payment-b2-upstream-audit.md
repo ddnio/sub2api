@@ -2,7 +2,7 @@
 
 Date: 2026-05-01
 Branch: `worktree-payment-b2`
-Local HEAD: `8fdb3e8a`
+Local HEAD: `05593a1b`
 Upstream baseline: `upstream/main` at `48912014`
 
 ## Goal And Scope
@@ -177,6 +177,38 @@ Kimi reviewed this matrix on 2026-05-01 and found:
 
 Manual review additionally found the `fd0c9a13`/`61a008f7` provider config write path was not actually applied; this was fixed before further deployment.
 
+Final Kimi review on 2026-05-01 found no P0. Follow-up actions:
+
+- P1 Stripe provider-level unit coverage gap: fixed by adding `backend/internal/payment/provider/stripe_test.go`, covering config validation, publishable key, supported types, sub-method mapping, signed webhook success/failure/ignore handling, and missing webhook configuration errors.
+- P1 WeChat-browser wxpay risk found in Kimi follow-up: fixed by avoiding JSAPI/OAuth selection for WeChat-browser requests that do not carry an OpenID. This fork still treats actual OpenID/JSAPI requests as requiring JSAPI-compatible configuration, but normal H5/native wxpay can proceed.
+- P1 wxpay provider method coverage gap found in Kimi follow-up: fixed by adding provider-level tests for `QueryOrder`, `VerifyNotification`, `Refund`, and `CancelPayment` through non-network SDK call wrappers.
+- P1 Alipay/Stripe real end-to-end gap: recorded as a production gate only if those providers are enabled; current test deployment and real payment evidence covers wxpay.
+- P1 refund real-environment gap: recorded as a production gate if refund or user refund is enabled; current code now has provider-level wxpay refund coverage plus service refund coverage, but no real refund has been executed.
+- P2 legacy ciphertext fallback TODO: accepted as a migration compatibility TODO, not a production blocker.
+- P2 migration numbering gaps: production deploy must keep the documented migration list and avoid parallel branch number conflicts.
+
+Post-fix verification:
+
+```text
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/payment/provider
+result: pass
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/payment ./internal/payment/provider
+result: pass
+
+GOCACHE="$PWD/../../.cache/go-build" go test -tags unit -count=1 ./internal/payment ./internal/payment/provider ./internal/handler -run 'TestDecryptConfig|TestApplyWeChatPaymentResumeClaims|TestVerifyOrderPublic|TestResolveOrderPublicByResumeToken|TestWriteSuccessResponse|TestUnknownOrderWebhookAcksWithSuccess|TestWebhookConstants|TestExtractOutTradeNo|TestVerifyNotificationWithProviders|TestStripe'
+result: pass
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./...
+result: pass
+
+GOCACHE="$PWD/../../.cache/go-build" go test -tags unit -count=1 ./internal/payment/provider -run 'TestWxpay|TestCreatePaymentWithOpenID|TestResolveWxpay|TestBuildWxpay|TestMapWxState|TestWxSV'
+result: pass
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/service -run 'TestMaybeBuildWeChatOAuthRequiredResponse|TestWeChatBrowserWithoutOpenID|TestWeChatOpenID|TestBuildCreateOrderResponse'
+result: pass
+```
+
 ## Raw Candidate Groups Considered
 
 The path/subject scan also returned many unrelated commits. They are intentionally out of payment scope:
@@ -224,6 +256,21 @@ result: pass
 ```
 
 After local verification, deploy to test only after backing up test DB. Production remains out of scope for this plan.
+
+## Test Deployment Verification
+
+Final test deployment on 2026-05-01 used commit `05593a1b`.
+
+- Backup: `/home/nio/backups/sub2api_test_pre_payment_b2_audit_20260501-153107.sql` (59M).
+- Test container: `sub2api-test` healthy on `127.0.0.1:8081`.
+- Production container: `sub2api-prod` remained healthy on `127.0.0.1:8080`; production was not deployed.
+- Health: test and prod both returned `{"status":"ok"}`.
+- Logs: no `panic`, `fatal`, `preflight failed`, `postcheck failed`, `migration failed`, or `error` found in recent test logs.
+- DB postcheck: `bad_amount=0`, `null_expired=0`, `orphan_orders=0`, `fk_to_payment=0`, `invalid_payment_order_index=0`, `duplicate_out_trade_no=0`.
+- Provider: wxpay provider enabled with `singleMin=0.1` and `singleMax=10000`.
+- Plans: `subscription_plans=3`, two plans for sale, `invalid_for_sale_plans=0`, no unmigrated old `payment_plans`.
+- Real payment result: order `35` balance 0.10 wxpay and order `36` subscription 0.10 wxpay both reached `COMPLETED`; audit logs include `ORDER_PAID`, `RECHARGE_SUCCESS`, and `SUBSCRIPTION_SUCCESS`.
+- Static frontend verification: deployed index references latest payment chunks and CSS includes `btn-wxpay`, `btn-alipay`, `btn-stripe`, `btn-outline-danger`, and `btn-xs`.
 
 ## Current Change List And Impact
 

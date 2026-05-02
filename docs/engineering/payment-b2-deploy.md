@@ -343,7 +343,7 @@ ORDER BY pp.id;
 
 后台支付配置 UI 已迁移 upstream Provider 组件，可录入 `provider_key`、`name`、`supported_types`、`payment_mode`、`refund_enabled`、`allow_user_refund`、单笔/每日限额和 `config`。首次部署仍建议准备好 JSON，再通过 UI 粘贴/核对；如 UI 不可用，使用 Admin API 创建，避免字段缺失。
 
-Provider config 新写入会使用 `TOTP_ENCRYPTION_KEY` 做 AES-256-GCM 加密；部署前确认 test/prod 配置中的该 key 为 32 字节并已备份在安全渠道。备份文件会包含加密后的支付配置，仍必须 `chmod 600` 且不要外传。
+Provider config 新写入与 upstream 对齐，存储为明文 JSON；旧版 AES ciphertext 仍通过 legacy fallback 读取，便于历史配置平滑迁移。备份文件会包含支付商户配置和密钥材料，必须 `chmod 600` 且不要外传。生产环境不要依赖重新生成 Provider 配置来回滚，回滚时应同时恢复 pg_dump。
 
 微信 Provider 的 `appId`、`mchId`、`certSerial`、`publicKeyId` 属于商户身份字段。生产环境不要在有历史订单需要退款时直接替换这些字段；如果确实要换商户或证书，建议保留旧 Provider instance 用于历史订单退款，再新增新 Provider 承接新订单。
 
@@ -414,6 +414,10 @@ SELECT key, value FROM settings WHERE key ILIKE '%backend%mode%';
 4. 选择微信支付并扫码完成支付。
 5. 等待订单从 `PENDING` 流转到 `PAID` / `COMPLETED`。
 6. 进入 `/orders`，确认订单中心能看到新订单；后台进入 `/admin/payment/orders` 和 `/admin/payment/dashboard` 复核订单与看板数据。
+
+如果生产计划启用 Alipay 或 Stripe，不能只依赖 wxpay 验证结果；必须先在测试环境分别完成对应 provider 的下单、回调、状态流转和订单中心展示验证。Stripe WebhookEndpoint 的 API version 需要与当前 `stripe-go` SDK 期望版本兼容，否则 webhook 验签后仍可能因 API version mismatch 被拒绝。
+
+如果生产计划开放退款能力，必须先在测试环境完成至少一次真实退款，确认 provider 返回、订单状态、余额/订阅扣减和 `payment_audit_logs` 均符合预期。未完成真实退款验证前，生产应保持 `allow_user_refund=false`，并谨慎开启 `refund_enabled`。
 
 数据库复核：
 

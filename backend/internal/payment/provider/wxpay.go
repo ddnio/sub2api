@@ -70,6 +70,18 @@ var (
 	wxpayJSAPIPrepayWithRequestPayment = func(ctx context.Context, svc jsapi.JsapiApiService, req jsapi.PrepayRequest) (*jsapi.PrepayWithRequestPaymentResponse, *core.APIResult, error) {
 		return svc.PrepayWithRequestPayment(ctx, req)
 	}
+	wxpayNativeQueryOrderByOutTradeNo = func(ctx context.Context, svc native.NativeApiService, req native.QueryOrderByOutTradeNoRequest) (*payments.Transaction, *core.APIResult, error) {
+		return svc.QueryOrderByOutTradeNo(ctx, req)
+	}
+	wxpayParseNotifyRequest = func(ctx context.Context, handler *notify.Handler, req *http.Request, content any) (*notify.Request, error) {
+		return handler.ParseNotifyRequest(ctx, req, content)
+	}
+	wxpayRefundCreate = func(ctx context.Context, svc refunddomestic.RefundsApiService, req refunddomestic.CreateRequest) (*refunddomestic.Refund, *core.APIResult, error) {
+		return svc.Create(ctx, req)
+	}
+	wxpayNativeCloseOrder = func(ctx context.Context, svc native.NativeApiService, req native.CloseOrderRequest) (*core.APIResult, error) {
+		return svc.CloseOrder(ctx, req)
+	}
 )
 
 type Wxpay struct {
@@ -396,7 +408,7 @@ func (w *Wxpay) QueryOrder(ctx context.Context, tradeNo string) (*payment.QueryO
 		return nil, err
 	}
 	svc := native.NativeApiService{Client: c}
-	tx, _, err := svc.QueryOrderByOutTradeNo(ctx, native.QueryOrderByOutTradeNoRequest{
+	tx, _, err := wxpayNativeQueryOrderByOutTradeNo(ctx, svc, native.QueryOrderByOutTradeNoRequest{
 		OutTradeNo: core.String(tradeNo), Mchid: core.String(w.config["mchId"]),
 	})
 	if err != nil {
@@ -435,7 +447,7 @@ func (w *Wxpay) VerifyNotification(ctx context.Context, rawBody string, headers 
 		r.Header.Set(k, v)
 	}
 	var tx payments.Transaction
-	nr, err := w.notifyHandler.ParseNotifyRequest(ctx, r, &tx)
+	nr, err := wxpayParseNotifyRequest(ctx, w.notifyHandler, r, &tx)
 	if err != nil {
 		return nil, fmt.Errorf("wxpay verify notification: %w", err)
 	}
@@ -471,7 +483,7 @@ func (w *Wxpay) Refund(ctx context.Context, req payment.RefundRequest) (*payment
 	}
 	rs := refunddomestic.RefundsApiService{Client: c}
 	cur := wxpayCurrency
-	res, _, err := rs.Create(ctx, refunddomestic.CreateRequest{
+	res, _, err := wxpayRefundCreate(ctx, rs, refunddomestic.CreateRequest{
 		OutTradeNo:  core.String(req.OrderID),
 		OutRefundNo: core.String(fmt.Sprintf("%s-refund-%d", req.OrderID, time.Now().UnixNano())),
 		Reason:      core.String(req.Reason),
@@ -493,7 +505,7 @@ func (w *Wxpay) Refund(ctx context.Context, req payment.RefundRequest) (*payment
 
 func (w *Wxpay) queryOrderTotalFen(ctx context.Context, c *core.Client, orderID string) (int64, error) {
 	svc := native.NativeApiService{Client: c}
-	tx, _, err := svc.QueryOrderByOutTradeNo(ctx, native.QueryOrderByOutTradeNoRequest{
+	tx, _, err := wxpayNativeQueryOrderByOutTradeNo(ctx, svc, native.QueryOrderByOutTradeNoRequest{
 		OutTradeNo: core.String(orderID), Mchid: core.String(w.config["mchId"]),
 	})
 	if err != nil {
@@ -512,7 +524,7 @@ func (w *Wxpay) CancelPayment(ctx context.Context, tradeNo string) error {
 		return err
 	}
 	svc := native.NativeApiService{Client: c}
-	_, err = svc.CloseOrder(ctx, native.CloseOrderRequest{
+	_, err = wxpayNativeCloseOrder(ctx, svc, native.CloseOrderRequest{
 		OutTradeNo: core.String(tradeNo), Mchid: core.String(w.config["mchId"]),
 	})
 	if err != nil {

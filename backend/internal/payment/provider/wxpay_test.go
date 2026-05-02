@@ -9,16 +9,19 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"net/http"
 	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	"github.com/wechatpay-apiv3/wechatpay-go/core"
+	"github.com/wechatpay-apiv3/wechatpay-go/core/notify"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/h5"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/jsapi"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/native"
+	"github.com/wechatpay-apiv3/wechatpay-go/services/refunddomestic"
 )
 
 // generateTestKeyPair returns a fresh RSA 2048 key pair as PEM strings.
@@ -558,6 +561,201 @@ func TestCreatePaymentWithOpenIDReturnsJSAPIResult(t *testing.T) {
 	if resp.JSAPI.PaySign != "signed-payload" {
 		t.Fatalf("jsapi paySign = %q, want %q", resp.JSAPI.PaySign, "signed-payload")
 	}
+}
+
+func TestWxpayQueryOrderMapsTransaction(t *testing.T) {
+	origQuery := wxpayNativeQueryOrderByOutTradeNo
+	t.Cleanup(func() { wxpayNativeQueryOrderByOutTradeNo = origQuery })
+
+	wxpayNativeQueryOrderByOutTradeNo = func(ctx context.Context, svc native.NativeApiService, req native.QueryOrderByOutTradeNoRequest) (*payments.Transaction, *core.APIResult, error) {
+		if got := wxSV(req.OutTradeNo); got != "sub2_order_1" {
+			t.Fatalf("OutTradeNo = %q, want sub2_order_1", got)
+		}
+		if got := wxSV(req.Mchid); got != "1234567890" {
+			t.Fatalf("Mchid = %q, want 1234567890", got)
+		}
+		return &payments.Transaction{
+			TransactionId: core.String("wx-trade-1"),
+			OutTradeNo:    core.String("sub2_order_1"),
+			Appid:         core.String("wx-app"),
+			Mchid:         core.String("1234567890"),
+			TradeState:    core.String(wxpayTradeStateSuccess),
+			SuccessTime:   core.String("2026-05-01T12:00:00+08:00"),
+			Amount: &payments.TransactionAmount{
+				Total:    core.Int64(1234),
+				Currency: core.String(wxpayCurrency),
+			},
+		}, nil, nil
+	}
+
+	provider := newUnitWxpay(t)
+	resp, err := provider.QueryOrder(context.Background(), "sub2_order_1")
+	if err != nil {
+		t.Fatalf("QueryOrder returned error: %v", err)
+	}
+	if resp.TradeNo != "wx-trade-1" {
+		t.Fatalf("TradeNo = %q, want wx-trade-1", resp.TradeNo)
+	}
+	if resp.Status != payment.ProviderStatusPaid {
+		t.Fatalf("Status = %q, want paid", resp.Status)
+	}
+	if resp.Amount != 12.34 {
+		t.Fatalf("Amount = %v, want 12.34", resp.Amount)
+	}
+	if resp.PaidAt != "2026-05-01T12:00:00+08:00" {
+		t.Fatalf("PaidAt = %q", resp.PaidAt)
+	}
+	if resp.Metadata[wxpayMetadataAppID] != "wx-app" || resp.Metadata[wxpayMetadataTradeState] != wxpayTradeStateSuccess {
+		t.Fatalf("Metadata = %#v", resp.Metadata)
+	}
+}
+
+func TestWxpayVerifyNotificationParsesTransaction(t *testing.T) {
+	origParse := wxpayParseNotifyRequest
+	t.Cleanup(func() { wxpayParseNotifyRequest = origParse })
+
+	wxpayParseNotifyRequest = func(ctx context.Context, handler *notify.Handler, req *http.Request, content any) (*notify.Request, error) {
+		tx, ok := content.(*payments.Transaction)
+		if !ok {
+			t.Fatalf("content type = %T, want *payments.Transaction", content)
+		}
+		if got := req.Header.Get("Wechatpay-Serial"); got != "serial-1" {
+			t.Fatalf("Wechatpay-Serial = %q, want serial-1", got)
+		}
+		tx.TransactionId = core.String("wx-trade-2")
+		tx.OutTradeNo = core.String("sub2_order_2")
+		tx.Appid = core.String("wx-app")
+		tx.Mchid = core.String("1234567890")
+		tx.TradeState = core.String(wxpayTradeStateSuccess)
+		tx.Amount = &payments.TransactionAmount{Total: core.Int64(99), Currency: core.String(wxpayCurrency)}
+		return &notify.Request{EventType: wxpayEventTransactionSuccess}, nil
+	}
+
+	provider := newUnitWxpay(t)
+	resp, err := provider.VerifyNotification(context.Background(), `{"id":"notify-1"}`, map[string]string{
+		"Wechatpay-Serial": "serial-1",
+	})
+	if err != nil {
+		t.Fatalf("VerifyNotification returned error: %v", err)
+	}
+	if resp.TradeNo != "wx-trade-2" || resp.OrderID != "sub2_order_2" {
+		t.Fatalf("notification ids = %#v", resp)
+	}
+	if resp.Status != payment.ProviderStatusSuccess {
+		t.Fatalf("Status = %q, want success", resp.Status)
+	}
+	if resp.Amount != 0.99 {
+		t.Fatalf("Amount = %v, want 0.99", resp.Amount)
+	}
+	if resp.RawData != `{"id":"notify-1"}` {
+		t.Fatalf("RawData = %q", resp.RawData)
+	}
+}
+
+func TestWxpayVerifyNotificationIgnoresOtherEvents(t *testing.T) {
+	origParse := wxpayParseNotifyRequest
+	t.Cleanup(func() { wxpayParseNotifyRequest = origParse })
+
+	wxpayParseNotifyRequest = func(ctx context.Context, handler *notify.Handler, req *http.Request, content any) (*notify.Request, error) {
+		return &notify.Request{EventType: "REFUND.SUCCESS"}, nil
+	}
+
+	provider := newUnitWxpay(t)
+	resp, err := provider.VerifyNotification(context.Background(), `{}`, nil)
+	if err != nil {
+		t.Fatalf("VerifyNotification returned error: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("response = %#v, want nil", resp)
+	}
+}
+
+func TestWxpayRefundUsesOrderAmountAndMapsSuccess(t *testing.T) {
+	origQuery := wxpayNativeQueryOrderByOutTradeNo
+	origRefund := wxpayRefundCreate
+	t.Cleanup(func() {
+		wxpayNativeQueryOrderByOutTradeNo = origQuery
+		wxpayRefundCreate = origRefund
+	})
+
+	wxpayNativeQueryOrderByOutTradeNo = func(ctx context.Context, svc native.NativeApiService, req native.QueryOrderByOutTradeNoRequest) (*payments.Transaction, *core.APIResult, error) {
+		return &payments.Transaction{
+			Amount: &payments.TransactionAmount{Total: core.Int64(1234), Currency: core.String(wxpayCurrency)},
+		}, nil, nil
+	}
+	wxpayRefundCreate = func(ctx context.Context, svc refunddomestic.RefundsApiService, req refunddomestic.CreateRequest) (*refunddomestic.Refund, *core.APIResult, error) {
+		if got := wxSV(req.OutTradeNo); got != "sub2_order_3" {
+			t.Fatalf("OutTradeNo = %q, want sub2_order_3", got)
+		}
+		if req.Amount == nil || req.Amount.Refund == nil || *req.Amount.Refund != 500 {
+			t.Fatalf("Refund amount = %#v, want 500", req.Amount)
+		}
+		if req.Amount == nil || req.Amount.Total == nil || *req.Amount.Total != 1234 {
+			t.Fatalf("Total amount = %#v, want 1234", req.Amount)
+		}
+		status := refunddomestic.STATUS_SUCCESS
+		return &refunddomestic.Refund{RefundId: core.String("refund-1"), Status: &status}, nil, nil
+	}
+
+	provider := newUnitWxpay(t)
+	resp, err := provider.Refund(context.Background(), payment.RefundRequest{
+		OrderID: "sub2_order_3",
+		TradeNo: "wx-trade-3",
+		Amount:  "5.00",
+		Reason:  "test refund",
+	})
+	if err != nil {
+		t.Fatalf("Refund returned error: %v", err)
+	}
+	if resp.RefundID != "refund-1" {
+		t.Fatalf("RefundID = %q, want refund-1", resp.RefundID)
+	}
+	if resp.Status != payment.ProviderStatusSuccess {
+		t.Fatalf("Status = %q, want success", resp.Status)
+	}
+}
+
+func TestWxpayCancelPaymentClosesOrder(t *testing.T) {
+	origClose := wxpayNativeCloseOrder
+	t.Cleanup(func() { wxpayNativeCloseOrder = origClose })
+
+	called := false
+	wxpayNativeCloseOrder = func(ctx context.Context, svc native.NativeApiService, req native.CloseOrderRequest) (*core.APIResult, error) {
+		called = true
+		if got := wxSV(req.OutTradeNo); got != "sub2_order_4" {
+			t.Fatalf("OutTradeNo = %q, want sub2_order_4", got)
+		}
+		if got := wxSV(req.Mchid); got != "1234567890" {
+			t.Fatalf("Mchid = %q, want 1234567890", got)
+		}
+		return nil, nil
+	}
+
+	provider := newUnitWxpay(t)
+	if err := provider.CancelPayment(context.Background(), "sub2_order_4"); err != nil {
+		t.Fatalf("CancelPayment returned error: %v", err)
+	}
+	if !called {
+		t.Fatal("expected wxpayNativeCloseOrder to be called")
+	}
+}
+
+func newUnitWxpay(t *testing.T) *Wxpay {
+	t.Helper()
+	privPEM, pubPEM := generateTestKeyPair(t)
+	provider, err := NewWxpay("wxpay-test", map[string]string{
+		"appId":       "wx-app",
+		"mchId":       "1234567890",
+		"privateKey":  privPEM,
+		"apiV3Key":    "12345678901234567890123456789012",
+		"publicKey":   pubPEM,
+		"publicKeyId": "PUB_KEY_ID_TEST",
+		"certSerial":  "SERIAL001",
+	})
+	if err != nil {
+		t.Fatalf("NewWxpay returned error: %v", err)
+	}
+	return provider
 }
 
 func TestCreatePaymentMobileH5IncludesConfiguredSceneInfo(t *testing.T) {

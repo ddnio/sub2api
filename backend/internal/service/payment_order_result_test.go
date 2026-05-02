@@ -7,7 +7,6 @@ import (
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
-	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 )
 
 func TestBuildCreateOrderResponseDefaultsToOrderCreated(t *testing.T) {
@@ -90,7 +89,7 @@ func TestBuildCreateOrderResponseCopiesJSAPIPayload(t *testing.T) {
 	}
 }
 
-func TestMaybeBuildWeChatOAuthRequiredResponseRequiresMPConfigInFork(t *testing.T) {
+func TestMaybeBuildWeChatOAuthRequiredResponseSkipsOAuthInFork(t *testing.T) {
 	t.Setenv("PAYMENT_RESUME_SIGNING_KEY", "0123456789abcdef0123456789abcdef")
 
 	svc := newWeChatPaymentOAuthTestService(nil)
@@ -105,13 +104,40 @@ func TestMaybeBuildWeChatOAuthRequiredResponseRequiresMPConfigInFork(t *testing.
 	if resp != nil {
 		t.Fatalf("expected nil response, got %+v", resp)
 	}
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestWeChatBrowserWithoutOpenIDDoesNotRequireJSAPICompatibility(t *testing.T) {
+	t.Parallel()
+
+	req := CreateOrderRequest{
+		PaymentType:     payment.TypeWxpay,
+		IsWeChatBrowser: true,
 	}
 
-	appErr := infraerrors.FromError(err)
-	if appErr.Reason != "WECHAT_PAYMENT_MP_NOT_CONFIGURED" {
-		t.Fatalf("reason = %q, want %q", appErr.Reason, "WECHAT_PAYMENT_MP_NOT_CONFIGURED")
+	if requestNeedsWeChatJSAPICompatibility(req) {
+		t.Fatal("WeChat browser without OpenID should not require JSAPI compatibility")
+	}
+	if requiresWeChatJSAPICompatibleSelection(req, &payment.InstanceSelection{ProviderKey: payment.TypeWxpay}) {
+		t.Fatal("WeChat browser without OpenID should not require a JSAPI-compatible provider")
+	}
+}
+
+func TestWeChatOpenIDRequiresJSAPICompatibility(t *testing.T) {
+	t.Parallel()
+
+	req := CreateOrderRequest{
+		PaymentType: payment.TypeWxpay,
+		OpenID:      "openid-123",
+	}
+
+	if !requestNeedsWeChatJSAPICompatibility(req) {
+		t.Fatal("OpenID wxpay request should require JSAPI compatibility")
+	}
+	if !requiresWeChatJSAPICompatibleSelection(req, &payment.InstanceSelection{ProviderKey: payment.TypeWxpay}) {
+		t.Fatal("OpenID wxpay request should require a JSAPI-compatible provider")
 	}
 }
 

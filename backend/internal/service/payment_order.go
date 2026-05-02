@@ -344,7 +344,7 @@ func requestNeedsWeChatJSAPICompatibility(req CreateOrderRequest) bool {
 	if payment.GetBasePaymentType(req.PaymentType) != payment.TypeWxpay {
 		return false
 	}
-	return req.IsWeChatBrowser || strings.TrimSpace(req.OpenID) != ""
+	return strings.TrimSpace(req.OpenID) != ""
 }
 
 func (s *PaymentService) usesOfficialWxpayVisibleMethod(ctx context.Context) bool {
@@ -493,7 +493,10 @@ func (s *PaymentService) maybeBuildWeChatOAuthRequiredResponseForSelection(ctx c
 	if strings.TrimSpace(req.OpenID) != "" || !req.IsWeChatBrowser || payment.GetBasePaymentType(req.PaymentType) != payment.TypeWxpay {
 		return nil, nil
 	}
-	return s.buildWeChatOAuthRequiredResponse(ctx, req, amount, payAmount, feeRate)
+	// This fork does not provide WeChat MP OAuth/JSAPI credentials. Do not force
+	// WeChat-browser users into JSAPI; allow the selected wxpay provider to use
+	// H5/native modes when no OpenID is present.
+	return nil, nil
 }
 
 func (s *PaymentService) buildWeChatOAuthRequiredResponse(ctx context.Context, req CreateOrderRequest, amount, payAmount, feeRate float64) (*CreateOrderResponse, error) {
@@ -544,7 +547,7 @@ func requiresWeChatJSAPICompatibleSelection(req CreateOrderRequest, sel *payment
 	if sel == nil || sel.ProviderKey != payment.TypeWxpay || payment.GetBasePaymentType(req.PaymentType) != payment.TypeWxpay {
 		return false
 	}
-	return req.IsWeChatBrowser || strings.TrimSpace(req.OpenID) != ""
+	return strings.TrimSpace(req.OpenID) != ""
 }
 
 // getWeChatPaymentOAuthCredential returns MP OAuth credentials for JSAPI payment.
