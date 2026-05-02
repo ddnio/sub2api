@@ -357,6 +357,8 @@ Accepted deployment-impacting changes:
   - `git diff --check`
 - CI status: GitHub `test` and `golangci-lint` are red from pre-existing `origin/main` drift in unrelated auth/payment tests and old lint findings outside the PR #28/#29 diffs; backend/frontend security checks passed.
 - Exact test environment verification: deployed to `sub2api-test` on 2026-05-02 from `origin/main` at `f4731c1c`; container was healthy on `127.0.0.1:8081`; local `/health` returned `{"status":"ok"}`; unauthenticated `/v1/models` returned HTTP 401 as expected; post-deploy severe log check found no `panic`, `fatal`, `error`, `migration`, `failed`, `traceback`, or `异常`.
+- Admin table-preference i18n hotfix: `2828a44c fix(admin): add table preference translations` added missing Chinese and English labels, placeholders, hints, and validation messages for the new table pagination settings shown on the admin settings page.
+- Exact i18n hotfix verification: deployed to `sub2api-test` and `sub2api-prod` on 2026-05-02 from `origin/main` at `2828a44c`; both containers were healthy; local `/health` returned `{"status":"ok"}`; unauthenticated `/v1/models` returned HTTP 401 as expected; post-deploy severe log checks found no `panic`, `fatal`, `error`, `migration`, `failed`, `traceback`, or `异常`.
 - Customer-facing changelog/API note required: no
 - Rollback notes: revert PR #29 then PR #28 and redeploy; no DB rollback.
 
@@ -634,6 +636,43 @@ docker logs --since 3m sub2api-test 2>&1 | egrep -i "panic|fatal|error|migration
 # no output
 ```
 
+### 2026-05-02 Admin Table Preferences I18n Hotfix
+
+- Host: `108.160.133.141`
+- Environment: `test`
+- Branch: `main`
+- Commit deployed: `2828a44c fix(admin): add table preference translations`
+- Runtime changes:
+  - Missing admin settings table-preference i18n keys were added to `frontend/src/i18n/locales/zh.ts` and `frontend/src/i18n/locales/en.ts`.
+- Backup: not taken; this is frontend i18n only and has no migration, schema, config, env var, localStorage schema, or data change.
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+bash deploy/deploy-server.sh test
+```
+
+- Container result: `sub2api-test` healthy on `127.0.0.1:8081->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8081/health
+# {"status":"ok"}
+
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8081/v1/models
+# 401
+```
+
+- Log check:
+
+```bash
+docker logs --since 5m sub2api-test 2>&1 | egrep -i "panic|fatal|error|migration|failed|traceback|异常" || true
+# no output
+```
+
 ## Production Deployment Log
 
 ### 2026-05-02 Runtime Request Body Decoding
@@ -815,6 +854,42 @@ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/v1/models
 
 ```bash
 docker logs --since 2m sub2api-prod 2>&1 | egrep -i "panic|fatal|error|migration|failed|traceback|异常" || true
+# no output
+```
+
+### 2026-05-02 Admin Table Preferences I18n Hotfix
+
+- Host: `108.160.133.141`
+- Environment: `prod`
+- Branch: `main`
+- Commit deployed: `2828a44c fix(admin): add table preference translations`
+- Runtime change: missing admin settings table-preference i18n keys were added to Chinese and English locale files.
+- Backup: not taken; this is frontend i18n only and has no migration, schema, config, env var, localStorage schema, or data change.
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+bash deploy/deploy-server.sh prod
+```
+
+- Container result: `sub2api-prod` healthy on `127.0.0.1:8080->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8080/health
+# {"status":"ok"}
+
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/v1/models
+# 401
+```
+
+- Log check:
+
+```bash
+docker logs --since 3m sub2api-prod 2>&1 | egrep -i "panic|fatal|error|migration|failed|traceback|异常" || true
 # no output
 ```
 
