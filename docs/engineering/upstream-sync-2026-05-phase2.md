@@ -42,7 +42,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | Task 2 | Runtime safety: request decoding + scheduler | Request decoding sub-slice deployed; scheduler 2A implemented locally | Kimi no blockers for decoding; scheduler code review pending | httputil, handler, scheduler, payment tests passed | Test/prod images rebuilt for decoding; scheduler 2A not deployed |
 | Task 3 | OpenAI Responses / Codex compatibility | Task 3A and Task 3B deployed | Kimi no blockers for PR #22 and PR #24 | apicompat, targeted service, and payment tests passed | Test/prod images rebuilt; no DB backup because no DB/config/frontend impact |
 | Task 4 | Anthropic / Claude compatibility | Task 4A Claude Code mimicry gate implemented locally | Pending | service, apicompat, and payment tests passed | No DB/config/frontend impact expected |
-| Task 5 | Admin/frontend low-risk UX | Merged via PR #28 + follow-up PR #29 | Claude no issues; Kimi no blockers for follow-up | Admin handler, frontend bulk-edit, typecheck, build passed; full CI red remains pre-existing main drift | Test deploy pending |
+| Task 5 | Admin/frontend low-risk UX | Deployed to test via PR #28 + follow-up PR #29 | Claude no issues; Kimi no blockers for follow-up | Admin handler, frontend bulk-edit, typecheck, build passed; full CI red remains pre-existing main drift | Test image rebuilt; no DB backup because no migration/schema/data impact |
 | Task 6 | Payment residual audit only | Pending | Not started | Not started | TBD |
 | Task 7 | Integration smoke gate | Pending | Not started | Not started | TBD |
 
@@ -356,7 +356,7 @@ Accepted deployment-impacting changes:
   - `pnpm run build`
   - `git diff --check`
 - CI status: GitHub `test` and `golangci-lint` are red from pre-existing `origin/main` drift in unrelated auth/payment tests and old lint findings outside the PR #28/#29 diffs; backend/frontend security checks passed.
-- Exact test environment verification: pending after merge commit `6d943c6b`.
+- Exact test environment verification: deployed to `sub2api-test` on 2026-05-02 from `origin/main` at `f4731c1c`; container was healthy on `127.0.0.1:8081`; local `/health` returned `{"status":"ok"}`; unauthenticated `/v1/models` returned HTTP 401 as expected; post-deploy severe log check found no `panic`, `fatal`, `error`, `migration`, `failed`, `traceback`, or `异常`.
 - Customer-facing changelog/API note required: no
 - Rollback notes: revert PR #29 then PR #28 and redeploy; no DB rollback.
 
@@ -593,6 +593,44 @@ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8081/v1/models
 
 ```bash
 docker logs --since 2m sub2api-test 2>&1 | egrep -i "panic|fatal|error|migration|failed|traceback|异常" || true
+# no output
+```
+
+### 2026-05-02 Admin Frontend Table Preferences and Filtered Bulk Edit
+
+- Host: `108.160.133.141`
+- Environment: `test`
+- Branch: `main`
+- Commit deployed: `f4731c1c docs(upstream-sync): record admin frontend batch`
+- Runtime changes:
+  - `86a76164 Merge pull request #28 from ddnio/feature/upstream-sync-admin-frontend`
+  - `6d943c6b Merge pull request #29 from ddnio/feature/admin-frontend-followup`
+- Backup: not taken; this slice has no migration, schema, config, env var, or data change.
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+bash deploy/deploy-server.sh test
+```
+
+- Container result: `sub2api-test` healthy on `127.0.0.1:8081->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8081/health
+# {"status":"ok"}
+
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8081/v1/models
+# 401
+```
+
+- Log check:
+
+```bash
+docker logs --since 3m sub2api-test 2>&1 | egrep -i "panic|fatal|error|migration|failed|traceback|异常" || true
 # no output
 ```
 
