@@ -43,7 +43,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | Task 3 | OpenAI Responses / Codex compatibility | Task 3A and Task 3B deployed | Kimi no blockers for PR #22 and PR #24 | apicompat, targeted service, and payment tests passed | Test/prod images rebuilt; no DB backup because no DB/config/frontend impact |
 | Task 4 | Anthropic / Claude compatibility | Task 4A Claude Code mimicry gate implemented locally | Pending | service, apicompat, and payment tests passed | No DB/config/frontend impact expected |
 | Task 5 | Admin/frontend low-risk UX | Deployed to test via PR #28 + follow-up PR #29 | Claude no issues; Kimi no blockers for follow-up | Admin handler, frontend bulk-edit, typecheck, build passed; full CI red remains pre-existing main drift | Test image rebuilt; no DB backup because no migration/schema/data impact |
-| Task 2B | Sticky session false reject on snapshot accounts | Deployed to test via PR #30 | Claude self-review approved; Kimi no blockers | All gateway load-aware + sticky tests passed (26 subtests); new regression test added | Test image rebuilt; no DB/config/frontend impact; note: upstream refactored same path more extensively (variable extraction + slog.Debug + isAccountSchedulableForSelection), our slice is minimal-correct |
+| Task 2B | Sticky session false reject on snapshot accounts | Deployed to test + prod via PR #30 | Claude self-review approved; Kimi no blockers | All gateway load-aware + sticky tests passed (26 subtests); new regression test added | Test + prod images rebuilt; no DB/config/frontend impact; note: upstream refactored same path more extensively (variable extraction + slog.Debug + isAccountSchedulableForSelection), our slice is minimal-correct |
 | Task 6 | Payment residual audit only | Pending | Not started | Not started | TBD |
 | Task 7 | Integration smoke gate | Pending | Not started | Not started | TBD |
 
@@ -668,6 +668,36 @@ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8081/v1/models
 
 - Log check: no `panic`, `fatal`, `error`, `migration`, `failed`, `traceback`, or `异常`.
 - Note: upstream (`733627cf`) refactored the same code path more extensively — variable extraction, `slog.Debug` logging, and `isAccountSchedulableForSelection` — held for a future Task 2B follow-up.
+
+### 2026-05-03 Sticky Session Snapshot False Reject Fix (Production)
+
+- Host: `108.160.133.141`
+- Environment: `prod`
+- Branch: `main`
+- Commit deployed: `99b2b130 docs(upstream-sync): record sticky-session snapshot fix test deploy`; runtime change is `7cfaf250 sync(gateway): fix sticky-session false reject on snapshot accounts (#30)`
+- Backup: not taken; this slice has no migration, schema, config, env var, frontend localStorage, or data change.
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git checkout main
+git pull
+bash deploy/deploy-server.sh prod
+```
+
+- Container result: `sub2api-prod` healthy on `127.0.0.1:8080->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8080/health
+# {"status":"ok"}
+
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/v1/models
+# 401
+```
+
+- Log check: no `panic`, `fatal`, `error`, `migration`, `failed`, `traceback`, or `异常`.
+- Rollback notes: revert PR #30 and redeploy; no DB rollback.
 
 ### 2026-05-02 Admin Table Preferences I18n Hotfix
 
