@@ -60,7 +60,7 @@ Current gate:
 | Gate | Status | Required next action |
 | --- | --- | --- |
 | `v0.1.110..v0.1.111` | In review | Earliest known unclosed release interval. Process all 17 first-parent upstream items in this interval before moving on. |
-| `v0.1.111..v0.1.112` | Blocked | Start only after `v0.1.110..v0.1.111` is closed, `backend/cmd/server/VERSION` is bumped to `0.1.111`, and the fork tag `v0.1.111` is created. |
+| `v0.1.111..v0.1.112` | Blocked | Start only after `v0.1.110..v0.1.111` is closed, `backend/cmd/server/VERSION` is bumped to `0.1.111`, and the fork sync tag `fork/v0.1.111` is created. |
 | `v0.1.117` and later | Blocked | The earlier ledger that started at `v0.1.117` is not the active start point anymore. Do not advance here until the earlier gates are closed in order. |
 
 ## CI Baseline Closeout
@@ -145,7 +145,9 @@ git log --oneline --first-parent --reverse v0.1.110..v0.1.111
 | `a1a28368` | Sponsors churn | Not an ancestor after fork slices. | SKIP | Sponsor/readme churn; no fork behavior. |
 | `9648c432` | Frontend TS2352 cast fix in API client | Upstream merge commit is not an ancestor, but equivalent code is present. | PRESENT | `frontend/src/api/client.ts` uses `apiResponse as unknown as Record<string, unknown>` and preserves `reason`/`metadata` for payment errors. |
 
-Gate status: decision-complete, pending release-marker update. Next code step is to bump the fork release marker from `0.1.110` to `0.1.111` in a small marker PR if self-review and Kimi review confirm no unresolved item remains. After that marker PR lands, create the fork tag `v0.1.111` on the merged fork commit before starting `v0.1.111..v0.1.112`.
+Gate status: decision-complete, pending release-marker update. Next code step is to bump the fork release marker from `0.1.110` to `0.1.111` in a small marker PR if self-review and Kimi review confirm no unresolved item remains. After that marker PR lands, create the fork sync tag `fork/v0.1.111` on the merged fork commit before starting `v0.1.111..v0.1.112`.
+
+Tag namespace note: do not create a fork tag named exactly `v0.1.111`. That tag name already exists for the upstream release and points at upstream commit `9648c432`; using the same tag name for a different fork commit would create a tag collision across remotes. Fork coverage tags use the `fork/vX.Y.Z` namespace.
 
 ### v0.1.117
 
@@ -265,6 +267,6 @@ Gate status: blocked by Anthropic global TTL HOLD. Do not mark `v0.1.121` comple
 
 1. Run self-review and Kimi review on the `v0.1.110..v0.1.111` 17-item matrix.
 2. If review finds no unresolved item, open a small release-marker PR to bump `backend/cmd/server/VERSION` from `0.1.110` to `0.1.111`.
-3. After the marker PR lands, create and push fork tag `v0.1.111` on the merged fork commit.
+3. After the marker PR lands, create and push fork sync tag `fork/v0.1.111` on the merged fork commit.
 4. Only after the tag exists in `ddnio/sub2api`, start the next gate: `v0.1.111..v0.1.112`.
 5. Do not start later-release runtime `PORT` work out of order unless it is an emergency production fix and is recorded as such.

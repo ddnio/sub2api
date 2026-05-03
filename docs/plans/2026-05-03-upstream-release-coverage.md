@@ -72,7 +72,7 @@ Current next task:
 
 1. Finish review of every item in `v0.1.110..v0.1.111`.
 2. If review confirms no unresolved item remains, update the fork release marker from `0.1.110` to `0.1.111` in a small marker PR.
-3. After the marker PR lands, create and push the fork tag `v0.1.111` on the merged fork commit.
+3. After the marker PR lands, create and push the fork sync tag `fork/v0.1.111` on the merged fork commit.
 4. Then start `v0.1.111..v0.1.112`.
 
 ## Task 2: Release Coverage Ledger PR
@@ -123,5 +123,6 @@ Only start after Task 1 is merged or CI baseline is otherwise green. This gate i
 - Whole-release cherry-picks are not allowed.
 - Ambiguous upstream candidates are held only temporarily; they must be resolved before the release gate closes.
 - `v0.1.110..v0.1.111` is decision-complete only after self-review and Kimi review confirm the 17-item matrix has no unresolved item.
-- A release gate is not fully closed until both the fork release marker and corresponding fork tag exist.
+- A release gate is not fully closed until both the fork release marker and corresponding fork sync tag exist.
+- Fork sync tags use the `fork/vX.Y.Z` namespace to avoid colliding with upstream release tags such as `v0.1.111`.
 - PRs must target `ddnio/sub2api` explicitly.
