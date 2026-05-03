@@ -410,6 +410,7 @@ func registerSettingsRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		// Web Search 模拟配置
 		adminSettings.GET("/web-search-emulation", h.Admin.Setting.GetWebSearchEmulationConfig)
 		adminSettings.PUT("/web-search-emulation", h.Admin.Setting.UpdateWebSearchEmulationConfig)
+		adminSettings.POST("/web-search-emulation/test", h.Admin.Setting.TestWebSearchEmulation)
 		// 悬浮联系按钮渠道配置
 		adminSettings.GET("/contact-channels", h.Admin.Setting.GetContactChannels)
 		adminSettings.PUT("/contact-channels", h.Admin.Setting.UpdateContactChannels)

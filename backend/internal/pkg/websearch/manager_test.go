@@ -12,14 +12,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewManager_SortsByPriority(t *testing.T) {
+func TestNewManager_PreservesOrder(t *testing.T) {
 	configs := []ProviderConfig{
-		{Type: "brave", APIKey: "k3", Priority: 30},
-		{Type: "tavily", APIKey: "k1", Priority: 10},
+		{Type: "brave", APIKey: "k3"},
+		{Type: "tavily", APIKey: "k1"},
 	}
 	m := NewManager(configs, nil)
-	require.Equal(t, 10, m.configs[0].Priority)
-	require.Equal(t, 30, m.configs[1].Priority)
+	require.Equal(t, "brave", m.configs[0].Type)
+	require.Equal(t, "tavily", m.configs[1].Type)
 }
 
 func TestManager_SearchWithBestProvider_EmptyQuery(t *testing.T) {
@@ -46,8 +46,7 @@ func TestManager_SearchWithBestProvider_SkipExpired(t *testing.T) {
 	require.ErrorContains(t, err, "no available provider")
 }
 
-func TestManager_SearchWithBestProvider_PriorityOrder(t *testing.T) {
-	// Create two mock servers that return different results
+func TestManager_SearchWithBestProvider_UsesFirstAvailable(t *testing.T) {
 	srvBrave := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		resp := braveResponse{}
 		resp.Web.Results = []braveResult{{URL: "https://brave.com", Title: "Brave", Description: "from brave"}}
@@ -55,17 +54,15 @@ func TestManager_SearchWithBestProvider_PriorityOrder(t *testing.T) {
 	}))
 	defer srvBrave.Close()
 
-	// Override brave endpoint for test
 	origURL := *braveSearchURL
 	u, _ := http.NewRequest("GET", srvBrave.URL, nil)
 	*braveSearchURL = *u.URL
 	defer func() { *braveSearchURL = origURL }()
 
 	m := NewManager([]ProviderConfig{
-		{Type: "brave", APIKey: "k1", Priority: 1},
-		{Type: "tavily", APIKey: "k2", Priority: 2},
+		{Type: "brave", APIKey: "k1"},
+		{Type: "tavily", APIKey: "k2"},
 	}, nil)
-	// Inject the test server's client
 	m.clientCache[srvBrave.URL] = srvBrave.Client()
 	m.clientCache[""] = srvBrave.Client()
 
@@ -77,7 +74,6 @@ func TestManager_SearchWithBestProvider_PriorityOrder(t *testing.T) {
 }
 
 func TestManager_SearchWithBestProvider_NilRedis(t *testing.T) {
-	// With nil Redis, quota check is skipped (always allowed)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		resp := braveResponse{}
 		resp.Web.Results = []braveResult{{URL: "https://test.com", Title: "Test", Description: "result"}}
@@ -91,8 +87,8 @@ func TestManager_SearchWithBestProvider_NilRedis(t *testing.T) {
 	defer func() { *braveSearchURL = origURL }()
 
 	m := NewManager([]ProviderConfig{
-		{Type: "brave", APIKey: "k", Priority: 1, QuotaLimit: 100},
-	}, nil) // nil Redis
+		{Type: "brave", APIKey: "k", QuotaLimit: 100},
+	}, nil)
 	m.clientCache[""] = srv.Client()
 
 	resp, _, err := m.SearchWithBestProvider(context.Background(), SearchRequest{Query: "test"})
@@ -102,51 +98,61 @@ func TestManager_SearchWithBestProvider_NilRedis(t *testing.T) {
 
 func TestManager_GetUsage_NilRedis(t *testing.T) {
 	m := NewManager(nil, nil)
-	used, err := m.GetUsage(context.Background(), "brave", "monthly")
+	used, err := m.GetUsage(context.Background(), "brave")
 	require.NoError(t, err)
 	require.Equal(t, int64(0), used)
 }
 
 func TestManager_GetAllUsage_NilRedis(t *testing.T) {
 	m := NewManager([]ProviderConfig{
-		{Type: "brave", QuotaRefreshInterval: "monthly"},
+		{Type: "brave"},
 	}, nil)
 	usage := m.GetAllUsage(context.Background())
 	require.Equal(t, int64(0), usage["brave"])
 }
 
-// --- Key/TTL helpers ---
+// --- Quota TTL from subscription ---
 
-func TestQuotaTTL_Daily(t *testing.T) {
-	require.Equal(t, 24*time.Hour+quotaTTLBuffer, quotaTTL(QuotaRefreshDaily))
+func TestQuotaTTLFromSubscription_NilSubscription(t *testing.T) {
+	require.Equal(t, defaultQuotaTTL, quotaTTLFromSubscription(nil))
 }
 
-func TestQuotaTTL_Weekly(t *testing.T) {
-	require.Equal(t, 7*24*time.Hour+quotaTTLBuffer, quotaTTL(QuotaRefreshWeekly))
+func TestQuotaTTLFromSubscription_ZeroSubscription(t *testing.T) {
+	zero := int64(0)
+	require.Equal(t, defaultQuotaTTL, quotaTTLFromSubscription(&zero))
 }
 
-func TestQuotaTTL_Monthly(t *testing.T) {
-	require.Equal(t, 31*24*time.Hour+quotaTTLBuffer, quotaTTL(QuotaRefreshMonthly))
+func TestQuotaTTLFromSubscription_ValidSubscription(t *testing.T) {
+	sub := time.Now().Add(-10 * 24 * time.Hour).Unix()
+	ttl := quotaTTLFromSubscription(&sub)
+	require.Greater(t, ttl, 15*24*time.Hour)
+	require.Less(t, ttl, 25*24*time.Hour+quotaTTLBuffer)
 }
 
-func TestPeriodKey_Daily(t *testing.T) {
-	key := periodKey(QuotaRefreshDaily)
-	require.Regexp(t, `^\d{4}-\d{2}-\d{2}$`, key)
+func TestNextMonthlyReset_SubscribedLongAgo(t *testing.T) {
+	sub := time.Now().UTC().AddDate(0, -6, 0)
+	sub = time.Date(sub.Year(), sub.Month(), 1, 0, 0, 0, 0, time.UTC)
+	next := nextMonthlyReset(sub)
+	require.True(t, next.After(time.Now().UTC()))
+	require.True(t, next.Before(time.Now().UTC().AddDate(0, 1, 1)))
 }
 
-func TestPeriodKey_Weekly(t *testing.T) {
-	key := periodKey(QuotaRefreshWeekly)
-	require.Regexp(t, `^\d{4}-W\d{2}$`, key)
+func TestAddMonthsClamped_Jan31ToFeb(t *testing.T) {
+	sub := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
+	next := addMonthsClamped(sub, 1)
+	require.Equal(t, time.Month(2), next.Month())
+	require.Equal(t, 28, next.Day())
 }
 
-func TestPeriodKey_Monthly(t *testing.T) {
-	key := periodKey(QuotaRefreshMonthly)
-	require.Regexp(t, `^\d{4}-\d{2}$`, key)
+func TestAddMonthsClamped_Jan31ToFebLeapYear(t *testing.T) {
+	sub := time.Date(2028, 1, 31, 0, 0, 0, 0, time.UTC)
+	next := addMonthsClamped(sub, 1)
+	require.Equal(t, time.Month(2), next.Month())
+	require.Equal(t, 29, next.Day())
 }
 
 func TestQuotaRedisKey_Format(t *testing.T) {
-	key := quotaRedisKey("brave", QuotaRefreshDaily)
-	require.Contains(t, key, "websearch:quota:brave:")
+	require.Equal(t, "websearch:quota:brave", quotaRedisKey("brave"))
 }
 
 // --- isProviderAvailable ---

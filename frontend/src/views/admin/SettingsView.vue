@@ -1804,85 +1804,178 @@
               <div
                 v-for="(provider, providerIndex) in webSearchConfig.providers"
                 :key="providerIndex"
-                class="space-y-3 rounded-lg border border-gray-200 p-4 dark:border-dark-600"
+                class="rounded-lg border border-gray-200 dark:border-dark-600"
               >
-                <div class="flex items-center justify-between">
-                  <Select
-                    v-model="provider.type"
-                    :options="[
-                      { value: 'brave', label: 'Brave Search' },
-                      { value: 'tavily', label: 'Tavily' },
-                    ]"
-                    class="w-40"
-                  />
+                <div
+                  class="flex cursor-pointer items-center justify-between px-4 py-3"
+                  @click="toggleWebSearchProviderExpand(providerIndex)"
+                >
+                  <div class="flex min-w-0 flex-wrap items-center gap-3">
+                    <svg
+                      class="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform"
+                      :class="{ 'rotate-90': expandedWebSearchProviders[providerIndex] }"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                    <Select
+                      v-model="provider.type"
+                      :options="[
+                        { value: 'brave', label: 'Brave Search' },
+                        { value: 'tavily', label: 'Tavily' },
+                      ]"
+                      class="w-36"
+                      @click.stop
+                    />
+                    <span v-if="!expandedWebSearchProviders[providerIndex] && provider.quota_limit > 0" class="text-xs text-gray-400">
+                      {{ provider.quota_used ?? 0 }} / {{ provider.quota_limit }}
+                    </span>
+                    <span v-if="provider.api_key_configured" class="text-xs text-green-500">
+                      {{ t('admin.settings.webSearchEmulation.apiKeyConfigured') }}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     class="text-xs text-red-500 hover:text-red-700"
-                    @click="webSearchConfig.providers.splice(providerIndex, 1)"
+                    @click.stop="removeWebSearchProvider(providerIndex)"
                   >
                     {{ t('admin.settings.webSearchEmulation.removeProvider') }}
                   </button>
                 </div>
 
-                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div
+                  v-if="expandedWebSearchProviders[providerIndex]"
+                  class="space-y-3 border-t border-gray-100 px-4 pb-4 pt-3 dark:border-dark-700"
+                >
                   <div>
                     <label class="text-xs text-gray-500">
                       {{ t('admin.settings.webSearchEmulation.apiKey') }}
                     </label>
-                    <input
-                      v-model="provider.api_key"
-                      type="password"
-                      class="input text-sm"
-                      :placeholder="
-                        provider.api_key_configured
-                          ? '••••••••'
-                          : t('admin.settings.webSearchEmulation.apiKeyPlaceholder')
-                      "
-                    />
+                    <div class="flex items-center gap-1">
+                      <input
+                        v-model="provider.api_key"
+                        :type="webSearchApiKeyVisible[providerIndex] ? 'text' : 'password'"
+                        class="input flex-1 text-sm"
+                        :placeholder="
+                          provider.api_key_configured
+                            ? '••••••••'
+                            : t('admin.settings.webSearchEmulation.apiKeyPlaceholder')
+                        "
+                      />
+                      <button
+                        type="button"
+                        class="btn btn-secondary btn-sm px-2"
+                        :title="
+                          webSearchApiKeyVisible[providerIndex]
+                            ? t('admin.settings.webSearchEmulation.hideApiKey')
+                            : t('admin.settings.webSearchEmulation.showApiKey')
+                        "
+                        @click="webSearchApiKeyVisible[providerIndex] = !webSearchApiKeyVisible[providerIndex]"
+                      >
+                        <svg v-if="!webSearchApiKeyVisible[providerIndex]" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <svg v-else class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 104.243 4.243" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-secondary btn-sm px-2"
+                        :title="t('admin.settings.webSearchEmulation.copyApiKey')"
+                        @click="copyWebSearchApiKey(providerIndex)"
+                      >
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
+
+                  <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div>
+                      <label class="text-xs text-gray-500">
+                        {{ t('admin.settings.webSearchEmulation.quotaLimit') }}
+                      </label>
+                      <input v-model.number="provider.quota_limit" type="number" min="0" class="input text-sm" />
+                      <p class="mt-0.5 text-xs text-gray-400">
+                        {{ t('admin.settings.webSearchEmulation.quotaLimitHint') }}
+                      </p>
+                    </div>
+                    <div>
+                      <label class="text-xs text-gray-500">
+                        {{ t('admin.settings.webSearchEmulation.subscribedAt') }}
+                      </label>
+                      <input
+                        :value="formatSubscribedAt(provider.subscribed_at)"
+                        type="date"
+                        class="input text-sm"
+                        @input="provider.subscribed_at = parseSubscribedAt(($event.target as HTMLInputElement).value)"
+                      />
+                      <p class="mt-0.5 text-xs text-gray-400">
+                        {{ t('admin.settings.webSearchEmulation.subscribedAtHint') }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div v-if="provider.quota_limit > 0" class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500">{{ t('admin.settings.webSearchEmulation.quotaUsage') }}:</span>
+                    <div class="h-1.5 flex-1 rounded-full bg-gray-200 dark:bg-dark-600">
+                      <div
+                        class="h-full rounded-full transition-all"
+                        :class="quotaPercentage(provider) > 90 ? 'bg-red-500' : quotaPercentage(provider) > 70 ? 'bg-yellow-500' : 'bg-green-500'"
+                        :style="{ width: Math.min(quotaPercentage(provider), 100) + '%' }"
+                      />
+                    </div>
+                    <span class="text-xs text-gray-500">{{ provider.quota_used ?? 0 }} / {{ provider.quota_limit }}</span>
+                  </div>
+
                   <div>
                     <label class="text-xs text-gray-500">
-                      {{ t('admin.settings.webSearchEmulation.priority') }}
+                      {{ t('admin.settings.webSearchEmulation.proxy') }}
                     </label>
-                    <input v-model.number="provider.priority" type="number" min="1" class="input text-sm" />
-                    <p class="mt-0.5 text-xs text-gray-400">
-                      {{ t('admin.settings.webSearchEmulation.priorityHint') }}
-                    </p>
-                  </div>
-                  <div>
-                    <label class="text-xs text-gray-500">
-                      {{ t('admin.settings.webSearchEmulation.quotaLimit') }}
-                    </label>
-                    <input v-model.number="provider.quota_limit" type="number" min="0" class="input text-sm" />
-                    <p class="mt-0.5 text-xs text-gray-400">
-                      {{ t('admin.settings.webSearchEmulation.quotaLimitHint') }}
-                    </p>
-                    <p v-if="provider.quota_used != null" class="mt-0.5 text-xs text-gray-400">
-                      {{ t('admin.settings.webSearchEmulation.quotaUsed') }}:
-                      {{ provider.quota_used }} / {{ provider.quota_limit || '∞' }}
-                    </p>
-                  </div>
-                  <div>
-                    <label class="text-xs text-gray-500">
-                      {{ t('admin.settings.webSearchEmulation.quotaRefreshInterval') }}
-                    </label>
-                    <Select
-                      v-model="provider.quota_refresh_interval"
-                      :options="[
-                        { value: 'daily', label: t('admin.settings.webSearchEmulation.daily') },
-                        { value: 'weekly', label: t('admin.settings.webSearchEmulation.weekly') },
-                        { value: 'monthly', label: t('admin.settings.webSearchEmulation.monthly') },
-                      ]"
-                      class="w-full"
-                    />
+                    <ProxySelector v-model="provider.proxy_id" :proxies="proxyOptions" />
                   </div>
                 </div>
+              </div>
 
-                <div>
-                  <label class="text-xs text-gray-500">
-                    {{ t('admin.settings.webSearchEmulation.proxy') }}
-                  </label>
-                  <ProxySelector v-model="provider.proxy_id" :proxies="proxyOptions" />
+              <div class="border-t border-gray-100 pt-4 dark:border-dark-700">
+                <div class="flex items-center gap-2">
+                  <input
+                    v-model="webSearchTestQuery"
+                    type="text"
+                    class="input flex-1 text-sm"
+                    :placeholder="t('admin.settings.webSearchEmulation.testDefaultQuery')"
+                    @keyup.enter="testWebSearchProvider"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    :disabled="webSearchTestLoading"
+                    @click="testWebSearchProvider"
+                  >
+                    {{ webSearchTestLoading ? t('admin.settings.webSearchEmulation.testing') : t('admin.settings.webSearchEmulation.test') }}
+                  </button>
+                </div>
+                <div v-if="webSearchTestResult" class="mt-3 rounded-lg bg-gray-50 p-3 text-xs dark:bg-dark-700">
+                  <p class="mb-2 font-medium text-gray-700 dark:text-gray-300">
+                    {{ t('admin.settings.webSearchEmulation.testResultProvider') }}: {{ webSearchTestResult.provider }}
+                  </p>
+                  <div v-if="webSearchTestResult.results.length === 0" class="text-gray-400">
+                    {{ t('admin.settings.webSearchEmulation.testNoResults') }}
+                  </div>
+                  <div v-for="(result, resultIndex) in webSearchTestResult.results.slice(0, 3)" :key="resultIndex" class="mt-2">
+                    <a :href="result.url" target="_blank" rel="noopener noreferrer" class="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                      {{ result.title }}
+                    </a>
+                    <p class="text-gray-500 dark:text-gray-400">
+                      {{ result.snippet && result.snippet.length > 120 ? result.snippet.slice(0, 120) + '...' : result.snippet }}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2776,7 +2869,8 @@ import type {
   UpdateSettingsRequest,
   DefaultSubscriptionSetting,
   WebSearchEmulationConfig,
-  WebSearchProviderConfig
+  WebSearchProviderConfig,
+  WebSearchTestResult
 } from '@/api/admin/settings'
 import type { AdminGroup, ContactChannel, Proxy } from '@/types'
 import type { PaymentConfig } from '@/api/admin'
@@ -3015,17 +3109,72 @@ const webSearchConfig = reactive<WebSearchEmulationConfig>({
   providers: []
 })
 
+const webSearchTestQuery = ref('')
+const webSearchTestLoading = ref(false)
+const webSearchTestResult = ref<WebSearchTestResult | null>(null)
+const expandedWebSearchProviders = reactive<Record<number, boolean>>({})
+const webSearchApiKeyVisible = reactive<Record<number, boolean>>({})
+
+function toggleWebSearchProviderExpand(index: number) {
+  expandedWebSearchProviders[index] = !expandedWebSearchProviders[index]
+}
+
+function removeWebSearchProvider(index: number) {
+  webSearchConfig.providers.splice(index, 1)
+
+  const newExpanded: Record<number, boolean> = {}
+  const newVisible: Record<number, boolean> = {}
+  for (let i = 0; i < webSearchConfig.providers.length; i++) {
+    const oldIndex = i >= index ? i + 1 : i
+    newExpanded[i] = expandedWebSearchProviders[oldIndex] ?? false
+    newVisible[i] = webSearchApiKeyVisible[oldIndex] ?? false
+  }
+  Object.keys(expandedWebSearchProviders).forEach((key) => delete expandedWebSearchProviders[Number(key)])
+  Object.keys(webSearchApiKeyVisible).forEach((key) => delete webSearchApiKeyVisible[Number(key)])
+  Object.assign(expandedWebSearchProviders, newExpanded)
+  Object.assign(webSearchApiKeyVisible, newVisible)
+}
+
 function addWebSearchProvider() {
+  const index = webSearchConfig.providers.length
   webSearchConfig.providers.push({
     type: 'brave',
     api_key: '',
     api_key_configured: false,
-    priority: webSearchConfig.providers.length + 1,
     quota_limit: DEFAULT_WEB_SEARCH_QUOTA_LIMIT,
-    quota_refresh_interval: 'monthly',
+    subscribed_at: null,
     proxy_id: null,
     expires_at: null
   } as WebSearchProviderConfig)
+  expandedWebSearchProviders[index] = true
+}
+
+function formatSubscribedAt(timestamp: number | null): string {
+  if (!timestamp) return ''
+  const date = new Date(timestamp * 1000)
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function parseSubscribedAt(value: string): number | null {
+  if (!value) return null
+  return Math.floor(new Date(`${value}T00:00:00Z`).getTime() / 1000)
+}
+
+function quotaPercentage(provider: WebSearchProviderConfig): number {
+  if (!provider.quota_limit || provider.quota_limit <= 0) return 0
+  return ((provider.quota_used ?? 0) / provider.quota_limit) * 100
+}
+
+async function copyWebSearchApiKey(index: number) {
+  const key = webSearchConfig.providers[index]?.api_key
+  if (!key) {
+    appStore.showError(t('admin.settings.webSearchEmulation.apiKeyPlaceholder'))
+    return
+  }
+  await copyToClipboard(key, t('admin.settings.webSearchEmulation.copied'))
 }
 
 async function loadWebSearchConfig() {
@@ -3033,11 +3182,26 @@ async function loadWebSearchConfig() {
     const config = await adminAPI.settings.getWebSearchEmulationConfig()
     webSearchConfig.enabled = config.enabled || false
     webSearchConfig.providers = Array.isArray(config.providers) ? config.providers : []
+    Object.keys(expandedWebSearchProviders).forEach((key) => delete expandedWebSearchProviders[Number(key)])
+    Object.keys(webSearchApiKeyVisible).forEach((key) => delete webSearchApiKeyVisible[Number(key)])
   } catch (error: unknown) {
     const status = (error as { status?: number })?.status
     if (status !== 404) {
       appStore.showError(extractApiErrorMessage(error, t('common.error')))
     }
+  }
+}
+
+async function testWebSearchProvider() {
+  webSearchTestLoading.value = true
+  webSearchTestResult.value = null
+  try {
+    const query = webSearchTestQuery.value.trim() || t('admin.settings.webSearchEmulation.testDefaultQuery')
+    webSearchTestResult.value = await adminAPI.settings.testWebSearchEmulation(query)
+  } catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('common.error')))
+  } finally {
+    webSearchTestLoading.value = false
   }
 }
 
