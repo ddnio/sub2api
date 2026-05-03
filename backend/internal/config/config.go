@@ -2377,23 +2377,23 @@ func isHTTPScheme(scheme string) bool {
 }
 
 type PaymentConfig struct {
-	Provider        string  `mapstructure:"provider"`          // easypay
+	Provider        string  `mapstructure:"provider"` // easypay
 	EasyPayBaseURL  string  `mapstructure:"easypay_base_url"`
 	EasyPayAppID    string  `mapstructure:"easypay_app_id"`
 	EasyPaySignKey  string  `mapstructure:"easypay_sign_key"`
 	CallbackBaseURL string  `mapstructure:"callback_base_url"`
-	OrderExpirySec  int     `mapstructure:"order_expiry_sec"`  // default 900
-	ExpiryTickSec   int     `mapstructure:"expiry_tick_sec"`   // default 60
-	MinTopupAmount  float64 `mapstructure:"min_topup_amount"`  // default 10.00
-	MaxTopupAmount  float64 `mapstructure:"max_topup_amount"`  // default 10000.00
+	OrderExpirySec  int     `mapstructure:"order_expiry_sec"` // default 900
+	ExpiryTickSec   int     `mapstructure:"expiry_tick_sec"`  // default 60
+	MinTopupAmount  float64 `mapstructure:"min_topup_amount"` // default 10.00
+	MaxTopupAmount  float64 `mapstructure:"max_topup_amount"` // default 10000.00
 
 	// 微信支付 Native Pay v3
 	WxpayAppID       string `mapstructure:"wxpay_app_id"`
 	WxpayMchID       string `mapstructure:"wxpay_mch_id"`
 	WxpayApiV3Key    string `mapstructure:"wxpay_api_v3_key"`
-	WxpayPrivateKey  string `mapstructure:"wxpay_private_key"`  // 商户私钥 PEM（多行，YAML literal block）
-	WxpaySerialNo    string `mapstructure:"wxpay_serial_no"`    // 商户证书序列号
-	WxpayPublicKey   string `mapstructure:"wxpay_public_key"`   // 微信支付公钥 PEM（新版公钥模式，从商户平台下载）
+	WxpayPrivateKey  string `mapstructure:"wxpay_private_key"`   // 商户私钥 PEM（多行，YAML literal block）
+	WxpaySerialNo    string `mapstructure:"wxpay_serial_no"`     // 商户证书序列号
+	WxpayPublicKey   string `mapstructure:"wxpay_public_key"`    // 微信支付公钥 PEM（新版公钥模式，从商户平台下载）
 	WxpayPublicKeyID string `mapstructure:"wxpay_public_key_id"` // 公钥 ID，含 PUB_KEY_ID_ 前缀完整填写（如 PUB_KEY_ID_0114...）
 }
 

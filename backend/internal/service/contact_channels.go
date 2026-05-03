@@ -16,9 +16,9 @@ import (
 
 // ContactChannelType 渠道固定类型枚举
 const (
-	ContactChannelTypeWeChatGroup       = "wechat_group"
-	ContactChannelTypeCustomerService   = "customer_service"
-	ContactChannelTypeOfficialAccount   = "official_account"
+	ContactChannelTypeWeChatGroup     = "wechat_group"
+	ContactChannelTypeCustomerService = "customer_service"
+	ContactChannelTypeOfficialAccount = "official_account"
 )
 
 // ValidContactChannelTypes 渠道允许的固定类型集合

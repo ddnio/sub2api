@@ -5785,7 +5785,7 @@ func (s *GatewayService) buildUpstreamRequest(ctx context.Context, c *gin.Contex
 	// Parrot 的 build_upstream_headers 只发 9 个精确 header，不透传任何客户端 header。
 	// 透传客户端 header 会引入不一致的 x-stainless-* / anthropic-beta / user-agent /
 	// x-claude-code-session-id 等值，和我们注入的伪装 header 冲突，被 Anthropic 判 third-party。
-	if !(tokenType == "oauth" && mimicClaudeCode) {
+	if tokenType != "oauth" || !mimicClaudeCode {
 		for key, values := range clientHeaders {
 			lowerKey := strings.ToLower(key)
 			if allowedHeaders[lowerKey] {
