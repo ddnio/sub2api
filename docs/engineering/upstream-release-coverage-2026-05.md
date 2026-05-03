@@ -1,24 +1,39 @@
 # Upstream Release Coverage 2026-05
 
-This document replaces ad-hoc continuation notes with a release-bounded coverage ledger. Releases are audit boundaries only; actual code movement remains upstream PR/merge-commit based.
+This document replaces ad-hoc continuation notes with a release-bounded coverage ledger. Releases are sequential gates: do not mark a release complete, update the fork release/tag marker, or advance to the next release until every upstream change in that release has a final recorded outcome.
+
+The final outcome for a release item is one of:
+
+- merged into the fork
+- adapted into the fork through a deliberate local implementation
+- already present locally with evidence
+- intentionally skipped because it does not apply to the fork
+- explicitly rejected or long-term frozen with a decision owner and reason
+
+Implementation still moves by upstream PR/merge commit or smaller reviewed hunks. The release is the planning and closeout boundary, not a license to cherry-pick an entire tag.
 
 ## Baseline
 
-- Local base: `origin/main` at `fed065e6 fix(ci): restore baseline test and lint health`.
-- Upstream pinned scope: `upstream/main` at `48912014 chore: sync VERSION to 0.1.121 [skip ci]`.
+- Local base: `origin/main` at `2acdfd66 docs(upstream-sync): add release coverage ledger`.
+- Upstream published-tag scope: latest local upstream tag `v0.1.121` at `9d801595 test: 更新管理员设置契约字段`.
+- Upstream main observed locally: `b2bdba78 stabilize image request handling`; this is not in the published tag scope yet.
 - Latest upstream tag in scope: `v0.1.121`.
-- Work branch: `feature/upstream-release-coverage-2026-05`.
-- Worktree: `.claude/worktrees/upstream-release-coverage-2026-05`.
+- Work branch: `docs/upstream-sync-final-smoke`.
+- Worktree: `.claude/worktrees/upstream-sync-final-smoke`.
 - Plan: `docs/plans/2026-05-03-upstream-release-coverage.md`.
 
-If `upstream/main` advances, do not expand this ledger automatically. Pin the new SHA and review the scope first.
+If `upstream/main` advances, do not expand this ledger automatically. Only expand after a new upstream tag is fetched and the release interval is reviewed.
+
+Fetch note: 2026-05-03 attempts to refresh `upstream` and `origin` failed with GitHub transport errors (`HTTP2 framing layer` / `Operation timed out`). Current decisions use the already present local refs above and the local upstream tags through `v0.1.121`. Push fallback order for this environment is: retry with `git -c http.version=HTTP/1.1 push`; if HTTPS still fails, use the GitHub Git Data API branch-creation fallback already documented in `docs/engineering/upstream-sync-2026-05-phase2.md`.
 
 ## Rules
 
 - Do not merge or cherry-pick an entire release.
 - Code merge unit is upstream PR/merge commit or a smaller manually ported hunk.
-- Already merged fork PRs #19-#35 are treated as current baseline and are not repeated.
-- `HOLD` is the safe default for auth identity, pending OAuth, affiliate, channel monitor/insights, Vertex, Fast/Flex, OpenAI image refactors, payment semantics, schema/migration/Ent drift, license/CLA, and sponsor/readme churn.
+- Process releases in tag order. A later release must not start until the previous release gate is closed.
+- `HOLD` is not a completed state by itself. A release with unresolved `HOLD` items is not complete. A `HOLD` item closes only when it is explicitly accepted for a later dedicated project, rejected for this fork, or long-term frozen with a documented owner/reason.
+- Already merged fork PRs #19-#35 are treated as current implementation baseline.
+- Product, schema/migration/Ent, auth identity, pending OAuth, affiliate, channel monitor/insights, Vertex, Fast/Flex, OpenAI image refactors, payment semantics, license/CLA, and sponsor/readme churn require explicit release-gate decisions.
 - Docs-only PRs require `git diff --check`, self-review, Kimi review, and PR-level review; they do not deploy.
 - Runtime PRs require targeted tests, self-review, Kimi pre-commit review, PR-level Kimi review, GitHub CI, and a recorded deployment gate if deployed.
 
@@ -27,11 +42,26 @@ If `upstream/main` advances, do not expand this ledger automatically. Pin the ne
 This ledger PR is documentation-only in the fork. The upstream commits listed below are mostly code changes. Listing a code commit in this ledger does not authorize merging it; the `Action` column is the decision boundary.
 
 - `MERGED`: the relevant behavior has already landed in this fork through a reviewed fork PR.
+- `ADAPTED`: the upstream behavior or feature family was intentionally implemented through a fork-specific architecture instead of preserving the upstream commit ancestry.
 - `PRESENT`: current fork code already provides the behavior; no new PR is planned.
 - `PARTIAL`: some behavior exists or was ported, but more upstream code is not automatically accepted.
 - `PORT`: a future small PR may port a proven low-risk missing behavior.
-- `HOLD`: do not implement without a separate product/architecture/migration plan.
+- `HOLD`: not complete; must be converted to accepted-later, rejected, or long-term-frozen before the release gate closes.
+- `REJECTED`: explicitly not adopted for this fork/release, with reason.
+- `FROZEN`: accepted only as a later dedicated project, with owner/reason; it is closed for the current release gate.
 - `SKIP`: intentionally ignore for this fork cycle, usually chore/version/churn or no proven local gap.
+
+## Sequential Gate Status
+
+The previous 2026-04 sync closed a slice-based Phase 1, not a release-gate sequence. Do not process the historical HOLD set as a separate global queue. Instead, start from the earliest release interval that was not closed under the release-gate rule, then decide each item inside that release before advancing.
+
+Current gate:
+
+| Gate | Status | Required next action |
+| --- | --- | --- |
+| `v0.1.110..v0.1.111` | In review | Earliest known unclosed release interval. Process all 17 first-parent upstream items in this interval before moving on. |
+| `v0.1.111..v0.1.112` | Blocked | Start only after `v0.1.110..v0.1.111` is closed, `backend/cmd/server/VERSION` is bumped to `0.1.111`, and the fork tag `v0.1.111` is created. |
+| `v0.1.117` and later | Blocked | The earlier ledger that started at `v0.1.117` is not the active start point anymore. Do not advance here until the earlier gates are closed in order. |
 
 ## CI Baseline Closeout
 
@@ -81,8 +111,41 @@ GitHub verification:
 | #34 | `682cee12` | OpenAI WS item-reference guard rails from `094e1171`. |
 | #35 | `59b9cf34` | Deployed-slice closeout documentation. |
 | #36 | `fed065e6` | CI baseline restored before release coverage closeout. |
+| #37 | `2acdfd66` | Initial release coverage ledger; later corrected to start from `v0.1.110..v0.1.111`. |
 
 ## Release Coverage Matrix
+
+### v0.1.111
+
+Range: `v0.1.110..v0.1.111`.
+
+Source command:
+
+```bash
+git log --oneline --first-parent --reverse v0.1.110..v0.1.111
+```
+
+| Upstream source | Area | Local state | Outcome | Evidence / decision |
+| --- | --- | --- | --- | --- |
+| `f54e9d0b` | README churn | Commit is ancestor of local `HEAD`. | SKIP | Documentation/churn only; no release-gate behavior. |
+| `0d69c0cd` | Version sync to `0.1.110` | Commit is ancestor of local `HEAD`; current `backend/cmd/server/VERSION` is `0.1.110`. | PRESENT | Current fork release marker is still `0.1.110`; bumping to `0.1.111` is the marker step after this gate closes. |
+| `155d3474` | Sponsors churn | Commit is ancestor of local `HEAD`. | SKIP | Sponsor/readme churn does not affect fork runtime or product behavior. |
+| `1b79f6a7` / PR #1522 | Redis scheduler snapshot metadata and large MGET chunking | Commit is ancestor of local `HEAD`. | MERGED | Local `scheduler_cache.go` contains chunked `MGet` and preserves metadata fields such as `LoadFactor`. |
+| `74302f60` / PR #1010 | OIDC login | Commit is ancestor of local `HEAD`. | MERGED | Current fork already includes OIDC config/public settings plumbing from this upstream family. |
+| `9a72025a` / PR #1523 | Include `home_content` URL in CSP `frame-src` | Commit is ancestor of local `HEAD`. | MERGED | `SettingService.GetFrameSrcOrigins` adds `settings.HomeContent` before purchase/custom-menu origins. |
+| `760cc7d6` / PR #1481 | Increase stored error-log body limit | Commit is ancestor of local `HEAD`. | MERGED | Local ops service has upstream-equivalent error-body/request-body sanitization; no further port required in this release. |
+| `bbc79796` / PR #1529 | Group `/v1/messages` dispatch redo | Commit is ancestor of local `HEAD`. | MERGED | Local code has `OpenAIMessagesDispatchModelConfig`, group UI controls, migration `091_add_group_messages_dispatch_model_config.sql`, and dispatch resolution tests. |
+| `00c08c57` / PR #1539 | Sync `load_factor` into scheduler cache | Commit is ancestor of local `HEAD`. | MERGED | `buildSchedulerMetadataAccount` copies `LoadFactor` into scheduler metadata snapshots. |
+| `1ef3782d` / PR #1538 | Broad admin/repository/frontend bug-cleanup batch | Upstream merge commit is not an ancestor; selected behavior has landed through later fork/admin slices. | FROZEN | Owner: upstream-sync maintainer. Reason: 117-file mixed admin/repository/frontend cleanup overlaps later fork work and is not safe as a whole-release import. Keep as a later item-by-item audit source; no current missing behavior is proven. |
+| `97f14b7a` / PR #1572 | Payment system v2 | Upstream merge commit is not an ancestor; fork intentionally replaced/adapted it through `623dda62` and the payment-b2 sequence through production hotfix `6518510b`. | ADAPTED | Payment-b2 audit and deploy logs show fork-specific migrations, provider instances, checkout/result flows, Stripe/Alipay/Wxpay providers, webhook/refund/resume tests, and test/prod deployment. Do not cherry-pick upstream payment v2 over the fork adaptation. |
+| `54490cf6` / PR #1576 | Payment docs | Upstream merge commit is not an ancestor; upstream docs are superseded by fork payment-b2 operational docs. | ADAPTED | Current docs include `payment-b2-upstream-audit.md`, `payment-b2-deploy.md`, and `payment-b2-deploy-log.md`, which document the fork-specific payment architecture and deployment evidence. |
+| `9b7b3755` / PR #1543 | Messages-dispatch i18n | Upstream merge commit is not an ancestor, but fork PR #9 imported the relevant i18n slice in `d80a3827`. | MERGED | `git log --all --grep 1543` maps PR #1543 to fork slice #9; local i18n keys for messages dispatch are present. |
+| `16126a2c` / PR #1545 | Smooth sidebar collapse | Upstream merge commit is not an ancestor and conflicts with fork sidebar. | REJECTED | Owner: upstream-sync maintainer. Reason: fork `AppSidebar.vue` has diverged through local navigation/payment/contact changes; previous slice-7 explicitly skipped #1545 because the upstream sidebar rewrite is not safely applicable. Reopen only if a frontend sidebar redesign is requested. |
+| `82b840c1` / PR #1587 | Anthropic 400 credit-balance handling | Upstream merge commit is not an ancestor, but fork PR #10 imported equivalent Anthropic handling in `a53527fa`. | MERGED | `ratelimit_service.go` disables Anthropic accounts on 400 bodies containing `credit balance`; fork slice #10 covered this family. |
+| `a1a28368` | Sponsors churn | Not an ancestor after fork slices. | SKIP | Sponsor/readme churn; no fork behavior. |
+| `9648c432` | Frontend TS2352 cast fix in API client | Upstream merge commit is not an ancestor, but equivalent code is present. | PRESENT | `frontend/src/api/client.ts` uses `apiResponse as unknown as Record<string, unknown>` and preserves `reason`/`metadata` for payment errors. |
+
+Gate status: decision-complete, pending release-marker update. Next code step is to bump the fork release marker from `0.1.110` to `0.1.111` in a small marker PR if self-review and Kimi review confirm no unresolved item remains. After that marker PR lands, create the fork tag `v0.1.111` on the merged fork commit before starting `v0.1.111..v0.1.112`.
 
 ### v0.1.117
 
@@ -96,7 +159,7 @@ Range: `v0.1.116..v0.1.117`.
 | `ca204ddd` | Preserve image outputs when text serialization fails | Image-adjacent fix | HOLD | Potentially useful, but tied to held image path; reopen only in image batch. |
 | `a4e329c1` | Add default GPT-5.5 model | Model catalog/policy | HOLD | Not a safety fix; handle with a model catalog policy pass. |
 
-Conclusion: covered except HOLD.
+Gate status: blocked by HOLD. Do not mark `v0.1.117` complete until channel insights, image-family items, and model-catalog policy are explicitly accepted for later, rejected, or long-term frozen.
 
 ### v0.1.118
 
@@ -120,7 +183,7 @@ Range: `v0.1.117..v0.1.118`.
 | `641e6107` / PR #1940 | Codex CLI version bump | Dependency/tooling | HOLD | Dependency/policy update, not a low-risk runtime fix. |
 | `5d1c12e6` / PR #1943 | Responses pre-output failover | Not portable | HOLD | Requires upstream buffering structure absent in fork. |
 
-Conclusion: covered except HOLD and unproven partials.
+Gate status: blocked by HOLD / unresolved PARTIAL items. Do not mark `v0.1.118` complete until these are resolved after `v0.1.117`.
 
 ### v0.1.119
 
@@ -139,7 +202,7 @@ Range: `v0.1.118..v0.1.119`.
 | `41d06573` / PR #1970 | Anthropic cache usage semantics | Present | SKIP | Local tests and tracker record present behavior. |
 | `a0b5e5bf` / PR #1973 | Misc upstream PR | Unclassified low signal | HOLD | Do not port without candidate-specific evidence. |
 
-Conclusion: covered except HOLD; one lint item handled in PR #36.
+Gate status: blocked by HOLD / unresolved PARTIAL items. Do not mark `v0.1.119` complete until these are resolved after `v0.1.118`.
 
 ### v0.1.120
 
@@ -170,7 +233,7 @@ Range: `v0.1.119..v0.1.120`.
 | `40feb86b` | Decompression guard / errcheck lint | Merged | MERGED | Covered by PR #19. |
 | `8bf2a7b8` | Scheduler snapshot race / usage throttle | Merged/Partial | MERGED/PARTIAL | Backend scheduler safety covered by PR #19 and #33; frontend usage throttle file absent in fork. |
 
-Conclusion: mostly covered; remaining items are HOLD or require dedicated audit.
+Gate status: blocked by HOLD / dedicated-audit items. Do not mark `v0.1.120` complete until these are resolved after `v0.1.119`.
 
 ### v0.1.121
 
@@ -185,7 +248,7 @@ Range: `v0.1.120..v0.1.121`.
 | `9c448f89` / PR #2118 | Restore pagination localStorage | Merged/Present | MERGED | Admin/frontend table preference work covered by PR #28/#29. |
 | `9d801595` | Admin settings contract tests | Present/Docs closeout | SKIP | No runtime gap proven after PR #28/#29. |
 
-Conclusion: covered except Anthropic global TTL HOLD.
+Gate status: blocked by Anthropic global TTL HOLD. Do not mark `v0.1.121` complete until this is explicitly accepted for later, rejected, or long-term frozen.
 
 ## Remaining Decision List
 
@@ -200,7 +263,8 @@ Conclusion: covered except Anthropic global TTL HOLD.
 
 ## Current Next Action
 
-1. Run final self-review and Kimi review on this release coverage ledger.
-2. Keep PR #37 docs-only; no deployment is required.
-3. After PR #37 merges, use this ledger as the next-phase source of truth before opening any runtime `PORT` PR.
-4. Do not start runtime `PORT` work without a focused missing-behavior proof and a dedicated PR.
+1. Run self-review and Kimi review on the `v0.1.110..v0.1.111` 17-item matrix.
+2. If review finds no unresolved item, open a small release-marker PR to bump `backend/cmd/server/VERSION` from `0.1.110` to `0.1.111`.
+3. After the marker PR lands, create and push fork tag `v0.1.111` on the merged fork commit.
+4. Only after the tag exists in `ddnio/sub2api`, start the next gate: `v0.1.111..v0.1.112`.
+5. Do not start later-release runtime `PORT` work out of order unless it is an emergency production fix and is recorded as such.
