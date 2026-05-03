@@ -188,7 +188,47 @@ func (s *stubAdminService) BatchSetGroupRateMultipliers(_ context.Context, _ int
 }
 
 func (s *stubAdminService) ListAccounts(ctx context.Context, page, pageSize int, platform, accountType, status, search string, groupID int64, privacyMode string) ([]service.Account, int64, error) {
-	return s.accounts, int64(len(s.accounts)), nil
+	search = strings.TrimSpace(strings.ToLower(search))
+	filtered := make([]service.Account, 0, len(s.accounts))
+	for _, account := range s.accounts {
+		if platform != "" && account.Platform != platform {
+			continue
+		}
+		if accountType != "" && account.Type != accountType {
+			continue
+		}
+		if status != "" && account.Status != status {
+			continue
+		}
+		if groupID != 0 && !accountHasGroup(account, groupID) {
+			continue
+		}
+		if privacyMode != "" && account.Extra["privacy_mode"] != privacyMode {
+			continue
+		}
+		if search != "" && !strings.Contains(strings.ToLower(account.Name), search) {
+			continue
+		}
+		filtered = append(filtered, account)
+	}
+	return filtered, int64(len(filtered)), nil
+}
+
+func accountHasGroup(account service.Account, groupID int64) bool {
+	if groupID == service.AccountListGroupUngrouped {
+		return len(account.GroupIDs) == 0 && len(account.AccountGroups) == 0
+	}
+	for _, id := range account.GroupIDs {
+		if id == groupID {
+			return true
+		}
+	}
+	for _, group := range account.AccountGroups {
+		if group.GroupID == groupID {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *stubAdminService) GetAccount(ctx context.Context, id int64) (*service.Account, error) {
@@ -385,7 +425,21 @@ func (s *stubAdminService) CheckProxyQuality(ctx context.Context, id int64) (*se
 }
 
 func (s *stubAdminService) ListRedeemCodes(ctx context.Context, page, pageSize int, codeType, status, search string) ([]service.RedeemCode, int64, error) {
-	return s.redeems, int64(len(s.redeems)), nil
+	search = strings.TrimSpace(strings.ToLower(search))
+	filtered := make([]service.RedeemCode, 0, len(s.redeems))
+	for _, code := range s.redeems {
+		if codeType != "" && code.Type != codeType {
+			continue
+		}
+		if status != "" && code.Status != status {
+			continue
+		}
+		if search != "" && !strings.Contains(strings.ToLower(code.Code), search) {
+			continue
+		}
+		filtered = append(filtered, code)
+	}
+	return filtered, int64(len(filtered)), nil
 }
 
 func (s *stubAdminService) GetRedeemCode(ctx context.Context, id int64) (*service.RedeemCode, error) {

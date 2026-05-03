@@ -4702,7 +4702,7 @@ export default {
         tableDefaultPageSize: '默认分页大小',
         tableDefaultPageSizeHint: '新打开表格页面时默认使用的每页数量，范围 {min}-{max}',
         tablePageSizeOptions: '分页大小选项',
-        tablePageSizeOptionsPlaceholder: '10, 20, 50',
+        tablePageSizeOptionsPlaceholder: '10, 20, 50, 100',
         tablePageSizeOptionsHint: '用逗号分隔多个选项，必须在 {min}-{max} 范围内；默认分页大小会自动加入选项',
         tableDefaultPageSizeRangeError: '默认分页大小必须在 {min}-{max} 之间',
         tablePageSizeOptionsFormatError: '分页大小选项必须是 {min}-{max} 之间的整数，并用逗号分隔',

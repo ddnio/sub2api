@@ -44,6 +44,12 @@ describe('AccountTableFilters', () => {
     const selects = wrapper.findAll('.select-stub')
     expect(selects).toHaveLength(5)
 
+    const statusOptions = JSON.parse(selects[2].attributes('data-options'))
+    expect(statusOptions).toContainEqual({
+      value: 'unschedulable',
+      label: 'admin.accounts.status.unschedulable'
+    })
+
     const privacyOptions = JSON.parse(selects[3].attributes('data-options'))
     expect(privacyOptions).toEqual([
       { value: '', label: 'admin.accounts.allPrivacyModes' },

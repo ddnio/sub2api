@@ -1293,6 +1293,8 @@ const handleExportData = async () => {
               platform: params.platform,
               type: params.type,
               status: params.status,
+              group: params.group,
+              privacy_mode: params.privacy_mode,
               search: params.search
             }
           }

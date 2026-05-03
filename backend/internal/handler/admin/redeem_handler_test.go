@@ -2,9 +2,11 @@ package admin
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -138,4 +140,25 @@ func TestCreateAndRedeem_BalanceIgnoresSubscriptionFields(t *testing.T) {
 
 	assert.NotEqual(t, http.StatusBadRequest, code,
 		"balance type should not require group_id or validity_days")
+}
+
+func TestRedeemExportRespectsSearchFilter(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	adminSvc := newStubAdminService()
+	adminSvc.redeems = []service.RedeemCode{
+		{ID: 1, Code: "MATCH-001", Type: service.RedeemTypeBalance, Status: service.StatusUnused},
+		{ID: 2, Code: "OTHER-001", Type: service.RedeemTypeBalance, Status: service.StatusUnused},
+	}
+	router.GET("/api/v1/admin/redeem-codes/export", NewRedeemHandler(adminSvc, nil).Export)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/redeem-codes/export?search=match", nil)
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	rows, err := csv.NewReader(strings.NewReader(rec.Body.String())).ReadAll()
+	require.NoError(t, err)
+	require.Len(t, rows, 2)
+	require.Equal(t, "MATCH-001", rows[1][1])
 }

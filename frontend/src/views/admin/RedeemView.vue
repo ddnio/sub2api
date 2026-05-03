@@ -674,7 +674,8 @@ const handleExportCodes = async () => {
   try {
     const blob = await adminAPI.redeem.exportCodes({
       type: filters.type as RedeemCodeType,
-      status: filters.status as any
+      status: filters.status as any,
+      search: searchQuery.value || undefined
     })
 
     // Create download link

@@ -1358,7 +1358,7 @@ func normalizeTablePreferences(defaultPageSize int, options []int) (int, []int) 
 	}
 
 	if len(normalizedOptions) == 0 {
-		normalizedOptions = []int{10, 20, 50}
+		normalizedOptions = []int{10, 20, 50, 100}
 	}
 	if !containsInt(normalizedOptions, defaultPageSize) {
 		normalizedOptions = append(normalizedOptions, defaultPageSize)

@@ -4541,7 +4541,7 @@ export default {
         tableDefaultPageSize: 'Default Page Size',
         tableDefaultPageSizeHint: 'Default number of rows per page for newly opened tables, from {min} to {max}',
         tablePageSizeOptions: 'Page Size Options',
-        tablePageSizeOptionsPlaceholder: '10, 20, 50',
+        tablePageSizeOptionsPlaceholder: '10, 20, 50, 100',
         tablePageSizeOptionsHint: 'Separate options with commas. Values must be between {min} and {max}; the default page size is added automatically.',
         tableDefaultPageSizeRangeError: 'Default page size must be between {min} and {max}',
         tablePageSizeOptionsFormatError: 'Page size options must be comma-separated integers between {min} and {max}',
