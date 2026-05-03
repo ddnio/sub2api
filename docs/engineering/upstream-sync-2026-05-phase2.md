@@ -9,6 +9,7 @@ This document tracks the post-payment-b2 upstream sync. It is intentionally oper
 - Worktree: `.claude/worktrees/upstream-sync-2026-05-phase2`
 - Upstream reference: `upstream/main` at `48912014 chore: sync VERSION to 0.1.121 [skip ci]`
 - Plan: `docs/plans/2026-05-02-upstream-sync-phase2.md`
+- Continuation plan: `docs/plans/2026-05-03-upstream-sync-continuation.md`
 
 ## Pinned Upstream Scope
 
@@ -413,6 +414,7 @@ For each deployment-impacting slice, record:
 | 2026-05-02 | Claude | PR #28 admin/frontend upstream batch | Initial blockers fixed; final comment found no issues | Merged PR #28, then follow-up PR #29 for guard/constant/test coverage |
 | 2026-05-02 | Kimi | PR #29 admin/frontend follow-up | No blockers | Merge and deploy test |
 | 2026-05-03 | Claude + Kimi | PR #30 sticky session snapshot false reject | Claude: approved, test discriminating power weak (priority ordering masks sticky path); Kimi: no blockers, same note + suggest result.Sticky assert | Merged; note upstream has more extensive refactor of same area |
+| 2026-05-03 | Kimi | Continuation plan after PR #30 | No blockers in narrative review; runtime structured verdict inconclusive due to summary extraction | Proceed with ledger refresh first; keep Anthropic global TTL and payment semantics held unless separately approved |
 
 ## Test Deployment Log
 
