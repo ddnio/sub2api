@@ -14,7 +14,7 @@ Implementation still moves by upstream PR/merge commit or smaller reviewed hunks
 
 ## Baseline
 
-- Local base: `origin/main` at `d2a3e5a9 chore(release): mark fork coverage v0.1.111`.
+- Local base: `origin/main` at `fbaa1fdd sync(upstream): close v0.1.112 release gate (#40)`.
 - Upstream published-tag scope: latest local upstream tag `v0.1.121` at `9d801595 test: 更新管理员设置契约字段`.
 - Upstream main observed locally: `b2bdba78 stabilize image request handling`; this is not in the published tag scope yet.
 - Latest upstream tag in scope: `v0.1.121`.
@@ -69,7 +69,8 @@ Current gate:
 | Gate | Status | Required next action |
 | --- | --- | --- |
 | `v0.1.110..v0.1.111` | Closed | Decision matrix completed, fork marker bumped to `0.1.111`, and sync tag `fork/v0.1.111` pushed. |
-| `v0.1.111..v0.1.112` | In review | Current gate. Process all 9 first-parent upstream items in this interval before the `0.1.112` marker/tag step. |
+| `v0.1.111..v0.1.112` | Marker in progress | Decision matrix completed and PR #40 merged at `fbaa1fdd`; bump the fork marker to `0.1.112`, then push sync tag `fork/v0.1.112`. |
+| `v0.1.112..v0.1.113` | Blocked | Start only after the `0.1.112` marker PR lands and sync tag `fork/v0.1.112` is pushed. |
 | `v0.1.117` and later | Blocked | The earlier ledger that started at `v0.1.117` is not the active start point anymore. Do not advance here until the earlier gates are closed in order. |
 
 ## CI Baseline Closeout
@@ -182,7 +183,7 @@ git log --oneline --first-parent --reverse v0.1.111..v0.1.112
 | `92f4a6bb` | README/partner logo churn | Not product/runtime relevant for this fork gate. | SKIP | Documentation/logo sponsor churn; no local behavior. |
 | `f9f57e95` | Restore `settings.updated_at` SQL default | Missing locally; this PR ports the migration. | PORT | Added upstream `backend/migrations/097_fix_settings_updated_at_default.sql` and an integration assertion that final schema keeps `settings.updated_at DEFAULT now()`. Test/prod read-only checks showed both current databases already have `DEFAULT now()`, `is_nullable=NO`, `updated_at NULL count=0`, and already applied `098`/`111`; `097` is still absent there, so this is a compatibility/backfill marker for code and older instances rather than a current prod rescue. |
 
-Gate status: open until this PR lands and CI/review pass. If the migration PR merges cleanly, the next step is a small marker PR bumping `backend/cmd/server/VERSION` from `0.1.111` to `0.1.112`, followed by annotated fork sync tag `fork/v0.1.112`.
+Gate status: decision-complete, pending release-marker update. PR #40 merged the migration gate at `fbaa1fdd` after CI passed. This marker PR bumps `backend/cmd/server/VERSION` from `0.1.111` to `0.1.112`; after it lands, create annotated fork sync tag `fork/v0.1.112`.
 
 Runtime/deploy note for `097`: this release gate contains a database migration file. Before any deployment of the merged PR, take the normal database backup. Current test/prod evidence indicates the migration should no-op on the live databases because the target default already exists, but it will still be recorded in `schema_migrations` on startup.
 
@@ -302,8 +303,7 @@ Gate status: blocked by Anthropic global TTL HOLD. Do not mark `v0.1.121` comple
 
 ## Current Next Action
 
-1. Run self-review and Kimi review on the `v0.1.110..v0.1.111` 17-item matrix.
-2. If review finds no unresolved item, open a small release-marker PR to bump `backend/cmd/server/VERSION` from `0.1.110` to `0.1.111`.
-3. After the marker PR lands, create and push fork sync tag `fork/v0.1.111` on the merged fork commit.
-4. Only after the tag exists in `ddnio/sub2api`, start the next gate: `v0.1.111..v0.1.112`.
-5. Do not start later-release runtime `PORT` work out of order unless it is an emergency production fix and is recorded as such.
+1. Merge the small release-marker PR that bumps `backend/cmd/server/VERSION` from `0.1.111` to `0.1.112`.
+2. After the marker PR lands, create and push fork sync tag `fork/v0.1.112` on the merged fork commit.
+3. Only after the tag exists in `ddnio/sub2api`, start the next gate: `v0.1.112..v0.1.113`.
+4. Do not start later-release runtime `PORT` work out of order unless it is an emergency production fix and is recorded as such.
