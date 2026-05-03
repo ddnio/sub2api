@@ -60,8 +60,6 @@
   ::selection {
     @apply bg-primary-500/20 text-primary-900 dark:text-primary-100;
   }
-
-
 }
 
 @layer components {

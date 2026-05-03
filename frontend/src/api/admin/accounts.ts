@@ -503,7 +503,9 @@ export async function exportData(options?: {
     platform?: string
     type?: string
     status?: string
+    group?: string
     search?: string
+    privacy_mode?: string
   }
   includeProxies?: boolean
 }): Promise<AdminDataPayload> {
@@ -511,11 +513,13 @@ export async function exportData(options?: {
   if (options?.ids && options.ids.length > 0) {
     params.ids = options.ids.join(',')
   } else if (options?.filters) {
-    const { platform, type, status, search } = options.filters
+    const { platform, type, status, group, search, privacy_mode } = options.filters
     if (platform) params.platform = platform
     if (type) params.type = type
     if (status) params.status = status
+    if (group) params.group = group
     if (search) params.search = search
+    if (privacy_mode) params.privacy_mode = privacy_mode
   }
   if (options?.includeProxies === false) {
     params.include_proxies = 'false'

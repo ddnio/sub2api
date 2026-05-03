@@ -69,4 +69,18 @@ describe('DataTable', () => {
       restore()
     }
   })
+
+  it('keeps desktop tables wide enough to expose horizontal overflow', async () => {
+    const { wrapper, restore } = mountDesktopTable([{ id: 1, name: 'First order' }])
+
+    try {
+      await wrapper.vm.$nextTick()
+
+      const table = wrapper.find('table')
+      expect(table.classes()).toContain('w-full')
+      expect(table.classes()).toContain('min-w-max')
+    } finally {
+      restore()
+    }
+  })
 })

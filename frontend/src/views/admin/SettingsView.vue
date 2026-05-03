@@ -2700,7 +2700,7 @@ const smtpPasswordManuallyEdited = ref(false)
 const testEmailAddress = ref('')
 const registrationEmailSuffixWhitelistTags = ref<string[]>([])
 const registrationEmailSuffixWhitelistDraft = ref('')
-const tablePageSizeOptionsInput = ref('10, 20, 50')
+const tablePageSizeOptionsInput = ref('10, 20, 50, 100')
 
 // Admin API Key 状态
 const adminApiKeyLoading = ref(true)
@@ -2803,7 +2803,7 @@ const form = reactive<SettingsForm>({
   purchase_subscription_enabled: false,
   purchase_subscription_url: '',
   table_default_page_size: tablePageSizeDefault,
-  table_page_size_options: [10, 20, 50],
+  table_page_size_options: [10, 20, 50, 100],
   custom_menu_items: [] as Array<{id: string; label: string; icon_svg: string; url: string; visibility: 'user' | 'admin'; sort_order: number}>,
   custom_endpoints: [] as Array<{name: string; endpoint: string; description: string}>,
   frontend_url: '',
@@ -3075,7 +3075,7 @@ async function loadSettings() {
       settings.registration_email_suffix_whitelist
     )
     tablePageSizeOptionsInput.value = formatTablePageSizeOptions(
-      Array.isArray(settings.table_page_size_options) ? settings.table_page_size_options : [10, 20, 50]
+      Array.isArray(settings.table_page_size_options) ? settings.table_page_size_options : [10, 20, 50, 100]
     )
     registrationEmailSuffixWhitelistDraft.value = ''
     form.smtp_password = ''
@@ -3280,7 +3280,7 @@ async function saveSettings() {
       updated.registration_email_suffix_whitelist
     )
     tablePageSizeOptionsInput.value = formatTablePageSizeOptions(
-      Array.isArray(updated.table_page_size_options) ? updated.table_page_size_options : [10, 20, 50]
+      Array.isArray(updated.table_page_size_options) ? updated.table_page_size_options : [10, 20, 50, 100]
     )
     registrationEmailSuffixWhitelistDraft.value = ''
     form.smtp_password = ''
