@@ -4,9 +4,9 @@ This document tracks the post-payment-b2 upstream sync. It is intentionally oper
 
 ## Baseline
 
-- Current local base: `origin/main` at `9308f805 docs(upstream-sync): plan continuation review flow (#31)`
+- Current local base: `origin/main` at `682cee12 fix(openai): guard ws previous response inference`
 - Original Phase 2 work branch: `feature/upstream-sync-2026-05-phase2`
-- Current continuation worktree: `.claude/worktrees/upstream-sync-ledger-refresh`
+- Current continuation worktree: `.claude/worktrees/upstream-sync-openai-ws-itemref`
 - Original Phase 2 worktree: `.claude/worktrees/upstream-sync-2026-05-phase2`
 - Upstream reference: `upstream/main` at `48912014 chore: sync VERSION to 0.1.121 [skip ci]`
 - Plan: `docs/plans/2026-05-02-upstream-sync-phase2.md`
@@ -23,7 +23,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 - No direct merge from `upstream/main`.
 - Port small slices only.
 - Kimi review is required before committing each plan or code slice.
-- Production deployment is out of scope unless a separate deployment gate is approved and recorded.
+- Production deployment requires an explicit deployment gate and a recorded test deploy first.
 - Payment-b2 is a protected baseline. Payment changes require proof that the upstream behavior is missing locally.
 - Slices should stay under about 300 changed lines and 5 touched files. Larger slices must be split or justified before review.
 - Every slice must record config, env var, migration, Ent, API contract, and frontend localStorage impact.
@@ -48,9 +48,9 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | Task 2B | Sticky session false reject on snapshot accounts | Deployed to test + prod via PR #30 | Claude self-review approved; Kimi no blockers | All gateway load-aware + sticky tests passed (26 subtests); new regression test added | Test + prod images rebuilt; no DB/config/frontend impact; note: upstream refactored same path more extensively (variable extraction + slog.Debug + isAccountSchedulableForSelection), our slice is minimal-correct |
 | Task 6 | Payment residual audit only | Pending | Not started | Not started | TBD |
 | Task 7 | Integration smoke gate | Pending | Not started | Not started | TBD |
-| Task 8 | Continuation ledger refresh after PR #31 | In progress | Pending | `origin/main=9308f805`, `upstream/main=48912014`; local evidence collected | None |
-| Task 9 | Sticky scheduler metadata group membership | Implemented locally | Kimi pre-commit review: safe to commit | repository unit/integration, gateway sticky/load-aware, payment tests passed | No DB/config/frontend/API impact |
-| Task 10 | OpenAI WS item-reference previous-response inference | Implemented locally | Kimi pre-commit review: no blockers | WS inference/tool-continuation and payment tests passed | No DB/config/frontend/API impact |
+| Task 8 | Continuation ledger refresh after PR #31 | Merged via PR #32 | Kimi no blockers in narrative review | `origin/main=520e0677` after merge; `upstream/main=48912014`; local evidence collected | None |
+| Task 9 | Sticky scheduler metadata group membership | Merged via PR #33 and deployed test/prod | Kimi pre-commit + PR-level reviews: no blockers; first PR-level attempt timed out and was retried with smaller evidence | repository unit/integration, gateway sticky/load-aware, payment tests passed; PR CI red only from known unrelated main drift | Test + prod images rebuilt at `682cee12`; no DB/config/frontend/API impact |
+| Task 10 | OpenAI WS item-reference previous-response inference | Merged via PR #34 and deployed test/prod | Kimi pre-commit + PR-level reviews: no blockers; parser marked prose reviews inconclusive | WS inference/tool-continuation and payment tests passed; PR CI red only from known unrelated main drift | Test + prod images rebuilt at `682cee12`; no DB/config/frontend/API impact |
 
 ## Hold List
 
@@ -240,6 +240,8 @@ Review:
 
 - Self-review: diff keeps the existing item-reference positive path, adds only upstream guard rails, avoids unrelated upstream Fast/Flex/compact nearby changes, and documents no DB/config/frontend impact.
 - Kimi pre-commit review: no blockers; runtime parser marked the prose response inconclusive, but review text explicitly approved the scoped change.
+- PR-level Kimi review: no blockers found; runtime parser marked the prose response inconclusive, but review text explicitly approved the scoped PR diff.
+- GitHub CI on PR #34: security scans passed; CI failed on known main drift outside this PR. Unit test failure is `internal/server/middleware/*_test.go` calling `service.NewAuthService` with too few arguments. Lint failures are pre-existing gofmt/staticcheck/unused findings in config, handler, payment, and route files not touched by this slice.
 
 ## Historical Next Slice Plan
 
@@ -597,6 +599,9 @@ For each deployment-impacting slice, record:
 | 2026-05-02 | Kimi | PR #29 admin/frontend follow-up | No blockers | Merge and deploy test |
 | 2026-05-03 | Claude + Kimi | PR #30 sticky session snapshot false reject | Claude: approved, test discriminating power weak (priority ordering masks sticky path); Kimi: no blockers, same note + suggest result.Sticky assert | Merged; note upstream has more extensive refactor of same area |
 | 2026-05-03 | Kimi | Continuation plan after PR #30 | No blockers in narrative review; runtime structured verdict inconclusive due to summary extraction | Proceed with ledger refresh first; keep Anthropic global TTL and payment semantics held unless separately approved |
+| 2026-05-03 | Kimi | PR #33 scheduler metadata group membership | Pre-commit review: safe to commit; PR-level retry: no blockers | First PR-level attempt timed out with zero content chunks and was retried with smaller evidence; merged despite unrelated CI drift |
+| 2026-05-03 | Kimi | PR #34 OpenAI WS item-reference previous-response inference | Pre-commit and PR-level reviews found no blockers | Runtime parser marked prose responses inconclusive; merged despite unrelated CI drift |
+| 2026-05-03 | Kimi | Deployment closeout and fast-alignment plan docs | No blockers; safe to proceed | Runtime parser marked the prose response inconclusive, but review text approved SHA/status/deploy evidence, CI drift attribution, and large-batch guard rails |
 
 ## Test Deployment Log
 
@@ -852,6 +857,47 @@ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8081/v1/models
 
 - Log check: no `panic`, `fatal`, `error`, `migration`, `failed`, `traceback`, or `异常`.
 - Note: upstream (`733627cf`) refactored the same code path more extensively — variable extraction, `slog.Debug` logging, and `isAccountSchedulableForSelection` — held for a future Task 2B follow-up.
+
+### 2026-05-03 Scheduler Metadata Groups and OpenAI WS Guard Rails
+
+- Host: `108.160.133.141`
+- Environment: `test`
+- Branch: `main`
+- Commit deployed: `682cee12 fix(openai): guard ws previous response inference`
+- Runtime changes:
+  - `2c36c421 fix(scheduler): keep slim group metadata in snapshots (#33)`
+  - `682cee12 fix(openai): guard ws previous response inference`
+- Backup: not taken; these slices have no migration, schema, config, env var, frontend `localStorage`, API contract, or data change.
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+bash deploy/deploy-server.sh test
+```
+
+- Container result: `sub2api-test` healthy on `127.0.0.1:8081->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8081/health
+# {"status":"ok"}
+
+curl -fsS https://router-test.nanafox.com/health
+# {"status":"ok"}
+
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8081/v1/models
+# 401
+```
+
+- Log check:
+
+```bash
+docker logs --since 3m sub2api-test 2>&1 | egrep -i "panic|fatal|error|migration|failed|traceback|异常" || true
+# no output
+```
 
 ### 2026-05-03 Sticky Session Snapshot False Reject Fix (Production)
 
@@ -1127,6 +1173,47 @@ bash deploy/deploy-server.sh prod
 
 ```bash
 curl -fsS http://127.0.0.1:8080/health
+# {"status":"ok"}
+
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/v1/models
+# 401
+```
+
+- Log check:
+
+```bash
+docker logs --since 3m sub2api-prod 2>&1 | egrep -i "panic|fatal|error|migration|failed|traceback|异常" || true
+# no output
+```
+
+### 2026-05-03 Scheduler Metadata Groups and OpenAI WS Guard Rails
+
+- Host: `108.160.133.141`
+- Environment: `prod`
+- Branch: `main`
+- Commit deployed: `682cee12 fix(openai): guard ws previous response inference`
+- Runtime changes:
+  - `2c36c421 fix(scheduler): keep slim group metadata in snapshots (#33)`
+  - `682cee12 fix(openai): guard ws previous response inference`
+- Backup: not taken; these slices have no migration, schema, config, env var, frontend `localStorage`, API contract, or data change.
+- Deploy command:
+
+```bash
+cd /data/service/sub2api
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+bash deploy/deploy-server.sh prod
+```
+
+- Container result: `sub2api-prod` healthy on `127.0.0.1:8080->8080/tcp`
+- Health checks:
+
+```bash
+curl -fsS http://127.0.0.1:8080/health
+# {"status":"ok"}
+
+curl -fsS https://router.nanafox.com/health
 # {"status":"ok"}
 
 curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/v1/models

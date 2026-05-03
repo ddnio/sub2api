@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Continue the post-payment-b2 upstream sync with upstream-first behavior, small reviewed slices, and no speculative local rewrites.
+**Goal:** Finish the post-payment-b2 upstream sync quickly while keeping upstream-first behavior, review gates, and no speculative local rewrites.
 
-**Architecture:** Treat `upstream/main` as the source of truth for feature behavior, but do not merge it wholesale. For each candidate, prove whether the upstream behavior is missing locally, port the smallest coherent upstream hunk, and hold anything that requires local product decisions or broad redesign.
+**Architecture:** Treat `upstream/main` as the source of truth for feature behavior, but choose batch size from evidence. Low-divergence maintenance and already-proven bugfix families can be grouped. Product, migration, auth, payment, and config families stay as separate slices or `HOLD`.
 
 **Tech Stack:** Go, Vue 3, TypeScript, Vitest, PostgreSQL migrations, Git worktrees, GitHub PRs in `ddnio/sub2api`, Kimi review through `codex-buddy`.
 
@@ -12,15 +12,25 @@
 
 ## Current Baseline
 
-- Local base: `origin/main` at `9226cb49 docs(upstream-sync): record sticky-session snapshot fix prod deploy`.
+- Local base: `origin/main` at `682cee12 fix(openai): guard ws previous response inference`.
 - Upstream ref inspected: `upstream/main` at `48912014 chore: sync VERSION to 0.1.121 [skip ci]`.
-- Planning branch: `feature/upstream-sync-continuation-plan`.
-- Planning worktree: `.claude/worktrees/upstream-sync-continuation-plan`.
+- Current closeout branch: `docs/upstream-sync-closeout-20260503`.
+- Current worktree: `.claude/worktrees/upstream-sync-openai-ws-itemref`.
 - Existing Phase 2 tracker: `docs/engineering/upstream-sync-2026-05-phase2.md`.
 - Existing Phase 2 plan: `docs/plans/2026-05-02-upstream-sync-phase2.md`.
 - Root checkout noise: untracked `.pnpm-store/`; do not add it.
 
-If `upstream/main` advances, pin the new SHA in the tracker before expanding scope.
+If `upstream/main` advances, pin the new SHA in the tracker before expanding scope. If `git fetch upstream` fails because of GitHub HTTPS/HTTP2 transport errors, do not expand scope from memory; retry later or use a verified remote/API fallback.
+
+## Current Closeout Status
+
+- PR #31: merged; continuation review flow documented.
+- PR #32: merged; continuation ledger refreshed.
+- PR #33: merged; scheduler metadata keeps slim group membership snapshots.
+- PR #34: merged; OpenAI WS item-reference previous-response inference has upstream guard rails.
+- Test deployment: `682cee12` deployed to `sub2api-test` on `108.160.133.141`; container healthy, local/public `/health` OK, unauthenticated `/v1/models` returned 401, severe log scan had no output.
+- Production deployment: `682cee12` deployed to `sub2api-prod` on `108.160.133.141`; same verification passed.
+- Known CI drift: GitHub CI remains red on `internal/server/middleware/*_test.go` `service.NewAuthService` argument count plus pre-existing lint issues outside the upstream-sync slices. Do not fix these inside unrelated upstream alignment PRs.
 
 ## Non-Negotiable Rules
 
@@ -36,6 +46,27 @@ If `upstream/main` advances, pin the new SHA in the tracker before expanding sco
 - If an upstream hunk conflicts because local behavior already diverged, stop and classify it as `HOLD` unless the missing behavior is proven.
 - Payment-b2, auth identity, affiliate, channel insights, Vertex, Fast/Flex, license/CLA, and sponsor/readme churn stay held unless separately approved.
 - Each slice must record migration, Ent, config/env, settings, frontend `localStorage`, API contract, deploy, monitoring, and rollback impact.
+
+## Fast Alignment Mode
+
+The fork has local product work, so "large merge" is safe only when the upstream area is low-divergence and has no schema/config/product contract impact.
+
+Use a larger batch when all of these are true:
+
+- The candidate files are absent from the hold list and do not touch migrations, Ent generated code/schema, payment, auth identity, affiliate, channel insights, Vertex, Fast/Flex, image API, settings/env/config, or frontend API contracts.
+- `git diff --name-only origin/main..upstream/main -- <area>` shows a narrow, coherent file set.
+- Local behavior is missing or clearly older, not divergent.
+- The batch can be verified with one focused test family plus `git diff --check`.
+- Review evidence can stay small enough for Kimi PR-level review.
+
+Keep a small slice or `HOLD` when any of these are true:
+
+- The upstream change requires a product decision, new UI contract, new config setting, data migration, or generated Ent drift.
+- The fork already has an equivalent local implementation.
+- The upstream diff mixes bugfixes with debug logging, unrelated refactors, or broad feature policy.
+- The only proof is "upstream has it"; no missing local behavior has been shown.
+
+Expected practical result: group docs/tests/low-risk compatibility cleanups, but keep payment/auth/migration/config/frontend-contract changes separate.
 
 ## Review Protocol For Every Update
 
@@ -92,7 +123,7 @@ For each remaining candidate, record:
 
 Send only the ledger diff and raw command output to Kimi. Do not start code until review returns no blockers.
 
-## Task 1: Sticky Session Scheduling Remainder Audit
+## Task 1: Sticky Session Scheduling Remainder Audit (Done)
 
 **Upstream source:**
 - `733627cf fix: improve sticky session scheduling`
@@ -119,7 +150,9 @@ Send only the ledger diff and raw command output to Kimi. Do not start code unti
 
 **Default action:** audit first; no code until a missing behavior is proven.
 
-## Task 2: OpenAI WebSocket Continuation Audit
+**Closeout:** Completed through PR #33. The accepted upstream hunk was limited to scheduler metadata `GroupIDs` / slim `AccountGroups` retention. Debug logging, service-layer false-reject logic already fixed by PR #30, and handler sticky-binding refresh were not ported because no independent missing behavior was proven. Deployed to test and prod as part of `682cee12`.
+
+## Task 2: OpenAI WebSocket Continuation Audit (Done)
 
 **Upstream source:**
 - `094e1171 fix(openai): infer previous response for item references`
@@ -142,6 +175,8 @@ Send only the ledger diff and raw command output to Kimi. Do not start code unti
 6. Kimi review the matrix and any diff before PR.
 
 **Default action:** likely audit/skip unless the exact upstream regression is missing locally.
+
+**Closeout:** Completed through PR #34. Local already covered the positive item-reference inference path, but upstream guard rails were missing. The accepted hunk skips inference when full `function_call` context is present or when `function_call_output` lacks `call_id`. Unrelated upstream Fast/Flex/compact nearby changes remained out of scope. Deployed to test and prod as part of `682cee12`.
 
 ## Task 3: Anthropic Cache TTL Setting Decision
 
@@ -202,27 +237,37 @@ Send only the ledger diff and raw command output to Kimi. Do not start code unti
 
 **Default action:** skip already-present Stripe fixes; hold payment semantics.
 
-## Task 5: Final Integration Smoke Gate
+## Task 5: Final Integration Smoke Gate and Next Scope Refresh
 
 **Files:**
 - Modify: `docs/engineering/upstream-sync-2026-05-phase2.md`
 
 **Steps:**
 1. Confirm every candidate is classified as port / skip / hold.
-2. Run the final targeted backend and frontend tests for accepted slices.
-3. Run `git diff --check`.
-4. If any slice was deployed, record exact test/prod health, log, rollback, and monitoring notes.
-5. Ask Kimi to review the final ledger and verification evidence.
-6. Close or supersede stale Phase 2 branches/worktrees only after their commits are on `origin/main`.
+2. Refresh `upstream/main` and record the new SHA. If fetch fails, keep scope pinned to `48912014` and do not expand.
+3. Run the final targeted backend and frontend tests for accepted slices.
+4. Run `git diff --check`.
+5. If any slice was deployed, record exact test/prod health, log, rollback, and monitoring notes.
+6. Ask Kimi to review the final ledger and verification evidence.
+7. Close or supersede stale Phase 2 branches/worktrees only after their commits are on `origin/main`.
+
+## Quick Finish Sequence
+
+1. Documentation closeout PR: merge this deployment record and fast-alignment plan after self-review, Kimi review, and PR-level review.
+2. Scope refresh PR: fetch `upstream/main`, update the continuation matrix, and classify every remaining item as `present`, `missing`, `partial`, `divergent`, or `unknown`.
+3. Large low-risk PR batch: group only `present/skip` documentation, docs/test-only churn, or small compatibility bugfixes that do not touch protected areas.
+4. Payment residual audit PR: mark Stripe route/button fixes as `present`; keep fee/multiplier and wxpay semantics held unless a missing local behavior is proven.
+5. Final smoke/deploy gate: deploy only accepted runtime slices; record health, 401, and severe log scans.
+6. HOLD handoff: leave product/migration/config families in the tracker with exact upstream SHAs and required decision owner.
 
 ## Expected Continuation Order
 
-1. Task 0 ledger refresh.
-2. Task 1 sticky-session remainder audit.
-3. Task 2 OpenAI WS continuation audit.
-4. Task 4 payment residual equivalence audit.
-5. Task 3 Anthropic TTL setting only if explicitly accepted.
-6. Task 5 final integration smoke gate.
+1. Documentation closeout PR for `682cee12` deploy evidence and this fast-alignment plan.
+2. Scope refresh against the latest reachable `upstream/main`.
+3. Payment residual equivalence audit, because the likely Stripe fixes are already present and can close fast.
+4. Low-risk compatibility batch for candidates classified `missing` or `partial` with no protected-surface impact.
+5. Anthropic global TTL setting only if explicitly accepted.
+6. Final integration smoke gate and HOLD handoff.
 
 This order prioritizes bugfix equivalence and avoids feature/config expansion until the remaining low-risk items are exhausted.
 
