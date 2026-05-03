@@ -12,7 +12,7 @@
 
 ## Current Baseline
 
-- Local base: `origin/main` at `fbaa1fdd sync(upstream): close v0.1.112 release gate (#40)`.
+- Local base: `origin/main` at `1d436745 chore(release): mark fork coverage v0.1.112 (#41)`.
 - Upstream published-tag scope: latest local upstream tag `v0.1.121` at `9d801595 test: 更新管理员设置契约字段`.
 - Upstream main observed locally: `b2bdba78 stabilize image request handling`; this is outside the current published-tag scope.
 - Tracking doc: `docs/engineering/upstream-release-coverage-2026-05.md`.
@@ -70,9 +70,11 @@ The 2026-04 slice-based sync was useful but did not satisfy the sequential relea
 
 Current next task:
 
-1. Complete the small marker PR that updates the fork release marker from `0.1.111` to `0.1.112`.
-2. After the marker PR lands, create and push the fork sync tag `fork/v0.1.112` on the merged fork commit.
-3. Then start `v0.1.112..v0.1.113`.
+1. Finish review and implementation decisions for every item in `v0.1.112..v0.1.113`.
+2. This gate is expected to be docs-only unless review proves a small missing behavior is both safe and necessary.
+3. After the `v0.1.113` gate PR lands and CI passes, update the fork release marker from `0.1.112` to `0.1.113` in a small marker PR.
+4. After the marker PR lands, create and push the fork sync tag `fork/v0.1.113` on the merged fork commit.
+5. Then start `v0.1.113..v0.1.114`.
 
 ## Task 2: Release Coverage Ledger PR
 
@@ -81,7 +83,7 @@ Current next task:
 - Create: `docs/plans/2026-05-03-upstream-release-coverage.md`
 
 **Steps:**
-1. Work from `origin/main` in `.claude/worktrees/upstream-sync-final-smoke`.
+1. Work from `origin/main` in a release-specific worktree such as `.claude/worktrees/release-gate-v0.1.113`.
 2. Generate release intervals with:
    - `git log --first-parent --reverse v0.1.110..v0.1.111`
    - next releases only after the current gate closes.
@@ -117,11 +119,11 @@ Only start after Task 1 is merged or CI baseline is otherwise green. This gate i
 
 ## Assumptions
 
-- The release coverage effort is currently bounded to upstream `48912014` / `v0.1.121`.
+- The release coverage effort is currently bounded to the latest local published upstream tag `v0.1.121`.
 - The release ledger is the source of truth for gate order; old phase2 docs are historical evidence when deciding earlier release intervals.
 - Whole-release cherry-picks are not allowed.
 - Ambiguous upstream candidates are held only temporarily; they must be resolved before the release gate closes.
-- `v0.1.110..v0.1.111` is decision-complete only after self-review and Kimi review confirm the 17-item matrix has no unresolved item.
+- `v0.1.110..v0.1.111` and `v0.1.111..v0.1.112` are closed and tagged with fork sync tags.
 - A release gate is not fully closed until both the fork release marker and corresponding fork sync tag exist.
 - Fork sync tags use the `fork/vX.Y.Z` namespace to avoid colliding with upstream release tags such as `v0.1.111`.
 - PRs must target `ddnio/sub2api` explicitly.
