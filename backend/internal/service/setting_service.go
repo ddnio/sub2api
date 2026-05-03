@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -1360,21 +1361,12 @@ func normalizeTablePreferences(defaultPageSize int, options []int) (int, []int) 
 	if len(normalizedOptions) == 0 {
 		normalizedOptions = []int{10, 20, 50, 100}
 	}
-	if !containsInt(normalizedOptions, defaultPageSize) {
+	if !slices.Contains(normalizedOptions, defaultPageSize) {
 		normalizedOptions = append(normalizedOptions, defaultPageSize)
 		sort.Ints(normalizedOptions)
 	}
 
 	return defaultPageSize, normalizedOptions
-}
-
-func containsInt(values []int, target int) bool {
-	for _, value := range values {
-		if value == target {
-			return true
-		}
-	}
-	return false
 }
 
 // getStringOrDefault 获取字符串值或默认值

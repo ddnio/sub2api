@@ -225,7 +225,7 @@ func (h *ProxyHandler) listProxiesFiltered(ctx context.Context, protocol, status
 	pageSize := dataPageCap
 	var out []service.Proxy
 	for {
-		items, total, err := h.adminService.ListProxies(ctx, page, pageSize, protocol, status, search)
+		items, total, err := h.adminService.ListProxies(ctx, page, pageSize, protocol, status, search, "", "")
 		if err != nil {
 			return nil, err
 		}
