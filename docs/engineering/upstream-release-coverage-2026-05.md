@@ -70,8 +70,8 @@ Current gate:
 | --- | --- | --- |
 | `v0.1.110..v0.1.111` | Closed | Decision matrix completed, fork marker bumped to `0.1.111`, and sync tag `fork/v0.1.111` pushed. |
 | `v0.1.111..v0.1.112` | Closed | Decision matrix completed, PR #40 merged at `fbaa1fdd`, fork marker bumped to `0.1.112`, and sync tag `fork/v0.1.112` pushed. |
-| `v0.1.112..v0.1.113` | Marker PR | Decision matrix completed in PR #42. Bump fork marker to `0.1.113`, then push sync tag `fork/v0.1.113`. |
-| `v0.1.113..v0.1.114` | Blocked | Start only after the `0.1.113` marker PR lands and sync tag `fork/v0.1.113` is pushed. |
+| `v0.1.112..v0.1.113` | Closed | Decision matrix completed in PR #42, fork marker bumped to `0.1.113` in PR #43, and sync tag `fork/v0.1.113` pushed. |
+| `v0.1.113..v0.1.114` | In progress | Current gate. Process all 9 first-parent upstream items in this interval before the `0.1.114` marker/tag step. |
 | `v0.1.117` and later | Blocked | The earlier ledger that started at `v0.1.117` is not the active start point anymore. Do not advance here until the earlier gates are closed in order. |
 
 ## CI Baseline Closeout
@@ -211,7 +211,31 @@ git log --oneline --first-parent --reverse v0.1.112..v0.1.113
 | `1db32d69` / PR #1666 | Account cost display in usage/dashboard tables | Not safely portable as a release-gate slice. | FROZEN | Owner: reporting/product maintainer. Reason: upstream adds migration `107_add_account_cost_to_dashboard_tables.sql` and changes usage aggregation/dashboard display. Cost display needs a fork-specific accounting decision and migration review before adoption. |
 | `70d0569f` / PR #1668 | OpenAI rate-limit and usage scheduling fix | Already landed through fork OpenAI core slice. | MERGED | Fork commit `2ce67ca4` maps PR #1668 and updates account usage/rate-limit paths plus `openai_ws_ratelimit_signal_test.go`. |
 
-Gate status: decision-complete, marker PR in progress. No runtime code is ported by this gate or marker PR. After the marker PR lands, push annotated fork sync tag `fork/v0.1.113`.
+Gate status: closed. PR #42 completed the decision matrix; PR #43 bumped `backend/cmd/server/VERSION` from `0.1.112` to `0.1.113` and merged at `32787ca4`; annotated tag `fork/v0.1.113` was pushed for the merged fork commit.
+
+### v0.1.114
+
+Range: `v0.1.113..v0.1.114`.
+
+Source command:
+
+```bash
+git log --oneline --first-parent --reverse v0.1.113..v0.1.114
+```
+
+| Upstream source | Area | Local state | Outcome | Evidence / decision |
+| --- | --- | --- | --- | --- |
+| `be7551b9` | Version sync to `0.1.113` | Current fork marker is already `0.1.113`. | PRESENT | PR #43 set `backend/cmd/server/VERSION` to `0.1.113` before this gate started. |
+| `a55ead5e` | Remove empty `Antigravity-Manager` directory | Empty upstream directory is not meaningful for the fork. | SKIP | No runtime or repository behavior to port. |
+| `7ea8e7e6` | Sponsor/readme update | Sponsor branding churn. | SKIP | Does not affect runtime, schema, config, security, or fork release coverage. |
+| `e6e73b4f` / PR #1690 | WS scheduler cache flags and UI mode option | Backend behavior already landed through fork Codex slice; UI ctx-pool exposure remains fork-specific. | ADAPTED | Fork commit `60f10e5b` maps PR #1690. Current `scheduler_cache.go` preserves OpenAI WS scheduling flags and current modal UI intentionally keeps ctx-pool exposure aligned to fork settings rather than blindly importing upstream UI. |
+| `a789c8c4` | Opus 4.7 support | Partially present; this gate ports the missing low-risk mappings. | PORT | Current fork already had `backend/internal/pkg/claude/constants.go` Opus 4.7 and request tests. This PR adds Antigravity/Bedrock mappings, Antigravity model listing, adaptive Opus high-tier handling, fallback billing/pricing support, and frontend preset/whitelist entries. |
+| `5d586a9f` | Disable scheduling on upstream KYC identity verification requirement | Missing locally. | PORT | This PR makes 400 responses containing `identity verification is required` call `SetError`, with a focused unit test. No schema/config change. |
+| `c22d11ce` / PR #1702 | Outbox watermark context, retry, and per-batch dedup | Already landed through fork ops slice. | MERGED | Fork commit `11f5a6e3` maps PR #1702; current `scheduler_snapshot_service.go` has `batchSeenKey`, watermark retry, and deduped per-batch rebuild handling. |
+| `41fbdba1` / PR #1687 | Upstream response body read-limit helper dedup | Already landed through fork OpenAI core slice. | MERGED | Fork commit `2ce67ca4` maps PR #1687; current `upstream_response_limit.go` has `ReadUpstreamResponseBody`, `anthropicTooLargeError`, and `openAITooLargeError`. |
+| `358ff6a6` / PR #1683 | Inject `prompt_cache_key` for API-key Anthropic messages compatibility | Already landed through fork OpenAI core slice. | MERGED | Fork commit `2ce67ca4` maps PR #1683; current `openai_gateway_messages.go` injects `prompt_cache_key` for API key accounts when absent. |
+
+Gate status: in progress. This gate contains runtime code changes, so after PR CI and merge it needs the normal test/prod deployment verification before the `0.1.114` marker PR/tag step.
 
 ### v0.1.117
 
@@ -329,7 +353,9 @@ Gate status: blocked by Anthropic global TTL HOLD. Do not mark `v0.1.121` comple
 
 ## Current Next Action
 
-1. Review and merge the marker PR that bumps `backend/cmd/server/VERSION` from `0.1.112` to `0.1.113`.
-2. After the marker PR lands, create and push fork sync tag `fork/v0.1.113` on the merged fork commit.
-3. Only after the tag exists in `ddnio/sub2api`, start the next gate: `v0.1.113..v0.1.114`.
-4. Do not start later-release runtime `PORT` work out of order unless it is an emergency production fix and is recorded as such.
+1. Review, test, and merge the `v0.1.113..v0.1.114` gate PR.
+2. Because this gate ports runtime code, deploy and verify test/prod after merge.
+3. Open a small release-marker PR to bump `backend/cmd/server/VERSION` from `0.1.113` to `0.1.114`.
+4. After the marker PR lands, create and push fork sync tag `fork/v0.1.114` on the merged fork commit.
+5. Only after the tag exists in `ddnio/sub2api`, start the next gate: `v0.1.114..v0.1.115`.
+6. Do not start later-release runtime `PORT` work out of order unless it is an emergency production fix and is recorded as such.

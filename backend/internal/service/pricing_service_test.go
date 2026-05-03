@@ -63,6 +63,21 @@ func TestGetModelPricing_Gpt53CodexFallbackStillUsesGpt52Codex(t *testing.T) {
 	require.Same(t, gpt52CodexPricing, got)
 }
 
+func TestGetModelPricing_ClaudeOpus47FallsBackToOpus46Pricing(t *testing.T) {
+	opus46Pricing := &LiteLLMModelPricing{InputCostPerToken: 5e-6}
+	opus4Pricing := &LiteLLMModelPricing{InputCostPerToken: 15e-6}
+
+	svc := &PricingService{
+		pricingData: map[string]*LiteLLMModelPricing{
+			"claude-opus-4.6": opus46Pricing,
+			"claude-opus-4":   opus4Pricing,
+		},
+	}
+
+	got := svc.GetModelPricing("claude-opus-4-7")
+	require.Same(t, opus46Pricing, got)
+}
+
 func TestGetModelPricing_OpenAIFallbackMatchedLoggedAsInfo(t *testing.T) {
 	logSink, restore := captureStructuredLog(t)
 	defer restore()

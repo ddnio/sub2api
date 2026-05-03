@@ -158,3 +158,20 @@ func TestRateLimitService_HandleUpstreamError_OAuth401UsesCredentialsUpdater(t *
 	require.Equal(t, 1, repo.updateCredentialsCalls)
 	require.NotEmpty(t, repo.lastCredentials["expires_at"])
 }
+
+func TestRateLimitService_HandleUpstreamError_IdentityVerificationRequiredDisablesAccount(t *testing.T) {
+	repo := &rateLimitAccountRepoStub{}
+	service := NewRateLimitService(repo, nil, &config.Config{}, nil, nil)
+	account := &Account{
+		ID:       104,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+	}
+
+	body := []byte(`{"error":{"message":"Your account requires action: identity verification is required to continue."}}`)
+	shouldDisable := service.HandleUpstreamError(context.Background(), account, 400, http.Header{}, body)
+
+	require.True(t, shouldDisable)
+	require.Equal(t, 1, repo.setErrorCalls)
+	require.Contains(t, repo.lastErrorMsg, "Identity verification required (400)")
+}
