@@ -186,6 +186,12 @@ func TestResolveWebSearchProviderProxyURL_NoRepo(t *testing.T) {
 	require.Equal(t, "", svc.resolveWebSearchProviderProxyURL(context.Background(), &proxyID))
 }
 
+func TestWebSearchProxyIDValue(t *testing.T) {
+	proxyID := int64(10)
+	require.Equal(t, int64(10), webSearchProxyIDValue(&proxyID))
+	require.Equal(t, int64(0), webSearchProxyIDValue(nil))
+}
+
 type webSearchProxyRepoStub struct {
 	proxies map[int64]*Proxy
 }

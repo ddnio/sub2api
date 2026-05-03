@@ -236,6 +236,7 @@ func (s *SettingService) RebuildWebSearchManager(ctx context.Context) {
 			QuotaLimit:           p.QuotaLimit,
 			QuotaRefreshInterval: p.QuotaRefreshInterval,
 			ProxyURL:             s.resolveWebSearchProviderProxyURL(ctx, p.ProxyID),
+			ProxyID:              webSearchProxyIDValue(p.ProxyID),
 			ExpiresAt:            p.ExpiresAt,
 		})
 	}
@@ -256,6 +257,13 @@ func (s *SettingService) resolveWebSearchProviderProxyURL(ctx context.Context, p
 		return ""
 	}
 	return proxy.URL()
+}
+
+func webSearchProxyIDValue(proxyID *int64) int64 {
+	if proxyID == nil {
+		return 0
+	}
+	return *proxyID
 }
 
 // SanitizeWebSearchConfig returns a copy with api_key fields masked for API responses.
