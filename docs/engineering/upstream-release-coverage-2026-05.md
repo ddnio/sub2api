@@ -71,7 +71,7 @@ Current gate:
 | `v0.1.110..v0.1.111` | Closed | Decision matrix completed, fork marker bumped to `0.1.111`, and sync tag `fork/v0.1.111` pushed. |
 | `v0.1.111..v0.1.112` | Closed | Decision matrix completed, PR #40 merged at `fbaa1fdd`, fork marker bumped to `0.1.112`, and sync tag `fork/v0.1.112` pushed. |
 | `v0.1.112..v0.1.113` | Closed | Decision matrix completed in PR #42, fork marker bumped to `0.1.113` in PR #43, and sync tag `fork/v0.1.113` pushed. |
-| `v0.1.113..v0.1.114` | In progress | Current gate. Process all 9 first-parent upstream items in this interval before the `0.1.114` marker/tag step. |
+| `v0.1.113..v0.1.114` | Marker PR | Decision matrix completed in PR #44 and deployed to test/prod at `46ed8ff7`. Bump fork marker to `0.1.114`, then push sync tag `fork/v0.1.114`. |
 | `v0.1.117` and later | Blocked | The earlier ledger that started at `v0.1.117` is not the active start point anymore. Do not advance here until the earlier gates are closed in order. |
 
 ## CI Baseline Closeout
@@ -235,7 +235,7 @@ git log --oneline --first-parent --reverse v0.1.113..v0.1.114
 | `41fbdba1` / PR #1687 | Upstream response body read-limit helper dedup | Already landed through fork OpenAI core slice. | MERGED | Fork commit `2ce67ca4` maps PR #1687; current `upstream_response_limit.go` has `ReadUpstreamResponseBody`, `anthropicTooLargeError`, and `openAITooLargeError`. |
 | `358ff6a6` / PR #1683 | Inject `prompt_cache_key` for API-key Anthropic messages compatibility | Already landed through fork OpenAI core slice. | MERGED | Fork commit `2ce67ca4` maps PR #1683; current `openai_gateway_messages.go` injects `prompt_cache_key` for API key accounts when absent. |
 
-Gate status: in progress. This gate contains runtime code changes, so after PR CI and merge it needs the normal test/prod deployment verification before the `0.1.114` marker PR/tag step.
+Gate status: decision-complete, deployed, marker PR in progress. PR #44 merged at `46ed8ff7`; test and prod were both deployed from that commit. Verification on both environments returned `{"status":"ok"}` for `/health`, HTTP 401 for unauthenticated `/v1/models`, and no `panic|fatal|error|migration|failed|traceback|异常` matches in post-deploy container logs. The next code step is a small marker PR bumping `backend/cmd/server/VERSION` from `0.1.113` to `0.1.114`, followed by annotated fork sync tag `fork/v0.1.114`.
 
 ### v0.1.117
 
@@ -353,9 +353,7 @@ Gate status: blocked by Anthropic global TTL HOLD. Do not mark `v0.1.121` comple
 
 ## Current Next Action
 
-1. Review, test, and merge the `v0.1.113..v0.1.114` gate PR.
-2. Because this gate ports runtime code, deploy and verify test/prod after merge.
-3. Open a small release-marker PR to bump `backend/cmd/server/VERSION` from `0.1.113` to `0.1.114`.
-4. After the marker PR lands, create and push fork sync tag `fork/v0.1.114` on the merged fork commit.
-5. Only after the tag exists in `ddnio/sub2api`, start the next gate: `v0.1.114..v0.1.115`.
-6. Do not start later-release runtime `PORT` work out of order unless it is an emergency production fix and is recorded as such.
+1. Review and merge the marker PR that bumps `backend/cmd/server/VERSION` from `0.1.113` to `0.1.114`.
+2. After the marker PR lands, create and push fork sync tag `fork/v0.1.114` on the merged fork commit.
+3. Only after the tag exists in `ddnio/sub2api`, start the next gate: `v0.1.114..v0.1.115`.
+4. Do not start later-release runtime `PORT` work out of order unless it is an emergency production fix and is recorded as such.
