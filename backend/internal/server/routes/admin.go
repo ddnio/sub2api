@@ -407,6 +407,9 @@ func registerSettingsRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		// Beta 策略配置
 		adminSettings.GET("/beta-policy", h.Admin.Setting.GetBetaPolicySettings)
 		adminSettings.PUT("/beta-policy", h.Admin.Setting.UpdateBetaPolicySettings)
+		// Web Search 模拟配置
+		adminSettings.GET("/web-search-emulation", h.Admin.Setting.GetWebSearchEmulationConfig)
+		adminSettings.PUT("/web-search-emulation", h.Admin.Setting.UpdateWebSearchEmulationConfig)
 		// 悬浮联系按钮渠道配置
 		adminSettings.GET("/contact-channels", h.Admin.Setting.GetContactChannels)
 		adminSettings.PUT("/contact-channels", h.Admin.Setting.UpdateContactChannels)

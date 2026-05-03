@@ -1169,6 +1169,17 @@ func (a *Account) IsAnthropicAPIKeyPassthroughEnabled() bool {
 	return ok && enabled
 }
 
+// IsWebSearchEmulationEnabled 返回 Anthropic API Key 账号是否启用 web search 模拟。
+// 字段：accounts.extra.web_search_emulation。
+// 字段缺失或类型不正确时，按 false（关闭）处理。
+func (a *Account) IsWebSearchEmulationEnabled() bool {
+	if a == nil || a.Platform != PlatformAnthropic || a.Type != AccountTypeAPIKey || a.Extra == nil {
+		return false
+	}
+	enabled, ok := a.Extra[featureKeyWebSearchEmulation].(bool)
+	return ok && enabled
+}
+
 // IsCodexCLIOnlyEnabled 返回 OpenAI OAuth 账号是否启用“仅允许 Codex 官方客户端”。
 // 字段：accounts.extra.codex_cli_only。
 // 字段缺失或类型不正确时，按 false（关闭）处理。

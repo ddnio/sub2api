@@ -165,6 +165,7 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		EnableFingerprintUnification:         settings.EnableFingerprintUnification,
 		EnableMetadataPassthrough:            settings.EnableMetadataPassthrough,
 		EnableCCHSigning:                     settings.EnableCCHSigning,
+		WebSearchEmulationEnabled:            settings.WebSearchEmulationEnabled,
 	})
 }
 
@@ -1809,4 +1810,37 @@ func (h *SettingHandler) UpdateContactChannels(c *gin.Context) {
 		return
 	}
 	response.Success(c, gin.H{"channels": contactChannelsToDTO(updated)})
+}
+
+// GetWebSearchEmulationConfig 获取 Web Search 模拟配置。
+// GET /api/v1/admin/settings/web-search-emulation
+func (h *SettingHandler) GetWebSearchEmulationConfig(c *gin.Context) {
+	cfg, err := h.settingService.GetWebSearchEmulationConfig(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, service.SanitizeWebSearchConfig(cfg))
+}
+
+// UpdateWebSearchEmulationConfig 更新 Web Search 模拟配置。
+// PUT /api/v1/admin/settings/web-search-emulation
+func (h *SettingHandler) UpdateWebSearchEmulationConfig(c *gin.Context) {
+	var cfg service.WebSearchEmulationConfig
+	if err := c.ShouldBindJSON(&cfg); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	if err := h.settingService.SaveWebSearchEmulationConfig(c.Request.Context(), &cfg); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	updated, err := h.settingService.GetWebSearchEmulationConfig(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, service.SanitizeWebSearchConfig(updated))
 }

@@ -1760,6 +1760,134 @@
             </div>
           </div>
         </div>
+
+        <!-- Web Search Emulation -->
+        <div class="card">
+          <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+              {{ t('admin.settings.webSearchEmulation.title') }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {{ t('admin.settings.webSearchEmulation.description') }}
+            </p>
+          </div>
+          <div class="space-y-5 p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ t('admin.settings.webSearchEmulation.enabled') }}
+                </label>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{ t('admin.settings.webSearchEmulation.enabledHint') }}
+                </p>
+              </div>
+              <Toggle v-model="webSearchConfig.enabled" />
+            </div>
+
+            <div v-if="webSearchConfig.enabled" class="space-y-4">
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ t('admin.settings.webSearchEmulation.providers') }}
+                </label>
+                <button type="button" class="btn btn-secondary btn-sm" @click="addWebSearchProvider">
+                  {{ t('admin.settings.webSearchEmulation.addProvider') }}
+                </button>
+              </div>
+
+              <div
+                v-if="webSearchConfig.providers.length === 0"
+                class="rounded-lg border border-dashed border-gray-300 p-4 text-center text-sm text-gray-400 dark:border-dark-600"
+              >
+                {{ t('admin.settings.webSearchEmulation.noProviders') }}
+              </div>
+
+              <div
+                v-for="(provider, providerIndex) in webSearchConfig.providers"
+                :key="providerIndex"
+                class="space-y-3 rounded-lg border border-gray-200 p-4 dark:border-dark-600"
+              >
+                <div class="flex items-center justify-between">
+                  <Select
+                    v-model="provider.type"
+                    :options="[
+                      { value: 'brave', label: 'Brave Search' },
+                      { value: 'tavily', label: 'Tavily' },
+                    ]"
+                    class="w-40"
+                  />
+                  <button
+                    type="button"
+                    class="text-xs text-red-500 hover:text-red-700"
+                    @click="webSearchConfig.providers.splice(providerIndex, 1)"
+                  >
+                    {{ t('admin.settings.webSearchEmulation.removeProvider') }}
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <label class="text-xs text-gray-500">
+                      {{ t('admin.settings.webSearchEmulation.apiKey') }}
+                    </label>
+                    <input
+                      v-model="provider.api_key"
+                      type="password"
+                      class="input text-sm"
+                      :placeholder="
+                        provider.api_key_configured
+                          ? '••••••••'
+                          : t('admin.settings.webSearchEmulation.apiKeyPlaceholder')
+                      "
+                    />
+                  </div>
+                  <div>
+                    <label class="text-xs text-gray-500">
+                      {{ t('admin.settings.webSearchEmulation.priority') }}
+                    </label>
+                    <input v-model.number="provider.priority" type="number" min="1" class="input text-sm" />
+                    <p class="mt-0.5 text-xs text-gray-400">
+                      {{ t('admin.settings.webSearchEmulation.priorityHint') }}
+                    </p>
+                  </div>
+                  <div>
+                    <label class="text-xs text-gray-500">
+                      {{ t('admin.settings.webSearchEmulation.quotaLimit') }}
+                    </label>
+                    <input v-model.number="provider.quota_limit" type="number" min="0" class="input text-sm" />
+                    <p class="mt-0.5 text-xs text-gray-400">
+                      {{ t('admin.settings.webSearchEmulation.quotaLimitHint') }}
+                    </p>
+                    <p v-if="provider.quota_used != null" class="mt-0.5 text-xs text-gray-400">
+                      {{ t('admin.settings.webSearchEmulation.quotaUsed') }}:
+                      {{ provider.quota_used }} / {{ provider.quota_limit || '∞' }}
+                    </p>
+                  </div>
+                  <div>
+                    <label class="text-xs text-gray-500">
+                      {{ t('admin.settings.webSearchEmulation.quotaRefreshInterval') }}
+                    </label>
+                    <Select
+                      v-model="provider.quota_refresh_interval"
+                      :options="[
+                        { value: 'daily', label: t('admin.settings.webSearchEmulation.daily') },
+                        { value: 'weekly', label: t('admin.settings.webSearchEmulation.weekly') },
+                        { value: 'monthly', label: t('admin.settings.webSearchEmulation.monthly') },
+                      ]"
+                      class="w-full"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label class="text-xs text-gray-500">
+                    {{ t('admin.settings.webSearchEmulation.proxy') }}
+                  </label>
+                  <ProxySelector v-model="provider.proxy_id" :proxies="proxyOptions" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         </div><!-- /Tab: Gateway — Claude Code, Scheduling -->
 
         <!-- Tab: General -->
@@ -2646,9 +2774,11 @@ import { adminAPI } from '@/api'
 import type {
   SystemSettings,
   UpdateSettingsRequest,
-  DefaultSubscriptionSetting
+  DefaultSubscriptionSetting,
+  WebSearchEmulationConfig,
+  WebSearchProviderConfig
 } from '@/api/admin/settings'
-import type { AdminGroup, ContactChannel } from '@/types'
+import type { AdminGroup, ContactChannel, Proxy } from '@/types'
 import type { PaymentConfig } from '@/api/admin'
 import type { ProviderInstance } from '@/types/payment'
 import type { TypeOption } from '@/components/payment/providerConfig'
@@ -2658,6 +2788,7 @@ import Select from '@/components/common/Select.vue'
 import GroupBadge from '@/components/common/GroupBadge.vue'
 import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
 import Toggle from '@/components/common/Toggle.vue'
+import ProxySelector from '@/components/common/ProxySelector.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import BackupSettings from '@/views/admin/BackupView.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
@@ -2666,6 +2797,7 @@ import PaymentProviderDialog from '@/components/payment/PaymentProviderDialog.vu
 import { useClipboard } from '@/composables/useClipboard'
 import { useAppStore } from '@/stores'
 import { useAdminSettingsStore } from '@/stores/adminSettings'
+import { extractApiErrorMessage } from '@/utils/apiError'
 import {
   isRegistrationEmailSuffixDomainValid,
   normalizeRegistrationEmailSuffixDomain,
@@ -2709,6 +2841,7 @@ const adminApiKeyMasked = ref('')
 const adminApiKeyOperating = ref(false)
 const newAdminApiKey = ref('')
 const subscriptionGroups = ref<AdminGroup[]>([])
+const proxyOptions = ref<Proxy[]>([])
 
 // Overload Cooldown (529) 状态
 const overloadCooldownLoading = ref(true)
@@ -2874,6 +3007,61 @@ const form = reactive<SettingsForm>({
   enable_metadata_passthrough: false,
   enable_cch_signing: false
 })
+
+const DEFAULT_WEB_SEARCH_QUOTA_LIMIT = 1000
+
+const webSearchConfig = reactive<WebSearchEmulationConfig>({
+  enabled: false,
+  providers: []
+})
+
+function addWebSearchProvider() {
+  webSearchConfig.providers.push({
+    type: 'brave',
+    api_key: '',
+    api_key_configured: false,
+    priority: webSearchConfig.providers.length + 1,
+    quota_limit: DEFAULT_WEB_SEARCH_QUOTA_LIMIT,
+    quota_refresh_interval: 'monthly',
+    proxy_id: null,
+    expires_at: null
+  } as WebSearchProviderConfig)
+}
+
+async function loadWebSearchConfig() {
+  try {
+    const config = await adminAPI.settings.getWebSearchEmulationConfig()
+    webSearchConfig.enabled = config.enabled || false
+    webSearchConfig.providers = Array.isArray(config.providers) ? config.providers : []
+  } catch (error: unknown) {
+    const status = (error as { status?: number })?.status
+    if (status !== 404) {
+      appStore.showError(extractApiErrorMessage(error, t('common.error')))
+    }
+  }
+}
+
+async function saveWebSearchConfig(): Promise<boolean> {
+  try {
+    await adminAPI.settings.updateWebSearchEmulationConfig({
+      enabled: webSearchConfig.enabled,
+      providers: webSearchConfig.providers
+    })
+    return true
+  } catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('common.error')))
+    return false
+  }
+}
+
+async function loadProxyOptions() {
+  try {
+    proxyOptions.value = await adminAPI.proxies.getAll()
+  } catch (error) {
+    console.error('Failed to load proxies:', error)
+    proxyOptions.value = []
+  }
+}
 
 const defaultSubscriptionGroupOptions = computed<DefaultSubscriptionGroupOption[]>(() =>
   subscriptionGroups.value.map((group) => ({
@@ -3083,6 +3271,7 @@ async function loadSettings() {
     form.turnstile_secret_key = ''
     form.linuxdo_connect_client_secret = ''
     form.oidc_connect_client_secret = ''
+    await loadWebSearchConfig()
   } catch (error: any) {
     loadFailed.value = true
     appStore.showError(
@@ -3288,10 +3477,13 @@ async function saveSettings() {
     form.turnstile_secret_key = ''
     form.linuxdo_connect_client_secret = ''
     form.oidc_connect_client_secret = ''
+    const webSearchSaved = await saveWebSearchConfig()
     // Refresh cached settings so sidebar/header update immediately
     await appStore.fetchPublicSettings(true)
     await adminSettingsStore.fetch(true)
-    appStore.showSuccess(t('admin.settings.settingsSaved'))
+    if (webSearchSaved) {
+      appStore.showSuccess(t('admin.settings.settingsSaved'))
+    }
   } catch (error: any) {
     appStore.showError(
       t('admin.settings.failedToSave') + ': ' + (error.message || t('common.unknownError'))
@@ -3949,6 +4141,7 @@ onMounted(() => {
   loadStreamTimeoutSettings()
   loadRectifierSettings()
   loadBetaPolicySettings()
+  loadProxyOptions()
   loadContactChannels()
   loadProviders()
   loadPaymentConfig()

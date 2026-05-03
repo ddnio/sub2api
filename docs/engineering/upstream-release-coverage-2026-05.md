@@ -374,9 +374,9 @@ Internal commits in `d402e722^1..d402e722^2`:
 | Domain | Internal commits | Current decision |
 | --- | --- | --- |
 | Branch maintenance / CI / conflict repair | `1cd033e5`, `37c23ecc`, `3d4d960d`, `49915987`, `1e6912ea`, `d6965b06`, `24e16b7f`, `b42f34c3`, `6a08efee`, `e8ee400a`, `3d202722` | REGISTERED | These commits are formatting, generated-wire repair, upstream branch maintenance, or CI repair. They do not become standalone fork features, but any touched behavior must still be covered by the functional domains below. |
-| Channel restriction / channel model pricing base | `3de77130`, `2dce4306`, `160903fc`, `e3748741`, `794e8172`, `1c63ea14`, `58677dd5` | PARTIAL | Fork has channel model pricing and upstream restriction checks in `channel_repo_pricing.go`, `ChannelsView.vue`, `gateway_service.go`, and `openai_gateway_service.go`, but PR #1637's `features_config` / reused-Channel features model is not fully present. Needs a commit-by-commit parity check before closure. |
+| Channel restriction / channel model pricing base | `3de77130`, `2dce4306`, `160903fc`, `e3748741`, `794e8172`, `1c63ea14`, `58677dd5` | PARTIAL | Fork has channel model pricing and upstream restriction checks in `channel_repo_pricing.go`, `ChannelsView.vue`, `gateway_service.go`, and `openai_gateway_service.go`. Branch `sync/v0.1.112-release-closeout` now also adapts `features_config` without importing upstream's incompatible `channels.features` column. Remaining parity work is channel cache/restriction logging review. |
 | Payment residuals and provider refund controls | `5bae3b05`, `3c884f8e`, `56e4a9a9`, `c738cfec`, `4aa0070e`, `f1297a36`, `c14d7393`, `5240b444`, `63f539b3` | ADAPTED | Fork payment-b2 already has provider instances, `allow_user_refund`, method limits, fee/pay amount separation, refund provider lookup, proportional gateway refund, Stripe payment type matching, inline/mobile payment flow, and payment regression tests. Keep as adapted unless a targeted diff finds a missing residual. |
-| Websearch backend and settings | `1b53ffca`, `7fad9f60`, `fda61b06`, `60b0fa81`, `d0674e0f`, `889b5b4f`, `5df73099`, `49281bbe`, `1262654d`, `74f8a30f`, `9c09bd19`, `0a4ece5f`, `9e0d12d3`, `7c729293`, `9028d208` | MISSING | Current fork only has adjacent web-search tool compatibility in Gemini/Codex helpers. It lacks `backend/internal/pkg/websearch`, gateway websearch emulation, provider config, admin settings UI, tests, and the `101_add_channel_features_config.sql` / tri-state migration family. Must be implemented or explicitly rejected with product reason before this release closes. |
+| Websearch backend and settings | `1b53ffca`, `7fad9f60`, `fda61b06`, `60b0fa81`, `d0674e0f`, `889b5b4f`, `5df73099`, `49281bbe`, `1262654d`, `74f8a30f`, `9c09bd19`, `0a4ece5f`, `9e0d12d3`, `7c729293`, `9028d208` | PARTIAL | Branch `sync/v0.1.112-release-closeout` adapts the websearch base: `backend/internal/pkg/websearch`, gateway emulation service, global provider config API, channel `features_config`, account/channel UI toggles, admin settings UI, migration `125_add_channel_features_config.sql`, and targeted tests. Verification: `pnpm --dir frontend typecheck`, websearch targeted Go tests, broader channel/API-contract tests, and `git diff --check`. Remaining release blockers are later websearch hardening/tri-state/admin-test/API-key-visibility/quota commits. |
 | Account stats pricing | `7535e312`, `80fa4844`, `11c46068`, `98c9d517`, `1262654d`, `a68df457`, `b7fb2e43`, `ca673f98`, `ed8a9d97`, `9d319cfa`, `594f0d17`, `9c09bd19`, `9028d208` | ADAPTED | Added fork migration `108_add_account_stats_pricing.sql`, `usage_logs.account_stats_cost`, channel account-stats pricing rules/intervals, service resolver priority, OpenAI/Anthropic usage-log write integration, account-cost aggregate formulas, admin channel API fields, and a basic UI entry. Verification so far: targeted service/repository tests and frontend typecheck passed. This closes the account-stats-pricing domain, but commits also touching websearch/notify remain open under those domains until implemented and release-level review confirms no shared leftovers. |
 | Balance and quota notification | `b32d1a2c`, `c3812ce1`, `30b926ad`, `f694afbb`, `9e33d0c4`, `cef22c70`, `eba289a7`, `4e96a6fa`, `79d154ed`, `81287e96`, `42280751`, `61aa197b`, `915b7a4a`, `31550a2c`, `95f9b27e`, `48e8efe3`, `42f8ef33`, `2066c478`, `ac554432`, `7141dcee`, `216bda58`, `e27335ac`, `c1eb79e4`, `48b6c481`, `f571d8ff`, `6e9146e7`, `a43da622`, `ca673f98`, `ed8a9d97`, `9d319cfa`, `594f0d17`, `1b7c2951`, `74f8a30f`, `a9880ee7`, `0a4ece5f`, `b402c367`, `7c729293`, `9028d208` | MISSING | Current fork has ops alert email infrastructure but not user balance-low/account quota notification settings, saved email verification, quota notify UI, notify-email struct migration, or the dedicated service/tests. This is a release-blocking feature domain. |
 | Frontend account/settings composition and usage queue | `a56151fe`, `3fa5b8bc`, `6ac8ccde`, `245f47ce`, `2066c478`, `ac554432`, `7141dcee`, `1b7c2951` | PARTIAL | Some fork UI equivalents exist, but websearch/notify-specific components and usage load queue need parity review with frontend tests. |
@@ -384,11 +384,106 @@ Internal commits in `d402e722^1..d402e722^2`:
 
 Next implementation order for PR #1637:
 
-1. Finish payment residual proof with tests, then keep it closed as `ADAPTED`.
-2. Implement websearch backend/config first, then frontend settings.
-3. Implement balance/quota notification backend, then frontend profile/account settings.
+1. Finish websearch follow-up commits after the base import: proxy failover/timeout/quota hardening, admin test timeout, tri-state behavior, API key visibility/copy controls, and quota cache fixes.
+2. Implement balance/quota notification backend, then frontend profile/account settings.
+3. Finish payment residual proof with tests, then keep it closed as `ADAPTED` unless a targeted residual is found.
 4. Re-run the full PR #1637 internal commit coverage audit, especially commits that touched multiple domains (`1262654d`, `a68df457`, `b7fb2e43`, `ed8a9d97`, `9d319cfa`, `74f8a30f`, `0a4ece5f`, `9028d208`).
 5. Only after these domains pass targeted tests, run the release-level closeout checklist and update `v0.1.113` from reopened to final.
+
+#### PR #1637 internal commit coverage snapshot
+
+This snapshot was refreshed while closing the `1b53ffca` websearch base import on branch `sync/v0.1.112-release-closeout`. It is not a release closeout: every `PARTIAL`, `MISSING`, or `UNCLEAR` row below still blocks final `v0.1.113` closure until converted to a final outcome with evidence.
+
+| Commit | Area | Current state | Evidence / remaining action |
+| --- | --- | --- | --- |
+| `1cd033e5` | Formatting | UNCLEAR | Recheck after all PR #1637 functional domains are complete. |
+| `3de77130` | Channel pricing UI/debug | PARTIAL | Channel pricing UI exists; verify upstream splice/debug behavior after websearch/notify closeout. |
+| `2dce4306` | Channel restriction scheduling | COVERED | Fork already has scheduler-stage restriction behavior in gateway scheduling paths. |
+| `160903fc` | Channel restriction review fixes | COVERED | Covered with the restriction scheduling behavior above. |
+| `e3748741` | Channel cache/logging | PARTIAL | Cache/logging parity still needs targeted review. |
+| `37c23ecc` | Formatting | UNCLEAR | Recheck with final gofmt/diff-check. |
+| `794e8172` | Channel feature model | ADAPTED | Fork uses `features_config` only; upstream `channels.features` is intentionally not imported because this fork has no matching schema contract. |
+| `3d4d960d` | Formatting | UNCLEAR | Recheck with final gofmt/diff-check. |
+| `1c63ea14` | Channel feature query | ADAPTED | Queries now include `features_config`; no `features` column is queried. |
+| `5bae3b05` | Payment audit fixes | COVERED | Payment-b2 already covers provider/method semantics. |
+| `3c884f8e` | Payment tests | COVERED | Payment-b2 regression coverage exists; rerun payment regression during release closeout. |
+| `56e4a9a9` | Payment/frontend audit fixes | COVERED | Payment-b2 and frontend payment flow already adapted. |
+| `c738cfec` | Payment security/idempotency | COVERED | Payment-b2 includes provider lookup, amount breakdown, refund, and idempotency behavior. |
+| `1b53ffca` | Websearch base | ADAPTED | Current branch imports/adapts websearch package, gateway emulation, config API/UI, account/channel toggles, and tests. |
+| `7fad9f60` | API contract field | ADAPTED | API contract and settings DTO include `web_search_emulation_enabled`. |
+| `7535e312` | Account stats pricing | ADAPTED | Closed by account-stats-pricing branch work and migration `108_add_account_stats_pricing.sql`. |
+| `fda61b06` | Websearch failover/quota | PARTIAL | Current base has quota/proxy support; failover and timeout parity still needs direct commit review. |
+| `49915987` | Websearch formatting | UNCLEAR | Recheck with final gofmt/diff-check. |
+| `60b0fa81` | Websearch proxy error tests | PARTIAL | Current manager has proxy-aware client and tests; `isProxyError` parity still needs direct review. |
+| `b32d1a2c` | Balance/quota notify base | MISSING | No dedicated balance/quota notification service, UI, migration, or tests in fork yet. |
+| `c3812ce1` | Notify review fixes | MISSING | Blocked by notify base. |
+| `30b926ad` | Notify email timeout/removal | MISSING | Blocked by notify base. |
+| `d0674e0f` | Websearch settings/quota UI | PARTIAL | Settings UI is adapted; quota improvement parity remains open. |
+| `f694afbb` | Notify percentage threshold | MISSING | Blocked by notify base. |
+| `9e33d0c4` | Websearch/notify audit | PARTIAL | Websearch subset partly covered; notify subset missing. |
+| `cef22c70` | Notify threshold rollback | MISSING | Blocked by notify base. |
+| `889b5b4f` | Websearch UI disabled state | PARTIAL | Global settings UI exists; visibility behavior needs direct review. |
+| `eba289a7` | Notify global toggles | MISSING | Blocked by notify base. |
+| `4e96a6fa` | Notify/websearch/security audit | PARTIAL | Websearch subset partly covered; notify subset missing. |
+| `80fa4844` | Account-stats UI placement | COVERED | Account-stats pricing UI is integrated into channel platform tabs. |
+| `5df73099` | Websearch admin test timeout | MISSING | No admin search-test timeout parity verified yet. |
+| `49281bbe` | Websearch API key visibility | PARTIAL | Settings provider form has password placeholder; show/copy saved-key controls still open. |
+| `79d154ed` | Notify public settings fields | MISSING | Notify settings fields are absent. |
+| `81287e96` | Balance notify UX | MISSING | Notify UI absent. |
+| `42280751` | Notify duplicate email UX | MISSING | Notify UI absent. |
+| `61aa197b` | Balance threshold save UX | MISSING | Notify UI absent. |
+| `915b7a4a` | NotifyEmailEntry schema | MISSING | Notify schema/service absent. |
+| `31550a2c` | Notify balance crossing | MISSING | Notify service absent. |
+| `95f9b27e` | Notify email verification | MISSING | Notify verification flow absent. |
+| `11c46068` | Account-stats upstream model | COVERED | Account-stats pricing priority and upstream model semantics adapted. |
+| `1262654d` | Mixed websearch/account-stats/quota tooltip | PARTIAL | Account-stats subset covered; websearch/notify subsets need follow-up review. |
+| `a68df457` | Mixed audit fixes | PARTIAL | Account-stats subset covered; websearch/notify subsets need follow-up review. |
+| `b7fb2e43` | Mixed audit fixes | PARTIAL | Account-stats subset covered; websearch/notify subsets need follow-up review. |
+| `b1875f0b` | Notify SMTP hardening | MISSING | Notify email path absent. |
+| `48e8efe3` | Notify frontend visibility | MISSING | Notify UI absent. |
+| `245f47ce` | Websearch label/width UI | PARTIAL | Settings UI adapted; exact select-label compacting still needs direct review. |
+| `42f8ef33` | Notify admin settings field | MISSING | Notify settings fields absent. |
+| `98c9d517` | Account-stats priority | COVERED | Account-stats resolver priority adapted and tested. |
+| `2066c478` | Quota notify UI | MISSING | Notify UI absent. |
+| `ac554432` | Quota card layout | MISSING | Notify UI absent. |
+| `7141dcee` | Quota toggle inline | MISSING | Notify UI absent. |
+| `216bda58` | Quota threshold semantics | MISSING | Notify service/UI absent. |
+| `e27335ac` | Notify dropdown/input widths | MISSING | Notify UI absent. |
+| `c1eb79e4` | Notify email content/recharge URL | MISSING | Notify service/email path absent. |
+| `48b6c481` | Notify recharge URL autofill | MISSING | Notify UI absent. |
+| `f571d8ff` | Notify recharge URL writeback | MISSING | Notify UI absent. |
+| `6e9146e7` | Notify recharge URL GET | MISSING | Notify settings fields absent. |
+| `a43da622` | Account modal notify props | MISSING | Notify account-modal props absent. |
+| `ca673f98` | Notify tests / plan validation | PARTIAL | Plan/payment validation may be covered; notify tests absent. |
+| `ed8a9d97` | Mixed batch 1 fixes | PARTIAL | Websearch/account-stats subsets partly covered; notify subset missing. |
+| `9d319cfa` | Mixed batch 2 fixes | PARTIAL | Websearch/account-stats subsets partly covered; notify subset missing. |
+| `594f0d17` | Notify refactor | MISSING | Notify service absent. |
+| `1b7c2951` | Notify frontend composable/splits | MISSING | Notify UI absent. |
+| `74f8a30f` | Websearch/email/pricing audit | PARTIAL | Account-stats subset covered; websearch/email notify subsets open. |
+| `a9880ee7` | Security/UI audit | PARTIAL | Requires direct commit review after websearch/notify implementation. |
+| `9c09bd19` | Websearch features_config/pricing validation | PARTIAL | `features_config` and account-stats validation adapted; websearch cleanup parity still open. |
+| `0a4ece5f` | Proxy safety/intervals/SMTP/sort | PARTIAL | Websearch/account-stats subsets partly covered; notify SMTP subset missing. |
+| `b402c367` | Notify SMTP STARTTLS | MISSING | Notify email path absent. |
+| `9e0d12d3` | Websearch saved-key controls | PARTIAL | Saved-key visibility/copy controls still need direct review. |
+| `1e6912ea` | Formatting | UNCLEAR | Recheck with final gofmt/diff-check. |
+| `7c729293` | Websearch quota + notify hint | PARTIAL | Websearch quota subset partly covered; notify hint missing. |
+| `9028d208` | Billing/websearch/notify tests | PARTIAL | Websearch targeted tests added; notify tests absent. |
+| `d6965b06` | Conflict repair/compilation | UNCLEAR | Recheck after all PR #1637 domains compile together. |
+| `24e16b7f` | Messages dispatch model | PRESENT | Fork messages routing behavior already exists from earlier slices. |
+| `b42f34c3` | Test compilation/version | UNCLEAR | Recheck during final release closeout. |
+| `4aa0070e` | Stripe LB type matching | COVERED | Payment-b2 provider matching already adapted. |
+| `6a08efee` | Upstream CI failures | PARTIAL | Current targeted checks pass; full release CI remains required. |
+| `e8ee400a` | Lint errors | UNCLEAR | Recheck with final lint/CI. |
+| `f1297a36` | Provider allow_user_refund | COVERED | Fork payment-b2 includes provider-level refund controls. |
+| `6ac8ccde` | General improvements | PARTIAL | Mixed commit; requires direct review after core domains close. |
+| `58677dd5` | PR-related improvements | PARTIAL | Mixed commit; channel/websearch subsets still under review. |
+| `c14d7393` | allow_user_refund review | COVERED | Covered by payment-b2 refund controls. |
+| `63f539b3` | General frontend improvements | PARTIAL | Mixed frontend commit; review after websearch/notify UI. |
+| `a56151fe` | CapacityBadge extraction | MISSING | Not yet ported or rejected. |
+| `5240b444` | Payment inline/mobile/renewal | UNCLEAR | Payment-b2 has local equivalents; needs targeted proof before final. |
+| `3fa5b8bc` | WebSocket flaky test / usage queue | PARTIAL | Usage queue/test subset needs direct review. |
+| `3d202722` | Wire provider config injection | UNCLEAR | Fork wire/config injection differs; review when all runtime domains compile. |
+| `8548a130` | Messages routing subscription groups | PRESENT | Fork already includes messages routing/subscription group behavior. |
 
 ### v0.1.114
 

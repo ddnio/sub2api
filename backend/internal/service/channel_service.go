@@ -691,6 +691,7 @@ func (s *ChannelService) Create(ctx context.Context, input *CreateChannelInput) 
 		GroupIDs:                   input.GroupIDs,
 		ModelPricing:               input.ModelPricing,
 		ModelMapping:               input.ModelMapping,
+		FeaturesConfig:             input.FeaturesConfig,
 		ApplyPricingToAccountStats: input.ApplyPricingToAccountStats,
 		AccountStatsPricingRules:   input.AccountStatsPricingRules,
 	}
@@ -783,6 +784,9 @@ func (s *ChannelService) applyUpdateInput(ctx context.Context, channel *Channel,
 	}
 	if input.AccountStatsPricingRules != nil {
 		channel.AccountStatsPricingRules = *input.AccountStatsPricingRules
+	}
+	if input.FeaturesConfig != nil {
+		channel.FeaturesConfig = input.FeaturesConfig
 	}
 	return nil
 }
@@ -956,6 +960,7 @@ type CreateChannelInput struct {
 	ModelMapping               map[string]map[string]string // platform → {src→dst}
 	BillingModelSource         string
 	RestrictModels             bool
+	FeaturesConfig             map[string]any
 	ApplyPricingToAccountStats bool
 	AccountStatsPricingRules   []AccountStatsPricingRule
 }
@@ -970,6 +975,7 @@ type UpdateChannelInput struct {
 	ModelMapping               map[string]map[string]string // platform → {src→dst}
 	BillingModelSource         string
 	RestrictModels             *bool
+	FeaturesConfig             map[string]any
 	ApplyPricingToAccountStats *bool
 	AccountStatsPricingRules   *[]AccountStatsPricingRule
 }
