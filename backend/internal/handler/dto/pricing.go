@@ -2,10 +2,10 @@ package dto
 
 // ModelPricingItem represents a single model's pricing information.
 type ModelPricingItem struct {
-	ID          string  `json:"id"`
-	DisplayName string  `json:"display_name"`
-	OwnedBy     string  `json:"owned_by"`
-	Category    string  `json:"category"`
+	ID          string   `json:"id"`
+	DisplayName string   `json:"display_name"`
+	OwnedBy     string   `json:"owned_by"`
+	Category    string   `json:"category"`
 	Pricing     PriceSet `json:"pricing"`
 	// EffectivePricing is non-nil only when group_id is provided.
 	EffectivePricing *EffectivePriceSet `json:"effective_pricing"`

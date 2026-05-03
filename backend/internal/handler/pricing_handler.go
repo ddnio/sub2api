@@ -116,7 +116,7 @@ func (h *PricingHandler) GetModelPricing(c *gin.Context) {
 	}
 
 	// Resolve effective rate multiplier for the selected group.
-	var effectiveRate float64 = 1.0
+	effectiveRate := 1.0
 	if requestedGroupID != nil {
 		g := groupMap[*requestedGroupID]
 		effectiveRate = g.RateMultiplier

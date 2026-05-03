@@ -41,8 +41,7 @@ var (
 	// KEYS[4] = snapshotKey   (新写入的快照 key)
 	// ARGV[1] = 新版本号字符串
 	// ARGV[2] = bucket 字符串 (用于 SADD)
-	// ARGV[3] = 快照 key 前缀 (用于构造旧快照 key)
-	// ARGV[4] = 宽限期 TTL 秒数
+	// ARGV[3] = 宽限期 TTL 秒数
 	//
 	// 返回 1 = 已激活, 0 = 版本过旧未激活
 	activateSnapshotScript = redis.NewScript(`
@@ -62,7 +61,8 @@ redis.call('SET', KEYS[2], '1')
 redis.call('SADD', KEYS[3], ARGV[2])
 
 if currentActive ~= false and currentActive ~= ARGV[1] then
-	redis.call('EXPIRE', ARGV[3] .. currentActive, tonumber(ARGV[4]))
+	local snapshotPrefix = string.sub(KEYS[4], 1, string.len(KEYS[4]) - string.len(ARGV[1]))
+	redis.call('EXPIRE', snapshotPrefix .. currentActive, tonumber(ARGV[3]))
 end
 
 return 1
@@ -195,10 +195,8 @@ func (c *schedulerCache) SetSnapshot(ctx context.Context, bucket service.Schedul
 	// 旧快照使用 EXPIRE 宽限期而非立即 DEL，避免 reader 竞态。
 	activeKey := schedulerBucketKey(schedulerActivePrefix, bucket)
 	readyKey := schedulerBucketKey(schedulerReadyPrefix, bucket)
-	snapshotKeyPrefix := fmt.Sprintf("%s%d:%s:%s:v", schedulerSnapshotPrefix, bucket.GroupID, bucket.Platform, bucket.Mode)
-
 	keys := []string{activeKey, readyKey, schedulerBucketSetKey, snapshotKey}
-	args := []any{versionStr, bucket.String(), snapshotKeyPrefix, snapshotGraceTTLSeconds}
+	args := []any{versionStr, bucket.String(), snapshotGraceTTLSeconds}
 
 	_, err = activateSnapshotScript.Run(ctx, c.rdb, keys, args...).Result()
 	if err != nil {

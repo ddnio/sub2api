@@ -542,32 +542,6 @@ func registerErrorPassthroughRoutes(admin *gin.RouterGroup, h *handler.Handlers)
 	}
 }
 
-func registerAdminPaymentRoutes(adminGroup *gin.RouterGroup, h *handler.Handlers) {
-	plans := adminGroup.Group("/payment/plans")
-	{
-		plans.GET("", h.Admin.Payment.ListPlans)
-		plans.POST("", h.Admin.Payment.CreatePlan)
-		plans.PUT("/:id", h.Admin.Payment.UpdatePlan)
-		plans.DELETE("/:id", h.Admin.Payment.DeletePlan)
-	}
-	orders := adminGroup.Group("/payment/orders")
-	{
-		orders.GET("", h.Admin.Payment.ListOrders)
-		orders.GET("/stats", h.Admin.Payment.GetDashboard) // must be before /:id
-		orders.GET("/:id", h.Admin.Payment.GetOrderDetail)
-		orders.POST("/:id/refund", h.Admin.Payment.ProcessRefund)
-	}
-	providers := adminGroup.Group("/payment/providers")
-	{
-		providers.GET("", h.Admin.Payment.ListProviders)
-		providers.POST("", h.Admin.Payment.CreateProvider)
-		providers.PUT("/:id", h.Admin.Payment.UpdateProvider)
-		providers.DELETE("/:id", h.Admin.Payment.DeleteProvider)
-	}
-	adminGroup.GET("/payment/config", h.Admin.Payment.GetConfig)
-	adminGroup.PUT("/payment/config", h.Admin.Payment.UpdateConfig)
-}
-
 func registerTLSFingerprintProfileRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 	profiles := admin.Group("/tls-fingerprint-profiles")
 	{
