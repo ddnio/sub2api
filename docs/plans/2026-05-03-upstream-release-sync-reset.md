@@ -39,13 +39,14 @@ Do not continue with `v0.1.115` completion work until the process reset is merge
 4. `REJECTED` is allowed only when the fork intentionally does not want the feature/behavior, with concrete product or technical reason.
 5. `PRESENT` requires code evidence and, for behavior, test or executable-path evidence.
 6. `ADAPTED` requires fork-specific implementation evidence and a regression plan.
-7. Runtime changes require local verification, GitHub CI, deployment to test/prod after merge, and `/health`, unauthenticated `/v1/models`, and log-scan verification.
+7. Runtime work-package PRs require local verification and GitHub CI, but routine deployment waits until the whole upstream release gate is closed. Deploy test/prod once per completed release after the release-level closeout review, then verify `/health`, unauthenticated `/v1/models`, and logs. Exceptions are security hotfixes, migrations/schema changes, payment/auth/data-risk changes, or urgent production fixes.
 8. Existing public fork tags are not rewritten or deleted. Incorrectly closed gates are corrected forward by new PRs on latest `main`, and the ledger must clearly say those older markers are provisional until reopened items close.
 9. After each PR merges:
    - fetch `origin/main`;
    - confirm the merge commit is on `main`;
    - remove the merged worktree/branch after checking it has no uncommitted changes;
    - create the next worktree from latest `origin/main`.
+10. Do not let old worktrees and feature branches drive planning. They may make Git graph tools look fragmented, but the release gate always starts from latest `origin/main`; branch cleanup is a separate maintenance action after merge state and uncommitted changes are checked.
 
 ## Reopened Release Items
 
@@ -209,7 +210,7 @@ If `git branch -d` refuses because the branch is not fully merged, stop and insp
 6. Run backend/frontend verification based on touched areas.
 7. Kimi review code and PR.
 8. Merge only after CI passes.
-9. Deploy test/prod if runtime behavior changed.
+9. Do not deploy for this work package unless it is a security hotfix, migration/schema change, payment/auth/data-risk change, or urgent production fix. Record runtime impact for the release-level deployment.
 10. Clean the worktree after merge.
 
 ### Task 4: Reprocess `v0.1.113` reopened items
@@ -247,9 +248,9 @@ If `git branch -d` refuses because the branch is not fully merged, stop and insp
 - Docs-only PR: `git diff --check`, self-review, Kimi review, GitHub docs/CI checks.
 - Backend runtime PR: targeted package tests plus relevant `make test-unit` or `go test -tags=unit ./...` if shared service behavior changes.
 - Frontend PR: `pnpm --dir frontend install --frozen-lockfile`, `pnpm --dir frontend typecheck`, `pnpm --dir frontend build`, targeted Vitest where available.
-- Payment PR: payment backend regression tests, frontend payment flow tests, and deployment smoke tests after merge.
-- Migration PR: local migration integration test, live DB read-only precheck, backup plan, test deploy, prod deploy, post-deploy schema check.
-- Deployment smoke:
+- Payment PR: payment backend regression tests, frontend payment flow tests, and deployment smoke tests. Payment/auth/data-risk PRs may still deploy immediately when risk warrants it.
+- Migration PR: local migration integration test, live DB read-only precheck, backup plan, test deploy, prod deploy, post-deploy schema check. Migrations remain an exception to the routine release-level deployment rule.
+- Release-level deployment smoke:
   - test and prod `/health` return `{"status":"ok"}`;
   - unauthenticated `/v1/models` returns 401;
   - logs since deploy contain no `panic|fatal|error|migration|failed|traceback|异常`.
