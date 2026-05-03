@@ -42,6 +42,7 @@ Fetch note: 2026-05-03 attempts to refresh `upstream` and `origin` failed with G
 - Code merge unit is upstream first-parent commit / upstream PR merge commit. A smaller manually ported hunk is allowed only after the commit/PR has been tried or audited and the exact conflict/fork-divergence reason is recorded.
 - Process releases in tag order. A later release must not start until the previous release gate is closed.
 - Inside a release, process upstream first-parent commits in order. Do not jump from one reopened item to a later release, and do not start a broad hand-written implementation before the corresponding upstream commit/PR has a direct-import or already-present audit.
+- Default fork PR packaging is one PR per upstream release gate. Keep all compatible items for the same release in one release worktree and one fork PR, with an itemized ledger and targeted tests. Split into separate PRs only for schema/migration changes, payment/auth/security/data-risk changes, very large or conflicted imports, or when a smaller PR is needed to unblock CI safely.
 - After all items inside a release appear closed, run a release-level closeout review before updating the fork release marker/tag or starting the next release. The closeout must re-run the upstream first-parent list, confirm every commit/PR has a final outcome with evidence, confirm runtime tests and CI for changed code, decide whether deployment is required, and check that the ledger has no unresolved `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` entries for that release.
 - For each upstream commit/PR, use this order:
   1. Confirm whether the upstream commit is already an ancestor of the fork or already landed through a mapped fork PR.
@@ -80,8 +81,8 @@ Current gate:
 
 | Gate | Status | Required next action |
 | --- | --- | --- |
-| `v0.1.110..v0.1.111` | Reopened | Historical marker `fork/v0.1.111` exists, but PR #1538 and PR #1545 must be reprocessed under the stricter rule before this gate is final. |
-| `v0.1.111..v0.1.112` | Provisional | Historical marker `fork/v0.1.112` exists. Keep it as an immutable sync marker, but final alignment depends on closing the reopened prior gate first. |
+| `v0.1.110..v0.1.111` | Final | Historical marker `fork/v0.1.111` exists. PR #1538 and PR #1545 were reprocessed under the stricter rule through PR #48, #49, #50, and #51; no release-local unresolved item remains. |
+| `v0.1.111..v0.1.112` | Next | Historical marker `fork/v0.1.112` exists. Re-confirm this gate under the strict release rule before moving to `v0.1.113`. |
 | `v0.1.112..v0.1.113` | Reopened | Historical marker `fork/v0.1.113` exists, but PR #1637, PR #1655, and PR #1666 must be reprocessed under the stricter rule before this gate is final. |
 | `v0.1.113..v0.1.114` | Provisional | PR #44 was merged and deployed, and marker `fork/v0.1.114` exists. Reconfirm only after the reopened earlier gates are closed. |
 | `v0.1.114..v0.1.115` | Parked | A partial PR #1752 worktree exists with uncommitted changes. Do not rebase, recreate, or mark this gate complete until the parked work is preserved and earlier reopened gates are closed. |
@@ -176,7 +177,7 @@ git log --oneline --first-parent --reverse v0.1.110..v0.1.111
 | `760cc7d6` / PR #1481 | Increase stored error-log body limit | Commit is ancestor of local `HEAD`. | MERGED | Local ops service has upstream-equivalent error-body/request-body sanitization; no further port required in this release. |
 | `bbc79796` / PR #1529 | Group `/v1/messages` dispatch redo | Commit is ancestor of local `HEAD`. | MERGED | Local code has `OpenAIMessagesDispatchModelConfig`, group UI controls, migration `091_add_group_messages_dispatch_model_config.sql`, and dispatch resolution tests. |
 | `00c08c57` / PR #1539 | Sync `load_factor` into scheduler cache | Commit is ancestor of local `HEAD`. | MERGED | `buildSchedulerMetadataAccount` copies `LoadFactor` into scheduler metadata snapshots. |
-| `1ef3782d` / PR #1538 | Broad admin/repository/frontend bug-cleanup batch | Upstream merge commit is not an ancestor; selected behavior has landed through later fork/admin slices, but the earlier blanket freeze is not enough under the reset rule. | REOPENED | First produce a PR-level import audit before writing code: direct patch/cherry-pick result, direct-portable files, fork-present behavior, conflict areas, schema/data impact, product semantics, and required tests. Only after that audit may it be split into minimal subitems such as pagination/sort/search behavior, settings/public fields, repository query changes, cache behavior, frontend table preference behavior, and tests. Each subitem must become `MERGED`, `ADAPTED`, `PRESENT`, or explicitly `REJECTED` with evidence before this gate is final. |
+| `1ef3782d` / PR #1538 | Broad admin/repository/frontend bug-cleanup batch | Upstream merge commit is not an ancestor; direct whole-PR import was unsafe because it conflicted with fork settings/table/navigation surfaces. The PR was reprocessed by internal subitems A-I. | ADAPTED | Closed through PR #48, #49, and #50. Covered table scrollbar/account filters/settings/export filters, backend/frontend sort/search, axios security presence, messages-dispatch auth hydration, sidebar SVG color preservation, and applicable tests. Subitem ledger below has final states for A-I; no unresolved PR #1538 item remains. |
 | `97f14b7a` / PR #1572 | Payment system v2 | Upstream merge commit is not an ancestor; fork intentionally replaced/adapted it through `623dda62` and the payment-b2 sequence through production hotfix `6518510b`. | ADAPTED | Payment-b2 audit and deploy logs show fork-specific migrations, provider instances, checkout/result flows, Stripe/Alipay/Wxpay providers, webhook/refund/resume tests, and test/prod deployment. Do not cherry-pick upstream payment v2 over the fork adaptation. |
 | `54490cf6` / PR #1576 | Payment docs | Upstream merge commit is not an ancestor; upstream docs are superseded by fork payment-b2 operational docs. | ADAPTED | Current docs include `payment-b2-upstream-audit.md`, `payment-b2-deploy.md`, and `payment-b2-deploy-log.md`, which document the fork-specific payment architecture and deployment evidence. |
 | `9b7b3755` / PR #1543 | Messages-dispatch i18n | Upstream merge commit is not an ancestor, but fork PR #9 imported the relevant i18n slice in `d80a3827`. | MERGED | `git log --all --grep 1543` maps PR #1543 to fork slice #9; local i18n keys for messages dispatch are present. |
@@ -185,7 +186,7 @@ git log --oneline --first-parent --reverse v0.1.110..v0.1.111
 | `a1a28368` | Sponsors churn | Not an ancestor after fork slices. | SKIP | Sponsor/readme churn; no fork behavior. |
 | `9648c432` | Frontend TS2352 cast fix in API client | Upstream merge commit is not an ancestor, but equivalent code is present. | PRESENT | `frontend/src/api/client.ts` uses `apiResponse as unknown as Record<string, unknown>` and preserves `reason`/`metadata` for payment errors. |
 
-Gate status: closeout pending. PR #39 bumped the fork release marker from `0.1.110` to `0.1.111` and merged at `d2a3e5a9`; annotated tag `fork/v0.1.111` points at that merged fork commit. That tag is retained as a historical marker. PR #1538 has been reprocessed under the stricter rule through PR #50; PR #1545 is handled by branch `sync/v0.1.111-pr1545-sidebar`. After PR #1545 merges and CI passes, run the `v0.1.111` release-level closeout review before deciding whether a release-level deployment is required.
+Gate status: final. PR #39 bumped the fork release marker from `0.1.110` to `0.1.111` and merged at `d2a3e5a9`; annotated tag `fork/v0.1.111` points at that merged fork commit. That tag is retained as a historical marker. Release-level closeout was re-run after PR #51: the first-parent list for `v0.1.110..v0.1.111` has 17 entries and every row has a final outcome; PR #1538 subitems A-I are closed; PR #1545 is adapted; there are no release-local unresolved `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` entries. Runtime changes in this release were already deployed during earlier PR #49 before the release-level deployment rule changed, and PR #50/#51 are covered by CI and targeted tests; no extra per-work-package deployment is recorded here.
 
 Tag namespace note: do not create a fork tag named exactly `v0.1.111`. That tag name already exists for the upstream release and points at upstream commit `9648c432`; using the same tag name for a different fork commit would create a tag collision across remotes. Fork coverage tags use the `fork/vX.Y.Z` namespace.
 
@@ -281,11 +282,11 @@ Planned PR #1538 subitems:
 | H. Sidebar SVG color follow-up | `f480e573` sidebar-color portions only | Current fork sidebar still had `.sidebar-svg-icon :deep(svg)` forcing `stroke: currentColor` and `fill: none`, which could strip uploaded SVG colors. PR #1545 still owns smooth collapse behavior. | This remainder branch ports only the SVG color-preservation hunk: keep inherited `color`, size/display constraints, and remove fill/stroke overrides. Collapse behavior remains PR #1545. | `pnpm --dir frontend exec vitest run src/components/layout/__tests__/AppSidebar.spec.ts`; frontend typecheck if broader frontend changes require it. | `ADAPTED` after this PR merges and CI passes. |
 | I. Applicable upstream tests | All PR #1538 added tests. | Applicable tests have been handled with their owning subitems: DataTable/account filters/table preferences/app store tests in Subitems A-C, handler/repository/frontend tests in Subitems D-E, repository hydration tests in Subitem G, and AppSidebar style test in Subitem H. Broad upstream tests that assert replaced settings/sidebar structure are not copied as one dump. | Keep tests attached to the behavior they verify. Do not add a separate large upstream test import. | Same as owning subitems plus `git diff --check`. | `ADAPTED` after Subitems F-H are merged and the PR #1538 subitem ledger has no open rows. |
 
-Immediate next PR #1538 runtime batches:
+PR #1538 closeout:
 
 - Subitem E (`5f8e60a1` plus direct sort/search fixups) has merged through PR #49 and was deployed before the release-level deployment rule changed.
-- Close Subitems F-I in the current small remainder PR: F is present, G/H need narrow code/test fixes, I is handled by behavior-owned tests.
-- Only after PR #1538 is closed should `v0.1.111` move to PR #1545 sidebar re-audit.
+- Subitems F-I merged through PR #50: F is present, G/H have narrow code/test fixes, I is handled by behavior-owned tests.
+- PR #1538 is closed under the strict release rule.
 
 ### v0.1.112
 
@@ -476,8 +477,8 @@ Gate status: blocked by Anthropic global TTL HOLD. Do not mark `v0.1.121` comple
 ## Current Next Action
 
 1. Keep existing `fork/v0.1.111` through `fork/v0.1.114` tags as immutable historical markers.
-2. Reprocess `v0.1.110..v0.1.111` reopened items first, in upstream first-parent order: PR #1538, then PR #1545. For #1538, create the PR-level import audit before any new runtime code.
-3. After `v0.1.111` is final under the stricter rule, re-confirm `v0.1.111..v0.1.112` before moving on. Do not skip directly to `v0.1.113`.
+2. `v0.1.110..v0.1.111` is final under the stricter rule.
+3. Re-confirm `v0.1.111..v0.1.112` next before moving on. Do not skip directly to `v0.1.113`.
 4. After `v0.1.112` is final, reprocess `v0.1.112..v0.1.113` reopened items: PR #1637, PR #1655, and PR #1666.
 5. After `v0.1.113` is final, reconfirm `v0.1.113..v0.1.114` remains valid.
 6. Preserve the parked uncommitted `v0.1.115` quota-scheduling work before any rebase/recreate, then resume `v0.1.114..v0.1.115` only after earlier gates are final.
