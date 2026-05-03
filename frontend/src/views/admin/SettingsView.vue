@@ -1865,6 +1865,7 @@
                         "
                       />
                       <button
+                        v-if="provider.api_key"
                         type="button"
                         class="btn btn-secondary btn-sm px-2"
                         :title="
@@ -1884,6 +1885,7 @@
                         </svg>
                       </button>
                       <button
+                        v-if="provider.api_key"
                         type="button"
                         class="btn btn-secondary btn-sm px-2"
                         :title="t('admin.settings.webSearchEmulation.copyApiKey')"

@@ -427,7 +427,7 @@ This snapshot was refreshed while closing the `1b53ffca` websearch base import o
 | `4e96a6fa` | Notify/websearch/security audit | PARTIAL | Websearch subset partly covered; notify subset missing. |
 | `80fa4844` | Account-stats UI placement | COVERED | Account-stats pricing UI is integrated into channel platform tabs. |
 | `5df73099` | Websearch admin test timeout | ADAPTED | `service.TestWebSearch` now wraps admin test searches in a 15s context timeout while continuing to bypass quota. Verification covered by targeted websearch Go tests. |
-| `49281bbe` | Websearch API key visibility | PARTIAL | Settings provider form has password placeholder; show/copy saved-key controls still open. |
+| `49281bbe` | Websearch API key visibility | ADAPTED | Hide show/copy controls when the API key input is empty, including saved-key placeholders where the secret is not loaded into the form. Later `9e0d12d3` reopens this behavior for saved providers and remains pending. |
 | `79d154ed` | Notify public settings fields | MISSING | Notify settings fields are absent. |
 | `81287e96` | Balance notify UX | MISSING | Notify UI absent. |
 | `42280751` | Notify duplicate email UX | MISSING | Notify UI absent. |
