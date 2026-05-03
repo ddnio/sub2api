@@ -50,6 +50,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | Task 7 | Integration smoke gate | Pending | Not started | Not started | TBD |
 | Task 8 | Continuation ledger refresh after PR #31 | In progress | Pending | `origin/main=9308f805`, `upstream/main=48912014`; local evidence collected | None |
 | Task 9 | Sticky scheduler metadata group membership | Implemented locally | Kimi pre-commit review: safe to commit | repository unit/integration, gateway sticky/load-aware, payment tests passed | No DB/config/frontend/API impact |
+| Task 10 | OpenAI WS item-reference previous-response inference | Implemented locally | Kimi pre-commit review: no blockers | WS inference/tool-continuation and payment tests passed | No DB/config/frontend/API impact |
 
 ## Hold List
 
@@ -99,7 +100,7 @@ Do not cherry-pick from this broad diff. Any slice touching `backend/ent`, `back
 | Upstream source | Area | Local state | Action | Evidence / notes |
 | --- | --- | --- | --- | --- |
 | `733627cf` | Sticky session scheduling remainder | Partial / scheduler metadata hunk ported | Port minimal proven hunk; keep rest under audit/skip | PR #30 already fixed snapshot-account false reject. This slice ports only upstream's scheduler metadata `GroupIDs` / slim `AccountGroups` retention because a focused unit test failed before the hunk and passed after it. Upstream debug logging was skipped. Handler successful-forward sticky bind hunk remains unported because local load-aware service paths already set or refresh sticky bindings during account selection; no independent missing behavior was proven. |
-| `094e1171` | OpenAI WS previous-response inference for item references | Present enough / audit verify | Likely skip after focused test review | Local `openai_ws_forwarder.go` has `ingress_ws_function_call_output_prev_infer`; tests assert missing `previous_response_id` on `function_call_output` is filled from the prior response. |
+| `094e1171` | OpenAI WS previous-response inference for item references | Partial / protection hunk ported | Port minimal upstream hunk | Local already inferred `previous_response_id` for item_reference-only `function_call_output`, but its helper only took a boolean and missed upstream's guard rails: skip when `function_call_output` lacks `call_id`, and skip when the request already includes full `function_call` context. This slice ports those guard rails using existing local `ToolContinuationSignals`; no direct cherry-pick because upstream diff also includes unrelated nearby changes in this fork. |
 | `c1b52615` | Stripe payment routes bypass frontend auth/payment guard | Present | Skip | Local `/payment/stripe` and `/payment/stripe-popup` routes already have `requiresPayment: false`; backend-mode allowed paths include both Stripe routes. |
 | `8f28a834` | Show Stripe as top-level method when EasyPay and Stripe are both enabled | Present | Skip | Local `VISIBLE_METHOD_ALIASES` includes `stripe`; `paymentFlow.spec.ts` covers Stripe as a top-level method and dedicated Stripe route behavior. |
 | `73b87299` | Anthropic global cache TTL injection setting | Divergent product feature | HOLD unless accepted | Local account-level `cache_ttl_override_enabled` / `cache_ttl_override_target` exists; gateway/message/tool rewrite already handles TTL. Upstream global setting is a cross-stack product/config decision. |
@@ -191,6 +192,54 @@ Lessons from this slice:
 - API-created commits may have a different SHA from the local commit even when the tree/message are equivalent; record the remote SHA in PR notes when it matters.
 - Keep Kimi PR-level evidence smaller than the full PR body plus full diff when possible. A timeout with zero content chunks is a failed review, not a pass.
 - Upstream sticky-session fixes may bundle debug logging, already-ported service fixes, and one real metadata hunk. Start with a failing focused test and port only the hunk that makes it pass.
+
+### Task 2 Audit Result: OpenAI WS Item Reference Previous Response Inference
+
+Accepted upstream source: `094e1171 fix(openai): infer previous response for item references`.
+
+Ported files:
+
+- `backend/internal/service/openai_ws_forwarder.go`
+- `backend/internal/service/openai_ws_forwarder_ingress_test.go`
+
+Ported behavior:
+
+- Continue inferring `previous_response_id` for store-disabled WS turns when the only anchor is `item_reference` plus `function_call_output`.
+- Skip inference when the request already includes full `function_call` context, because that payload is self-contained.
+- Skip inference when a `function_call_output` item is missing `call_id`.
+
+Local divergence note:
+
+- Local code already had a simplified inference path that covered the item-reference success case, but it lacked upstream's signal-level guard rails. This slice uses the existing local `ToolContinuationSignals` helper instead of importing unrelated upstream nearby changes.
+
+Impact:
+
+- Migration files added or changed: none.
+- Ent schema or generated-code impact: none.
+- New config keys, setting names, or env vars: none.
+- New frontend `localStorage` keys: none.
+- API contract impact: none.
+- Deployment impact: backend runtime only; OpenAI Responses WebSocket store-disabled continuation handling changes.
+- Rollback: revert this slice and rebuild backend; no DB rollback.
+
+Verification:
+
+```bash
+cd backend
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/service -run 'TestShouldInferIngressFunctionCallOutputPreviousResponseID|TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_StoreDisabledFunctionCallOutput'
+# ok github.com/Wei-Shaw/sub2api/internal/service 0.814s
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/service -run 'TestHasToolCallContext|TestHasFunctionCallOutputMissingCallID|TestNeedsToolContinuationSignals'
+# ok github.com/Wei-Shaw/sub2api/internal/service 1.543s
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/payment
+# ok github.com/Wei-Shaw/sub2api/internal/payment 0.566s
+```
+
+Review:
+
+- Self-review: diff keeps the existing item-reference positive path, adds only upstream guard rails, avoids unrelated upstream Fast/Flex/compact nearby changes, and documents no DB/config/frontend impact.
+- Kimi pre-commit review: no blockers; runtime parser marked the prose response inconclusive, but review text explicitly approved the scoped change.
 
 ## Historical Next Slice Plan
 
