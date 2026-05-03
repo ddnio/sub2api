@@ -4716,6 +4716,7 @@ export default {
         test: '测试',
         testDefaultQuery: '搜索今年世界大事件',
         testing: '搜索中...',
+        testResultTitle: 'Web Search 测试',
         testResultProvider: '服务商',
         testNoResults: '无搜索结果',
       },

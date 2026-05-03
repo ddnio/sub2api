@@ -1934,50 +1934,77 @@
                     <span class="text-xs text-gray-500">{{ provider.quota_used ?? 0 }} / {{ provider.quota_limit }}</span>
                   </div>
 
-                  <div>
-                    <label class="text-xs text-gray-500">
-                      {{ t('admin.settings.webSearchEmulation.proxy') }}
-                    </label>
-                    <ProxySelector v-model="provider.proxy_id" :proxies="proxyOptions" />
+                  <div class="flex items-end gap-3">
+                    <div class="flex-1">
+                      <label class="text-xs text-gray-500">
+                        {{ t('admin.settings.webSearchEmulation.proxy') }}
+                      </label>
+                      <ProxySelector v-model="provider.proxy_id" :proxies="proxyOptions" />
+                    </div>
+                    <button
+                      type="button"
+                      class="btn btn-secondary btn-sm whitespace-nowrap"
+                      @click="openWebSearchTestDialog"
+                    >
+                      {{ t('admin.settings.webSearchEmulation.test') }}
+                    </button>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
 
-              <div class="border-t border-gray-100 pt-4 dark:border-dark-700">
-                <div class="flex items-center gap-2">
-                  <input
-                    v-model="webSearchTestQuery"
-                    type="text"
-                    class="input flex-1 text-sm"
-                    :placeholder="t('admin.settings.webSearchEmulation.testDefaultQuery')"
-                    @keyup.enter="testWebSearchProvider"
-                  />
-                  <button
-                    type="button"
-                    class="btn btn-secondary btn-sm"
-                    :disabled="webSearchTestLoading"
-                    @click="testWebSearchProvider"
-                  >
-                    {{ webSearchTestLoading ? t('admin.settings.webSearchEmulation.testing') : t('admin.settings.webSearchEmulation.test') }}
-                  </button>
-                </div>
-                <div v-if="webSearchTestResult" class="mt-3 rounded-lg bg-gray-50 p-3 text-xs dark:bg-dark-700">
-                  <p class="mb-2 font-medium text-gray-700 dark:text-gray-300">
-                    {{ t('admin.settings.webSearchEmulation.testResultProvider') }}: {{ webSearchTestResult.provider }}
-                  </p>
-                  <div v-if="webSearchTestResult.results.length === 0" class="text-gray-400">
-                    {{ t('admin.settings.webSearchEmulation.testNoResults') }}
-                  </div>
-                  <div v-for="(result, resultIndex) in webSearchTestResult.results.slice(0, 3)" :key="resultIndex" class="mt-2">
-                    <a :href="result.url" target="_blank" rel="noopener noreferrer" class="font-medium text-blue-600 hover:underline dark:text-blue-400">
-                      {{ result.title }}
-                    </a>
-                    <p class="text-gray-500 dark:text-gray-400">
-                      {{ result.snippet && result.snippet.length > 120 ? result.snippet.slice(0, 120) + '...' : result.snippet }}
-                    </p>
-                  </div>
-                </div>
+        <div
+          v-if="webSearchTestDialogOpen"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          @click.self="webSearchTestDialogOpen = false"
+        >
+          <div class="mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl dark:bg-dark-800">
+            <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+              {{ t('admin.settings.webSearchEmulation.testResultTitle') }}
+            </h3>
+            <div class="flex items-center gap-2">
+              <input
+                v-model="webSearchTestQuery"
+                type="text"
+                class="input flex-1 text-sm"
+                :placeholder="t('admin.settings.webSearchEmulation.testDefaultQuery')"
+                @keyup.enter="testWebSearchProvider"
+              />
+              <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                :disabled="webSearchTestLoading"
+                @click="testWebSearchProvider"
+              >
+                {{ webSearchTestLoading ? t('admin.settings.webSearchEmulation.testing') : t('admin.settings.webSearchEmulation.test') }}
+              </button>
+            </div>
+            <div v-if="webSearchTestResult" class="mt-4 max-h-80 overflow-y-auto rounded-lg bg-gray-50 p-4 dark:bg-dark-700">
+              <p class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                {{ t('admin.settings.webSearchEmulation.testResultProvider') }}: {{ webSearchTestResult.provider }}
+              </p>
+              <div v-if="webSearchTestResult.results.length === 0" class="text-sm text-gray-400">
+                {{ t('admin.settings.webSearchEmulation.testNoResults') }}
               </div>
+              <div
+                v-for="(result, resultIndex) in webSearchTestResult.results"
+                :key="resultIndex"
+                class="mt-2 border-t border-gray-200 pt-2 first:mt-0 first:border-0 first:pt-0 dark:border-dark-600"
+              >
+                <a :href="result.url" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+                  {{ result.title }}
+                </a>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{ result.snippet }}
+                </p>
+              </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+              <button type="button" class="btn btn-secondary btn-sm" @click="webSearchTestDialogOpen = false">
+                {{ t('common.close') }}
+              </button>
             </div>
           </div>
         </div>
@@ -3112,8 +3139,14 @@ const webSearchConfig = reactive<WebSearchEmulationConfig>({
 const webSearchTestQuery = ref('')
 const webSearchTestLoading = ref(false)
 const webSearchTestResult = ref<WebSearchTestResult | null>(null)
+const webSearchTestDialogOpen = ref(false)
 const expandedWebSearchProviders = reactive<Record<number, boolean>>({})
 const webSearchApiKeyVisible = reactive<Record<number, boolean>>({})
+
+function openWebSearchTestDialog() {
+  webSearchTestResult.value = null
+  webSearchTestDialogOpen.value = true
+}
 
 function toggleWebSearchProviderExpand(index: number) {
   expandedWebSearchProviders[index] = !expandedWebSearchProviders[index]

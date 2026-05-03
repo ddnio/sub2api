@@ -4554,6 +4554,7 @@ export default {
         test: 'Test',
         testDefaultQuery: 'Major world events this year',
         testing: 'Searching...',
+        testResultTitle: 'Web Search Test',
         testResultProvider: 'Provider',
         testNoResults: 'No results found',
       },
