@@ -41,9 +41,9 @@ Fetch note: 2026-05-03 attempts to refresh `upstream` and `origin` failed with G
 - Do not merge or cherry-pick an entire release.
 - Code merge unit is upstream first-parent commit / upstream PR merge commit. A smaller manually ported hunk is allowed only after the commit/PR has been tried or audited and the exact conflict/fork-divergence reason is recorded.
 - Process releases in tag order. A later release must not start until the previous release gate is closed.
-- Inside a release, process upstream first-parent commits in order. Do not jump from one reopened item to a later release, and do not start a broad hand-written implementation before the corresponding upstream commit/PR has a direct-import or already-present audit.
+- Inside a release, use upstream first-parent commits only as the mainline entry index. For every upstream merge PR entry, also expand the second-parent branch/internal commits before claiming the release is complete. Do not jump from one reopened item to a later release, and do not start a broad hand-written implementation before the corresponding upstream commit/PR and its internal commits have a direct-import or already-present audit.
 - Default fork PR packaging is one PR per upstream release gate. Keep all compatible items for the same release in one release worktree and one fork PR, with an itemized ledger and targeted tests. Split into separate PRs only for schema/migration changes, payment/auth/security/data-risk changes, very large or conflicted imports, or when a smaller PR is needed to unblock CI safely.
-- After all items inside a release appear closed, run a release-level closeout review before updating the fork release marker/tag or starting the next release. The closeout must re-run the upstream first-parent list, confirm every commit/PR has a final outcome with evidence, confirm runtime tests and CI for changed code, decide whether deployment is required, and check that the ledger has no unresolved `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` entries for that release.
+- After all items inside a release appear closed, run a release-level closeout review before updating the fork release marker/tag or starting the next release. The closeout must re-run both the upstream first-parent list and the full commit list, expand every merge PR's internal commits, confirm every commit/PR has a final outcome with evidence, confirm runtime tests and CI for changed code, decide whether deployment is required, and check that the ledger has no unresolved `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` entries for that release.
 - For each upstream commit/PR, use this order:
   1. Confirm whether the upstream commit is already an ancestor of the fork or already landed through a mapped fork PR.
   2. If not present, attempt or preview the direct upstream patch/cherry-pick in an isolated worktree.
@@ -82,7 +82,7 @@ Current gate:
 | Gate | Status | Required next action |
 | --- | --- | --- |
 | `v0.1.110..v0.1.111` | Final | Historical marker `fork/v0.1.111` exists. PR #1538 and PR #1545 were reprocessed under the stricter rule through PR #48, #49, #50, and #51; no release-local unresolved item remains. |
-| `v0.1.111..v0.1.112` | Next | Historical marker `fork/v0.1.112` exists. Re-confirm this gate under the strict release rule before moving to `v0.1.113`. |
+| `v0.1.111..v0.1.112` | Final | Historical marker `fork/v0.1.112` exists. PR #40 closed the release-local migration gap and PR #41 marked fork coverage; re-confirmed after `v0.1.111` became final. |
 | `v0.1.112..v0.1.113` | Reopened | Historical marker `fork/v0.1.113` exists, but PR #1637, PR #1655, and PR #1666 must be reprocessed under the stricter rule before this gate is final. |
 | `v0.1.113..v0.1.114` | Provisional | PR #44 was merged and deployed, and marker `fork/v0.1.114` exists. Reconfirm only after the reopened earlier gates are closed. |
 | `v0.1.114..v0.1.115` | Parked | A partial PR #1752 worktree exists with uncommitted changes. Do not rebase, recreate, or mark this gate complete until the parked work is preserved and earlier reopened gates are closed. |
@@ -93,13 +93,15 @@ Existing `fork/v0.1.111` through `fork/v0.1.114` tags must not be moved or delet
 
 Release closeout review checklist:
 
-1. Re-run `git log --oneline --first-parent --reverse <previous-upstream-tag>..<current-upstream-tag>` and compare every row against the release ledger.
-2. Re-run any PR/internal-commit subitem list used inside broad upstream PRs and confirm each subitem has a final state.
-3. Confirm there are no release-local `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` entries left unless they have been converted to an explicit accepted-later/rejected/frozen decision that does not block the marker.
-4. Confirm local tests, GitHub CI, and Kimi review exist for every runtime PR in the release.
-5. If any release item changed runtime behavior, deploy test/prod once for the completed release unless a documented exception already deployed the relevant runtime change.
-6. Confirm deployment notes and log checks exist for the release-level deployment when deployment is required.
-7. Only after this closeout review passes, update the fork release marker and create/push the `fork/vX.Y.Z` tag.
+1. Re-run `git log --oneline --first-parent --reverse <previous-upstream-tag>..<current-upstream-tag>` and compare every mainline entry against the release ledger.
+2. Re-run `git log --oneline --reverse <previous-upstream-tag>..<current-upstream-tag>` and record the full commit count for the release.
+3. For every merge PR in the first-parent list, expand its internal commits with the merge parents or PR branch history and confirm each internal commit maps to the same final release decision.
+4. Re-run any PR/internal-commit subitem list used inside broad upstream PRs and confirm each subitem has a final state.
+5. Confirm there are no release-local `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` entries left unless they have been converted to an explicit accepted-later/rejected/frozen decision that does not block the marker.
+6. Confirm local tests, GitHub CI, and Kimi review exist for every runtime PR in the release.
+7. If any release item changed runtime behavior, deploy test/prod once for the completed release unless a documented exception already deployed the relevant runtime change.
+8. Confirm deployment notes and log checks exist for the release-level deployment when deployment is required.
+9. Only after this closeout review passes, update the fork release marker and create/push the `fork/vX.Y.Z` tag.
 
 ## CI Baseline Closeout
 
@@ -292,11 +294,21 @@ PR #1538 closeout:
 
 Range: `v0.1.111..v0.1.112`.
 
-Source command:
+Mainline source command:
 
 ```bash
 git log --oneline --first-parent --reverse v0.1.111..v0.1.112
 ```
+
+Full release audit commands:
+
+```bash
+git rev-list --count --first-parent v0.1.111..v0.1.112
+git rev-list --count v0.1.111..v0.1.112
+git log --oneline --reverse v0.1.111..v0.1.112
+```
+
+Audit result: 9 first-parent mainline entries and 17 total commits. The first-parent list is only the release entry index; the non-mainline commits inside upstream merge PRs are expanded below before the gate is treated as closed.
 
 | Upstream source | Area | Local state | Outcome | Evidence / decision |
 | --- | --- | --- | --- | --- |
@@ -308,9 +320,20 @@ git log --oneline --first-parent --reverse v0.1.111..v0.1.112
 | `ad6c3281` / PR #1575 | Cursor responses body compatibility | Already landed through fork Codex/Cursor slice. | MERGED | Fork commit `60f10e5b` includes `openai_codex_transform.go`, `openai_gateway_chat_completions.go`, and Cursor warmup tests for this family; `git log --all --grep 1575` also maps upstream PR #1575. |
 | `66bea2b5` / PR #1624 | Version dropdown clipping | Fork applied a minimal sidebar-compatible fix instead of upstream sidebar churn. | ADAPTED | Fork commit `58c0f576` updates `AppSidebar.vue` and its spec for the expanded brand/version dropdown. This keeps the fork sidebar structure intact. |
 | `92f4a6bb` | README/partner logo churn | Not product/runtime relevant for this fork gate. | SKIP | Documentation/logo sponsor churn; no local behavior. |
-| `f9f57e95` | Restore `settings.updated_at` SQL default | Missing locally; this PR ports the migration. | PORT | Added upstream `backend/migrations/097_fix_settings_updated_at_default.sql` and an integration assertion that final schema keeps `settings.updated_at DEFAULT now()`. Test/prod read-only checks showed both current databases already have `DEFAULT now()`, `is_nullable=NO`, `updated_at NULL count=0`, and already applied `098`/`111`; `097` is still absent there, so this is a compatibility/backfill marker for code and older instances rather than a current prod rescue. |
+| `f9f57e95` | Restore `settings.updated_at` SQL default | Ported by PR #40. | MERGED | PR #40 added upstream `backend/migrations/097_fix_settings_updated_at_default.sql` and an integration assertion that final schema keeps `settings.updated_at DEFAULT now()`. Test/prod read-only checks showed both current databases already have `DEFAULT now()`, `is_nullable=NO`, `updated_at NULL count=0`, and already applied `098`/`111`; `097` is still absent there, so this is a compatibility/backfill marker for code and older instances rather than a current prod rescue. |
 
-Gate status: provisional historical marker. PR #40 merged the migration gate at `fbaa1fdd` after CI passed. PR #41 bumped `backend/cmd/server/VERSION` from `0.1.111` to `0.1.112` and merged at `1d436745`; annotated tag `fork/v0.1.112` points at that merged fork commit. This gate cannot be treated as final until the reopened `v0.1.110..v0.1.111` gate is closed first.
+Expanded upstream PR/internal commit audit:
+
+| Mainline entry | Internal commits | Local coverage |
+| --- | --- | --- |
+| `e70812f0` / PR #1623 | `a1e299a3` | Covered by fork Anthropic slice `a53527fa`; current `openai_gateway_messages.go` uses the buffered accumulator and supplements empty final output from prior deltas. |
+| `7d80b5ad` / PR #1610 | `f498eb8f` | Covered through fork payment-b2 adaptation. Current payment load balancer/provider selection supports base `alipay`/`wxpay` across provider instances without replacing fork payment architecture. |
+| `75908800` / PR #1612 | `24f0eebc` | Covered in current payment QR components: QR correction level is `M` with logos and `L` without logos, reducing QR density while preserving branded QR behavior. |
+| `d949acb1` / PR #1603 | `3a113481`, `abe42675` | Covered by fork frontend slice `a845041a`; current `DataTable.vue` avoids hidden mobile table mounting and `AccountUsageCell.vue` lazy-loads mobile usage cells. |
+| `ad6c3281` / PR #1575 | `b7edc3ed`, `422e25c9` | Covered by fork Codex/Cursor slice `60f10e5b`; current chat-completions and Codex transform code accepts Cursor Responses-shaped bodies and strips unsupported Responses parameters on the raw-body path. |
+| `66bea2b5` / PR #1624 | `b9b52e74` | Covered by fork sidebar fix `58c0f576`; current expanded brand/version dropdown behavior is tested without importing unrelated upstream sidebar churn. |
+
+Gate status: final. PR #40 merged the migration gate at `fbaa1fdd` after CI passed. PR #41 bumped `backend/cmd/server/VERSION` from `0.1.111` to `0.1.112` and merged at `1d436745`; annotated tag `fork/v0.1.112` points at that merged fork commit. Rechecked after `v0.1.110..v0.1.111` became final: the first-parent list for `v0.1.111..v0.1.112` has 9 mainline entries, the full release log has 17 commits, every merge PR's internal commits are mapped above, and every release row has a final outcome. There are no release-local unresolved `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` entries.
 
 Runtime/deploy note for `097`: this release gate contains a database migration file. Before any deployment of the merged PR, take the normal database backup. Current test/prod evidence indicates the migration should no-op on the live databases because the target default already exists, but it will still be recorded in `schema_migrations` on startup.
 
@@ -478,8 +501,8 @@ Gate status: blocked by Anthropic global TTL HOLD. Do not mark `v0.1.121` comple
 
 1. Keep existing `fork/v0.1.111` through `fork/v0.1.114` tags as immutable historical markers.
 2. `v0.1.110..v0.1.111` is final under the stricter rule.
-3. Re-confirm `v0.1.111..v0.1.112` next before moving on. Do not skip directly to `v0.1.113`.
-4. After `v0.1.112` is final, reprocess `v0.1.112..v0.1.113` reopened items: PR #1637, PR #1655, and PR #1666.
+3. `v0.1.111..v0.1.112` is final under the stricter rule.
+4. Reprocess `v0.1.112..v0.1.113` reopened items next: PR #1637, PR #1655, and PR #1666. Keep this as one release PR unless a schema/migration, payment/auth/security/data-risk, large-conflict, or CI-unblock split is required.
 5. After `v0.1.113` is final, reconfirm `v0.1.113..v0.1.114` remains valid.
 6. Preserve the parked uncommitted `v0.1.115` quota-scheduling work before any rebase/recreate, then resume `v0.1.114..v0.1.115` only after earlier gates are final.
 7. After `v0.1.114..v0.1.115` is final and closeout-reviewed, process `v0.1.115..v0.1.116` before `v0.1.116..v0.1.117`.
