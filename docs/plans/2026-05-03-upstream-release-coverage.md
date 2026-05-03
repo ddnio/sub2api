@@ -12,16 +12,16 @@
 
 ## Current Baseline
 
-- Local base: `origin/main` at `59b9cf34 docs(upstream-sync): close out deployed slices`.
+- Local base: `origin/main` at `fed065e6 fix(ci): restore baseline test and lint health`.
 - Upstream scope: `upstream/main` at `48912014 chore: sync VERSION to 0.1.121 [skip ci]`.
 - Tracking doc: `docs/engineering/upstream-release-coverage-2026-05.md`.
 - Historical docs: `docs/engineering/upstream-sync-2026-05-phase2.md` and `docs/plans/2026-05-02-upstream-sync-phase2.md`.
-- CI baseline fix branch: `fix/ci-baseline-green-2026-05`, local commit `2e6b0cef`; push is blocked by GitHub HTTPS connectivity errors and must be retried before opening the PR.
+- CI baseline fix PR: #36, merged at `fed065e6`; GitHub CI passed after lint, unit, integration, and security gates.
 - Known root checkout noise: untracked `.pnpm-store/`; do not add it.
 
 If `upstream/main` moves, do not expand scope. Pin the new SHA in the tracking doc and review the plan again.
 
-## Task 1: CI Baseline PR
+## Task 1: CI Baseline PR - Completed
 
 **Files:**
 - Modify only the CI-drift files needed to restore tests/lint.
@@ -41,6 +41,8 @@ If `upstream/main` moves, do not expand scope. Pin the new SHA in the tracking d
 6. Push to `origin` and open a PR with `--repo ddnio/sub2api`.
 7. Let GitHub Actions run the official `golangci/golangci-lint-action@v9` with `version: v2.9`.
 8. Merge only after PR CI and PR-level Kimi review have no blockers.
+
+**Status:** Completed via PR #36. Kimi pre-commit review returned `NO BLOCKERS` in prose; PR-level Kimi attempts timed out without content, so GitHub CI and local self-review were the final merge gates.
 
 ## Task 2: Release Coverage Ledger PR
 
@@ -63,7 +65,7 @@ If `upstream/main` moves, do not expand scope. Pin the new SHA in the tracking d
 
 ## Task 3: Safe Port PRs
 
-Only start after Task 1 is merged or CI baseline is otherwise green.
+Only start after Task 1 is merged or CI baseline is otherwise green. This gate is now satisfied by PR #36.
 
 **Steps:**
 1. Choose one `PORT` item from the ledger.

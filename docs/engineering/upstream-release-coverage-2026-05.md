@@ -4,7 +4,7 @@ This document replaces ad-hoc continuation notes with a release-bounded coverage
 
 ## Baseline
 
-- Local base: `origin/main` at `59b9cf34 docs(upstream-sync): close out deployed slices`.
+- Local base: `origin/main` at `fed065e6 fix(ci): restore baseline test and lint health`.
 - Upstream pinned scope: `upstream/main` at `48912014 chore: sync VERSION to 0.1.121 [skip ci]`.
 - Latest upstream tag in scope: `v0.1.121`.
 - Work branch: `feature/upstream-release-coverage-2026-05`.
@@ -33,11 +33,11 @@ This ledger PR is documentation-only in the fork. The upstream commits listed be
 - `HOLD`: do not implement without a separate product/architecture/migration plan.
 - `SKIP`: intentionally ignore for this fork cycle, usually chore/version/churn or no proven local gap.
 
-## Current CI Baseline
+## CI Baseline Closeout
 
-`origin/main` still has CI drift independent of release coverage. A separate local branch `fix/ci-baseline-green-2026-05` has commit `2e6b0cef fix(ci): restore baseline test and lint health`.
+CI drift independent of release coverage was fixed in PR #36 and merged to `origin/main` at `fed065e6`.
 
-Local verification on that branch:
+Local verification included:
 
 ```bash
 cd backend && make test-unit
@@ -59,11 +59,12 @@ Kimi review:
 
 - First evidence pack timed out in wire transport after partial streaming.
 - Smaller evidence pack returned `NO BLOCKERS`; runtime parser marked the prose result `INCONCLUSIVE`.
+- PR-level Kimi retry attempts timed out without content; no blocker text was returned.
 
-Push status:
+GitHub verification:
 
-- Push to `origin` is currently blocked by GitHub HTTPS errors: first `HTTP2 framing layer`, then `github.com:443` connection timeout.
-- Open the CI baseline PR before merging further runtime release-alignment PRs.
+- PR #36 passed `test`, `golangci-lint`, `backend-security`, and `frontend-security`.
+- The CI baseline gate is closed for this release-coverage PR.
 
 ## Fork PRs Already Mapped Into This Ledger
 
@@ -79,6 +80,7 @@ Push status:
 | #33 | `2c36c421` | Scheduler metadata keeps slim group membership snapshots from `733627cf`. |
 | #34 | `682cee12` | OpenAI WS item-reference guard rails from `094e1171`. |
 | #35 | `59b9cf34` | Deployed-slice closeout documentation. |
+| #36 | `fed065e6` | CI baseline restored before release coverage closeout. |
 
 ## Release Coverage Matrix
 
@@ -109,7 +111,7 @@ Range: `v0.1.117..v0.1.118`.
 | `5b5db885` / PR #1897 | Affiliate invite rebate | Held feature | HOLD | Product/migration/DI surface. |
 | `aa8ee33b` | Affiliate hardening | Held feature | HOLD | Same affiliate family. |
 | `6d20ab80` / PR #1914 | CC mimicry parity | Merged earlier | MERGED | Covered by prior 2026-04 slice and phase2 follow-ups. |
-| `732d6495` | Lint after CC mimicry | Merged/irrelevant | PRESENT | Local code passed targeted unit; CI baseline has separate lint PR. |
+| `732d6495` | Lint after CC mimicry | Merged/irrelevant | PRESENT | Local code passed targeted unit; CI baseline is now green after PR #36. |
 | `1afd81b0` / PR #1920 | Responses web-search tool types | Prior sync family | PRESENT/PARTIAL | Do not port further without concrete missing behavior. |
 | `7424c73b` | Remove unused model IDs | Prior HOLD | HOLD | Model catalog change; do not mix with safety sync. |
 | `8f28a834` | Stripe top-level method display | Present | SKIP | Local visible methods include Stripe; payment flow tests cover top-level Stripe route. |
@@ -130,14 +132,14 @@ Range: `v0.1.118..v0.1.119`.
 | `4e1bb2b4` | Affiliate feature toggle/custom invite | Held feature | HOLD | Product/migration surface. |
 | `aff98d5a` / PR #1960 | Responses stream keepalive | Not portable | HOLD | Same stream failover/buffering family as PR #1943. |
 | `22b12775` / PR #1948 | OpenAI account test responses stream | Prior sync family | PRESENT/PARTIAL | No current missing behavior proven. |
-| `3af9940b` | gofmt/ineffassign lint | CI baseline | PORT via CI baseline | Current baseline branch ports equivalent local lint cleanups only. |
+| `3af9940b` | gofmt/ineffassign lint | CI baseline | MERGED | PR #36 ports equivalent local lint cleanups only. |
 | `c1b52615` | Stripe payment pages bypass auth guard | Present | SKIP | Local Stripe payment routes are public/payment-safe. |
 | `496469ac` | Claude Code body mimicry skip | Merged | MERGED | Covered by PR #26. |
 | `9b6dcc57` | Affiliate rebate system | Held feature | HOLD | Product/migration surface. |
 | `41d06573` / PR #1970 | Anthropic cache usage semantics | Present | SKIP | Local tests and tracker record present behavior. |
 | `a0b5e5bf` / PR #1973 | Misc upstream PR | Unclassified low signal | HOLD | Do not port without candidate-specific evidence. |
 
-Conclusion: covered except HOLD; one lint item handled in CI baseline branch.
+Conclusion: covered except HOLD; one lint item handled in PR #36.
 
 ### v0.1.120
 
@@ -198,7 +200,7 @@ Conclusion: covered except Anthropic global TTL HOLD.
 
 ## Current Next Action
 
-1. Retry pushing `fix/ci-baseline-green-2026-05` and open the CI baseline PR.
-2. Run Kimi review on this release coverage ledger.
-3. Commit and open a docs-only release coverage PR.
-4. Do not start runtime `PORT` work until the CI baseline PR is merged or GitHub CI is otherwise green.
+1. Run final self-review and Kimi review on this release coverage ledger.
+2. Keep PR #37 docs-only; no deployment is required.
+3. After PR #37 merges, use this ledger as the next-phase source of truth before opening any runtime `PORT` PR.
+4. Do not start runtime `PORT` work without a focused missing-behavior proof and a dedicated PR.
