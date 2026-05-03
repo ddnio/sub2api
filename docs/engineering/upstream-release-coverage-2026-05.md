@@ -82,7 +82,7 @@ Current gate:
 | Gate | Status | Required next action |
 | --- | --- | --- |
 | `v0.1.110..v0.1.111` | Final | Historical marker `fork/v0.1.111` exists. PR #1538 and PR #1545 were reprocessed under the stricter rule through PR #48, #49, #50, and #51; no release-local unresolved item remains. |
-| `v0.1.111..v0.1.112` | Next | Historical marker `fork/v0.1.112` exists. Re-confirm this gate under the strict release rule before moving to `v0.1.113`. |
+| `v0.1.111..v0.1.112` | Final | Historical marker `fork/v0.1.112` exists. PR #40 closed the release-local migration gap and PR #41 marked fork coverage; re-confirmed after `v0.1.111` became final. |
 | `v0.1.112..v0.1.113` | Reopened | Historical marker `fork/v0.1.113` exists, but PR #1637, PR #1655, and PR #1666 must be reprocessed under the stricter rule before this gate is final. |
 | `v0.1.113..v0.1.114` | Provisional | PR #44 was merged and deployed, and marker `fork/v0.1.114` exists. Reconfirm only after the reopened earlier gates are closed. |
 | `v0.1.114..v0.1.115` | Parked | A partial PR #1752 worktree exists with uncommitted changes. Do not rebase, recreate, or mark this gate complete until the parked work is preserved and earlier reopened gates are closed. |
@@ -308,9 +308,9 @@ git log --oneline --first-parent --reverse v0.1.111..v0.1.112
 | `ad6c3281` / PR #1575 | Cursor responses body compatibility | Already landed through fork Codex/Cursor slice. | MERGED | Fork commit `60f10e5b` includes `openai_codex_transform.go`, `openai_gateway_chat_completions.go`, and Cursor warmup tests for this family; `git log --all --grep 1575` also maps upstream PR #1575. |
 | `66bea2b5` / PR #1624 | Version dropdown clipping | Fork applied a minimal sidebar-compatible fix instead of upstream sidebar churn. | ADAPTED | Fork commit `58c0f576` updates `AppSidebar.vue` and its spec for the expanded brand/version dropdown. This keeps the fork sidebar structure intact. |
 | `92f4a6bb` | README/partner logo churn | Not product/runtime relevant for this fork gate. | SKIP | Documentation/logo sponsor churn; no local behavior. |
-| `f9f57e95` | Restore `settings.updated_at` SQL default | Missing locally; this PR ports the migration. | PORT | Added upstream `backend/migrations/097_fix_settings_updated_at_default.sql` and an integration assertion that final schema keeps `settings.updated_at DEFAULT now()`. Test/prod read-only checks showed both current databases already have `DEFAULT now()`, `is_nullable=NO`, `updated_at NULL count=0`, and already applied `098`/`111`; `097` is still absent there, so this is a compatibility/backfill marker for code and older instances rather than a current prod rescue. |
+| `f9f57e95` | Restore `settings.updated_at` SQL default | Ported by PR #40. | MERGED | PR #40 added upstream `backend/migrations/097_fix_settings_updated_at_default.sql` and an integration assertion that final schema keeps `settings.updated_at DEFAULT now()`. Test/prod read-only checks showed both current databases already have `DEFAULT now()`, `is_nullable=NO`, `updated_at NULL count=0`, and already applied `098`/`111`; `097` is still absent there, so this is a compatibility/backfill marker for code and older instances rather than a current prod rescue. |
 
-Gate status: provisional historical marker. PR #40 merged the migration gate at `fbaa1fdd` after CI passed. PR #41 bumped `backend/cmd/server/VERSION` from `0.1.111` to `0.1.112` and merged at `1d436745`; annotated tag `fork/v0.1.112` points at that merged fork commit. This gate cannot be treated as final until the reopened `v0.1.110..v0.1.111` gate is closed first.
+Gate status: final. PR #40 merged the migration gate at `fbaa1fdd` after CI passed. PR #41 bumped `backend/cmd/server/VERSION` from `0.1.111` to `0.1.112` and merged at `1d436745`; annotated tag `fork/v0.1.112` points at that merged fork commit. Rechecked after `v0.1.110..v0.1.111` became final: the first-parent list for `v0.1.111..v0.1.112` has 9 entries and every row has a final outcome; there are no release-local unresolved `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` entries.
 
 Runtime/deploy note for `097`: this release gate contains a database migration file. Before any deployment of the merged PR, take the normal database backup. Current test/prod evidence indicates the migration should no-op on the live databases because the target default already exists, but it will still be recorded in `schema_migrations` on startup.
 
@@ -478,8 +478,8 @@ Gate status: blocked by Anthropic global TTL HOLD. Do not mark `v0.1.121` comple
 
 1. Keep existing `fork/v0.1.111` through `fork/v0.1.114` tags as immutable historical markers.
 2. `v0.1.110..v0.1.111` is final under the stricter rule.
-3. Re-confirm `v0.1.111..v0.1.112` next before moving on. Do not skip directly to `v0.1.113`.
-4. After `v0.1.112` is final, reprocess `v0.1.112..v0.1.113` reopened items: PR #1637, PR #1655, and PR #1666.
+3. `v0.1.111..v0.1.112` is final under the stricter rule.
+4. Reprocess `v0.1.112..v0.1.113` reopened items next: PR #1637, PR #1655, and PR #1666. Keep this as one release PR unless a schema/migration, payment/auth/security/data-risk, large-conflict, or CI-unblock split is required.
 5. After `v0.1.113` is final, reconfirm `v0.1.113..v0.1.114` remains valid.
 6. Preserve the parked uncommitted `v0.1.115` quota-scheduling work before any rebase/recreate, then resume `v0.1.114..v0.1.115` only after earlier gates are final.
 7. After `v0.1.114..v0.1.115` is final and closeout-reviewed, process `v0.1.115..v0.1.116` before `v0.1.116..v0.1.117`.
