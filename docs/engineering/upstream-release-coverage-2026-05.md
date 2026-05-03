@@ -14,7 +14,7 @@ Implementation still moves by upstream PR/merge commit or smaller reviewed hunks
 
 ## Baseline
 
-- Local base: `origin/main` at `2acdfd66 docs(upstream-sync): add release coverage ledger`.
+- Local base: `origin/main` at `d2a3e5a9 chore(release): mark fork coverage v0.1.111`.
 - Upstream published-tag scope: latest local upstream tag `v0.1.121` at `9d801595 test: 更新管理员设置契约字段`.
 - Upstream main observed locally: `b2bdba78 stabilize image request handling`; this is not in the published tag scope yet.
 - Latest upstream tag in scope: `v0.1.121`.
@@ -24,7 +24,15 @@ Implementation still moves by upstream PR/merge commit or smaller reviewed hunks
 
 If `upstream/main` advances, do not expand this ledger automatically. Only expand after a new upstream tag is fetched and the release interval is reviewed.
 
-Fetch note: 2026-05-03 attempts to refresh `upstream` and `origin` failed with GitHub transport errors (`HTTP2 framing layer` / `Operation timed out`). Current decisions use the already present local refs above and the local upstream tags through `v0.1.121`. Push fallback order for this environment is: retry with `git -c http.version=HTTP/1.1 push`; if HTTPS still fails, use the GitHub Git Data API branch-creation fallback already documented in `docs/engineering/upstream-sync-2026-05-phase2.md`.
+Fetch note: 2026-05-03 attempts to refresh `upstream` and `origin` failed with GitHub transport errors (`HTTP2 framing layer` / `Operation timed out`). Current decisions use the already present local refs above and the local upstream tags through `v0.1.121`. Push/fetch fallback order for this environment is: retry with `git -c http.version=HTTP/1.1`; if HTTPS still fails or hangs, use the explicit SSH URL (`git@github.com:ddnio/sub2api.git` for fork operations) or the GitHub Git Data API branch-creation fallback already documented in `docs/engineering/upstream-sync-2026-05-phase2.md`.
+
+## Repeated-Issue Log
+
+- GitHub HTTPS transport is unreliable in this environment. Do not spend multiple cycles retrying the same HTTPS fetch/push after `HTTP2 framing layer`, `Empty reply from server`, or timeout errors; switch to HTTP/1.1 once, then SSH or API fallback.
+- Fork release marker tags use `fork/vX.Y.Z`, not upstream tag names. Upstream `vX.Y.Z` tags already exist and point at upstream commits.
+- When inspecting upstream commits, copy full hashes from `git log --oneline --first-parent`; an abbreviated typo such as dropping one hex digit makes `git show` fail and wastes a cycle.
+- In shell commands, avoid placeholder strings with angle brackets such as `<NULL>` unless they are safely quoted for the local shell; zsh can interpret them as redirection before SSH runs.
+- Adding a lower-numbered migration after later migrations already exist is acceptable only when the runner sorts by filename and skips already-applied files by filename. In this repo, `applyMigrationsFS` sorts embedded `*.sql` names lexicographically and records each filename in `schema_migrations`, so a missing historical migration such as `097_*` can still be safely added before `098_*`.
 
 ## Rules
 
@@ -59,8 +67,8 @@ Current gate:
 
 | Gate | Status | Required next action |
 | --- | --- | --- |
-| `v0.1.110..v0.1.111` | In review | Earliest known unclosed release interval. Process all 17 first-parent upstream items in this interval before moving on. |
-| `v0.1.111..v0.1.112` | Blocked | Start only after `v0.1.110..v0.1.111` is closed, `backend/cmd/server/VERSION` is bumped to `0.1.111`, and the fork sync tag `fork/v0.1.111` is created. |
+| `v0.1.110..v0.1.111` | Closed | Decision matrix completed, fork marker bumped to `0.1.111`, and sync tag `fork/v0.1.111` pushed. |
+| `v0.1.111..v0.1.112` | In review | Current gate. Process all 9 first-parent upstream items in this interval before the `0.1.112` marker/tag step. |
 | `v0.1.117` and later | Blocked | The earlier ledger that started at `v0.1.117` is not the active start point anymore. Do not advance here until the earlier gates are closed in order. |
 
 ## CI Baseline Closeout
@@ -148,6 +156,34 @@ git log --oneline --first-parent --reverse v0.1.110..v0.1.111
 Gate status: decision-complete, pending release-marker update. Next code step is to bump the fork release marker from `0.1.110` to `0.1.111` in a small marker PR if self-review and Kimi review confirm no unresolved item remains. After that marker PR lands, create the fork sync tag `fork/v0.1.111` on the merged fork commit before starting `v0.1.111..v0.1.112`.
 
 Tag namespace note: do not create a fork tag named exactly `v0.1.111`. That tag name already exists for the upstream release and points at upstream commit `9648c432`; using the same tag name for a different fork commit would create a tag collision across remotes. Fork coverage tags use the `fork/vX.Y.Z` namespace.
+
+Marker closeout: PR #39 bumped `backend/cmd/server/VERSION` to `0.1.111` and merged at `d2a3e5a9`; annotated tag `fork/v0.1.111` points at that merged fork commit.
+
+### v0.1.112
+
+Range: `v0.1.111..v0.1.112`.
+
+Source command:
+
+```bash
+git log --oneline --first-parent --reverse v0.1.111..v0.1.112
+```
+
+| Upstream source | Area | Local state | Outcome | Evidence / decision |
+| --- | --- | --- | --- | --- |
+| `ad64190b` | Version sync to `0.1.111` | Current fork marker is already `0.1.111`. | PRESENT | PR #39 set `backend/cmd/server/VERSION` to `0.1.111` before this gate started. |
+| `e70812f0` / PR #1623 | Anthropic buffered empty terminal output | Equivalent behavior is present through earlier fork Anthropic slice. | MERGED | `openai_gateway_messages.go` uses `apicompat.NewBufferedResponseAccumulator`, handles `response.done`, and calls `SupplementResponseOutput`; fork slice #10 includes `9d40fcaa` / PR #1623 mapping. |
+| `7d80b5ad` / PR #1610 | Alipay/Wxpay base payment type mapping | Fork payment-b2 implements the mapping through provider instances and visible-method source selection. | ADAPTED | `DefaultLoadBalancer` can select across providers for base `alipay`/`wxpay`, `InstanceSelection` carries `ProviderKey`, and payment resume/source tests cover official/easypay routing. Do not cherry-pick upstream payment service code over fork payment-b2. |
+| `75908800` / PR #1612 | QR code density | Equivalent frontend behavior is already present. | PRESENT | `PaymentQRDialog.vue` and `PaymentQRCodeView.vue` use `M` error correction with logos and `L` without logos; `PaymentStatusPanel.vue` uses `M`. |
+| `d949acb1` / PR #1603 | DataTable mobile double render | Already landed through fork frontend slice. | MERGED | Fork commit `a845041a` maps PR #1603 and touched `DataTable.vue` plus `AccountUsageCell.vue`. |
+| `ad6c3281` / PR #1575 | Cursor responses body compatibility | Already landed through fork Codex/Cursor slice. | MERGED | Fork commit `60f10e5b` includes `openai_codex_transform.go`, `openai_gateway_chat_completions.go`, and Cursor warmup tests for this family; `git log --all --grep 1575` also maps upstream PR #1575. |
+| `66bea2b5` / PR #1624 | Version dropdown clipping | Fork applied a minimal sidebar-compatible fix instead of upstream sidebar churn. | ADAPTED | Fork commit `58c0f576` updates `AppSidebar.vue` and its spec for the expanded brand/version dropdown. This keeps the fork sidebar structure intact. |
+| `92f4a6bb` | README/partner logo churn | Not product/runtime relevant for this fork gate. | SKIP | Documentation/logo sponsor churn; no local behavior. |
+| `f9f57e95` | Restore `settings.updated_at` SQL default | Missing locally; this PR ports the migration. | PORT | Added upstream `backend/migrations/097_fix_settings_updated_at_default.sql` and an integration assertion that final schema keeps `settings.updated_at DEFAULT now()`. Test/prod read-only checks showed both current databases already have `DEFAULT now()`, `is_nullable=NO`, `updated_at NULL count=0`, and already applied `098`/`111`; `097` is still absent there, so this is a compatibility/backfill marker for code and older instances rather than a current prod rescue. |
+
+Gate status: open until this PR lands and CI/review pass. If the migration PR merges cleanly, the next step is a small marker PR bumping `backend/cmd/server/VERSION` from `0.1.111` to `0.1.112`, followed by annotated fork sync tag `fork/v0.1.112`.
+
+Runtime/deploy note for `097`: this release gate contains a database migration file. Before any deployment of the merged PR, take the normal database backup. Current test/prod evidence indicates the migration should no-op on the live databases because the target default already exists, but it will still be recorded in `schema_migrations` on startup.
 
 ### v0.1.117
 

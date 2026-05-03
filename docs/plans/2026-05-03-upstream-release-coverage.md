@@ -12,7 +12,7 @@
 
 ## Current Baseline
 
-- Local base: `origin/main` at `2acdfd66 docs(upstream-sync): add release coverage ledger`.
+- Local base: `origin/main` at `d2a3e5a9 chore(release): mark fork coverage v0.1.111`.
 - Upstream published-tag scope: latest local upstream tag `v0.1.121` at `9d801595 test: 更新管理员设置契约字段`.
 - Upstream main observed locally: `b2bdba78 stabilize image request handling`; this is outside the current published-tag scope.
 - Tracking doc: `docs/engineering/upstream-release-coverage-2026-05.md`.
@@ -70,10 +70,12 @@ The 2026-04 slice-based sync was useful but did not satisfy the sequential relea
 
 Current next task:
 
-1. Finish review of every item in `v0.1.110..v0.1.111`.
-2. If review confirms no unresolved item remains, update the fork release marker from `0.1.110` to `0.1.111` in a small marker PR.
-3. After the marker PR lands, create and push the fork sync tag `fork/v0.1.111` on the merged fork commit.
-4. Then start `v0.1.111..v0.1.112`.
+1. Finish review and implementation for every item in `v0.1.111..v0.1.112`.
+2. The only missing code item currently accepted for port is `f9f57e95`, upstream migration `097_fix_settings_updated_at_default.sql`.
+3. Before deploying any PR containing `097`, verify real test/prod database state with read-only SQL: `settings.updated_at` default, null count, and `schema_migrations` rows for `097`/`098`/`111`.
+4. After the `v0.1.112` gate PR lands and CI passes, update the fork release marker from `0.1.111` to `0.1.112` in a small marker PR.
+5. After the marker PR lands, create and push the fork sync tag `fork/v0.1.112` on the merged fork commit.
+6. Then start `v0.1.112..v0.1.113`.
 
 ## Task 2: Release Coverage Ledger PR
 
