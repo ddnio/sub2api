@@ -70,11 +70,9 @@ The 2026-04 slice-based sync was useful but did not satisfy the sequential relea
 
 Current next task:
 
-1. Review, test, and merge the `v0.1.113..v0.1.114` gate PR.
-2. Because this gate ports runtime code, deploy and verify test/prod after merge.
-3. Open a small marker PR to bump `backend/cmd/server/VERSION` from `0.1.113` to `0.1.114`.
-4. After the marker PR lands, create and push the fork sync tag `fork/v0.1.114` on the merged fork commit.
-5. Then start `v0.1.114..v0.1.115`.
+1. Merge the `v0.1.114` marker PR that bumps `backend/cmd/server/VERSION` from `0.1.113` to `0.1.114`.
+2. After the marker PR lands, create and push the fork sync tag `fork/v0.1.114` on the merged fork commit.
+3. Then start `v0.1.114..v0.1.115`.
 
 ## Task 2: Release Coverage Ledger PR
 
