@@ -14,12 +14,12 @@ Implementation still moves by upstream PR/merge commit or smaller reviewed hunks
 
 ## Baseline
 
-- Local base: `origin/main` at `fbaa1fdd sync(upstream): close v0.1.112 release gate (#40)`.
+- Local base: `origin/main` at `1d436745 chore(release): mark fork coverage v0.1.112 (#41)`.
 - Upstream published-tag scope: latest local upstream tag `v0.1.121` at `9d801595 test: 更新管理员设置契约字段`.
 - Upstream main observed locally: `b2bdba78 stabilize image request handling`; this is not in the published tag scope yet.
 - Latest upstream tag in scope: `v0.1.121`.
-- Work branch: `docs/upstream-sync-final-smoke`.
-- Worktree: `.claude/worktrees/upstream-sync-final-smoke`.
+- Work branch: `docs/release-gate-v0.1.113`.
+- Worktree: `.claude/worktrees/release-gate-v0.1.113`.
 - Plan: `docs/plans/2026-05-03-upstream-release-coverage.md`.
 
 If `upstream/main` advances, do not expand this ledger automatically. Only expand after a new upstream tag is fetched and the release interval is reviewed.
@@ -69,8 +69,9 @@ Current gate:
 | Gate | Status | Required next action |
 | --- | --- | --- |
 | `v0.1.110..v0.1.111` | Closed | Decision matrix completed, fork marker bumped to `0.1.111`, and sync tag `fork/v0.1.111` pushed. |
-| `v0.1.111..v0.1.112` | Marker in progress | Decision matrix completed and PR #40 merged at `fbaa1fdd`; bump the fork marker to `0.1.112`, then push sync tag `fork/v0.1.112`. |
-| `v0.1.112..v0.1.113` | Blocked | Start only after the `0.1.112` marker PR lands and sync tag `fork/v0.1.112` is pushed. |
+| `v0.1.111..v0.1.112` | Closed | Decision matrix completed, PR #40 merged at `fbaa1fdd`, fork marker bumped to `0.1.112`, and sync tag `fork/v0.1.112` pushed. |
+| `v0.1.112..v0.1.113` | In review | Current gate. Process all 7 first-parent upstream items in this interval before the `0.1.113` marker/tag step. |
+| `v0.1.113..v0.1.114` | Blocked | Start only after the `0.1.113` marker PR lands and sync tag `fork/v0.1.113` is pushed. |
 | `v0.1.117` and later | Blocked | The earlier ledger that started at `v0.1.117` is not the active start point anymore. Do not advance here until the earlier gates are closed in order. |
 
 ## CI Baseline Closeout
@@ -122,6 +123,9 @@ GitHub verification:
 | #35 | `59b9cf34` | Deployed-slice closeout documentation. |
 | #36 | `fed065e6` | CI baseline restored before release coverage closeout. |
 | #37 | `2acdfd66` | Initial release coverage ledger; later corrected to start from `v0.1.110..v0.1.111`. |
+| #39 | `d2a3e5a9` | Fork marker bumped to `0.1.111`; sync tag `fork/v0.1.111` points at this merged commit. |
+| #40 | `fbaa1fdd` | `v0.1.112` migration gate closed by adding migration `097_fix_settings_updated_at_default.sql` and regression coverage. |
+| #41 | `1d436745` | Fork marker bumped to `0.1.112`; sync tag `fork/v0.1.112` points at this merged commit. |
 
 ## Release Coverage Matrix
 
@@ -155,7 +159,7 @@ git log --oneline --first-parent --reverse v0.1.110..v0.1.111
 | `a1a28368` | Sponsors churn | Not an ancestor after fork slices. | SKIP | Sponsor/readme churn; no fork behavior. |
 | `9648c432` | Frontend TS2352 cast fix in API client | Upstream merge commit is not an ancestor, but equivalent code is present. | PRESENT | `frontend/src/api/client.ts` uses `apiResponse as unknown as Record<string, unknown>` and preserves `reason`/`metadata` for payment errors. |
 
-Gate status: decision-complete, pending release-marker update. Next code step is to bump the fork release marker from `0.1.110` to `0.1.111` in a small marker PR if self-review and Kimi review confirm no unresolved item remains. After that marker PR lands, create the fork sync tag `fork/v0.1.111` on the merged fork commit before starting `v0.1.111..v0.1.112`.
+Gate status: closed. PR #39 bumped the fork release marker from `0.1.110` to `0.1.111` and merged at `d2a3e5a9`; annotated tag `fork/v0.1.111` points at that merged fork commit.
 
 Tag namespace note: do not create a fork tag named exactly `v0.1.111`. That tag name already exists for the upstream release and points at upstream commit `9648c432`; using the same tag name for a different fork commit would create a tag collision across remotes. Fork coverage tags use the `fork/vX.Y.Z` namespace.
 
@@ -183,9 +187,31 @@ git log --oneline --first-parent --reverse v0.1.111..v0.1.112
 | `92f4a6bb` | README/partner logo churn | Not product/runtime relevant for this fork gate. | SKIP | Documentation/logo sponsor churn; no local behavior. |
 | `f9f57e95` | Restore `settings.updated_at` SQL default | Missing locally; this PR ports the migration. | PORT | Added upstream `backend/migrations/097_fix_settings_updated_at_default.sql` and an integration assertion that final schema keeps `settings.updated_at DEFAULT now()`. Test/prod read-only checks showed both current databases already have `DEFAULT now()`, `is_nullable=NO`, `updated_at NULL count=0`, and already applied `098`/`111`; `097` is still absent there, so this is a compatibility/backfill marker for code and older instances rather than a current prod rescue. |
 
-Gate status: decision-complete, pending release-marker update. PR #40 merged the migration gate at `fbaa1fdd` after CI passed. This marker PR bumps `backend/cmd/server/VERSION` from `0.1.111` to `0.1.112`; after it lands, create annotated fork sync tag `fork/v0.1.112`.
+Gate status: closed. PR #40 merged the migration gate at `fbaa1fdd` after CI passed. PR #41 bumped `backend/cmd/server/VERSION` from `0.1.111` to `0.1.112` and merged at `1d436745`; annotated tag `fork/v0.1.112` points at that merged fork commit.
 
 Runtime/deploy note for `097`: this release gate contains a database migration file. Before any deployment of the merged PR, take the normal database backup. Current test/prod evidence indicates the migration should no-op on the live databases because the target default already exists, but it will still be recorded in `schema_migrations` on startup.
+
+### v0.1.113
+
+Range: `v0.1.112..v0.1.113`.
+
+Source command:
+
+```bash
+git log --oneline --first-parent --reverse v0.1.112..v0.1.113
+```
+
+| Upstream source | Area | Local state | Outcome | Evidence / decision |
+| --- | --- | --- | --- | --- |
+| `e534e9ba` | Version sync to `0.1.112` | Current fork marker is already `0.1.112`. | PRESENT | PR #41 set `backend/cmd/server/VERSION` to `0.1.112` before this gate started. |
+| `d402e722` / PR #1637 | Websearch, balance notification, account pricing, and broad billing/settings changes | Not safely portable as a release-gate slice. | FROZEN | Owner: upstream-sync maintainer. Reason: 177-file feature bundle touches Ent schema, migrations `101`-`106`, auth/billing/payment/settings/channel/websearch/wire/frontend. This needs a dedicated product and migration project, not a silent upstream-sync import. |
+| `7c671b53` / PR #1635 | Version dropdown clipping | Current fork sidebar does not apply the upstream clipping style to the version badge wrapper. | PRESENT | `AppSidebar.vue` keeps the `VersionBadge` inside a plain `flex flex-col` wrapper, and `style.css` `.sidebar-header` has no `overflow-hidden` utility. The fork also uses a different sidebar DOM structure than upstream's `.sidebar-brand` path. The upstream commit `58c0f576` is not a fork ancestor, so do not cite it as fork evidence. |
+| `9bf079b7` / PR #1655 | Payment fee multiplier | Not safely portable over fork payment-b2 semantics. | FROZEN | Owner: payment/product maintainer. Reason: upstream changes payment amount, refund, fulfillment, settings, admin/user UI, and display semantics. The fork already has payment-b2 provider/order behavior; fee multiplier requires an explicit product decision and payment regression plan. |
+| `8fd29082` / PR #1663 | Abort account test stream when dialog closes | Already landed through fork slice. | MERGED | Fork commit `d80a3827` maps PR #1663 and updates both user and admin `AccountTestModal.vue` stream-close handling. |
+| `1db32d69` / PR #1666 | Account cost display in usage/dashboard tables | Not safely portable as a release-gate slice. | FROZEN | Owner: reporting/product maintainer. Reason: upstream adds migration `107_add_account_cost_to_dashboard_tables.sql` and changes usage aggregation/dashboard display. Cost display needs a fork-specific accounting decision and migration review before adoption. |
+| `70d0569f` / PR #1668 | OpenAI rate-limit and usage scheduling fix | Already landed through fork OpenAI core slice. | MERGED | Fork commit `2ce67ca4` maps PR #1668 and updates account usage/rate-limit paths plus `openai_ws_ratelimit_signal_test.go`. |
+
+Gate status: decision-complete, pending release-marker update. No runtime code is ported by this gate PR. The next code step is a small marker PR bumping `backend/cmd/server/VERSION` from `0.1.112` to `0.1.113`, followed by annotated fork sync tag `fork/v0.1.113`.
 
 ### v0.1.117
 
@@ -303,7 +329,8 @@ Gate status: blocked by Anthropic global TTL HOLD. Do not mark `v0.1.121` comple
 
 ## Current Next Action
 
-1. Merge the small release-marker PR that bumps `backend/cmd/server/VERSION` from `0.1.111` to `0.1.112`.
-2. After the marker PR lands, create and push fork sync tag `fork/v0.1.112` on the merged fork commit.
-3. Only after the tag exists in `ddnio/sub2api`, start the next gate: `v0.1.112..v0.1.113`.
-4. Do not start later-release runtime `PORT` work out of order unless it is an emergency production fix and is recorded as such.
+1. Review and merge the docs-only `v0.1.112..v0.1.113` decision matrix.
+2. If review finds no unresolved item, open a small release-marker PR to bump `backend/cmd/server/VERSION` from `0.1.112` to `0.1.113`.
+3. After the marker PR lands, create and push fork sync tag `fork/v0.1.113` on the merged fork commit.
+4. Only after the tag exists in `ddnio/sub2api`, start the next gate: `v0.1.113..v0.1.114`.
+5. Do not start later-release runtime `PORT` work out of order unless it is an emergency production fix and is recorded as such.
