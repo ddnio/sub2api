@@ -49,9 +49,9 @@ type ReferralInfo struct {
 	ReferralCode     string  `json:"referral_code"`
 	TotalInvited     int     `json:"total_invited"`
 	TotalRewarded    float64 `json:"total_rewarded"`
-	PendingCount     int     `json:"pending_count"`          // 待激活人数
-	InviterRewardAmt float64 `json:"inviter_reward_amount"`  // 当前配置的邀请人奖励
-	InviteeRewardAmt float64 `json:"invitee_reward_amount"`  // 当前配置的被邀请人奖励
+	PendingCount     int     `json:"pending_count"`         // 待激活人数
+	InviterRewardAmt float64 `json:"inviter_reward_amount"` // 当前配置的邀请人奖励
+	InviteeRewardAmt float64 `json:"invitee_reward_amount"` // 当前配置的被邀请人奖励
 }
 
 // ReferralRecord 邀请记录

@@ -306,4 +306,3 @@ func incrementUsageBillingAccountQuota(ctx context.Context, tx *sql.Tx, accountI
 	}
 	return nil
 }
-
