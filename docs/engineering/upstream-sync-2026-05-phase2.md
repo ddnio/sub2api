@@ -4,9 +4,10 @@ This document tracks the post-payment-b2 upstream sync. It is intentionally oper
 
 ## Baseline
 
-- Local base: `origin/main` at `010a662e docs(payment-b2): record order zero amount hotfix`
-- Work branch: `feature/upstream-sync-2026-05-phase2`
-- Worktree: `.claude/worktrees/upstream-sync-2026-05-phase2`
+- Current local base: `origin/main` at `9308f805 docs(upstream-sync): plan continuation review flow (#31)`
+- Original Phase 2 work branch: `feature/upstream-sync-2026-05-phase2`
+- Current continuation worktree: `.claude/worktrees/upstream-sync-ledger-refresh`
+- Original Phase 2 worktree: `.claude/worktrees/upstream-sync-2026-05-phase2`
 - Upstream reference: `upstream/main` at `48912014 chore: sync VERSION to 0.1.121 [skip ci]`
 - Plan: `docs/plans/2026-05-02-upstream-sync-phase2.md`
 - Continuation plan: `docs/plans/2026-05-03-upstream-sync-continuation.md`
@@ -47,6 +48,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | Task 2B | Sticky session false reject on snapshot accounts | Deployed to test + prod via PR #30 | Claude self-review approved; Kimi no blockers | All gateway load-aware + sticky tests passed (26 subtests); new regression test added | Test + prod images rebuilt; no DB/config/frontend impact; note: upstream refactored same path more extensively (variable extraction + slog.Debug + isAccountSchedulableForSelection), our slice is minimal-correct |
 | Task 6 | Payment residual audit only | Pending | Not started | Not started | TBD |
 | Task 7 | Integration smoke gate | Pending | Not started | Not started | TBD |
+| Task 8 | Continuation ledger refresh after PR #31 | In progress | Pending | `origin/main=9308f805`, `upstream/main=48912014`; local evidence collected | None |
 
 ## Hold List
 
@@ -58,10 +60,73 @@ These upstream areas are intentionally held for later phases unless separately a
 - affiliate invite rebate system
 - Vertex service account
 - OpenAI Fast/Flex policy
+- OpenAI image API family if it requires replacing local fork behavior
+- payment fee/multiplier semantics
+- Anthropic global cache TTL setting unless explicitly accepted as product behavior
 - license / CLA workflow changes
 - sponsor/readme churn
 
-## Next Slice Plan
+## Continuation Ledger After PR #31
+
+Task 8 refresh is scoped to documentation only. It updates the current branch/SHA baseline and classifies remaining upstream candidates before any more code is ported.
+
+### Ref Snapshot
+
+```bash
+git fetch origin
+git fetch upstream
+git status --short --branch
+# ## feature/upstream-sync-ledger-refresh...origin/main
+
+git rev-parse --short origin/main
+# 9308f805
+
+git rev-parse --short upstream/main
+# 48912014
+```
+
+`upstream/main` has not advanced beyond the Phase 2 pinned SHA. `origin/main` has advanced through PR #31, which adds the continuation plan and review-flow rules.
+
+### Dependency, Ent, and Migration Drift
+
+`git diff --name-status origin/main..upstream/main -- backend/go.mod backend/go.sum frontend/package.json frontend/pnpm-lock.yaml backend/ent backend/migrations` still shows broad drift in dependency files, Ent generated files/schema, and migrations. The drift is dominated by auth identity, channel monitor/insights, affiliate, payment schema deletion/replacement, and other held feature families.
+
+Do not cherry-pick from this broad diff. Any slice touching `backend/ent`, `backend/migrations`, `backend/go.mod`, `backend/go.sum`, `frontend/package.json`, or `frontend/pnpm-lock.yaml` must be separately justified, reviewed, and verified with fresh-install and existing-DB upgrade checks when applicable.
+
+### Continuation Matrix
+
+| Upstream source | Area | Local state | Action | Evidence / notes |
+| --- | --- | --- | --- | --- |
+| `733627cf` | Sticky session scheduling remainder | Partial / audit needed | Audit first | PR #30 already fixed snapshot-account false reject. Current local code has `isAccountSchedulableForSelection`, sticky wait plans, and sticky cache miss logging. Compare remaining hunks before editing; no direct cherry-pick. |
+| `094e1171` | OpenAI WS previous-response inference for item references | Present enough / audit verify | Likely skip after focused test review | Local `openai_ws_forwarder.go` has `ingress_ws_function_call_output_prev_infer`; tests assert missing `previous_response_id` on `function_call_output` is filled from the prior response. |
+| `c1b52615` | Stripe payment routes bypass frontend auth/payment guard | Present | Skip | Local `/payment/stripe` and `/payment/stripe-popup` routes already have `requiresPayment: false`; backend-mode allowed paths include both Stripe routes. |
+| `8f28a834` | Show Stripe as top-level method when EasyPay and Stripe are both enabled | Present | Skip | Local `VISIBLE_METHOD_ALIASES` includes `stripe`; `paymentFlow.spec.ts` covers Stripe as a top-level method and dedicated Stripe route behavior. |
+| `73b87299` | Anthropic global cache TTL injection setting | Divergent product feature | HOLD unless accepted | Local account-level `cache_ttl_override_enabled` / `cache_ttl_override_target` exists; gateway/message/tool rewrite already handles TTL. Upstream global setting is a cross-stack product/config decision. |
+| `dac6e520` / PR #1960 | Responses stream keepalive during pre-output failover | Not directly portable | HOLD | Existing tracker notes local fork lacks upstream `clientOutputStarted` / pre-output buffering structure; needs separate stream-failover design. |
+| `5d1c12e6` / PR #1943 | Responses pre-output failover | Not directly portable | HOLD | Same stream-failover family; do not mix with ledger refresh or WS continuation audit. |
+| `63ef2310` / `93d91e20` | Vertex service account | Held feature | HOLD | Touches service-account feature surface and broad backend integration. |
+| `b0a2252e` / `30f55a1f` | OpenAI Fast/Flex policy | Held feature | HOLD | Broad HTTP/WebSocket/Admin policy feature, not a low-risk bugfix. |
+| `bf43fb4e`, `ed0c85a1`, `ff08f9d7`, image family | OpenAI image API | Divergent / broad feature | HOLD | Existing fork image behavior is divergent; only port after direction decision. |
+| auth identity / pending OAuth commits and migrations | Auth identity foundation | Held feature | HOLD | Large Ent/migration/config surface. Requires dedicated cycle if accepted. |
+| affiliate commits and migrations | Affiliate invite/rebate | Held feature | HOLD | Product decision plus migrations/DI. |
+| channel monitor/insights commits and migrations | Channel monitor/insights | Held feature | HOLD | Large Ent/migration/frontend/backend feature family. |
+
+### Next Executable Slice
+
+Proceed with **Task 1: Sticky Session Scheduling Remainder Audit** only after this ledger refresh is self-reviewed and Kimi-reviewed.
+
+Task 1 must:
+
+- compare `733627cf` hunk-by-hunk against current `origin/main`
+- identify correctness hunks separately from logging/refactor-only hunks
+- prove a missing local behavior with a focused test or code-path evidence before editing code
+- keep any implementation PR small and upstream-hunk-based
+- run gateway sticky/load-aware scheduler tests and payment regression tests
+- trigger self-review, pre-commit Kimi review, and PR-level code review
+
+## Historical Next Slice Plan
+
+The section below is retained as historical Phase 2 context. After PR #31, the active order of execution is the continuation plan at `docs/plans/2026-05-03-upstream-sync-continuation.md` plus the refreshed continuation matrix above.
 
 ### Task 2A Scheduler Snapshot Race Fix, CAS Grace TTL, and Rebuild Lock Release
 
