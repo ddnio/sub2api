@@ -65,7 +65,10 @@ func (h *RedeemHandler) List(c *gin.Context) {
 		search = search[:100]
 	}
 
-	codes, total, err := h.adminService.ListRedeemCodes(c.Request.Context(), page, pageSize, codeType, status, search)
+	sortBy := c.DefaultQuery("sort_by", "id")
+	sortOrder := c.DefaultQuery("sort_order", "desc")
+
+	codes, total, err := h.adminService.ListRedeemCodes(c.Request.Context(), page, pageSize, codeType, status, search, sortBy, sortOrder)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -306,7 +309,10 @@ func (h *RedeemHandler) Export(c *gin.Context) {
 	}
 
 	// Get all codes without pagination (use large page size)
-	codes, _, err := h.adminService.ListRedeemCodes(c.Request.Context(), 1, 10000, codeType, status, search)
+	sortBy := c.DefaultQuery("sort_by", "id")
+	sortOrder := c.DefaultQuery("sort_order", "desc")
+
+	codes, _, err := h.adminService.ListRedeemCodes(c.Request.Context(), 1, 10000, codeType, status, search, sortBy, sortOrder)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return

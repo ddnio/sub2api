@@ -38,6 +38,8 @@ export async function list(
     search?: string
     privacy_mode?: string
     lite?: string
+    sort_by?: string
+    sort_order?: 'asc' | 'desc'
   },
   options?: {
     signal?: AbortSignal
@@ -71,6 +73,8 @@ export async function listWithEtag(
     search?: string
     privacy_mode?: string
     lite?: string
+    sort_by?: string
+    sort_order?: 'asc' | 'desc'
   },
   options?: {
     signal?: AbortSignal
@@ -499,28 +503,32 @@ export async function syncFromCrs(params: {
 
 export async function exportData(options?: {
   ids?: number[]
-  filters?: {
-    platform?: string
-    type?: string
-    status?: string
-    group?: string
-    search?: string
-    privacy_mode?: string
-  }
+	  filters?: {
+	    platform?: string
+	    type?: string
+	    status?: string
+	    group?: string
+	    search?: string
+	    privacy_mode?: string
+	    sort_by?: string
+	    sort_order?: 'asc' | 'desc'
+	  }
   includeProxies?: boolean
 }): Promise<AdminDataPayload> {
   const params: Record<string, string> = {}
-  if (options?.ids && options.ids.length > 0) {
-    params.ids = options.ids.join(',')
-  } else if (options?.filters) {
-    const { platform, type, status, group, search, privacy_mode } = options.filters
-    if (platform) params.platform = platform
-    if (type) params.type = type
-    if (status) params.status = status
-    if (group) params.group = group
-    if (search) params.search = search
-    if (privacy_mode) params.privacy_mode = privacy_mode
-  }
+	  if (options?.ids && options.ids.length > 0) {
+	    params.ids = options.ids.join(',')
+	  } else if (options?.filters) {
+	    const { platform, type, status, group, privacy_mode, search, sort_by, sort_order } = options.filters
+	    if (platform) params.platform = platform
+	    if (type) params.type = type
+	    if (status) params.status = status
+	    if (group) params.group = group
+	    if (search) params.search = search
+	    if (privacy_mode) params.privacy_mode = privacy_mode
+	    if (sort_by) params.sort_by = sort_by
+	    if (sort_order) params.sort_order = sort_order
+	  }
   if (options?.includeProxies === false) {
     params.include_proxies = 'false'
   }
