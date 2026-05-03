@@ -48,6 +48,23 @@ type Channel struct {
 	ModelPricing []ChannelModelPricing
 	// 渠道级模型映射（按平台分组：platform → {src→dst}）
 	ModelMapping map[string]map[string]string
+
+	// 账号统计定价
+	ApplyPricingToAccountStats bool
+	AccountStatsPricingRules   []AccountStatsPricingRule
+}
+
+// AccountStatsPricingRule 账号统计定价规则。
+type AccountStatsPricingRule struct {
+	ID         int64
+	ChannelID  int64
+	Name       string
+	GroupIDs   []int64
+	AccountIDs []int64
+	SortOrder  int
+	Pricing    []ChannelModelPricing
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 // ChannelModelPricing 渠道模型定价条目
@@ -174,6 +191,24 @@ func (c *Channel) Clone() *Channel {
 				inner[k] = v
 			}
 			cp.ModelMapping[platform] = inner
+		}
+	}
+	if c.AccountStatsPricingRules != nil {
+		cp.AccountStatsPricingRules = make([]AccountStatsPricingRule, len(c.AccountStatsPricingRules))
+		copy(cp.AccountStatsPricingRules, c.AccountStatsPricingRules)
+		for i := range cp.AccountStatsPricingRules {
+			if c.AccountStatsPricingRules[i].GroupIDs != nil {
+				cp.AccountStatsPricingRules[i].GroupIDs = append([]int64(nil), c.AccountStatsPricingRules[i].GroupIDs...)
+			}
+			if c.AccountStatsPricingRules[i].AccountIDs != nil {
+				cp.AccountStatsPricingRules[i].AccountIDs = append([]int64(nil), c.AccountStatsPricingRules[i].AccountIDs...)
+			}
+			if c.AccountStatsPricingRules[i].Pricing != nil {
+				cp.AccountStatsPricingRules[i].Pricing = make([]ChannelModelPricing, len(c.AccountStatsPricingRules[i].Pricing))
+				for j := range c.AccountStatsPricingRules[i].Pricing {
+					cp.AccountStatsPricingRules[i].Pricing[j] = c.AccountStatsPricingRules[i].Pricing[j].Clone()
+				}
+			}
 		}
 	}
 	return &cp

@@ -597,6 +597,14 @@ func UsageLogFromServiceAdmin(l *service.UsageLog) *AdminUsageLog {
 	if l == nil {
 		return nil
 	}
+	accountBaseCost := l.TotalCost
+	if l.AccountStatsCost != nil {
+		accountBaseCost = *l.AccountStatsCost
+	}
+	accountRateMultiplier := 1.0
+	if l.AccountRateMultiplier != nil {
+		accountRateMultiplier = *l.AccountRateMultiplier
+	}
 	return &AdminUsageLog{
 		UsageLog:              usageLogFromServiceUser(l),
 		UpstreamModel:         l.UpstreamModel,
@@ -604,6 +612,8 @@ func UsageLogFromServiceAdmin(l *service.UsageLog) *AdminUsageLog {
 		ModelMappingChain:     l.ModelMappingChain,
 		BillingTier:           l.BillingTier,
 		AccountRateMultiplier: l.AccountRateMultiplier,
+		AccountStatsCost:      l.AccountStatsCost,
+		AccountCost:           accountBaseCost * accountRateMultiplier,
 		IPAddress:             l.IPAddress,
 		Account:               AccountSummaryFromService(l.Account),
 	}

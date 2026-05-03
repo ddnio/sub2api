@@ -413,6 +413,10 @@ type AdminUsageLog struct {
 
 	// AccountRateMultiplier 账号计费倍率快照（nil 表示按 1.0 处理）
 	AccountRateMultiplier *float64 `json:"account_rate_multiplier"`
+	// AccountStatsCost 是账号统计自定义定价成本（nil 表示使用 total_cost）
+	AccountStatsCost *float64 `json:"account_stats_cost,omitempty"`
+	// AccountCost 是管理员账号口径费用：COALESCE(account_stats_cost,total_cost) * account_rate_multiplier
+	AccountCost float64 `json:"account_cost"`
 
 	// IPAddress 用户请求 IP（仅管理员可见）
 	IPAddress *string `json:"ip_address,omitempty"`

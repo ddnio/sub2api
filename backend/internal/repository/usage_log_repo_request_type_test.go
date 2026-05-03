@@ -85,6 +85,7 @@ func TestUsageLogRepositoryCreateSyncRequestTypeAndLegacyFields(t *testing.T) {
 			sqlmock.AnyArg(), // model_mapping_chain
 			sqlmock.AnyArg(), // billing_tier
 			sqlmock.AnyArg(), // billing_mode
+			sqlmock.AnyArg(), // account_stats_cost
 			createdAt,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow(int64(99), createdAt))
@@ -163,6 +164,7 @@ func TestUsageLogRepositoryCreate_PersistsServiceTier(t *testing.T) {
 			sqlmock.AnyArg(), // model_mapping_chain
 			sqlmock.AnyArg(), // billing_tier
 			sqlmock.AnyArg(), // billing_mode
+			sqlmock.AnyArg(), // account_stats_cost
 			createdAt,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow(int64(100), createdAt))
@@ -215,17 +217,20 @@ func TestExecUsageLogInsertNoResult_PersistsRequestedModel(t *testing.T) {
 }
 
 func TestPrepareUsageLogInsert_ArgCountMatchesTypes(t *testing.T) {
+	accountStatsCost := 0.75
 	prepared := prepareUsageLogInsert(&service.UsageLog{
-		UserID:         1,
-		APIKeyID:       2,
-		AccountID:      3,
-		RequestID:      "req-arg-count",
-		Model:          "gpt-5",
-		RequestedModel: "gpt-5",
-		CreatedAt:      time.Date(2025, 1, 5, 12, 0, 0, 0, time.UTC),
+		UserID:           1,
+		APIKeyID:         2,
+		AccountID:        3,
+		RequestID:        "req-arg-count",
+		Model:            "gpt-5",
+		RequestedModel:   "gpt-5",
+		AccountStatsCost: &accountStatsCost,
+		CreatedAt:        time.Date(2025, 1, 5, 12, 0, 0, 0, time.UTC),
 	})
 
 	require.Len(t, prepared.args, len(usageLogInsertArgTypes))
+	require.Equal(t, &accountStatsCost, prepared.args[len(prepared.args)-2])
 }
 
 func TestCoalesceTrimmedString(t *testing.T) {
@@ -299,7 +304,7 @@ func TestUsageLogRepositoryGetModelStatsWithFiltersRequestTypePriority(t *testin
 
 	mock.ExpectQuery("AND \\(request_type = \\$3 OR \\(request_type = 0 AND openai_ws_mode = TRUE\\)\\)").
 		WithArgs(start, end, requestType).
-		WillReturnRows(sqlmock.NewRows([]string{"model", "requests", "input_tokens", "output_tokens", "cache_creation_tokens", "cache_read_tokens", "total_tokens", "cost", "actual_cost"}))
+		WillReturnRows(sqlmock.NewRows([]string{"model", "requests", "input_tokens", "output_tokens", "cache_creation_tokens", "cache_read_tokens", "total_tokens", "cost", "actual_cost", "account_cost"}))
 
 	stats, err := repo.GetModelStatsWithFilters(context.Background(), start, end, 0, 0, 0, 0, &requestType, &stream, nil)
 	require.NoError(t, err)
@@ -344,6 +349,85 @@ func TestUsageLogRepositoryGetStatsWithFiltersRequestTypePriority(t *testing.T) 
 	require.NoError(t, err)
 	require.Equal(t, int64(1), stats.TotalRequests)
 	require.Equal(t, int64(9), stats.TotalTokens)
+	require.NotNil(t, stats.TotalAccountCost, "TotalAccountCost should always be returned")
+	require.Equal(t, 1.2, *stats.TotalAccountCost)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestUsageLogRepositoryGetModelStatsAccountCostColumn(t *testing.T) {
+	db, mock := newSQLMock(t)
+	repo := &usageLogRepository{sql: db}
+
+	start := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := start.Add(24 * time.Hour)
+
+	mock.ExpectQuery("FROM usage_logs").
+		WithArgs(start, end).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"model", "requests", "input_tokens", "output_tokens",
+			"cache_creation_tokens", "cache_read_tokens", "total_tokens",
+			"cost", "actual_cost", "account_cost",
+		}).
+			AddRow("claude-opus-4-6", int64(10), int64(100), int64(200), int64(5), int64(3), int64(308), 2.5, 2.0, 1.8).
+			AddRow("claude-sonnet-4-6", int64(5), int64(50), int64(100), int64(0), int64(0), int64(150), 1.0, 0.8, 0.7))
+
+	results, err := repo.GetModelStatsWithFilters(context.Background(), start, end, 0, 0, 0, 0, nil, nil, nil)
+	require.NoError(t, err)
+	require.Len(t, results, 2)
+	require.Equal(t, "claude-opus-4-6", results[0].Model)
+	require.Equal(t, 2.5, results[0].Cost)
+	require.Equal(t, 2.0, results[0].ActualCost)
+	require.Equal(t, 1.8, results[0].AccountCost)
+	require.Equal(t, "claude-sonnet-4-6", results[1].Model)
+	require.Equal(t, 0.7, results[1].AccountCost)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestUsageLogRepositoryGetGroupStatsAccountCostColumn(t *testing.T) {
+	db, mock := newSQLMock(t)
+	repo := &usageLogRepository{sql: db}
+
+	start := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := start.Add(24 * time.Hour)
+
+	mock.ExpectQuery("FROM usage_logs").
+		WithArgs(start, end).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"group_id", "group_name", "requests", "total_tokens",
+			"cost", "actual_cost", "account_cost",
+		}).
+			AddRow(int64(10), "pro", int64(12), int64(4096), 3.5, 2.8, 2.1))
+
+	results, err := repo.GetGroupStatsWithFilters(context.Background(), start, end, 0, 0, 0, 0, nil, nil, nil)
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	require.Equal(t, int64(10), results[0].GroupID)
+	require.Equal(t, "pro", results[0].GroupName)
+	require.Equal(t, 2.1, results[0].AccountCost)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestUsageLogRepositoryGetUserBreakdownAccountCostColumn(t *testing.T) {
+	db, mock := newSQLMock(t)
+	repo := &usageLogRepository{sql: db}
+
+	start := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := start.Add(24 * time.Hour)
+
+	mock.ExpectQuery("FROM usage_logs").
+		WithArgs(start, end).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"user_id", "email", "requests", "total_tokens",
+			"cost", "actual_cost", "account_cost",
+		}).
+			AddRow(int64(7), "user@example.com", int64(3), int64(512), 0.9, 0.75, 0.6))
+
+	results, err := repo.GetUserBreakdownStats(context.Background(), start, end, usagestats.UserBreakdownDimension{}, 0)
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	require.Equal(t, int64(7), results[0].UserID)
+	require.Equal(t, "user@example.com", results[0].Email)
+	require.Equal(t, 0.6, results[0].AccountCost)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -484,11 +568,12 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{},
 			false,
 			sql.NullInt64{},  // channel_id
-			sql.NullString{}, // model_mapping_chain
-			sql.NullString{}, // billing_tier
-			sql.NullString{}, // billing_mode
-			now,
-		}})
+				sql.NullString{}, // model_mapping_chain
+				sql.NullString{}, // billing_tier
+				sql.NullString{}, // billing_mode
+				sql.NullFloat64{}, // account_stats_cost
+				now,
+			}})
 		require.NoError(t, err)
 		require.NotNil(t, log.ServiceTier)
 		require.Equal(t, "priority", *log.ServiceTier)
@@ -531,11 +616,12 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{},
 			false,
 			sql.NullInt64{},  // channel_id
-			sql.NullString{}, // model_mapping_chain
-			sql.NullString{}, // billing_tier
-			sql.NullString{}, // billing_mode
-			now,
-		}})
+				sql.NullString{}, // model_mapping_chain
+				sql.NullString{}, // billing_tier
+				sql.NullString{}, // billing_mode
+				sql.NullFloat64{}, // account_stats_cost
+				now,
+			}})
 		require.NoError(t, err)
 		require.NotNil(t, log.ServiceTier)
 		require.Equal(t, "flex", *log.ServiceTier)
@@ -578,11 +664,12 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{},
 			false,
 			sql.NullInt64{},  // channel_id
-			sql.NullString{}, // model_mapping_chain
-			sql.NullString{}, // billing_tier
-			sql.NullString{}, // billing_mode
-			now,
-		}})
+				sql.NullString{}, // model_mapping_chain
+				sql.NullString{}, // billing_tier
+				sql.NullString{}, // billing_mode
+				sql.NullFloat64{}, // account_stats_cost
+				now,
+			}})
 		require.NoError(t, err)
 		require.NotNil(t, log.ServiceTier)
 		require.Equal(t, "priority", *log.ServiceTier)

@@ -140,6 +140,42 @@ func TestGatewayServiceRecordUsage_BillingFingerprintIncludesRequestPayloadHash(
 	require.Equal(t, payloadHash, billingRepo.lastCmd.RequestPayloadHash)
 }
 
+func TestGatewayServiceRecordUsage_RecordsAccountStatsCost(t *testing.T) {
+	groupID := int64(11)
+	usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}
+	userRepo := &openAIRecordUsageUserRepoStub{}
+	subRepo := &openAIRecordUsageSubRepoStub{}
+	svc := newGatewayRecordUsageServiceForTest(usageRepo, userRepo, subRepo)
+	svc.channelService = newTestChannelService(makeStandardRepo(Channel{
+		ID:       1,
+		Status:   StatusActive,
+		GroupIDs: []int64{groupID},
+	}, map[int64]string{groupID: PlatformAnthropic}))
+
+	err := svc.RecordUsage(context.Background(), &RecordUsageInput{
+		Result: &ForwardResult{
+			RequestID:     "gateway_account_stats_cost",
+			Usage:         ClaudeUsage{InputTokens: 100, OutputTokens: 20},
+			Model:         "claude-sonnet-4",
+			UpstreamModel: "claude-sonnet-4",
+			Duration:      time.Second,
+		},
+		APIKey: &APIKey{
+			ID:      501,
+			Quota:   100,
+			GroupID: &groupID,
+			Group:   &Group{ID: groupID, RateMultiplier: 1},
+		},
+		User:    &User{ID: 601},
+		Account: &Account{ID: 701},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, usageRepo.lastLog)
+	require.NotNil(t, usageRepo.lastLog.AccountStatsCost)
+	require.InDelta(t, 0.0006, *usageRepo.lastLog.AccountStatsCost, 1e-12)
+}
+
 func TestGatewayServiceRecordUsage_BillingFingerprintFallsBackToContextRequestID(t *testing.T) {
 	usageRepo := &openAIRecordUsageLogRepoStub{}
 	billingRepo := &openAIRecordUsageBillingRepoStub{result: &UsageBillingApplyResult{Applied: true}}
