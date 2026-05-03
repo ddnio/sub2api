@@ -70,11 +70,9 @@ The 2026-04 slice-based sync was useful but did not satisfy the sequential relea
 
 Current next task:
 
-1. Finish review and implementation decisions for every item in `v0.1.112..v0.1.113`.
-2. This gate is expected to be docs-only unless review proves a small missing behavior is both safe and necessary.
-3. After the `v0.1.113` gate PR lands and CI passes, update the fork release marker from `0.1.112` to `0.1.113` in a small marker PR.
-4. After the marker PR lands, create and push the fork sync tag `fork/v0.1.113` on the merged fork commit.
-5. Then start `v0.1.113..v0.1.114`.
+1. Merge the `v0.1.113` marker PR that bumps `backend/cmd/server/VERSION` from `0.1.112` to `0.1.113`.
+2. After the marker PR lands, create and push the fork sync tag `fork/v0.1.113` on the merged fork commit.
+3. Then start `v0.1.113..v0.1.114`.
 
 ## Task 2: Release Coverage Ledger PR
 
