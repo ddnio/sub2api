@@ -49,6 +49,7 @@ If `upstream/main` advances, do not auto-expand this work. Amend the plan, re-ru
 | Task 6 | Payment residual audit only | Pending | Not started | Not started | TBD |
 | Task 7 | Integration smoke gate | Pending | Not started | Not started | TBD |
 | Task 8 | Continuation ledger refresh after PR #31 | In progress | Pending | `origin/main=9308f805`, `upstream/main=48912014`; local evidence collected | None |
+| Task 9 | Sticky scheduler metadata group membership | Implemented locally | Kimi pre-commit review: safe to commit | repository unit/integration, gateway sticky/load-aware, payment tests passed | No DB/config/frontend/API impact |
 
 ## Hold List
 
@@ -97,7 +98,7 @@ Do not cherry-pick from this broad diff. Any slice touching `backend/ent`, `back
 
 | Upstream source | Area | Local state | Action | Evidence / notes |
 | --- | --- | --- | --- | --- |
-| `733627cf` | Sticky session scheduling remainder | Partial / audit needed | Audit first | PR #30 already fixed snapshot-account false reject. Current local code has `isAccountSchedulableForSelection`, sticky wait plans, and sticky cache miss logging. Compare remaining hunks before editing; no direct cherry-pick. |
+| `733627cf` | Sticky session scheduling remainder | Partial / scheduler metadata hunk ported | Port minimal proven hunk; keep rest under audit/skip | PR #30 already fixed snapshot-account false reject. This slice ports only upstream's scheduler metadata `GroupIDs` / slim `AccountGroups` retention because a focused unit test failed before the hunk and passed after it. Upstream debug logging was skipped. Handler successful-forward sticky bind hunk remains unported because local load-aware service paths already set or refresh sticky bindings during account selection; no independent missing behavior was proven. |
 | `094e1171` | OpenAI WS previous-response inference for item references | Present enough / audit verify | Likely skip after focused test review | Local `openai_ws_forwarder.go` has `ingress_ws_function_call_output_prev_infer`; tests assert missing `previous_response_id` on `function_call_output` is filled from the prior response. |
 | `c1b52615` | Stripe payment routes bypass frontend auth/payment guard | Present | Skip | Local `/payment/stripe` and `/payment/stripe-popup` routes already have `requiresPayment: false`; backend-mode allowed paths include both Stripe routes. |
 | `8f28a834` | Show Stripe as top-level method when EasyPay and Stripe are both enabled | Present | Skip | Local `VISIBLE_METHOD_ALIASES` includes `stripe`; `paymentFlow.spec.ts` covers Stripe as a top-level method and dedicated Stripe route behavior. |
@@ -123,6 +124,73 @@ Task 1 must:
 - keep any implementation PR small and upstream-hunk-based
 - run gateway sticky/load-aware scheduler tests and payment regression tests
 - trigger self-review, pre-commit Kimi review, and PR-level code review
+
+### Task 1 Audit Result: Scheduler Metadata Group Membership
+
+Accepted upstream source: `733627cf fix: improve sticky session scheduling`.
+
+Ported files:
+
+- `backend/internal/repository/scheduler_cache.go`
+- `backend/internal/repository/scheduler_cache_unit_test.go`
+- `backend/internal/repository/scheduler_cache_integration_test.go`
+
+Ported behavior:
+
+- Preserve slim `GroupIDs` and `AccountGroups` in scheduler metadata snapshots.
+- Drop nested `Account` / `Group` pointers from metadata snapshots so the snapshot stays slim.
+- Keep full account cache payload unchanged.
+
+Skipped from `733627cf` in this slice:
+
+- Debug `slog` / request log additions.
+- Service-layer false-reject fix already covered by PR #30.
+- Handler successful-forward sticky binding refresh, because local service-layer load-aware selection already writes or refreshes sticky bindings on selected-account paths and no independent failing behavior was proven.
+
+Impact:
+
+- Migration files added or changed: none.
+- Ent schema or generated-code impact: none.
+- New config keys, setting names, or env vars: none.
+- New frontend `localStorage` keys: none.
+- API contract impact: none.
+- Deployment impact: backend runtime only; scheduler metadata snapshot payloads include slim group membership after rebuild.
+- Rollback: revert this slice and rebuild backend; no DB rollback.
+
+Verification:
+
+```bash
+cd backend
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 -tags unit ./internal/repository -run 'TestBuildSchedulerMetadataAccount'
+# ok github.com/Wei-Shaw/sub2api/internal/repository 1.517s
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 -tags integration ./internal/repository -run 'TestSchedulerCacheSnapshotUsesSlimMetadataButKeepsFullAccount'
+# ok github.com/Wei-Shaw/sub2api/internal/repository 2.556s
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/service -run 'TestGatewaySelectAccountWithLoadAwareness_StickySnapshotAccountWithoutGroups|TestGatewayService_SelectAccountWithLoadAwareness|TestSelectAccountWithLoadAwareness_StickyReadReuse'
+# ok github.com/Wei-Shaw/sub2api/internal/service 2.528s
+
+GOCACHE="$PWD/../../.cache/go-build" go test -count=1 ./internal/payment
+# ok github.com/Wei-Shaw/sub2api/internal/payment 0.831s
+
+git diff --check
+# no output
+```
+
+Review:
+
+- Self-review: changed lines match the upstream scheduler metadata hunk and tests; no handler/service/debug hunks were included; full account cache behavior remains covered by the integration test.
+- Kimi pre-commit review: safe to commit; no blockers; tool parse status was inconclusive because the provider returned prose instead of structured JSON.
+- PR-level review: first Kimi wire attempt timed out after 120s with zero content chunks; do not treat timeout as approval. Retrying with a smaller evidence pack.
+- PR-level review retry: Kimi reported `Blocker verdict: None. Safe to proceed.` on the smaller PR diff evidence pack; no blockers. Runtime parser again marked the prose response inconclusive.
+- GitHub CI on PR #33: security scans passed; CI failed on existing main drift outside this PR. Unit test failure is `internal/server/middleware/*_test.go` calling `service.NewAuthService` with too few arguments. Lint failures are pre-existing gofmt/staticcheck/unused findings in config, handler, payment, and route files not touched by this slice. CI did run `internal/repository` successfully.
+
+Lessons from this slice:
+
+- GitHub HTTPS push can fail in this environment with `Error in the HTTP2 framing layer` or `Empty reply from server`. When a retry fails, use GitHub Git Data API to create the fork branch from `origin/main`, then open the PR against `ddnio/sub2api`.
+- API-created commits may have a different SHA from the local commit even when the tree/message are equivalent; record the remote SHA in PR notes when it matters.
+- Keep Kimi PR-level evidence smaller than the full PR body plus full diff when possible. A timeout with zero content chunks is a failed review, not a pass.
+- Upstream sticky-session fixes may bundle debug logging, already-ported service fixes, and one real metadata hunk. Start with a failing focused test and port only the hunk that makes it pass.
 
 ## Historical Next Slice Plan
 
