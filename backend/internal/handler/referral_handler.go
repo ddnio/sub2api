@@ -9,6 +9,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // ReferralHandler 推荐码 handler
@@ -31,7 +32,7 @@ func (h *ReferralHandler) GetReferralInfo(c *gin.Context) {
 
 	// 用户主动访问邀请页，确保有推荐码（惰性生成）
 	if _, err := h.referralService.EnsureReferralCode(c.Request.Context(), subject.UserID); err != nil {
-		// 非关键，不阻断
+		requestLogger(c, "handler.referral").Warn("referral.ensure_code_failed", zap.Error(err))
 	}
 
 	info, err := h.referralService.GetReferralInfo(c.Request.Context(), subject.UserID)

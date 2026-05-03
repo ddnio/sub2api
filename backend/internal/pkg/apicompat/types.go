@@ -173,18 +173,18 @@ type AnthropicDelta struct {
 
 // ResponsesRequest is the request body for POST /v1/responses.
 type ResponsesRequest struct {
-	Model           string              `json:"model"`
-	Input           json.RawMessage     `json:"input"` // string or []ResponsesInputItem
-	MaxOutputTokens *int                `json:"max_output_tokens,omitempty"`
-	Temperature     *float64            `json:"temperature,omitempty"`
-	TopP            *float64            `json:"top_p,omitempty"`
-	Stream          bool                `json:"stream,omitempty"`
-	Tools           []ResponsesTool     `json:"tools,omitempty"`
-	Include         []string            `json:"include,omitempty"`
-	Store           *bool               `json:"store,omitempty"`
-	Reasoning       *ResponsesReasoning `json:"reasoning,omitempty"`
-	ToolChoice      json.RawMessage     `json:"tool_choice,omitempty"`
-	ServiceTier     string              `json:"service_tier,omitempty"`
+	Model           string               `json:"model"`
+	Input           json.RawMessage      `json:"input"` // string or []ResponsesInputItem
+	MaxOutputTokens *int                 `json:"max_output_tokens,omitempty"`
+	Temperature     *float64             `json:"temperature,omitempty"`
+	TopP            *float64             `json:"top_p,omitempty"`
+	Stream          bool                 `json:"stream,omitempty"`
+	Tools           []ResponsesTool      `json:"tools,omitempty"`
+	Include         []string             `json:"include,omitempty"`
+	Store           *bool                `json:"store,omitempty"`
+	Reasoning       *ResponsesReasoning  `json:"reasoning,omitempty"`
+	ToolChoice      json.RawMessage      `json:"tool_choice,omitempty"`
+	ServiceTier     string               `json:"service_tier,omitempty"`
 	Text            *ResponsesTextConfig `json:"text,omitempty"`
 }
 

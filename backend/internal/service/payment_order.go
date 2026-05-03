@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -499,35 +498,6 @@ func (s *PaymentService) maybeBuildWeChatOAuthRequiredResponseForSelection(ctx c
 	return nil, nil
 }
 
-func (s *PaymentService) buildWeChatOAuthRequiredResponse(ctx context.Context, req CreateOrderRequest, amount, payAmount, feeRate float64) (*CreateOrderResponse, error) {
-	appID, _, err := s.getWeChatPaymentOAuthCredential(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.paymentResume().ensureSigningKey(); err != nil {
-		return nil, err
-	}
-
-	authorizeURL, err := buildWeChatPaymentOAuthStartURL(req, "snsapi_base")
-	if err != nil {
-		return nil, err
-	}
-
-	return &CreateOrderResponse{
-		Amount:      amount,
-		PayAmount:   payAmount,
-		FeeRate:     feeRate,
-		ResultType:  payment.CreatePaymentResultOAuthRequired,
-		PaymentType: req.PaymentType,
-		OAuth: &payment.WechatOAuthInfo{
-			AuthorizeURL: authorizeURL,
-			AppID:        appID,
-			Scope:        "snsapi_base",
-			RedirectURL:  "/auth/wechat/payment/callback",
-		},
-	}, nil
-}
-
 func (s *PaymentService) validateSelectedCreateOrderInstance(ctx context.Context, req CreateOrderRequest, sel *payment.InstanceSelection) error {
 	if !requiresWeChatJSAPICompatibleSelection(req, sel) {
 		return nil
@@ -596,71 +566,6 @@ func buildCreateOrderResponse(order *dbent.PaymentOrder, req CreateOrderRequest,
 		ExpiresAt:    order.ExpiresAt,
 		PaymentMode:  sel.PaymentMode,
 	}
-}
-
-func buildWeChatPaymentOAuthStartURL(req CreateOrderRequest, scope string) (string, error) {
-	u, err := url.Parse("/api/v1/auth/oauth/wechat/payment/start")
-	if err != nil {
-		return "", fmt.Errorf("build wechat payment oauth start url: %w", err)
-	}
-	q := u.Query()
-	q.Set("payment_type", strings.TrimSpace(req.PaymentType))
-	if req.Amount > 0 {
-		q.Set("amount", strconv.FormatFloat(req.Amount, 'f', -1, 64))
-	}
-	if orderType := strings.TrimSpace(req.OrderType); orderType != "" {
-		q.Set("order_type", orderType)
-	}
-	if req.PlanID > 0 {
-		q.Set("plan_id", strconv.FormatInt(req.PlanID, 10))
-	}
-	if scope = strings.TrimSpace(scope); scope != "" {
-		q.Set("scope", scope)
-	}
-	if redirectTo := paymentRedirectPathFromURL(req.SrcURL); redirectTo != "" {
-		q.Set("redirect", redirectTo)
-	}
-	u.RawQuery = q.Encode()
-	return u.String(), nil
-}
-
-func paymentRedirectPathFromURL(rawURL string) string {
-	rawURL = strings.TrimSpace(rawURL)
-	if rawURL == "" {
-		return "/purchase"
-	}
-	if strings.HasPrefix(rawURL, "/") && !strings.HasPrefix(rawURL, "//") {
-		return normalizePaymentRedirectPath(rawURL)
-	}
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return "/purchase"
-	}
-	path := strings.TrimSpace(u.EscapedPath())
-	if path == "" {
-		path = strings.TrimSpace(u.Path)
-	}
-	if path == "" || !strings.HasPrefix(path, "/") || strings.HasPrefix(path, "//") {
-		return "/purchase"
-	}
-	if strings.TrimSpace(u.RawQuery) != "" {
-		path += "?" + u.RawQuery
-	}
-	return normalizePaymentRedirectPath(path)
-}
-
-func normalizePaymentRedirectPath(path string) string {
-	path = strings.TrimSpace(path)
-	if path == "" {
-		return "/purchase"
-	}
-	if path == "/payment" {
-		return "/purchase"
-	}
-	if strings.HasPrefix(path, "/payment?") {
-		return "/purchase" + strings.TrimPrefix(path, "/payment")
-	}
-	return path
 }
 
 // --- Order Queries ---

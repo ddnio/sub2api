@@ -324,7 +324,6 @@ func (s *TokenRefreshService) refreshWithRetry(ctx context.Context, account *Acc
 	s.ensureOpenAIPrivacy(ctx, account)
 	s.ensureAntigravityPrivacy(ctx, account)
 
-
 	// 设置临时不可调度 10 分钟（不标记 error，保持 status=active 让下个刷新周期能继续尝试）
 	until := time.Now().Add(tokenRefreshTempUnschedDuration)
 	reason := fmt.Sprintf("token refresh retry exhausted: %v", lastErr)
