@@ -63,6 +63,7 @@ func TestMigrationsRunner_IsIdempotent_AndSchemaIsUpToDate(t *testing.T) {
 	var settingsRegclass sql.NullString
 	require.NoError(t, tx.QueryRowContext(context.Background(), "SELECT to_regclass('public.settings')").Scan(&settingsRegclass))
 	require.True(t, settingsRegclass.Valid, "expected settings table to exist")
+	requireColumnDefault(t, tx, "settings", "updated_at", "now()")
 
 	// security_secrets table should exist
 	var securitySecretsRegclass sql.NullString
@@ -138,4 +139,20 @@ WHERE table_schema = 'public'
 	} else {
 		require.Equal(t, "NO", row.Nullable, "nullable mismatch for %s.%s", table, column)
 	}
+}
+
+func requireColumnDefault(t *testing.T, tx *sql.Tx, table, column, wantDefault string) {
+	t.Helper()
+
+	var got sql.NullString
+	err := tx.QueryRowContext(context.Background(), `
+SELECT column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = $1
+  AND column_name = $2
+`, table, column).Scan(&got)
+	require.NoError(t, err, "query column_default for %s.%s", table, column)
+	require.True(t, got.Valid, "expected default for %s.%s", table, column)
+	require.Equal(t, wantDefault, got.String, "column_default mismatch for %s.%s", table, column)
 }

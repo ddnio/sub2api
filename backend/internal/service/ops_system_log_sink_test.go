@@ -183,10 +183,16 @@ func TestOpsSystemLogSink_StartStopAndFlushSuccess(t *testing.T) {
 	if strings.TrimSpace(item.Message) == "" {
 		t.Fatalf("message should not be empty")
 	}
-	health := sink.Health()
-	if health.WrittenCount == 0 {
-		t.Fatalf("written_count should be >0")
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		health := sink.Health()
+		if health.WrittenCount > 0 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
+	t.Fatalf("written_count should be >0")
 }
 
 func TestOpsSystemLogSink_FlushFailureUpdatesHealth(t *testing.T) {
