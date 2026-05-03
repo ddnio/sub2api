@@ -70,7 +70,7 @@ Current gate:
 | --- | --- | --- |
 | `v0.1.110..v0.1.111` | Closed | Decision matrix completed, fork marker bumped to `0.1.111`, and sync tag `fork/v0.1.111` pushed. |
 | `v0.1.111..v0.1.112` | Closed | Decision matrix completed, PR #40 merged at `fbaa1fdd`, fork marker bumped to `0.1.112`, and sync tag `fork/v0.1.112` pushed. |
-| `v0.1.112..v0.1.113` | In review | Current gate. Process all 7 first-parent upstream items in this interval before the `0.1.113` marker/tag step. |
+| `v0.1.112..v0.1.113` | Marker PR | Decision matrix completed in PR #42. Bump fork marker to `0.1.113`, then push sync tag `fork/v0.1.113`. |
 | `v0.1.113..v0.1.114` | Blocked | Start only after the `0.1.113` marker PR lands and sync tag `fork/v0.1.113` is pushed. |
 | `v0.1.117` and later | Blocked | The earlier ledger that started at `v0.1.117` is not the active start point anymore. Do not advance here until the earlier gates are closed in order. |
 
@@ -211,7 +211,7 @@ git log --oneline --first-parent --reverse v0.1.112..v0.1.113
 | `1db32d69` / PR #1666 | Account cost display in usage/dashboard tables | Not safely portable as a release-gate slice. | FROZEN | Owner: reporting/product maintainer. Reason: upstream adds migration `107_add_account_cost_to_dashboard_tables.sql` and changes usage aggregation/dashboard display. Cost display needs a fork-specific accounting decision and migration review before adoption. |
 | `70d0569f` / PR #1668 | OpenAI rate-limit and usage scheduling fix | Already landed through fork OpenAI core slice. | MERGED | Fork commit `2ce67ca4` maps PR #1668 and updates account usage/rate-limit paths plus `openai_ws_ratelimit_signal_test.go`. |
 
-Gate status: decision-complete, pending release-marker update. No runtime code is ported by this gate PR. The next code step is a small marker PR bumping `backend/cmd/server/VERSION` from `0.1.112` to `0.1.113`, followed by annotated fork sync tag `fork/v0.1.113`.
+Gate status: decision-complete, marker PR in progress. No runtime code is ported by this gate or marker PR. After the marker PR lands, push annotated fork sync tag `fork/v0.1.113`.
 
 ### v0.1.117
 
@@ -329,8 +329,7 @@ Gate status: blocked by Anthropic global TTL HOLD. Do not mark `v0.1.121` comple
 
 ## Current Next Action
 
-1. Review and merge the docs-only `v0.1.112..v0.1.113` decision matrix.
-2. If review finds no unresolved item, open a small release-marker PR to bump `backend/cmd/server/VERSION` from `0.1.112` to `0.1.113`.
-3. After the marker PR lands, create and push fork sync tag `fork/v0.1.113` on the merged fork commit.
-4. Only after the tag exists in `ddnio/sub2api`, start the next gate: `v0.1.113..v0.1.114`.
-5. Do not start later-release runtime `PORT` work out of order unless it is an emergency production fix and is recorded as such.
+1. Review and merge the marker PR that bumps `backend/cmd/server/VERSION` from `0.1.112` to `0.1.113`.
+2. After the marker PR lands, create and push fork sync tag `fork/v0.1.113` on the merged fork commit.
+3. Only after the tag exists in `ddnio/sub2api`, start the next gate: `v0.1.113..v0.1.114`.
+4. Do not start later-release runtime `PORT` work out of order unless it is an emergency production fix and is recorded as such.
