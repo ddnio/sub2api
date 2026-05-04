@@ -1829,8 +1829,8 @@
                       class="w-36"
                       @click.stop
                     />
-                    <span v-if="!expandedWebSearchProviders[providerIndex] && provider.quota_limit > 0" class="text-xs text-gray-400">
-                      {{ provider.quota_used ?? 0 }} / {{ provider.quota_limit }}
+                    <span v-if="!expandedWebSearchProviders[providerIndex]" class="text-xs text-gray-400">
+                      {{ provider.quota_used ?? 0 }} / {{ provider.quota_limit > 0 ? provider.quota_limit : '∞' }}
                     </span>
                     <span v-if="provider.api_key_configured" class="text-xs text-green-500">
                       {{ t('admin.settings.webSearchEmulation.apiKeyConfigured') }}
@@ -1865,7 +1865,7 @@
                         "
                       />
                       <button
-                        v-if="provider.api_key"
+                        v-if="provider.api_key || provider.api_key_configured"
                         type="button"
                         class="btn btn-secondary btn-sm px-2"
                         :title="
@@ -1885,10 +1885,12 @@
                         </svg>
                       </button>
                       <button
-                        v-if="provider.api_key"
+                        v-if="provider.api_key || provider.api_key_configured"
                         type="button"
                         class="btn btn-secondary btn-sm px-2"
+                        :class="{ 'opacity-30 cursor-not-allowed': !provider.api_key }"
                         :title="t('admin.settings.webSearchEmulation.copyApiKey')"
+                        :disabled="!provider.api_key"
                         @click="copyWebSearchApiKey(providerIndex)"
                       >
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1924,16 +1926,17 @@
                     </div>
                   </div>
 
-                  <div v-if="provider.quota_limit > 0" class="flex items-center gap-2">
+                  <div class="flex items-center gap-2">
                     <span class="text-xs text-gray-500">{{ t('admin.settings.webSearchEmulation.quotaUsage') }}:</span>
-                    <div class="h-1.5 flex-1 rounded-full bg-gray-200 dark:bg-dark-600">
+                    <div v-if="provider.quota_limit > 0" class="h-1.5 flex-1 rounded-full bg-gray-200 dark:bg-dark-600">
                       <div
                         class="h-full rounded-full transition-all"
                         :class="quotaPercentage(provider) > 90 ? 'bg-red-500' : quotaPercentage(provider) > 70 ? 'bg-yellow-500' : 'bg-green-500'"
                         :style="{ width: Math.min(quotaPercentage(provider), 100) + '%' }"
                       />
                     </div>
-                    <span class="text-xs text-gray-500">{{ provider.quota_used ?? 0 }} / {{ provider.quota_limit }}</span>
+                    <div v-else class="flex-1" />
+                    <span class="text-xs text-gray-500">{{ provider.quota_used ?? 0 }} / {{ provider.quota_limit > 0 ? provider.quota_limit : '∞' }}</span>
                   </div>
 
                   <div class="flex items-end gap-3">
@@ -3242,9 +3245,13 @@ async function testWebSearchProvider() {
 
 async function saveWebSearchConfig(): Promise<boolean> {
   try {
+    const providers = webSearchConfig.providers.map((provider) => ({
+      ...provider,
+      quota_limit: typeof provider.quota_limit === 'number' && provider.quota_limit > 0 ? provider.quota_limit : 0
+    }))
     await adminAPI.settings.updateWebSearchEmulationConfig({
       enabled: webSearchConfig.enabled,
-      providers: webSearchConfig.providers
+      providers
     })
     return true
   } catch (error: unknown) {
