@@ -68,6 +68,18 @@ func RegisterAuthRoutes(
 			}),
 			h.Auth.ExchangePendingOAuthCompletion,
 		)
+		auth.POST("/oauth/pending/create-account",
+			rateLimiter.LimitWithOptions("oauth-pending-create-account", 10, time.Minute, middleware.RateLimitOptions{
+				FailureMode: middleware.RateLimitFailClose,
+			}),
+			h.Auth.CreatePendingOAuthAccount,
+		)
+		auth.POST("/oauth/pending/bind-login",
+			rateLimiter.LimitWithOptions("oauth-pending-bind-login", 10, time.Minute, middleware.RateLimitOptions{
+				FailureMode: middleware.RateLimitFailClose,
+			}),
+			h.Auth.BindPendingOAuthLogin,
+		)
 		auth.GET("/oauth/linuxdo/start", h.Auth.LinuxDoOAuthStart)
 		auth.GET("/oauth/linuxdo/callback", h.Auth.LinuxDoOAuthCallback)
 		auth.POST("/oauth/linuxdo/complete-registration",

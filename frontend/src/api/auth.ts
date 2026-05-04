@@ -191,11 +191,40 @@ export interface PendingOAuthExchangeResponse {
   refresh_token?: string
   expires_in?: number
   token_type?: string
+  auth_result?: string
+  provider?: string
+  intent?: string
+  step?: string
+  email?: string
   redirect?: string
   error?: string
   adoption_required?: boolean
   suggested_display_name?: string
   suggested_avatar_url?: string
+}
+
+export interface PendingOAuthAdoptionDecision {
+  adopt_display_name?: boolean
+  adopt_avatar?: boolean
+}
+
+export interface PendingOAuthCreateAccountRequest extends PendingOAuthAdoptionDecision {
+  email: string
+  verify_code?: string
+  password: string
+  invitation_code?: string
+}
+
+export interface PendingOAuthBindLoginRequest extends PendingOAuthAdoptionDecision {
+  email: string
+  password: string
+}
+
+export interface PendingOAuthTokenPairResponse {
+  access_token: string
+  refresh_token: string
+  expires_in: number
+  token_type: string
 }
 
 /**
@@ -399,6 +428,32 @@ export async function exchangePendingOAuthCompletion(): Promise<PendingOAuthExch
   return data
 }
 
+/**
+ * Complete a browser-bound pending OAuth session by creating a local email account.
+ */
+export async function createPendingOAuthAccount(
+  request: PendingOAuthCreateAccountRequest
+): Promise<PendingOAuthExchangeResponse | PendingOAuthTokenPairResponse> {
+  const { data } = await apiClient.post<PendingOAuthExchangeResponse | PendingOAuthTokenPairResponse>(
+    '/auth/oauth/pending/create-account',
+    request
+  )
+  return data
+}
+
+/**
+ * Complete a browser-bound pending OAuth session by binding an existing local account.
+ */
+export async function bindPendingOAuthLogin(
+  request: PendingOAuthBindLoginRequest
+): Promise<PendingOAuthTokenPairResponse> {
+  const { data } = await apiClient.post<PendingOAuthTokenPairResponse>(
+    '/auth/oauth/pending/bind-login',
+    request
+  )
+  return data
+}
+
 export const authAPI = {
   login,
   login2FA,
@@ -424,7 +479,9 @@ export const authAPI = {
   revokeAllSessions,
   completeLinuxDoOAuthRegistration,
   completeOIDCOAuthRegistration,
-  exchangePendingOAuthCompletion
+  exchangePendingOAuthCompletion,
+  createPendingOAuthAccount,
+  bindPendingOAuthLogin
 }
 
 export default authAPI

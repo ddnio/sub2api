@@ -1,10 +1,36 @@
 package handler
 
 import (
+	"context"
+	"database/sql"
 	"testing"
 
+	dbent "github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/ent/enttest"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/stretchr/testify/require"
+
+	"entgo.io/ent/dialect"
+	entsql "entgo.io/ent/dialect/sql"
+	_ "modernc.org/sqlite"
 )
+
+func newOAuthPendingHandlerTestClient(t *testing.T) *dbent.Client {
+	t.Helper()
+
+	db, err := sql.Open("sqlite", "file:auth_oauth_pending_flow?mode=memory&cache=shared")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+
+	_, err = db.Exec("PRAGMA foreign_keys = ON")
+	require.NoError(t, err)
+
+	drv := entsql.OpenDB(dialect.SQLite, db)
+	client := enttest.NewClient(t, enttest.WithOptions(dbent.Driver(drv)))
+	t.Cleanup(func() { _ = client.Close() })
+	return client
+}
 
 func TestApplySuggestedProfileToCompletionResponse(t *testing.T) {
 	payload := map[string]any{
@@ -55,4 +81,111 @@ func TestInvitationPendingPayloads(t *testing.T) {
 	require.Equal(t, "sub-1", oidcPayload.Identity.ProviderSubject)
 	require.Equal(t, true, oidcPayload.UpstreamIdentityClaims["email_verified"])
 	require.Equal(t, "/dashboard", oidcPayload.CompletionResponse["redirect"])
+}
+
+func TestMergePendingCompletionResponseMarksExistingAccountBindLogin(t *testing.T) {
+	session := &dbent.PendingAuthSession{
+		RedirectTo: "/profile",
+		LocalFlowState: map[string]any{
+			oauthCompletionResponseKey: map[string]any{
+				"error": "invitation_required",
+			},
+		},
+		UpstreamIdentityClaims: map[string]any{
+			"suggested_display_name": "Alice",
+		},
+	}
+
+	payload := mergePendingCompletionResponse(session, map[string]any{
+		"step":  "bind_login_required",
+		"email": "user@example.com",
+	})
+
+	require.Equal(t, "bind_login_required", payload["step"])
+	require.Equal(t, "user@example.com", payload["email"])
+	require.Equal(t, "/profile", payload["redirect"])
+	require.Equal(t, "Alice", payload["suggested_display_name"])
+	require.Equal(t, true, payload["adoption_required"])
+}
+
+func TestEnsurePendingOAuthIdentityForUserCreatesAndRejectsOwnershipConflict(t *testing.T) {
+	client := newOAuthPendingHandlerTestClient(t)
+	ctx := context.Background()
+
+	user, err := client.User.Create().
+		SetEmail("bind@example.com").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+
+	other, err := client.User.Create().
+		SetEmail("other@example.com").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+
+	session := &dbent.PendingAuthSession{
+		ProviderType:    "linuxdo",
+		ProviderKey:     "linuxdo",
+		ProviderSubject: "subject-1",
+		UpstreamIdentityClaims: map[string]any{
+			"email": "linuxdo-1@linuxdo-connect.invalid",
+		},
+	}
+
+	err = ensurePendingOAuthIdentityForUser(ctx, client, session, user.ID)
+	require.NoError(t, err)
+	identity, err := client.AuthIdentity.Query().Only(ctx)
+	require.NoError(t, err)
+	require.Equal(t, user.ID, identity.UserID)
+
+	err = ensurePendingOAuthIdentityForUser(ctx, client, session, other.ID)
+	require.Error(t, err)
+	require.Equal(t, "AUTH_IDENTITY_OWNERSHIP_CONFLICT", serviceErrorReason(t, err))
+}
+
+func TestRejectPendingOAuthIdentityOwnedByAnotherUser(t *testing.T) {
+	client := newOAuthPendingHandlerTestClient(t)
+	ctx := context.Background()
+
+	user, err := client.User.Create().
+		SetEmail("owner@example.com").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+
+	session := &dbent.PendingAuthSession{
+		ProviderType:    "oidc",
+		ProviderKey:     "https://issuer.example",
+		ProviderSubject: "subject-owned",
+	}
+	require.NoError(t, rejectPendingOAuthIdentityOwnedByAnotherUser(ctx, client, session))
+
+	_, err = client.AuthIdentity.Create().
+		SetUserID(user.ID).
+		SetProviderType(session.ProviderType).
+		SetProviderKey(session.ProviderKey).
+		SetProviderSubject(session.ProviderSubject).
+		SetMetadata(map[string]any{}).
+		Save(ctx)
+	require.NoError(t, err)
+
+	err = rejectPendingOAuthIdentityOwnedByAnotherUser(ctx, client, session)
+	require.Error(t, err)
+	require.Equal(t, "AUTH_IDENTITY_OWNERSHIP_CONFLICT", serviceErrorReason(t, err))
+}
+
+func serviceErrorReason(t *testing.T, err error) string {
+	t.Helper()
+	appErr := infraerrors.FromError(err)
+	if appErr == nil {
+		return ""
+	}
+	return appErr.Reason
 }

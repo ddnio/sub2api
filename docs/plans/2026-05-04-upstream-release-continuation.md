@@ -172,11 +172,12 @@ git -C .claude/worktrees/release-v0.1.115-closeout log --oneline origin/main..HE
 - Pending OAuth exchange endpoint exists.
 - LinuxDo/OIDC invitation-required paths bridge into DB-backed pending sessions while preserving legacy fragment compatibility.
 - Frontend pending OAuth exchange API exists.
+- Backend generic pending OAuth create-account/bind-login endpoints now exist. They align the upstream API shape while preserving this fork's current invitation-code redemption and referral data semantics; do not replace existing `redeem_codes` invitation data or `user_referrals` history with upstream auth-source-default grants without a dedicated data migration plan.
 
 **Remaining areas to close:**
 - Frontend callback views use pending exchange while preserving legacy `pending_oauth_token` fallback.
 - Profile identity binding backend/API/UI.
-- Email verification and pending OAuth onboarding completion.
+- Frontend email verification and pending OAuth onboarding completion UI.
 - 2FA pending bind paths where upstream requires them.
 - WeChat OAuth/bind capability handling.
 - Legacy migration/report closeout.
