@@ -191,7 +191,7 @@ const appStore = useAppStore()
 
 const notifyEnabled = ref(props.enabled)
 const customThreshold = ref<number | null>(props.threshold)
-const emailEntries = ref<NotifyEmailEntry[]>([...props.extraEmails])
+const emailEntries = ref<NotifyEmailEntry[]>([...(props.extraEmails || [])])
 const pendingEmails = ref<PendingEmail[]>([])
 const newEmail = ref('')
 const savingThreshold = ref(false)
@@ -210,7 +210,7 @@ const canAddMore = computed(() => {
 
 watch(() => props.enabled, (val) => { notifyEnabled.value = val })
 watch(() => props.threshold, (val) => { customThreshold.value = val })
-watch(() => props.extraEmails, (val) => { emailEntries.value = [...val] })
+watch(() => props.extraEmails, (val) => { emailEntries.value = [...(val || [])] })
 
 // When list is empty on mount, pre-fill the add input with user's email
 onMounted(() => {

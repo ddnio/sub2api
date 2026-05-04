@@ -18,7 +18,7 @@
         v-if="profileUser"
         :enabled="profileUser.balance_notify_enabled"
         :threshold="profileUser.balance_notify_threshold"
-        :extra-emails="profileUser.balance_notify_extra_emails"
+        :extra-emails="profileUser.balance_notify_extra_emails || []"
         :system-default-threshold="publicSettings?.balance_low_notify_threshold || 0"
         :user-email="profileUser.email"
       />
