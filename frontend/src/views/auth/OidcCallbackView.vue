@@ -15,36 +15,99 @@
       </div>
 
       <transition name="fade">
-        <div v-if="needsInvitation" class="space-y-4">
-          <p class="text-sm text-gray-700 dark:text-gray-300">
-            {{ t('auth.oidc.invitationRequired', { providerName }) }}
-          </p>
-          <div>
-            <input
-              v-model="invitationCode"
-              type="text"
-              class="input w-full"
-              :placeholder="t('auth.invitationCodePlaceholder')"
-              :disabled="isSubmitting"
-              @keyup.enter="handleSubmitInvitation"
-            />
-          </div>
-          <transition name="fade">
-            <p v-if="invitationError" class="text-sm text-red-600 dark:text-red-400">
-              {{ invitationError }}
+        <div v-if="needsInvitation || needsCreateAccount || needsBindLogin" class="space-y-4">
+          <template v-if="needsInvitation">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              {{ t('auth.oidc.invitationRequired', { providerName }) }}
             </p>
-          </transition>
-          <button
-            class="btn btn-primary w-full"
-            :disabled="isSubmitting || !invitationCode.trim()"
-            @click="handleSubmitInvitation"
-          >
-            {{
-              isSubmitting
-                ? t('auth.oidc.completing')
-                : t('auth.oidc.completeRegistration')
-            }}
-          </button>
+            <div>
+              <input
+                v-model="invitationCode"
+                type="text"
+                class="input w-full"
+                :placeholder="t('auth.invitationCodePlaceholder')"
+                :disabled="isSubmitting"
+                @keyup.enter="handleSubmitInvitation"
+              />
+            </div>
+            <transition name="fade">
+              <p v-if="invitationError" class="text-sm text-red-600 dark:text-red-400">
+                {{ invitationError }}
+              </p>
+            </transition>
+            <button
+              class="btn btn-primary w-full"
+              :disabled="isSubmitting || !invitationCode.trim()"
+              @click="handleSubmitInvitation"
+            >
+              {{
+                isSubmitting
+                  ? t('auth.oidc.completing')
+                  : t('auth.oidc.completeRegistration')
+              }}
+            </button>
+          </template>
+
+          <template v-else-if="needsCreateAccount">
+            <p v-if="pendingAccountRequiresInvitation" class="text-sm text-gray-700 dark:text-gray-300">
+              {{ t('auth.oidc.invitationRequired', { providerName }) }}
+            </p>
+            <PendingOAuthCreateAccountForm
+              test-id-prefix="oidc"
+              :initial-email="pendingAccountEmail"
+              :is-submitting="isSubmitting"
+              :error-message="accountActionError"
+              :show-invitation-code="pendingAccountRequiresInvitation"
+              @submit="handleCreateAccount"
+              @switch-to-bind="switchToBindLoginMode"
+            />
+          </template>
+
+          <template v-else-if="needsBindLogin">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              {{ t('auth.oidc.bindLoginRequired', { providerName }) }}
+            </p>
+            <div class="space-y-3">
+              <input
+                v-model="bindLoginEmail"
+                data-testid="oidc-bind-login-email"
+                type="email"
+                class="input w-full"
+                placeholder="you@example.com"
+                :disabled="isSubmitting"
+                @keyup.enter="handleBindLogin"
+              />
+              <input
+                v-model="bindLoginPassword"
+                data-testid="oidc-bind-login-password"
+                type="password"
+                class="input w-full"
+                placeholder="Password"
+                :disabled="isSubmitting"
+                @keyup.enter="handleBindLogin"
+              />
+              <button
+                data-testid="oidc-bind-login-submit"
+                class="btn btn-primary w-full"
+                :disabled="isSubmitting || !bindLoginEmail.trim() || !bindLoginPassword"
+                @click="handleBindLogin"
+              >
+                {{ isSubmitting ? t('common.processing') : t('auth.oidc.bindLoginSubmit') }}
+              </button>
+              <button
+                class="btn btn-secondary w-full"
+                :disabled="isSubmitting"
+                @click="switchToCreateAccountMode"
+              >
+                {{ t('auth.oidc.useDifferentEmail') }}
+              </button>
+            </div>
+            <transition name="fade">
+              <p v-if="accountActionError" class="text-sm text-red-600 dark:text-red-400">
+                {{ accountActionError }}
+              </p>
+            </transition>
+          </template>
         </div>
       </transition>
 
@@ -73,15 +136,22 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { AuthLayout } from '@/components/layout'
+import PendingOAuthCreateAccountForm, {
+  type PendingOAuthCreateAccountPayload
+} from '@/components/auth/PendingOAuthCreateAccountForm.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { useAuthStore, useAppStore } from '@/stores'
 import {
+  bindPendingOAuthLogin,
   completeOIDCOAuthRegistration,
-  getPublicSettings
+  createPendingOAuthAccount,
+  getPublicSettings,
+  type PendingOAuthExchangeResponse,
+  type PendingOAuthTokenPairResponse,
 } from '@/api/auth'
 import {
   hasAuthTokenPayload,
@@ -109,6 +179,80 @@ const isSubmitting = ref(false)
 const invitationError = ref('')
 const redirectTo = ref('/dashboard')
 const providerName = ref('OIDC')
+const pendingAccountAction = ref<'none' | 'create_account' | 'bind_login'>('none')
+const pendingAccountEmail = ref('')
+const pendingAccountRequiresInvitation = ref(false)
+const bindLoginEmail = ref('')
+const bindLoginPassword = ref('')
+const accountActionError = ref('')
+
+const needsCreateAccount = computed(() => pendingAccountAction.value === 'create_account')
+const needsBindLogin = computed(() => pendingAccountAction.value === 'bind_login')
+
+type PendingAccountResponse = PendingOAuthExchangeResponse | PendingOAuthTokenPairResponse
+
+function getPendingAccountEmail(payload: PendingOAuthExchangeResponse): string {
+  return (payload.email || '').trim()
+}
+
+function resolvePendingAccountAction(payload: PendingOAuthExchangeResponse): 'none' | 'create_account' | 'bind_login' {
+  const raw = (payload.step || payload.error || '').trim().toLowerCase()
+  if (raw === 'invitation_required' || raw === 'email_required' || raw === 'create_account_required' || raw === 'create_account') {
+    return 'create_account'
+  }
+  if (raw === 'bind_login_required' || raw === 'bind_login') {
+    return 'bind_login'
+  }
+  return 'none'
+}
+
+function applyPendingAccountAction(payload: PendingOAuthExchangeResponse) {
+  const action = resolvePendingAccountAction(payload)
+  pendingAccountAction.value = action
+  pendingAccountRequiresInvitation.value = payload.error === 'invitation_required'
+  accountActionError.value = ''
+
+  const email = getPendingAccountEmail(payload)
+  if (action === 'create_account') {
+    pendingAccountEmail.value = email
+    bindLoginEmail.value = email
+    return
+  }
+  if (action === 'bind_login') {
+    bindLoginEmail.value = email
+    bindLoginPassword.value = ''
+  }
+}
+
+function getRequestErrorMessage(error: unknown, fallback: string): string {
+  const err = error as { message?: string; response?: { data?: { detail?: string; message?: string } } }
+  return err.response?.data?.detail || err.response?.data?.message || err.message || fallback
+}
+
+function persistTokenContext(tokenData: PendingOAuthTokenPairResponse) {
+  if (tokenData.refresh_token) {
+    localStorage.setItem('refresh_token', tokenData.refresh_token)
+  }
+  if (tokenData.expires_in) {
+    localStorage.setItem('token_expires_at', String(Date.now() + tokenData.expires_in * 1000))
+  }
+}
+
+function isTokenPair(payload: PendingAccountResponse): payload is PendingOAuthTokenPairResponse {
+  return typeof payload.access_token === 'string' && payload.access_token.trim().length > 0
+}
+
+async function finalizePendingAccountResponse(payload: PendingAccountResponse) {
+  if (isTokenPair(payload)) {
+    persistTokenContext(payload)
+    await authStore.setToken(payload.access_token)
+    appStore.showSuccess(t('auth.loginSuccess'))
+    await router.replace(redirectTo.value)
+    return
+  }
+
+  applyPendingAccountAction(payload)
+}
 
 async function loadProviderName() {
   try {
@@ -150,6 +294,54 @@ async function handleSubmitInvitation() {
   }
 }
 
+async function handleCreateAccount(payload: PendingOAuthCreateAccountPayload) {
+  accountActionError.value = ''
+  isSubmitting.value = true
+  try {
+    const completion = await createPendingOAuthAccount({
+      email: payload.email,
+      password: payload.password,
+      verify_code: payload.verifyCode || undefined,
+      invitation_code: payload.invitationCode || undefined,
+    })
+    await finalizePendingAccountResponse(completion)
+  } catch (e: unknown) {
+    accountActionError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+async function handleBindLogin() {
+  accountActionError.value = ''
+  const email = bindLoginEmail.value.trim()
+  const password = bindLoginPassword.value
+  if (!email || !password) return
+
+  isSubmitting.value = true
+  try {
+    const completion = await bindPendingOAuthLogin({ email, password })
+    await finalizePendingAccountResponse(completion)
+  } catch (e: unknown) {
+    accountActionError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+function switchToBindLoginMode(nextEmail?: string) {
+  pendingAccountAction.value = 'bind_login'
+  bindLoginEmail.value = nextEmail?.trim() || pendingAccountEmail.value.trim()
+  bindLoginPassword.value = ''
+  accountActionError.value = ''
+}
+
+function switchToCreateAccountMode() {
+  pendingAccountAction.value = 'create_account'
+  pendingAccountEmail.value = pendingAccountEmail.value.trim() || bindLoginEmail.value.trim()
+  accountActionError.value = ''
+}
+
 onMounted(async () => {
   void loadProviderName()
 
@@ -170,8 +362,7 @@ onMounted(async () => {
       pendingOAuthToken.value = legacyPendingOAuthTokenFromFragment(params)
       redirectTo.value = redirect
       if (!pendingOAuthToken.value) {
-        errorMessage.value = t('auth.oidc.invalidPendingToken')
-        appStore.showError(errorMessage.value)
+        applyPendingAccountAction(pendingPayload)
         isProcessing.value = false
         return
       }
@@ -193,12 +384,12 @@ onMounted(async () => {
   }
 
   try {
-    if (refreshToken) {
-      localStorage.setItem('refresh_token', refreshToken)
-    }
-    if (expiresIn && !isNaN(expiresIn)) {
-      localStorage.setItem('token_expires_at', String(Date.now() + expiresIn * 1000))
-    }
+    persistTokenContext({
+      access_token: token,
+      refresh_token: refreshToken,
+      expires_in: expiresIn || 0,
+      token_type: pendingPayload.token_type || 'Bearer',
+    })
 
     await authStore.setToken(token)
     appStore.showSuccess(t('auth.loginSuccess'))

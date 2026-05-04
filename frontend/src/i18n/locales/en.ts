@@ -523,6 +523,7 @@ export default {
     verificationCode: 'Verification Code',
     verificationCodeHint: 'Enter the 6-digit code sent to your email',
     sendingCode: 'Sending...',
+    sendCode: 'Send verification code',
     clickToResend: 'Click to resend code',
     resendCode: 'Resend verification code',
     sendCodeDesc: "We'll send a verification code to",
@@ -569,7 +570,10 @@ export default {
       invalidPendingToken: 'The registration token has expired. Please sign in with Linux.do again.',
       completeRegistration: 'Complete Registration',
       completing: 'Completing registration…',
-      completeRegistrationFailed: 'Registration failed. Please check your invitation code and try again.'
+      completeRegistrationFailed: 'Registration failed. Please check your invitation code and try again.',
+      bindLoginRequired: 'Log in to an existing account to bind this Linux.do sign-in.',
+      bindLoginSubmit: 'Log in and bind',
+      useDifferentEmail: 'Use a different email'
     },
     oidc: {
       signIn: 'Continue with {providerName}',
@@ -583,7 +587,10 @@ export default {
       invalidPendingToken: 'The registration token has expired. Please sign in again.',
       completeRegistration: 'Complete Registration',
       completing: 'Completing registration…',
-      completeRegistrationFailed: 'Registration failed. Please check your invitation code and try again.'
+      completeRegistrationFailed: 'Registration failed. Please check your invitation code and try again.',
+      bindLoginRequired: 'Log in to an existing account to bind this {providerName} sign-in.',
+      bindLoginSubmit: 'Log in and bind',
+      useDifferentEmail: 'Use a different email'
     },
     oauth: {
       code: 'Code',

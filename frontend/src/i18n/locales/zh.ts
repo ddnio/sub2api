@@ -522,6 +522,7 @@ export default {
     verificationCode: '验证码',
     verificationCodeHint: '请输入发送到您邮箱的6位验证码',
     sendingCode: '发送中...',
+    sendCode: '发送验证码',
     clickToResend: '点击重新发送验证码',
     resendCode: '重新发送验证码',
     sendCodeDesc: '我们将发送验证码到',
@@ -568,7 +569,10 @@ export default {
       invalidPendingToken: '注册凭证已失效，请重新使用 Linux.do 登录。',
       completeRegistration: '完成注册',
       completing: '正在完成注册...',
-      completeRegistrationFailed: '注册失败，请检查邀请码后重试。'
+      completeRegistrationFailed: '注册失败，请检查邀请码后重试。',
+      bindLoginRequired: '登录已有账户以绑定此 Linux.do 登录方式。',
+      bindLoginSubmit: '登录并绑定',
+      useDifferentEmail: '使用其他邮箱'
     },
     oidc: {
       signIn: '使用 {providerName} 登录',
@@ -581,7 +585,10 @@ export default {
       invalidPendingToken: '注册凭证已失效，请重新登录。',
       completeRegistration: '完成注册',
       completing: '正在完成注册...',
-      completeRegistrationFailed: '注册失败，请检查邀请码后重试。'
+      completeRegistrationFailed: '注册失败，请检查邀请码后重试。',
+      bindLoginRequired: '登录已有账户以绑定此 {providerName} 登录方式。',
+      bindLoginSubmit: '登录并绑定',
+      useDifferentEmail: '使用其他邮箱'
     },
     oauth: {
       code: '授权码',
