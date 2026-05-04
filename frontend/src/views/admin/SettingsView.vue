@@ -1829,8 +1829,8 @@
                       class="w-36"
                       @click.stop
                     />
-                    <span v-if="!expandedWebSearchProviders[providerIndex]" class="text-xs text-gray-400">
-                      {{ provider.quota_used ?? 0 }} / {{ provider.quota_limit > 0 ? provider.quota_limit : '∞' }}
+                    <span class="text-xs text-gray-400">
+                      {{ provider.quota_used ?? 0 }} / {{ provider.quota_limit != null && provider.quota_limit > 0 ? provider.quota_limit : '∞' }}
                     </span>
                     <span v-if="provider.api_key_configured" class="text-xs text-green-500">
                       {{ t('admin.settings.webSearchEmulation.apiKeyConfigured') }}
@@ -1905,7 +1905,13 @@
                       <label class="text-xs text-gray-500">
                         {{ t('admin.settings.webSearchEmulation.quotaLimit') }}
                       </label>
-                      <input v-model.number="provider.quota_limit" type="number" min="0" class="input text-sm" />
+                      <input
+                        v-model="provider.quota_limit"
+                        type="number"
+                        min="1"
+                        class="input text-sm"
+                        placeholder="∞"
+                      />
                       <p class="mt-0.5 text-xs text-gray-400">
                         {{ t('admin.settings.webSearchEmulation.quotaLimitHint') }}
                       </p>
@@ -1928,7 +1934,7 @@
 
                   <div class="flex items-center gap-2">
                     <span class="text-xs text-gray-500">{{ t('admin.settings.webSearchEmulation.quotaUsage') }}:</span>
-                    <div v-if="provider.quota_limit > 0" class="h-1.5 flex-1 rounded-full bg-gray-200 dark:bg-dark-600">
+                    <div v-if="provider.quota_limit != null && provider.quota_limit > 0" class="h-1.5 flex-1 rounded-full bg-gray-200 dark:bg-dark-600">
                       <div
                         class="h-full rounded-full transition-all"
                         :class="quotaPercentage(provider) > 90 ? 'bg-red-500' : quotaPercentage(provider) > 70 ? 'bg-yellow-500' : 'bg-green-500'"
@@ -1936,7 +1942,15 @@
                       />
                     </div>
                     <div v-else class="flex-1" />
-                    <span class="text-xs text-gray-500">{{ provider.quota_used ?? 0 }} / {{ provider.quota_limit > 0 ? provider.quota_limit : '∞' }}</span>
+                    <span class="text-xs text-gray-500">{{ provider.quota_used ?? 0 }} / {{ provider.quota_limit != null && provider.quota_limit > 0 ? provider.quota_limit : '∞' }}</span>
+                    <button
+                      v-if="(provider.quota_used ?? 0) > 0"
+                      type="button"
+                      class="text-xs text-primary-600 hover:text-primary-700"
+                      @click="resetWebSearchUsage(providerIndex)"
+                    >
+                      {{ t('admin.settings.webSearchEmulation.resetUsage') }}
+                    </button>
                   </div>
 
                   <div class="flex items-end gap-3">
@@ -3202,8 +3216,22 @@ function parseSubscribedAt(value: string): number | null {
 }
 
 function quotaPercentage(provider: WebSearchProviderConfig): number {
-  if (!provider.quota_limit || provider.quota_limit <= 0) return 0
-  return ((provider.quota_used ?? 0) / provider.quota_limit) * 100
+  const quotaLimit = Number(provider.quota_limit)
+  if (!quotaLimit || quotaLimit <= 0) return 0
+  return ((provider.quota_used ?? 0) / quotaLimit) * 100
+}
+
+async function resetWebSearchUsage(index: number) {
+  const provider = webSearchConfig.providers[index]
+  if (!provider) return
+  if (!confirm(t('admin.settings.webSearchEmulation.resetUsageConfirm'))) return
+  try {
+    await adminAPI.settings.resetWebSearchUsage({ provider_type: provider.type })
+    provider.quota_used = 0
+    appStore.showSuccess(t('admin.settings.webSearchEmulation.resetUsageSuccess'))
+  } catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('common.error')))
+  }
 }
 
 async function copyWebSearchApiKey(index: number) {
@@ -3245,9 +3273,17 @@ async function testWebSearchProvider() {
 
 async function saveWebSearchConfig(): Promise<boolean> {
   try {
+    for (const provider of webSearchConfig.providers) {
+      const rawQuotaLimit = provider.quota_limit
+      const quotaLimit = Number(rawQuotaLimit)
+      if (rawQuotaLimit != null && quotaLimit !== 0 && quotaLimit < 1) {
+        appStore.showError(t('admin.settings.webSearchEmulation.quotaLimitMustBePositive'))
+        return false
+      }
+    }
     const providers = webSearchConfig.providers.map((provider) => ({
       ...provider,
-      quota_limit: typeof provider.quota_limit === 'number' && provider.quota_limit > 0 ? provider.quota_limit : 0
+      quota_limit: Number(provider.quota_limit) > 0 ? Number(provider.quota_limit) : null
     }))
     await adminAPI.settings.updateWebSearchEmulationConfig({
       enabled: webSearchConfig.enabled,

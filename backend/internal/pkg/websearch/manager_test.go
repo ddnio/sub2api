@@ -103,6 +103,11 @@ func TestManager_GetUsage_NilRedis(t *testing.T) {
 	require.Equal(t, int64(0), used)
 }
 
+func TestManager_ResetUsage_NilRedis(t *testing.T) {
+	m := NewManager(nil, nil)
+	require.NoError(t, m.ResetUsage(context.Background(), "brave"))
+}
+
 func TestManager_GetAllUsage_NilRedis(t *testing.T) {
 	m := NewManager([]ProviderConfig{
 		{Type: "brave"},

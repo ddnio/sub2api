@@ -1845,6 +1845,28 @@ func (h *SettingHandler) UpdateWebSearchEmulationConfig(c *gin.Context) {
 	response.Success(c, service.SanitizeWebSearchConfig(c.Request.Context(), updated))
 }
 
+// ResetWebSearchUsage 重置指定 provider 的配额用量。
+// POST /api/v1/admin/settings/web-search-emulation/reset-usage
+func (h *SettingHandler) ResetWebSearchUsage(c *gin.Context) {
+	var req struct {
+		ProviderType string `json:"provider_type"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	req.ProviderType = strings.TrimSpace(req.ProviderType)
+	if req.ProviderType == "" {
+		response.BadRequest(c, "provider_type is required")
+		return
+	}
+	if err := service.ResetWebSearchUsage(c.Request.Context(), req.ProviderType); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, nil)
+}
+
 // TestWebSearchEmulation 测试 Web Search 搜索。
 // POST /api/v1/admin/settings/web-search-emulation/test
 func (h *SettingHandler) TestWebSearchEmulation(c *gin.Context) {

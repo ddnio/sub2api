@@ -25,7 +25,7 @@ type WebSearchProviderConfig struct {
 	Type             string `json:"type"`                    // websearch.ProviderTypeBrave | Tavily
 	APIKey           string `json:"api_key,omitempty"`       // secret — omitted in API responses
 	APIKeyConfigured bool   `json:"api_key_configured"`      // read-only mask
-	QuotaLimit       int64  `json:"quota_limit"`             // 0 = unlimited
+	QuotaLimit       *int64 `json:"quota_limit"`             // nil = unlimited, >0 = limited, 0 = legacy unlimited
 	SubscribedAt     *int64 `json:"subscribed_at,omitempty"` // subscription start; quota resets monthly
 	QuotaUsed        int64  `json:"quota_used,omitempty"`    // read-only: current usage from Redis
 	ProxyID          *int64 `json:"proxy_id"`                // optional proxy association
@@ -53,8 +53,8 @@ func validateWebSearchConfig(cfg *WebSearchEmulationConfig) error {
 		if !validProviderTypes[p.Type] {
 			return fmt.Errorf("provider[%d]: invalid type %q", i, p.Type)
 		}
-		if p.QuotaLimit < 0 {
-			return fmt.Errorf("provider[%d]: quota_limit must be >= 0", i)
+		if p.QuotaLimit != nil && *p.QuotaLimit < 0 {
+			return fmt.Errorf("provider[%d]: quota_limit must be >= 0 or null", i)
 		}
 		if seen[p.Type] {
 			return fmt.Errorf("provider[%d]: duplicate type %q", i, p.Type)
@@ -221,7 +221,7 @@ func (s *SettingService) RebuildWebSearchManager(ctx context.Context) {
 		providerConfigs = append(providerConfigs, websearch.ProviderConfig{
 			Type:         p.Type,
 			APIKey:       p.APIKey,
-			QuotaLimit:   p.QuotaLimit,
+			QuotaLimit:   webSearchQuotaLimitValue(p.QuotaLimit),
 			SubscribedAt: p.SubscribedAt,
 			ProxyURL:     s.resolveWebSearchProviderProxyURL(ctx, p.ProxyID),
 			ProxyID:      webSearchProxyIDValue(p.ProxyID),
@@ -254,6 +254,13 @@ func webSearchProxyIDValue(proxyID *int64) int64 {
 	return *proxyID
 }
 
+func webSearchQuotaLimitValue(quotaLimit *int64) int64 {
+	if quotaLimit == nil {
+		return 0
+	}
+	return *quotaLimit
+}
+
 // WebSearchTestResult holds the result of a search test.
 type WebSearchTestResult struct {
 	Provider string                   `json:"provider"`
@@ -284,6 +291,15 @@ func TestWebSearch(ctx context.Context, query string) (*WebSearchTestResult, err
 		Results:  resp.Results,
 		Query:    resp.Query,
 	}, nil
+}
+
+// ResetWebSearchUsage deletes the Redis quota key for the given provider type.
+func ResetWebSearchUsage(ctx context.Context, providerType string) error {
+	mgr := getWebSearchManager()
+	if mgr == nil {
+		return fmt.Errorf("web search manager not initialized")
+	}
+	return mgr.ResetUsage(ctx, providerType)
 }
 
 // SanitizeWebSearchConfig returns a copy with api_key fields masked and quota usage populated.

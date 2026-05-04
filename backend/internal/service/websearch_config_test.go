@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
@@ -15,11 +16,13 @@ func TestValidateWebSearchConfig_Nil(t *testing.T) {
 }
 
 func TestValidateWebSearchConfig_Valid(t *testing.T) {
+	quotaLimit := int64(1000)
+	quotaLimit2 := int64(500)
 	cfg := &WebSearchEmulationConfig{
 		Enabled: true,
 		Providers: []WebSearchProviderConfig{
-			{Type: "brave", QuotaLimit: 1000},
-			{Type: "tavily", QuotaLimit: 500},
+			{Type: "brave", QuotaLimit: &quotaLimit},
+			{Type: "tavily", QuotaLimit: &quotaLimit2},
 		},
 	}
 	require.NoError(t, validateWebSearchConfig(cfg))
@@ -42,10 +45,11 @@ func TestValidateWebSearchConfig_InvalidType(t *testing.T) {
 }
 
 func TestValidateWebSearchConfig_NegativeQuotaLimit(t *testing.T) {
+	quotaLimit := int64(-1)
 	cfg := &WebSearchEmulationConfig{
-		Providers: []WebSearchProviderConfig{{Type: "brave", QuotaLimit: -1}},
+		Providers: []WebSearchProviderConfig{{Type: "brave", QuotaLimit: &quotaLimit}},
 	}
-	require.ErrorContains(t, validateWebSearchConfig(cfg), "quota_limit must be >= 0")
+	require.ErrorContains(t, validateWebSearchConfig(cfg), "quota_limit must be >= 0 or null")
 }
 
 func TestValidateWebSearchConfig_DuplicateType(t *testing.T) {
@@ -58,9 +62,17 @@ func TestValidateWebSearchConfig_DuplicateType(t *testing.T) {
 	require.ErrorContains(t, validateWebSearchConfig(cfg), "duplicate type")
 }
 
-func TestValidateWebSearchConfig_ZeroQuotaLimit(t *testing.T) {
+func TestValidateWebSearchConfig_ZeroQuotaLimitAllowedForLegacyUnlimited(t *testing.T) {
+	quotaLimit := int64(0)
 	cfg := &WebSearchEmulationConfig{
-		Providers: []WebSearchProviderConfig{{Type: "brave", QuotaLimit: 0}},
+		Providers: []WebSearchProviderConfig{{Type: "brave", QuotaLimit: &quotaLimit}},
+	}
+	require.NoError(t, validateWebSearchConfig(cfg))
+}
+
+func TestValidateWebSearchConfig_NilQuotaLimitUnlimited(t *testing.T) {
+	cfg := &WebSearchEmulationConfig{
+		Providers: []WebSearchProviderConfig{{Type: "brave", QuotaLimit: nil}},
 	}
 	require.NoError(t, validateWebSearchConfig(cfg))
 }
@@ -92,7 +104,22 @@ func TestParseWebSearchConfigJSON_BackwardCompatibility(t *testing.T) {
 	cfg := parseWebSearchConfigJSON(raw)
 	require.True(t, cfg.Enabled)
 	require.Len(t, cfg.Providers, 1)
-	require.Equal(t, int64(1000), cfg.Providers[0].QuotaLimit)
+	require.NotNil(t, cfg.Providers[0].QuotaLimit)
+	require.Equal(t, int64(1000), *cfg.Providers[0].QuotaLimit)
+}
+
+func TestParseWebSearchConfigJSON_NullQuotaLimit(t *testing.T) {
+	raw := `{"enabled":true,"providers":[{"type":"brave","quota_limit":null}]}`
+	cfg := parseWebSearchConfigJSON(raw)
+	require.True(t, cfg.Enabled)
+	require.Len(t, cfg.Providers, 1)
+	require.Nil(t, cfg.Providers[0].QuotaLimit)
+}
+
+func TestWebSearchProviderConfig_RejectsStringQuotaLimit(t *testing.T) {
+	var cfg WebSearchEmulationConfig
+	err := json.Unmarshal([]byte(`{"providers":[{"type":"brave","quota_limit":""}]}`), &cfg)
+	require.Error(t, err)
 }
 
 // --- SanitizeWebSearchConfig ---
@@ -123,15 +150,17 @@ func TestSanitizeWebSearchConfig_Nil(t *testing.T) {
 }
 
 func TestSanitizeWebSearchConfig_PreservesOtherFields(t *testing.T) {
+	quotaLimit := int64(1000)
 	cfg := &WebSearchEmulationConfig{
 		Enabled: true,
 		Providers: []WebSearchProviderConfig{
-			{Type: "brave", APIKey: "secret", QuotaLimit: 1000},
+			{Type: "brave", APIKey: "secret", QuotaLimit: &quotaLimit},
 		},
 	}
 	out := SanitizeWebSearchConfig(context.Background(), cfg)
 	require.True(t, out.Enabled)
-	require.Equal(t, int64(1000), out.Providers[0].QuotaLimit)
+	require.NotNil(t, out.Providers[0].QuotaLimit)
+	require.Equal(t, int64(1000), *out.Providers[0].QuotaLimit)
 }
 
 func TestSanitizeWebSearchConfig_DoesNotMutateOriginal(t *testing.T) {
@@ -183,6 +212,17 @@ func TestWebSearchProxyIDValue(t *testing.T) {
 	proxyID := int64(10)
 	require.Equal(t, int64(10), webSearchProxyIDValue(&proxyID))
 	require.Equal(t, int64(0), webSearchProxyIDValue(nil))
+}
+
+func TestWebSearchQuotaLimitValue(t *testing.T) {
+	quotaLimit := int64(10)
+	require.Equal(t, int64(10), webSearchQuotaLimitValue(&quotaLimit))
+	require.Equal(t, int64(0), webSearchQuotaLimitValue(nil))
+}
+
+func TestResetWebSearchUsage_NoManager(t *testing.T) {
+	SetWebSearchManager(nil)
+	require.ErrorContains(t, ResetWebSearchUsage(context.Background(), "brave"), "manager not initialized")
 }
 
 type webSearchProxyRepoStub struct {
