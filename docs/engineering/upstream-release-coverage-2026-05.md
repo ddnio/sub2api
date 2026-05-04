@@ -481,7 +481,7 @@ This snapshot was refreshed while closing the `1b53ffca` websearch base import o
 | `b7fb2e43` | Mixed audit fixes | PARTIAL | Account-stats subset covered; websearch/notify subsets need follow-up review. |
 | `b1875f0b` | Notify SMTP hardening | MISSING | Notify email path absent. |
 | `48e8efe3` | Notify frontend visibility | MISSING | Notify UI absent. |
-| `245f47ce` | Websearch label/width UI | PARTIAL | Settings UI adapted; exact select-label compacting still needs direct review. |
+| `245f47ce` | Websearch label/width UI | ADAPTED | Create/edit account tri-state selects use compact `w-24` width, option label is shortened to `Default` / `默认`, and the channel-fallback explanation moved into the websearch description text. Verification: frontend typecheck and diff-check. |
 | `42f8ef33` | Notify admin settings field | MISSING | Notify settings fields absent. |
 | `98c9d517` | Account-stats priority | COVERED | Account-stats resolver priority adapted and tested. |
 | `2066c478` | Quota notify UI | MISSING | Notify UI absent. |
