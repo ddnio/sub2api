@@ -186,6 +186,18 @@ export interface RefreshTokenResponse {
   token_type: string
 }
 
+export interface PendingOAuthExchangeResponse {
+  access_token?: string
+  refresh_token?: string
+  expires_in?: number
+  token_type?: string
+  redirect?: string
+  error?: string
+  adoption_required?: boolean
+  suggested_display_name?: string
+  suggested_avatar_url?: string
+}
+
 /**
  * Refresh the access token using the refresh token
  * @returns New token pair
@@ -379,6 +391,14 @@ export async function completeOIDCOAuthRegistration(
   return data
 }
 
+/**
+ * Exchange a browser-bound pending OAuth session for frontend-safe callback payload.
+ */
+export async function exchangePendingOAuthCompletion(): Promise<PendingOAuthExchangeResponse> {
+  const { data } = await apiClient.post<PendingOAuthExchangeResponse>('/auth/oauth/pending/exchange')
+  return data
+}
+
 export const authAPI = {
   login,
   login2FA,
@@ -403,7 +423,8 @@ export const authAPI = {
   refreshToken,
   revokeAllSessions,
   completeLinuxDoOAuthRegistration,
-  completeOIDCOAuthRegistration
+  completeOIDCOAuthRegistration,
+  exchangePendingOAuthCompletion
 }
 
 export default authAPI
