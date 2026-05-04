@@ -675,6 +675,16 @@ PR #1785 subitem matrix:
 | G. Legacy identity migrations and reports | `113_normalize_legacy_wechat_provider_key.sql`, `114_auth_identity_migration_report_resolution.sql`, `115_auth_identity_legacy_external_backfill.sql`, `116_auth_identity_legacy_external_safety_reports.sql`, `7a9488ff`, `0a461d82`, `c624cce8`, `d08757ce`, `ebe75244`, `2626e8f2`, `7fbd5177` | These migrations depend on Subitem D tables and may inspect legacy `user_external_identities`, synthetic OAuth emails, and WeChat openid/unionid shape. | OPEN. Requires read-only live DB inventory before implementation. |
 | H. User activity/profile support | `13d9780d`, `bf3ef2d1`, `ed01c599`, `7309c02f`, `17c6348b`, `6d51834a`, avatar/profile commits | Adds `last_login_at`/`last_active_at`, avatar/profile UI split, and admin activity display. Partially independent from identity binding but shares `User` schema and profile UI. | OPEN. Can be split only after schema field decision; do not mix with payment. |
 
+PR #1785 auth identity DB preflight:
+
+- ToC test database `sub2api_test`, ToC production database `sub2api`, and ToB production database `sub2api_tob` were checked read-only through `docker exec sub2api-postgres psql`.
+- All three environments have fork migrations `108_add_account_stats_pricing.sql`, `111_payment_routing_and_scheduler_flags.sql`, `112_add_payment_order_provider_key_snapshot.sql`, `117_add_payment_order_provider_snapshot.sql`, and `119` through `127` applied.
+- None of the three environments have upstream auth identity migrations `109`, `110`, `113`, `114`, `115`, `116`, or `118` recorded.
+- None of the three environments currently have `auth_identities`, `auth_identity_channels`, `pending_auth_sessions`, `identity_adoption_decisions`, `auth_identity_migration_reports`, or `user_external_identities` tables.
+- `users` and `payment_orders` column shapes are consistent across the three environments; `payment_orders.provider_key` and `payment_orders.provider_snapshot` already exist, while `users.signup_source`, `last_login_at`, and `last_active_at` do not.
+- No duplicate active normalized emails were found in any environment, and linuxdo/wechat/oidc synthetic OAuth email counts were all zero.
+- Implementation implication: the fork migration should be new `128+` SQL, not upstream filenames. It can create the auth identity core and backfill normal email identities without legacy external-identity remediation on current live databases. Legacy remediation SQL from upstream `113` through `116` should remain conditional/future unless a later DB inventory proves those legacy tables or rows exist.
+
 Gate status: open. Do not bump `backend/cmd/server/VERSION` to `0.1.115`, create/move `fork/v0.1.115`, or deploy release-level changes until every row above has a final outcome and the release closeout review passes.
 
 ### v0.1.117
