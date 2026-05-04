@@ -77,5 +77,9 @@ func (h *SettingHandler) GetPublicSettings(c *gin.Context) {
 		ReferralEnabled:                  settings.ReferralEnabled,
 		ContactChannels:                  mapContactChannels(settings.ContactChannels),
 		Version:                          h.version,
+		BalanceLowNotifyEnabled:          settings.BalanceLowNotifyEnabled,
+		BalanceLowNotifyThreshold:        settings.BalanceLowNotifyThreshold,
+		BalanceLowNotifyRechargeURL:      settings.BalanceLowNotifyRechargeURL,
+		AccountQuotaNotifyEnabled:        settings.AccountQuotaNotifyEnabled,
 	})
 }

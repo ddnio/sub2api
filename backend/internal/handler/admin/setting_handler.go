@@ -101,6 +101,11 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		SMTPFrom:                             settings.SMTPFrom,
 		SMTPFromName:                         settings.SMTPFromName,
 		SMTPUseTLS:                           settings.SMTPUseTLS,
+		BalanceLowNotifyEnabled:              settings.BalanceLowNotifyEnabled,
+		BalanceLowNotifyThreshold:            settings.BalanceLowNotifyThreshold,
+		BalanceLowNotifyRechargeURL:          settings.BalanceLowNotifyRechargeURL,
+		AccountQuotaNotifyEnabled:            settings.AccountQuotaNotifyEnabled,
+		AccountQuotaNotifyEmails:             dto.NotifyEmailEntriesFromService(settings.AccountQuotaNotifyEmails),
 		TurnstileEnabled:                     settings.TurnstileEnabled,
 		TurnstileSiteKey:                     settings.TurnstileSiteKey,
 		TurnstileSecretKeyConfigured:         settings.TurnstileSecretKeyConfigured,
@@ -192,6 +197,12 @@ type UpdateSettingsRequest struct {
 	SMTPFrom     string `json:"smtp_from_email"`
 	SMTPFromName string `json:"smtp_from_name"`
 	SMTPUseTLS   bool   `json:"smtp_use_tls"`
+
+	BalanceLowNotifyEnabled     bool                   `json:"balance_low_notify_enabled"`
+	BalanceLowNotifyThreshold   float64                `json:"balance_low_notify_threshold"`
+	BalanceLowNotifyRechargeURL string                 `json:"balance_low_notify_recharge_url"`
+	AccountQuotaNotifyEnabled   bool                   `json:"account_quota_notify_enabled"`
+	AccountQuotaNotifyEmails    []dto.NotifyEmailEntry `json:"account_quota_notify_emails"`
 
 	// Cloudflare Turnstile 设置
 	TurnstileEnabled   bool   `json:"turnstile_enabled"`
@@ -748,6 +759,11 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		SMTPFrom:                         req.SMTPFrom,
 		SMTPFromName:                     req.SMTPFromName,
 		SMTPUseTLS:                       req.SMTPUseTLS,
+		BalanceLowNotifyEnabled:          req.BalanceLowNotifyEnabled,
+		BalanceLowNotifyThreshold:        req.BalanceLowNotifyThreshold,
+		BalanceLowNotifyRechargeURL:      req.BalanceLowNotifyRechargeURL,
+		AccountQuotaNotifyEnabled:        req.AccountQuotaNotifyEnabled,
+		AccountQuotaNotifyEmails:         dto.NotifyEmailEntriesToService(req.AccountQuotaNotifyEmails),
 		TurnstileEnabled:                 req.TurnstileEnabled,
 		TurnstileSiteKey:                 req.TurnstileSiteKey,
 		TurnstileSecretKey:               req.TurnstileSecretKey,
@@ -890,6 +906,11 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		SMTPFrom:                             updatedSettings.SMTPFrom,
 		SMTPFromName:                         updatedSettings.SMTPFromName,
 		SMTPUseTLS:                           updatedSettings.SMTPUseTLS,
+		BalanceLowNotifyEnabled:              updatedSettings.BalanceLowNotifyEnabled,
+		BalanceLowNotifyThreshold:            updatedSettings.BalanceLowNotifyThreshold,
+		BalanceLowNotifyRechargeURL:          updatedSettings.BalanceLowNotifyRechargeURL,
+		AccountQuotaNotifyEnabled:            updatedSettings.AccountQuotaNotifyEnabled,
+		AccountQuotaNotifyEmails:             dto.NotifyEmailEntriesFromService(updatedSettings.AccountQuotaNotifyEmails),
 		TurnstileEnabled:                     updatedSettings.TurnstileEnabled,
 		TurnstileSiteKey:                     updatedSettings.TurnstileSiteKey,
 		TurnstileSecretKeyConfigured:         updatedSettings.TurnstileSecretKeyConfigured,
@@ -954,6 +975,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		EnableFingerprintUnification:         updatedSettings.EnableFingerprintUnification,
 		EnableMetadataPassthrough:            updatedSettings.EnableMetadataPassthrough,
 		EnableCCHSigning:                     updatedSettings.EnableCCHSigning,
+		WebSearchEmulationEnabled:            updatedSettings.WebSearchEmulationEnabled,
 	})
 }
 

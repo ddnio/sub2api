@@ -138,6 +138,16 @@ func (s *SettingService) SaveWebSearchEmulationConfig(ctx context.Context, cfg *
 		return infraerrors.BadRequest("INVALID_WEB_SEARCH_CONFIG", err.Error())
 	}
 	s.mergeExistingAPIKeys(ctx, cfg)
+	if cfg.Enabled {
+		for _, provider := range cfg.Providers {
+			if provider.APIKey == "" {
+				return infraerrors.BadRequest(
+					"MISSING_API_KEY",
+					fmt.Sprintf("provider %s has no API key configured", provider.Type),
+				)
+			}
+		}
+	}
 
 	data, err := json.Marshal(cfg)
 	if err != nil {

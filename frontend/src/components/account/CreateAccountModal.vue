@@ -1495,6 +1495,16 @@
           :weeklyResetDay="editWeeklyResetDay"
           :weeklyResetHour="editWeeklyResetHour"
           :resetTimezone="editResetTimezone"
+          :quotaNotifyGlobalEnabled="quotaNotify.globalEnabled.value"
+          :quotaNotifyDailyEnabled="quotaNotify.state.daily.enabled"
+          :quotaNotifyDailyThreshold="quotaNotify.state.daily.threshold"
+          :quotaNotifyDailyThresholdType="quotaNotify.state.daily.thresholdType"
+          :quotaNotifyWeeklyEnabled="quotaNotify.state.weekly.enabled"
+          :quotaNotifyWeeklyThreshold="quotaNotify.state.weekly.threshold"
+          :quotaNotifyWeeklyThresholdType="quotaNotify.state.weekly.thresholdType"
+          :quotaNotifyTotalEnabled="quotaNotify.state.total.enabled"
+          :quotaNotifyTotalThreshold="quotaNotify.state.total.threshold"
+          :quotaNotifyTotalThresholdType="quotaNotify.state.total.thresholdType"
           @update:totalLimit="editQuotaLimit = $event"
           @update:dailyLimit="editQuotaDailyLimit = $event"
           @update:weeklyLimit="editQuotaWeeklyLimit = $event"
@@ -1504,6 +1514,15 @@
           @update:weeklyResetDay="editWeeklyResetDay = $event"
           @update:weeklyResetHour="editWeeklyResetHour = $event"
           @update:resetTimezone="editResetTimezone = $event"
+          @update:quotaNotifyDailyEnabled="quotaNotify.state.daily.enabled = $event"
+          @update:quotaNotifyDailyThreshold="quotaNotify.state.daily.threshold = $event"
+          @update:quotaNotifyDailyThresholdType="quotaNotify.state.daily.thresholdType = $event"
+          @update:quotaNotifyWeeklyEnabled="quotaNotify.state.weekly.enabled = $event"
+          @update:quotaNotifyWeeklyThreshold="quotaNotify.state.weekly.threshold = $event"
+          @update:quotaNotifyWeeklyThresholdType="quotaNotify.state.weekly.thresholdType = $event"
+          @update:quotaNotifyTotalEnabled="quotaNotify.state.total.enabled = $event"
+          @update:quotaNotifyTotalThreshold="quotaNotify.state.total.threshold = $event"
+          @update:quotaNotifyTotalThresholdType="quotaNotify.state.total.thresholdType = $event"
         />
       </div>
 
@@ -2853,6 +2872,7 @@ import ProxySelector from '@/components/common/ProxySelector.vue'
 import GroupSelector from '@/components/common/GroupSelector.vue'
 import ModelWhitelistSelector from '@/components/account/ModelWhitelistSelector.vue'
 import QuotaLimitCard from '@/components/account/QuotaLimitCard.vue'
+import { useQuotaNotifyState } from '@/composables/useQuotaNotifyState'
 import { applyInterceptWarmup } from '@/components/account/credentialsBuilder'
 import { formatDateTimeLocalInput, parseDateTimeLocalInput } from '@/utils/format'
 import { createStableObjectKeyResolver } from '@/utils/stableObjectKey'
@@ -2983,6 +3003,7 @@ const editWeeklyResetMode = ref<'rolling' | 'fixed' | null>(null)
 const editWeeklyResetDay = ref<number | null>(null)
 const editWeeklyResetHour = ref<number | null>(null)
 const editResetTimezone = ref<string | null>(null)
+const quotaNotify = useQuotaNotifyState()
 const modelMappings = ref<ModelMapping[]>([])
 const modelRestrictionMode = ref<'whitelist' | 'mapping'>('whitelist')
 const allowedModels = ref<string[]>([])
@@ -3020,6 +3041,7 @@ adminAPI.settings.getWebSearchEmulationConfig()
   .catch(() => {
     webSearchGlobalEnabled.value = false
   })
+quotaNotify.loadGlobalState()
 
 // Bedrock credentials
 const bedrockAuthMode = ref<'sigv4' | 'apikey'>('sigv4')
@@ -3700,6 +3722,7 @@ const resetForm = () => {
   editWeeklyResetDay.value = null
   editWeeklyResetHour.value = null
   editResetTimezone.value = null
+  quotaNotify.reset()
   modelMappings.value = []
   modelRestrictionMode.value = 'whitelist'
   allowedModels.value = [...claudeModels] // Default fill related models
@@ -4112,6 +4135,7 @@ const createAccountAndFinish = async (
     if (editDailyResetMode.value === 'fixed' || editWeeklyResetMode.value === 'fixed') {
       quotaExtra.quota_reset_timezone = editResetTimezone.value || 'UTC'
     }
+    quotaNotify.writeToExtra(quotaExtra, 'create')
     if (Object.keys(quotaExtra).length > 0) {
       finalExtra = quotaExtra
     }

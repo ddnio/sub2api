@@ -343,7 +343,10 @@ export const useAppStore = defineStore('app', () => {
         sora_client_enabled: false,
         backend_mode_enabled: false,
         contact_channels: [],
-        version: siteVersion.value
+        version: siteVersion.value,
+        balance_low_notify_enabled: false,
+        account_quota_notify_enabled: false,
+        balance_low_notify_threshold: 0
       }
     }
 

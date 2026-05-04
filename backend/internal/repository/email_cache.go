@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -11,23 +13,29 @@ import (
 
 const (
 	verifyCodeKeyPrefix          = "verify_code:"
+	notifyVerifyKeyPrefix        = "notify_verify:"
 	passwordResetKeyPrefix       = "password_reset:"
 	passwordResetSentAtKeyPrefix = "password_reset_sent:"
+	notifyCodeUserRateKeyPrefix  = "notify_code_user_rate:"
 )
 
 // verifyCodeKey generates the Redis key for email verification code.
 func verifyCodeKey(email string) string {
-	return verifyCodeKeyPrefix + email
+	return verifyCodeKeyPrefix + strings.ToLower(email)
+}
+
+func notifyVerifyKey(email string) string {
+	return notifyVerifyKeyPrefix + strings.ToLower(email)
 }
 
 // passwordResetKey generates the Redis key for password reset token.
 func passwordResetKey(email string) string {
-	return passwordResetKeyPrefix + email
+	return passwordResetKeyPrefix + strings.ToLower(email)
 }
 
 // passwordResetSentAtKey generates the Redis key for password reset email sent timestamp.
 func passwordResetSentAtKey(email string) string {
-	return passwordResetSentAtKeyPrefix + email
+	return passwordResetSentAtKeyPrefix + strings.ToLower(email)
 }
 
 type emailCache struct {
@@ -62,6 +70,33 @@ func (c *emailCache) SetVerificationCode(ctx context.Context, email string, data
 
 func (c *emailCache) DeleteVerificationCode(ctx context.Context, email string) error {
 	key := verifyCodeKey(email)
+	return c.rdb.Del(ctx, key).Err()
+}
+
+func (c *emailCache) GetNotifyVerifyCode(ctx context.Context, email string) (*service.VerificationCodeData, error) {
+	key := notifyVerifyKey(email)
+	val, err := c.rdb.Get(ctx, key).Result()
+	if err != nil {
+		return nil, err
+	}
+	var data service.VerificationCodeData
+	if err := json.Unmarshal([]byte(val), &data); err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+func (c *emailCache) SetNotifyVerifyCode(ctx context.Context, email string, data *service.VerificationCodeData, ttl time.Duration) error {
+	key := notifyVerifyKey(email)
+	val, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	return c.rdb.Set(ctx, key, val, ttl).Err()
+}
+
+func (c *emailCache) DeleteNotifyVerifyCode(ctx context.Context, email string) error {
+	key := notifyVerifyKey(email)
 	return c.rdb.Del(ctx, key).Err()
 }
 
@@ -105,4 +140,29 @@ func (c *emailCache) IsPasswordResetEmailInCooldown(ctx context.Context, email s
 func (c *emailCache) SetPasswordResetEmailCooldown(ctx context.Context, email string, ttl time.Duration) error {
 	key := passwordResetSentAtKey(email)
 	return c.rdb.Set(ctx, key, "1", ttl).Err()
+}
+
+func notifyCodeUserRateKey(userID int64) string {
+	return notifyCodeUserRateKeyPrefix + fmt.Sprintf("%d", userID)
+}
+
+func (c *emailCache) IncrNotifyCodeUserRate(ctx context.Context, userID int64, window time.Duration) (int64, error) {
+	key := notifyCodeUserRateKey(userID)
+	count, err := c.rdb.Incr(ctx, key).Result()
+	if err != nil {
+		return 0, err
+	}
+	if err := c.rdb.Expire(ctx, key, window).Err(); err != nil {
+		return count, fmt.Errorf("expire notify code rate key: %w", err)
+	}
+	return count, nil
+}
+
+func (c *emailCache) GetNotifyCodeUserRate(ctx context.Context, userID int64) (int64, error) {
+	key := notifyCodeUserRateKey(userID)
+	count, err := c.rdb.Get(ctx, key).Int64()
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }

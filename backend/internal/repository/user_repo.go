@@ -55,16 +55,23 @@ func (r *userRepository) Create(ctx context.Context, userIn *service.User) error
 		txClient = r.client
 	}
 
-	created, err := txClient.User.Create().
+	create := txClient.User.Create().
 		SetEmail(userIn.Email).
 		SetUsername(userIn.Username).
 		SetNotes(userIn.Notes).
 		SetPasswordHash(userIn.PasswordHash).
 		SetRole(userIn.Role).
 		SetBalance(userIn.Balance).
+		SetBalanceNotifyEnabled(userIn.BalanceNotifyEnabled).
+		SetBalanceNotifyExtraEmails(service.MarshalNotifyEmails(userIn.BalanceNotifyExtraEmails)).
+		SetBalanceNotifyThresholdType(userIn.BalanceNotifyThresholdType).
+		SetTotalRecharged(userIn.TotalRecharged).
 		SetConcurrency(userIn.Concurrency).
-		SetStatus(userIn.Status).
-		Save(ctx)
+		SetStatus(userIn.Status)
+	if userIn.BalanceNotifyThreshold != nil {
+		create.SetBalanceNotifyThreshold(*userIn.BalanceNotifyThreshold)
+	}
+	created, err := create.Save(ctx)
 	if err != nil {
 		return translatePersistenceError(err, nil, service.ErrEmailExists)
 	}
@@ -137,16 +144,25 @@ func (r *userRepository) Update(ctx context.Context, userIn *service.User) error
 		txClient = r.client
 	}
 
-	updated, err := txClient.User.UpdateOneID(userIn.ID).
+	update := txClient.User.UpdateOneID(userIn.ID).
 		SetEmail(userIn.Email).
 		SetUsername(userIn.Username).
 		SetNotes(userIn.Notes).
 		SetPasswordHash(userIn.PasswordHash).
 		SetRole(userIn.Role).
 		SetBalance(userIn.Balance).
+		SetBalanceNotifyEnabled(userIn.BalanceNotifyEnabled).
+		SetBalanceNotifyExtraEmails(service.MarshalNotifyEmails(userIn.BalanceNotifyExtraEmails)).
+		SetBalanceNotifyThresholdType(userIn.BalanceNotifyThresholdType).
+		SetTotalRecharged(userIn.TotalRecharged).
 		SetConcurrency(userIn.Concurrency).
-		SetStatus(userIn.Status).
-		Save(ctx)
+		SetStatus(userIn.Status)
+	if userIn.BalanceNotifyThreshold == nil {
+		update.ClearBalanceNotifyThreshold()
+	} else {
+		update.SetBalanceNotifyThreshold(*userIn.BalanceNotifyThreshold)
+	}
+	updated, err := update.Save(ctx)
 	if err != nil {
 		return translatePersistenceError(err, service.ErrUserNotFound, service.ErrEmailExists)
 	}

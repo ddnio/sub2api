@@ -19,6 +19,12 @@ type SystemSettings struct {
 	SMTPFromName           string
 	SMTPUseTLS             bool
 
+	BalanceLowNotifyEnabled     bool
+	BalanceLowNotifyThreshold   float64
+	BalanceLowNotifyRechargeURL string
+	AccountQuotaNotifyEnabled   bool
+	AccountQuotaNotifyEmails    []NotifyEmailEntry
+
 	TurnstileEnabled             bool
 	TurnstileSiteKey             string
 	TurnstileSecretKey           string
@@ -156,6 +162,11 @@ type PublicSettings struct {
 
 	// 悬浮联系按钮：仅 enabled 渠道，按 priority 升序
 	ContactChannels []ContactChannel
+
+	BalanceLowNotifyEnabled     bool
+	BalanceLowNotifyThreshold   float64
+	BalanceLowNotifyRechargeURL string
+	AccountQuotaNotifyEnabled   bool
 }
 
 // StreamTimeoutSettings 流超时处理配置（仅控制超时后的处理方式，超时判定由网关配置控制）

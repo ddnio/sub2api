@@ -39,6 +39,20 @@ export interface User {
   updated_at: string
 }
 
+/** Notification email entry with enable/disable and verification state. */
+export interface NotifyEmailEntry {
+  email: string
+  disabled: boolean
+  verified: boolean
+}
+
+export interface UserProfile extends User {
+  balance_notify_enabled: boolean
+  balance_notify_threshold: number | null
+  balance_notify_threshold_type: 'fixed' | 'percentage' | string
+  balance_notify_extra_emails: NotifyEmailEntry[]
+}
+
 export interface AdminUser extends User {
   // 管理员备注（普通用户接口不返回）
   notes: string
@@ -132,6 +146,9 @@ export interface PublicSettings {
   backend_mode_enabled: boolean
   contact_channels: ContactChannel[]
   version: string
+  balance_low_notify_enabled: boolean
+  account_quota_notify_enabled: boolean
+  balance_low_notify_threshold: number
 }
 
 export interface AuthResponse {

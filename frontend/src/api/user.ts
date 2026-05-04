@@ -4,14 +4,14 @@
  */
 
 import { apiClient } from './client'
-import type { User, ChangePasswordRequest } from '@/types'
+import type { UserProfile, ChangePasswordRequest } from '@/types'
 
 /**
  * Get current user profile
  * @returns User profile data
  */
-export async function getProfile(): Promise<User> {
-  const { data } = await apiClient.get<User>('/user/profile')
+export async function getProfile(): Promise<UserProfile> {
+  const { data } = await apiClient.get<UserProfile>('/user/profile')
   return data
 }
 
@@ -22,8 +22,10 @@ export async function getProfile(): Promise<User> {
  */
 export async function updateProfile(profile: {
   username?: string
-}): Promise<User> {
-  const { data } = await apiClient.put<User>('/user', profile)
+  balance_notify_enabled?: boolean
+  balance_notify_threshold?: number | null
+}): Promise<UserProfile> {
+  const { data } = await apiClient.put<UserProfile>('/user', profile)
   return data
 }
 
@@ -45,10 +47,33 @@ export async function changePassword(
   return data
 }
 
+export async function sendNotifyEmailCode(email: string): Promise<void> {
+  await apiClient.post('/user/notify-email/send-code', { email })
+}
+
+export async function verifyNotifyEmail(email: string, code: string): Promise<UserProfile> {
+  const { data } = await apiClient.post<UserProfile>('/user/notify-email/verify', { email, code })
+  return data
+}
+
+export async function removeNotifyEmail(email: string): Promise<UserProfile> {
+  const { data } = await apiClient.delete<UserProfile>('/user/notify-email', { data: { email } })
+  return data
+}
+
+export async function toggleNotifyEmail(email: string, disabled: boolean): Promise<UserProfile> {
+  const { data } = await apiClient.put<UserProfile>('/user/notify-email/toggle', { email, disabled })
+  return data
+}
+
 export const userAPI = {
   getProfile,
   updateProfile,
-  changePassword
+  changePassword,
+  sendNotifyEmailCode,
+  verifyNotifyEmail,
+  removeNotifyEmail,
+  toggleNotifyEmail
 }
 
 export default userAPI

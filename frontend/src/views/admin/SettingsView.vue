@@ -2594,6 +2594,72 @@
           </div>
         </div>
 
+        <div class="card">
+          <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+              {{ t('admin.settings.balanceNotify.title') }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {{ t('admin.settings.balanceNotify.description') }}
+            </p>
+          </div>
+          <div class="space-y-5 p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="font-medium text-gray-900 dark:text-white">{{ t('admin.settings.balanceNotify.enabled') }}</label>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('admin.settings.balanceNotify.thresholdHint') }}</p>
+              </div>
+              <Toggle v-model="form.balance_low_notify_enabled" />
+            </div>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label class="input-label">{{ t('admin.settings.balanceNotify.threshold') }}</label>
+                <input v-model.number="form.balance_low_notify_threshold" type="number" min="0" step="0.01" class="input" :placeholder="t('admin.settings.balanceNotify.thresholdPlaceholder')" />
+              </div>
+              <div>
+                <label class="input-label">{{ t('admin.settings.balanceNotify.rechargeUrl') }}</label>
+                <input v-model="form.balance_low_notify_recharge_url" type="url" class="input" :placeholder="t('admin.settings.balanceNotify.rechargeUrlPlaceholder')" />
+                <p class="input-hint">{{ t('admin.settings.balanceNotify.rechargeUrlHint') }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+              {{ t('admin.settings.quotaNotify.title') }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {{ t('admin.settings.quotaNotify.description') }}
+            </p>
+          </div>
+          <div class="space-y-4 p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="font-medium text-gray-900 dark:text-white">{{ t('admin.settings.quotaNotify.enabled') }}</label>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('admin.settings.quotaNotify.emailsHint') }}</p>
+              </div>
+              <Toggle v-model="form.account_quota_notify_enabled" />
+            </div>
+            <div class="space-y-2">
+              <label class="input-label">{{ t('admin.settings.quotaNotify.emails') }}</label>
+              <div v-for="entry in form.account_quota_notify_emails" :key="entry.email" class="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 dark:bg-dark-700">
+                <span class="min-w-0 flex-1 truncate text-sm text-gray-700 dark:text-gray-300">{{ entry.email }}</span>
+                <button type="button" class="text-xs text-red-600 hover:text-red-700 dark:text-red-400" @click="removeQuotaNotifyEmail(entry.email)">
+                  {{ t('common.remove') }}
+                </button>
+              </div>
+              <div class="flex gap-2">
+                <input v-model="quotaNotifyEmailDraft" type="email" class="input" :placeholder="t('admin.settings.quotaNotify.emailPlaceholder')" @keyup.enter="addQuotaNotifyEmail" />
+                <button type="button" class="btn btn-secondary whitespace-nowrap" @click="addQuotaNotifyEmail">
+                  {{ t('admin.settings.quotaNotify.addEmail') }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Send Test Email - Only show when email verification is enabled -->
         <div v-if="form.email_verify_enabled" class="card">
           <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
@@ -2918,7 +2984,7 @@ import type {
   WebSearchProviderConfig,
   WebSearchTestResult
 } from '@/api/admin/settings'
-import type { AdminGroup, ContactChannel, Proxy } from '@/types'
+import type { AdminGroup, ContactChannel, NotifyEmailEntry, Proxy } from '@/types'
 import type { PaymentConfig } from '@/api/admin'
 import type { ProviderInstance } from '@/types/payment'
 import type { TypeOption } from '@/components/payment/providerConfig'
@@ -2973,6 +3039,7 @@ const testEmailAddress = ref('')
 const registrationEmailSuffixWhitelistTags = ref<string[]>([])
 const registrationEmailSuffixWhitelistDraft = ref('')
 const tablePageSizeOptionsInput = ref('10, 20, 50, 100')
+const quotaNotifyEmailDraft = ref('')
 
 // Admin API Key 状态
 const adminApiKeyLoading = ref(true)
@@ -3088,6 +3155,11 @@ const form = reactive<SettingsForm>({
   smtp_from_email: '',
   smtp_from_name: '',
   smtp_use_tls: true,
+  balance_low_notify_enabled: false,
+  balance_low_notify_threshold: 0,
+  balance_low_notify_recharge_url: '',
+  account_quota_notify_enabled: false,
+  account_quota_notify_emails: [] as NotifyEmailEntry[],
   // Cloudflare Turnstile
   turnstile_enabled: false,
   turnstile_site_key: '',
@@ -3384,6 +3456,45 @@ function handleRegistrationEmailSuffixWhitelistPaste(event: ClipboardEvent) {
   }
 }
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase()
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function addQuotaNotifyEmail() {
+  const email = normalizeEmail(quotaNotifyEmailDraft.value)
+  if (!email) {
+    return
+  }
+  if (!isValidEmail(email)) {
+    appStore.showError(t('common.invalidEmail'))
+    return
+  }
+  const exists = form.account_quota_notify_emails.some(
+    (entry) => normalizeEmail(entry.email) === email
+  )
+  if (exists) {
+    appStore.showError(t('profile.balanceNotify.emailDuplicate'))
+    return
+  }
+  form.account_quota_notify_emails.push({
+    email,
+    disabled: false,
+    verified: true
+  })
+  quotaNotifyEmailDraft.value = ''
+}
+
+function removeQuotaNotifyEmail(email: string) {
+  const normalized = normalizeEmail(email)
+  form.account_quota_notify_emails = form.account_quota_notify_emails.filter(
+    (entry) => normalizeEmail(entry.email) !== normalized
+  )
+}
+
 // LinuxDo OAuth redirect URL suggestion
 const linuxdoRedirectUrlSuggestion = computed(() => {
   if (typeof window === 'undefined') return ''
@@ -3662,6 +3773,11 @@ async function saveSettings() {
       smtp_from_email: form.smtp_from_email,
       smtp_from_name: form.smtp_from_name,
       smtp_use_tls: form.smtp_use_tls,
+      balance_low_notify_enabled: form.balance_low_notify_enabled,
+      balance_low_notify_threshold: form.balance_low_notify_threshold,
+      balance_low_notify_recharge_url: form.balance_low_notify_recharge_url,
+      account_quota_notify_enabled: form.account_quota_notify_enabled,
+      account_quota_notify_emails: form.account_quota_notify_emails,
       turnstile_enabled: form.turnstile_enabled,
       turnstile_site_key: form.turnstile_site_key,
       turnstile_secret_key: form.turnstile_secret_key || undefined,

@@ -49,6 +49,23 @@ func UserFromService(u *service.User) *User {
 	return out
 }
 
+func UserProfileFromService(u *service.User) *UserProfile {
+	if u == nil {
+		return nil
+	}
+	base := UserFromService(u)
+	if base == nil {
+		return nil
+	}
+	return &UserProfile{
+		User:                       *base,
+		BalanceNotifyEnabled:       u.BalanceNotifyEnabled,
+		BalanceNotifyThreshold:     u.BalanceNotifyThreshold,
+		BalanceNotifyThresholdType: u.BalanceNotifyThresholdType,
+		BalanceNotifyExtraEmails:   NotifyEmailEntriesFromService(u.BalanceNotifyExtraEmails),
+	}
+}
+
 // UserFromServiceAdmin converts a service User to DTO for admin users.
 // It includes notes - user-facing endpoints must not use this.
 func UserFromServiceAdmin(u *service.User) *AdminUser {

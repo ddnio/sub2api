@@ -13,6 +13,8 @@ import (
 )
 
 type settingUpdateRepoStub struct {
+	values  map[string]string
+	err     error
 	updates map[string]string
 }
 
@@ -21,7 +23,13 @@ func (s *settingUpdateRepoStub) Get(ctx context.Context, key string) (*Setting, 
 }
 
 func (s *settingUpdateRepoStub) GetValue(ctx context.Context, key string) (string, error) {
-	panic("unexpected GetValue call")
+	if s.err != nil {
+		return "", s.err
+	}
+	if v, ok := s.values[key]; ok {
+		return v, nil
+	}
+	return "", ErrSettingNotFound
 }
 
 func (s *settingUpdateRepoStub) Set(ctx context.Context, key, value string) error {
@@ -91,6 +99,23 @@ func TestSettingService_UpdateSettings_DefaultSubscriptions_ValidGroup(t *testin
 	require.Equal(t, []DefaultSubscriptionSetting{
 		{GroupID: 11, ValidityDays: 30},
 	}, got)
+}
+
+func TestSettingService_InitializeDefaultSettings_IncludesNotifyDefaults(t *testing.T) {
+	repo := &settingUpdateRepoStub{}
+	svc := NewSettingService(repo, &config.Config{
+		Default: config.DefaultConfig{
+			UserConcurrency: 2,
+			UserBalance:     3.5,
+		},
+	})
+
+	require.NoError(t, svc.InitializeDefaultSettings(context.Background()))
+	require.Equal(t, "false", repo.updates[SettingKeyBalanceLowNotifyEnabled])
+	require.Equal(t, "0", repo.updates[SettingKeyBalanceLowNotifyThreshold])
+	require.Equal(t, "", repo.updates[SettingKeyBalanceLowNotifyRechargeURL])
+	require.Equal(t, "false", repo.updates[SettingKeyAccountQuotaNotifyEnabled])
+	require.Equal(t, "[]", repo.updates[SettingKeyAccountQuotaNotifyEmails])
 }
 
 func TestSettingService_UpdateSettings_DefaultSubscriptions_RejectsNonSubscriptionGroup(t *testing.T) {

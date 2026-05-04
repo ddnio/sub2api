@@ -444,6 +444,7 @@ import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import type { Account, AccountUsageInfo, GeminiCredentials, WindowStats } from '@/types'
 import { buildOpenAIUsageRefreshKey } from '@/utils/accountUsageRefresh'
+import { enqueueUsageRequest } from '@/utils/usageLoadQueue'
 import { formatCompactNumber } from '@/utils/format'
 import UsageProgressBar from './UsageProgressBar.vue'
 import AccountQuotaInfo from './AccountQuotaInfo.vue'
@@ -948,7 +949,10 @@ const loadUsage = async (source?: 'passive' | 'active') => {
   error.value = null
 
   try {
-    usageInfo.value = await adminAPI.accounts.getUsage(props.account.id, source)
+    usageInfo.value = await enqueueUsageRequest(
+      props.account,
+      () => adminAPI.accounts.getUsage(props.account.id, source)
+    )
   } catch (e: any) {
     error.value = t('common.error')
     console.error('Failed to load usage:', e)

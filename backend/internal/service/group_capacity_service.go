@@ -95,17 +95,20 @@ func (s *GroupCapacityService) getGroupCapacity(ctx context.Context, groupID int
 		}
 	}
 
-	// Batch query runtime data from Redis
-	concurrencyMap, _ := s.concurrencyService.GetAccountConcurrencyBatch(ctx, accountIDs)
+	// Batch query runtime data from Redis. Detach runtime metric lookups from
+	// request cancellation so capacity summaries do not collapse to all-zero
+	// values when the caller disconnects after the DB account list is loaded.
+	metricsCtx := context.WithoutCancel(ctx)
+	concurrencyMap, _ := s.concurrencyService.GetAccountConcurrencyBatch(metricsCtx, accountIDs)
 
 	var sessionsMap map[int64]int
 	if sessionsMax > 0 && s.sessionLimitCache != nil {
-		sessionsMap, _ = s.sessionLimitCache.GetActiveSessionCountBatch(ctx, accountIDs, sessionTimeouts)
+		sessionsMap, _ = s.sessionLimitCache.GetActiveSessionCountBatch(metricsCtx, accountIDs, sessionTimeouts)
 	}
 
 	var rpmMap map[int64]int
 	if rpmMax > 0 && s.rpmCache != nil {
-		rpmMap, _ = s.rpmCache.GetRPMBatch(ctx, accountIDs)
+		rpmMap, _ = s.rpmCache.GetRPMBatch(metricsCtx, accountIDs)
 	}
 
 	// Aggregate

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/stretchr/testify/require"
 )
@@ -223,6 +224,38 @@ func TestWebSearchQuotaLimitValue(t *testing.T) {
 func TestResetWebSearchUsage_NoManager(t *testing.T) {
 	SetWebSearchManager(nil)
 	require.ErrorContains(t, ResetWebSearchUsage(context.Background(), "brave"), "manager not initialized")
+}
+
+func TestSaveWebSearchEmulationConfig_RejectsEnabledProviderWithoutAPIKey(t *testing.T) {
+	repo := newMockSettingRepo()
+	svc := NewSettingService(repo, nil)
+
+	err := svc.SaveWebSearchEmulationConfig(context.Background(), &WebSearchEmulationConfig{
+		Enabled:   true,
+		Providers: []WebSearchProviderConfig{{Type: "brave"}},
+	})
+
+	require.Error(t, err)
+	require.Equal(t, "MISSING_API_KEY", infraerrors.Reason(err))
+}
+
+func TestSaveWebSearchEmulationConfig_MergesExistingAPIKeyBeforeValidation(t *testing.T) {
+	repo := newMockSettingRepo()
+	existing := `{"enabled":true,"providers":[{"type":"brave","api_key":"saved-key"}]}`
+	require.NoError(t, repo.Set(context.Background(), SettingKeyWebSearchEmulationConfig, existing))
+	svc := NewSettingService(repo, nil)
+
+	err := svc.SaveWebSearchEmulationConfig(context.Background(), &WebSearchEmulationConfig{
+		Enabled:   true,
+		Providers: []WebSearchProviderConfig{{Type: "brave"}},
+	})
+
+	require.NoError(t, err)
+	saved, err := repo.GetValue(context.Background(), SettingKeyWebSearchEmulationConfig)
+	require.NoError(t, err)
+	var cfg WebSearchEmulationConfig
+	require.NoError(t, json.Unmarshal([]byte(saved), &cfg))
+	require.Equal(t, "saved-key", cfg.Providers[0].APIKey)
 }
 
 type webSearchProxyRepoStub struct {

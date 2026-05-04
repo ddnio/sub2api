@@ -49,6 +49,8 @@ const maxTokenLength = 8192
 // refreshTokenPrefix is the prefix for refresh tokens to distinguish them from access tokens.
 const refreshTokenPrefix = "rt_"
 
+const defaultBalanceNotifyThresholdType = "fixed"
+
 // JWTClaims JWT载荷数据
 type JWTClaims struct {
 	UserID       int64  `json:"user_id"`
@@ -76,6 +78,16 @@ type AuthService struct {
 
 type DefaultSubscriptionAssigner interface {
 	AssignOrExtendSubscription(ctx context.Context, input *AssignSubscriptionInput) (*UserSubscription, bool, error)
+}
+
+func applyUserNotifyDefaults(user *User) {
+	if user == nil {
+		return
+	}
+	user.BalanceNotifyEnabled = true
+	if user.BalanceNotifyThresholdType == "" {
+		user.BalanceNotifyThresholdType = defaultBalanceNotifyThresholdType
+	}
 }
 
 // NewAuthService 创建认证服务实例
@@ -199,6 +211,7 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		Concurrency:  defaultConcurrency,
 		Status:       StatusActive,
 	}
+	applyUserNotifyDefaults(user)
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		// 优先检查邮箱冲突错误（竞态条件下可能发生）
@@ -506,6 +519,7 @@ func (s *AuthService) LoginOrRegisterOAuth(ctx context.Context, email, username 
 				Concurrency:  defaultConcurrency,
 				Status:       StatusActive,
 			}
+			applyUserNotifyDefaults(newUser)
 
 			if err := s.userRepo.Create(ctx, newUser); err != nil {
 				if errors.Is(err, ErrEmailExists) {
@@ -620,6 +634,7 @@ func (s *AuthService) LoginOrRegisterOAuthWithTokenPair(ctx context.Context, ema
 				Concurrency:  defaultConcurrency,
 				Status:       StatusActive,
 			}
+			applyUserNotifyDefaults(newUser)
 
 			if s.entClient != nil && invitationRedeemCode != nil {
 				tx, err := s.entClient.Tx(ctx)

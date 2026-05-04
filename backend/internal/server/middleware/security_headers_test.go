@@ -313,6 +313,22 @@ func TestEnhanceCSPPolicy(t *testing.T) {
 		assert.Equal(t, 1, count)
 	})
 
+	t.Run("adds_stripe_domains", func(t *testing.T) {
+		policy := "default-src 'self'; script-src 'self'; frame-src 'self'"
+		enhanced := enhanceCSPPolicy(policy)
+
+		assert.Contains(t, enhanced, "script-src 'self' "+NonceTemplate+" "+CloudflareInsightsDomain+" "+StripeDomain)
+		assert.Contains(t, enhanced, "frame-src 'self' "+StripeDomain)
+	})
+
+	t.Run("does_not_duplicate_stripe_domain", func(t *testing.T) {
+		policy := "default-src 'self'; script-src 'self' https://js.stripe.com; frame-src 'self' https://js.stripe.com"
+		enhanced := enhanceCSPPolicy(policy)
+
+		assert.Equal(t, 2, strings.Count(enhanced, "stripe.com"))
+		assert.NotContains(t, enhanced, StripeDomain)
+	})
+
 	t.Run("handles_policy_without_script_src", func(t *testing.T) {
 		policy := "default-src 'self'"
 		enhanced := enhanceCSPPolicy(policy)

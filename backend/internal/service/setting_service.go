@@ -176,6 +176,10 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyReferralEnabled,
 		SettingKeyOIDCConnectEnabled,
 		SettingKeyOIDCConnectProviderName,
+		SettingKeyBalanceLowNotifyEnabled,
+		SettingKeyBalanceLowNotifyThreshold,
+		SettingKeyBalanceLowNotifyRechargeURL,
+		SettingKeyAccountQuotaNotifyEnabled,
 	}
 
 	settings, err := s.settingRepo.GetMultiple(ctx, keys)
@@ -213,6 +217,10 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		settings[SettingKeyTableDefaultPageSize],
 		settings[SettingKeyTablePageSizeOptions],
 	)
+	var balanceLowNotifyThreshold float64
+	if v, err := strconv.ParseFloat(settings[SettingKeyBalanceLowNotifyThreshold], 64); err == nil && v >= 0 {
+		balanceLowNotifyThreshold = v
+	}
 
 	return &PublicSettings{
 		RegistrationEnabled:              settings[SettingKeyRegistrationEnabled] == "true",
@@ -244,6 +252,10 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		OIDCOAuthEnabled:                 oidcEnabled,
 		OIDCOAuthProviderName:            oidcProviderName,
 		ContactChannels:                  publicContactChannels(settings[SettingKeyContactChannels]),
+		BalanceLowNotifyEnabled:          settings[SettingKeyBalanceLowNotifyEnabled] == "true",
+		BalanceLowNotifyThreshold:        balanceLowNotifyThreshold,
+		BalanceLowNotifyRechargeURL:      settings[SettingKeyBalanceLowNotifyRechargeURL],
+		AccountQuotaNotifyEnabled:        settings[SettingKeyAccountQuotaNotifyEnabled] == "true",
 	}, nil
 }
 
@@ -502,6 +514,11 @@ func (s *SettingService) UpdateSettings(ctx context.Context, settings *SystemSet
 	updates[SettingKeySMTPFrom] = settings.SMTPFrom
 	updates[SettingKeySMTPFromName] = settings.SMTPFromName
 	updates[SettingKeySMTPUseTLS] = strconv.FormatBool(settings.SMTPUseTLS)
+	updates[SettingKeyBalanceLowNotifyEnabled] = strconv.FormatBool(settings.BalanceLowNotifyEnabled)
+	updates[SettingKeyBalanceLowNotifyThreshold] = strconv.FormatFloat(settings.BalanceLowNotifyThreshold, 'f', 8, 64)
+	updates[SettingKeyBalanceLowNotifyRechargeURL] = strings.TrimSpace(settings.BalanceLowNotifyRechargeURL)
+	updates[SettingKeyAccountQuotaNotifyEnabled] = strconv.FormatBool(settings.AccountQuotaNotifyEnabled)
+	updates[SettingKeyAccountQuotaNotifyEmails] = MarshalNotifyEmails(settings.AccountQuotaNotifyEmails)
 
 	// Cloudflare Turnstile 设置（只有非空才更新密钥）
 	updates[SettingKeyTurnstileEnabled] = strconv.FormatBool(settings.TurnstileEnabled)
@@ -967,6 +984,11 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyDefaultSubscriptions:             "[]",
 		SettingKeySMTPPort:                         "587",
 		SettingKeySMTPUseTLS:                       "false",
+		SettingKeyBalanceLowNotifyEnabled:          "false",
+		SettingKeyBalanceLowNotifyThreshold:        "0",
+		SettingKeyBalanceLowNotifyRechargeURL:      "",
+		SettingKeyAccountQuotaNotifyEnabled:        "false",
+		SettingKeyAccountQuotaNotifyEmails:         "[]",
 		// Model fallback defaults
 		SettingKeyEnableModelFallback:      "false",
 		SettingKeyFallbackModelAnthropic:   "claude-3-5-sonnet-20241022",
@@ -1018,6 +1040,10 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 		SMTPFromName:                     settings[SettingKeySMTPFromName],
 		SMTPUseTLS:                       settings[SettingKeySMTPUseTLS] == "true",
 		SMTPPasswordConfigured:           settings[SettingKeySMTPPassword] != "",
+		BalanceLowNotifyEnabled:          settings[SettingKeyBalanceLowNotifyEnabled] == "true",
+		BalanceLowNotifyRechargeURL:      settings[SettingKeyBalanceLowNotifyRechargeURL],
+		AccountQuotaNotifyEnabled:        settings[SettingKeyAccountQuotaNotifyEnabled] == "true",
+		AccountQuotaNotifyEmails:         ParseNotifyEmails(settings[SettingKeyAccountQuotaNotifyEmails]),
 		TurnstileEnabled:                 settings[SettingKeyTurnstileEnabled] == "true",
 		TurnstileSiteKey:                 settings[SettingKeyTurnstileSiteKey],
 		TurnstileSecretKeyConfigured:     settings[SettingKeyTurnstileSecretKey] != "",
@@ -1058,6 +1084,9 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 		result.DefaultBalance = balance
 	} else {
 		result.DefaultBalance = s.cfg.Default.UserBalance
+	}
+	if threshold, err := strconv.ParseFloat(settings[SettingKeyBalanceLowNotifyThreshold], 64); err == nil && threshold >= 0 {
+		result.BalanceLowNotifyThreshold = threshold
 	}
 	result.DefaultSubscriptions = parseDefaultSubscriptions(settings[SettingKeyDefaultSubscriptions])
 

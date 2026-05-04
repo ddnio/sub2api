@@ -1126,6 +1126,11 @@ var (
 		{Name: "password_hash", Type: field.TypeString, Size: 255},
 		{Name: "role", Type: field.TypeString, Size: 20, Default: "user"},
 		{Name: "balance", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "balance_notify_enabled", Type: field.TypeBool, Default: true},
+		{Name: "balance_notify_threshold", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "balance_notify_extra_emails", Type: field.TypeString, Default: "[]", SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "balance_notify_threshold_type", Type: field.TypeString, Size: 10, Default: "fixed"},
+		{Name: "total_recharged", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
 		{Name: "concurrency", Type: field.TypeInt, Default: 5},
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"},
 		{Name: "username", Type: field.TypeString, Size: 100, Default: ""},
@@ -1144,7 +1149,7 @@ var (
 			{
 				Name:    "user_status",
 				Unique:  false,
-				Columns: []*schema.Column{UsersColumns[9]},
+				Columns: []*schema.Column{UsersColumns[14]},
 			},
 			{
 				Name:    "user_deleted_at",

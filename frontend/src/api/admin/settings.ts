@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from '../client'
-import type { CustomMenuItem, CustomEndpoint, ContactChannel } from '@/types'
+import type { CustomMenuItem, CustomEndpoint, ContactChannel, NotifyEmailEntry } from '@/types'
 
 export interface DefaultSubscriptionSetting {
   group_id: number
@@ -56,6 +56,11 @@ export interface SystemSettings {
   smtp_from_email: string
   smtp_from_name: string
   smtp_use_tls: boolean
+  balance_low_notify_enabled: boolean
+  balance_low_notify_threshold: number
+  balance_low_notify_recharge_url: string
+  account_quota_notify_enabled: boolean
+  account_quota_notify_emails: NotifyEmailEntry[]
   // Cloudflare Turnstile settings
   turnstile_enabled: boolean
   turnstile_site_key: string
@@ -158,6 +163,11 @@ export interface UpdateSettingsRequest {
   smtp_from_email?: string
   smtp_from_name?: string
   smtp_use_tls?: boolean
+  balance_low_notify_enabled?: boolean
+  balance_low_notify_threshold?: number
+  balance_low_notify_recharge_url?: string
+  account_quota_notify_enabled?: boolean
+  account_quota_notify_emails?: NotifyEmailEntry[]
   turnstile_enabled?: boolean
   turnstile_site_key?: string
   turnstile_secret_key?: string
