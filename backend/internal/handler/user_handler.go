@@ -11,13 +11,17 @@ import (
 
 // UserHandler handles user-related requests
 type UserHandler struct {
-	userService *service.UserService
+	userService  *service.UserService
+	emailService *service.EmailService
+	emailCache   service.EmailCache
 }
 
 // NewUserHandler creates a new UserHandler
-func NewUserHandler(userService *service.UserService) *UserHandler {
+func NewUserHandler(userService *service.UserService, emailService *service.EmailService, emailCache service.EmailCache) *UserHandler {
 	return &UserHandler{
-		userService: userService,
+		userService:  userService,
+		emailService: emailService,
+		emailCache:   emailCache,
 	}
 }
 
@@ -29,7 +33,9 @@ type ChangePasswordRequest struct {
 
 // UpdateProfileRequest represents the update profile request payload
 type UpdateProfileRequest struct {
-	Username *string `json:"username"`
+	Username               *string  `json:"username"`
+	BalanceNotifyEnabled   *bool    `json:"balance_notify_enabled"`
+	BalanceNotifyThreshold *float64 `json:"balance_notify_threshold"`
 }
 
 // GetProfile handles getting user profile
@@ -47,7 +53,7 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, dto.UserFromService(userData))
+	response.Success(c, dto.UserProfileFromService(userData))
 }
 
 // ChangePassword handles changing user password
@@ -94,7 +100,9 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	}
 
 	svcReq := service.UpdateProfileRequest{
-		Username: req.Username,
+		Username:               req.Username,
+		BalanceNotifyEnabled:   req.BalanceNotifyEnabled,
+		BalanceNotifyThreshold: req.BalanceNotifyThreshold,
 	}
 	updatedUser, err := h.userService.UpdateProfile(c.Request.Context(), subject.UserID, svcReq)
 	if err != nil {
@@ -102,5 +110,116 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, dto.UserFromService(updatedUser))
+	response.Success(c, dto.UserProfileFromService(updatedUser))
+}
+
+type SendNotifyEmailCodeRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+func (h *UserHandler) SendNotifyEmailCode(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	var req SendNotifyEmailCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	if err := h.userService.SendNotifyEmailCode(c.Request.Context(), subject.UserID, req.Email, h.emailService, h.emailCache); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, gin.H{"message": "Verification code sent successfully"})
+}
+
+type VerifyNotifyEmailRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	Code  string `json:"code" binding:"required,len=6"`
+}
+
+func (h *UserHandler) VerifyNotifyEmail(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	var req VerifyNotifyEmailRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	if err := h.userService.VerifyAndAddNotifyEmail(c.Request.Context(), subject.UserID, req.Email, req.Code, h.emailCache); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	updatedUser, err := h.userService.GetByID(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, dto.UserProfileFromService(updatedUser))
+}
+
+type NotifyEmailRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+func (h *UserHandler) RemoveNotifyEmail(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	var req NotifyEmailRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	if err := h.userService.RemoveNotifyEmail(c.Request.Context(), subject.UserID, req.Email); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	updatedUser, err := h.userService.GetByID(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, dto.UserProfileFromService(updatedUser))
+}
+
+type ToggleNotifyEmailRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Disabled bool   `json:"disabled"`
+}
+
+func (h *UserHandler) ToggleNotifyEmail(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	var req ToggleNotifyEmailRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	if err := h.userService.ToggleNotifyEmail(c.Request.Context(), subject.UserID, req.Email, req.Disabled); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	updatedUser, err := h.userService.GetByID(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, dto.UserProfileFromService(updatedUser))
 }

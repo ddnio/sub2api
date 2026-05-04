@@ -25,6 +25,10 @@ func RegisterUserRoutes(
 			user.GET("/profile", h.User.GetProfile)
 			user.PUT("/password", h.User.ChangePassword)
 			user.PUT("", h.User.UpdateProfile)
+			user.POST("/notify-email/send-code", h.User.SendNotifyEmailCode)
+			user.POST("/notify-email/verify", h.User.VerifyNotifyEmail)
+			user.PUT("/notify-email/toggle", h.User.ToggleNotifyEmail)
+			user.DELETE("/notify-email", h.User.RemoveNotifyEmail)
 
 			// TOTP 双因素认证
 			totp := user.Group("/totp")

@@ -97,6 +97,13 @@ const (
 	SettingKeySMTPFromName = "smtp_from_name" // 发件人名称
 	SettingKeySMTPUseTLS   = "smtp_use_tls"   // 是否使用TLS
 
+	// 余额/账号配额通知设置
+	SettingKeyBalanceLowNotifyEnabled     = "balance_low_notify_enabled"
+	SettingKeyBalanceLowNotifyThreshold   = "balance_low_notify_threshold"
+	SettingKeyBalanceLowNotifyRechargeURL = "balance_low_notify_recharge_url"
+	SettingKeyAccountQuotaNotifyEnabled   = "account_quota_notify_enabled"
+	SettingKeyAccountQuotaNotifyEmails    = "account_quota_notify_emails"
+
 	// Cloudflare Turnstile 设置
 	SettingKeyTurnstileEnabled   = "turnstile_enabled"    // 是否启用 Turnstile 验证
 	SettingKeyTurnstileSiteKey   = "turnstile_site_key"   // Turnstile Site Key
@@ -258,6 +265,10 @@ const (
 	SettingKeyEnableMetadataPassthrough = "enable_metadata_passthrough"
 	// SettingKeyEnableCCHSigning 是否对 billing header 中的 cch 进行 xxHash64 签名（默认 false）
 	SettingKeyEnableCCHSigning = "enable_cch_signing"
+
+	// Web Search Emulation
+	// SettingKeyWebSearchEmulationConfig 全局 web search 模拟配置（JSON）
+	SettingKeyWebSearchEmulationConfig = "web_search_emulation_config"
 )
 
 // AdminAPIKeyPrefix is the prefix for admin API keys (distinct from user "sk-" keys).

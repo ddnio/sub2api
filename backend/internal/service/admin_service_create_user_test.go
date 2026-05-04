@@ -37,6 +37,8 @@ func TestAdminService_CreateUser_Success(t *testing.T) {
 	require.Equal(t, input.AllowedGroups, user.AllowedGroups)
 	require.Equal(t, RoleUser, user.Role)
 	require.Equal(t, StatusActive, user.Status)
+	require.True(t, user.BalanceNotifyEnabled)
+	require.Equal(t, "fixed", user.BalanceNotifyThresholdType)
 	require.True(t, user.CheckPassword(input.Password))
 	require.Len(t, repo.created, 1)
 	require.Equal(t, user, repo.created[0])

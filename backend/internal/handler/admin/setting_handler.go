@@ -101,6 +101,11 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		SMTPFrom:                             settings.SMTPFrom,
 		SMTPFromName:                         settings.SMTPFromName,
 		SMTPUseTLS:                           settings.SMTPUseTLS,
+		BalanceLowNotifyEnabled:              settings.BalanceLowNotifyEnabled,
+		BalanceLowNotifyThreshold:            settings.BalanceLowNotifyThreshold,
+		BalanceLowNotifyRechargeURL:          settings.BalanceLowNotifyRechargeURL,
+		AccountQuotaNotifyEnabled:            settings.AccountQuotaNotifyEnabled,
+		AccountQuotaNotifyEmails:             dto.NotifyEmailEntriesFromService(settings.AccountQuotaNotifyEmails),
 		TurnstileEnabled:                     settings.TurnstileEnabled,
 		TurnstileSiteKey:                     settings.TurnstileSiteKey,
 		TurnstileSecretKeyConfigured:         settings.TurnstileSecretKeyConfigured,
@@ -165,6 +170,7 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		EnableFingerprintUnification:         settings.EnableFingerprintUnification,
 		EnableMetadataPassthrough:            settings.EnableMetadataPassthrough,
 		EnableCCHSigning:                     settings.EnableCCHSigning,
+		WebSearchEmulationEnabled:            settings.WebSearchEmulationEnabled,
 	})
 }
 
@@ -191,6 +197,12 @@ type UpdateSettingsRequest struct {
 	SMTPFrom     string `json:"smtp_from_email"`
 	SMTPFromName string `json:"smtp_from_name"`
 	SMTPUseTLS   bool   `json:"smtp_use_tls"`
+
+	BalanceLowNotifyEnabled     bool                   `json:"balance_low_notify_enabled"`
+	BalanceLowNotifyThreshold   float64                `json:"balance_low_notify_threshold"`
+	BalanceLowNotifyRechargeURL string                 `json:"balance_low_notify_recharge_url"`
+	AccountQuotaNotifyEnabled   bool                   `json:"account_quota_notify_enabled"`
+	AccountQuotaNotifyEmails    []dto.NotifyEmailEntry `json:"account_quota_notify_emails"`
 
 	// Cloudflare Turnstile 设置
 	TurnstileEnabled   bool   `json:"turnstile_enabled"`
@@ -747,6 +759,11 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		SMTPFrom:                         req.SMTPFrom,
 		SMTPFromName:                     req.SMTPFromName,
 		SMTPUseTLS:                       req.SMTPUseTLS,
+		BalanceLowNotifyEnabled:          req.BalanceLowNotifyEnabled,
+		BalanceLowNotifyThreshold:        req.BalanceLowNotifyThreshold,
+		BalanceLowNotifyRechargeURL:      req.BalanceLowNotifyRechargeURL,
+		AccountQuotaNotifyEnabled:        req.AccountQuotaNotifyEnabled,
+		AccountQuotaNotifyEmails:         dto.NotifyEmailEntriesToService(req.AccountQuotaNotifyEmails),
 		TurnstileEnabled:                 req.TurnstileEnabled,
 		TurnstileSiteKey:                 req.TurnstileSiteKey,
 		TurnstileSecretKey:               req.TurnstileSecretKey,
@@ -889,6 +906,11 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		SMTPFrom:                             updatedSettings.SMTPFrom,
 		SMTPFromName:                         updatedSettings.SMTPFromName,
 		SMTPUseTLS:                           updatedSettings.SMTPUseTLS,
+		BalanceLowNotifyEnabled:              updatedSettings.BalanceLowNotifyEnabled,
+		BalanceLowNotifyThreshold:            updatedSettings.BalanceLowNotifyThreshold,
+		BalanceLowNotifyRechargeURL:          updatedSettings.BalanceLowNotifyRechargeURL,
+		AccountQuotaNotifyEnabled:            updatedSettings.AccountQuotaNotifyEnabled,
+		AccountQuotaNotifyEmails:             dto.NotifyEmailEntriesFromService(updatedSettings.AccountQuotaNotifyEmails),
 		TurnstileEnabled:                     updatedSettings.TurnstileEnabled,
 		TurnstileSiteKey:                     updatedSettings.TurnstileSiteKey,
 		TurnstileSecretKeyConfigured:         updatedSettings.TurnstileSecretKeyConfigured,
@@ -953,6 +975,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		EnableFingerprintUnification:         updatedSettings.EnableFingerprintUnification,
 		EnableMetadataPassthrough:            updatedSettings.EnableMetadataPassthrough,
 		EnableCCHSigning:                     updatedSettings.EnableCCHSigning,
+		WebSearchEmulationEnabled:            updatedSettings.WebSearchEmulationEnabled,
 	})
 }
 
@@ -1809,4 +1832,82 @@ func (h *SettingHandler) UpdateContactChannels(c *gin.Context) {
 		return
 	}
 	response.Success(c, gin.H{"channels": contactChannelsToDTO(updated)})
+}
+
+// GetWebSearchEmulationConfig 获取 Web Search 模拟配置。
+// GET /api/v1/admin/settings/web-search-emulation
+func (h *SettingHandler) GetWebSearchEmulationConfig(c *gin.Context) {
+	cfg, err := h.settingService.GetWebSearchEmulationConfig(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, service.SanitizeWebSearchConfig(c.Request.Context(), cfg))
+}
+
+// UpdateWebSearchEmulationConfig 更新 Web Search 模拟配置。
+// PUT /api/v1/admin/settings/web-search-emulation
+func (h *SettingHandler) UpdateWebSearchEmulationConfig(c *gin.Context) {
+	var cfg service.WebSearchEmulationConfig
+	if err := c.ShouldBindJSON(&cfg); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	if err := h.settingService.SaveWebSearchEmulationConfig(c.Request.Context(), &cfg); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	updated, err := h.settingService.GetWebSearchEmulationConfig(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, service.SanitizeWebSearchConfig(c.Request.Context(), updated))
+}
+
+// ResetWebSearchUsage 重置指定 provider 的配额用量。
+// POST /api/v1/admin/settings/web-search-emulation/reset-usage
+func (h *SettingHandler) ResetWebSearchUsage(c *gin.Context) {
+	var req struct {
+		ProviderType string `json:"provider_type"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	req.ProviderType = strings.TrimSpace(req.ProviderType)
+	if req.ProviderType == "" {
+		response.BadRequest(c, "provider_type is required")
+		return
+	}
+	if err := service.ResetWebSearchUsage(c.Request.Context(), req.ProviderType); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, nil)
+}
+
+// TestWebSearchEmulation 测试 Web Search 搜索。
+// POST /api/v1/admin/settings/web-search-emulation/test
+func (h *SettingHandler) TestWebSearchEmulation(c *gin.Context) {
+	var req struct {
+		Query string `json:"query"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	query := strings.TrimSpace(req.Query)
+	if query == "" {
+		query = "搜索今年世界大事件"
+	}
+
+	result, err := service.TestWebSearch(c.Request.Context(), query)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, result)
 }

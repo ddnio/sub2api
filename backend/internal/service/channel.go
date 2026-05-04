@@ -48,6 +48,39 @@ type Channel struct {
 	ModelPricing []ChannelModelPricing
 	// 渠道级模型映射（按平台分组：platform → {src→dst}）
 	ModelMapping map[string]map[string]string
+
+	// 渠道特性配置（如 {"web_search_emulation": {"anthropic": true}}）
+	FeaturesConfig map[string]any
+
+	// 账号统计定价
+	ApplyPricingToAccountStats bool
+	AccountStatsPricingRules   []AccountStatsPricingRule
+}
+
+// IsWebSearchEmulationEnabled 返回该渠道是否为指定平台启用了 web search 模拟。
+func (c *Channel) IsWebSearchEmulationEnabled(platform string) bool {
+	if c == nil || c.FeaturesConfig == nil {
+		return false
+	}
+	wse, ok := c.FeaturesConfig[featureKeyWebSearchEmulation].(map[string]any)
+	if !ok {
+		return false
+	}
+	enabled, ok := wse[platform].(bool)
+	return ok && enabled
+}
+
+// AccountStatsPricingRule 账号统计定价规则。
+type AccountStatsPricingRule struct {
+	ID         int64
+	ChannelID  int64
+	Name       string
+	GroupIDs   []int64
+	AccountIDs []int64
+	SortOrder  int
+	Pricing    []ChannelModelPricing
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 // ChannelModelPricing 渠道模型定价条目
@@ -176,7 +209,40 @@ func (c *Channel) Clone() *Channel {
 			cp.ModelMapping[platform] = inner
 		}
 	}
+	if c.FeaturesConfig != nil {
+		cp.FeaturesConfig = cloneMapAny(c.FeaturesConfig)
+	}
+	if c.AccountStatsPricingRules != nil {
+		cp.AccountStatsPricingRules = make([]AccountStatsPricingRule, len(c.AccountStatsPricingRules))
+		copy(cp.AccountStatsPricingRules, c.AccountStatsPricingRules)
+		for i := range cp.AccountStatsPricingRules {
+			if c.AccountStatsPricingRules[i].GroupIDs != nil {
+				cp.AccountStatsPricingRules[i].GroupIDs = append([]int64(nil), c.AccountStatsPricingRules[i].GroupIDs...)
+			}
+			if c.AccountStatsPricingRules[i].AccountIDs != nil {
+				cp.AccountStatsPricingRules[i].AccountIDs = append([]int64(nil), c.AccountStatsPricingRules[i].AccountIDs...)
+			}
+			if c.AccountStatsPricingRules[i].Pricing != nil {
+				cp.AccountStatsPricingRules[i].Pricing = make([]ChannelModelPricing, len(c.AccountStatsPricingRules[i].Pricing))
+				for j := range c.AccountStatsPricingRules[i].Pricing {
+					cp.AccountStatsPricingRules[i].Pricing[j] = c.AccountStatsPricingRules[i].Pricing[j].Clone()
+				}
+			}
+		}
+	}
 	return &cp
+}
+
+func cloneMapAny(in map[string]any) map[string]any {
+	out := make(map[string]any, len(in))
+	for k, v := range in {
+		if nested, ok := v.(map[string]any); ok {
+			out[k] = cloneMapAny(nested)
+			continue
+		}
+		out[k] = v
+	}
+	return out
 }
 
 // ValidateIntervals 校验区间列表的合法性。

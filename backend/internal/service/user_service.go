@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"crypto/subtle"
 	"fmt"
-	"log"
+	"log/slog"
+	"strings"
 	"time"
 
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
@@ -11,9 +13,16 @@ import (
 )
 
 var (
-	ErrUserNotFound      = infraerrors.NotFound("USER_NOT_FOUND", "user not found")
-	ErrPasswordIncorrect = infraerrors.BadRequest("PASSWORD_INCORRECT", "current password is incorrect")
-	ErrInsufficientPerms = infraerrors.Forbidden("INSUFFICIENT_PERMISSIONS", "insufficient permissions")
+	ErrUserNotFound            = infraerrors.NotFound("USER_NOT_FOUND", "user not found")
+	ErrPasswordIncorrect       = infraerrors.BadRequest("PASSWORD_INCORRECT", "current password is incorrect")
+	ErrInsufficientPerms       = infraerrors.Forbidden("INSUFFICIENT_PERMISSIONS", "insufficient permissions")
+	ErrNotifyCodeUserRateLimit = infraerrors.TooManyRequests("NOTIFY_CODE_USER_RATE_LIMIT", "too many verification codes requested, please try again later")
+)
+
+const (
+	maxNotifyEmails          = 3
+	notifyCodeUserRateLimit  = 5
+	notifyCodeUserRateWindow = 10 * time.Minute
 )
 
 // UserListFilters contains all filter options for listing users
@@ -58,9 +67,11 @@ type UserRepository interface {
 
 // UpdateProfileRequest 更新用户资料请求
 type UpdateProfileRequest struct {
-	Email       *string `json:"email"`
-	Username    *string `json:"username"`
-	Concurrency *int    `json:"concurrency"`
+	Email                  *string  `json:"email"`
+	Username               *string  `json:"username"`
+	Concurrency            *int     `json:"concurrency"`
+	BalanceNotifyEnabled   *bool    `json:"balance_notify_enabled"`
+	BalanceNotifyThreshold *float64 `json:"balance_notify_threshold"`
 }
 
 // ChangePasswordRequest 修改密码请求
@@ -72,6 +83,7 @@ type ChangePasswordRequest struct {
 // UserService 用户服务
 type UserService struct {
 	userRepo             UserRepository
+	settingRepo          SettingRepository
 	authCacheInvalidator APIKeyAuthCacheInvalidator
 	billingCache         BillingCache
 }
@@ -83,6 +95,10 @@ func NewUserService(userRepo UserRepository, authCacheInvalidator APIKeyAuthCach
 		authCacheInvalidator: authCacheInvalidator,
 		billingCache:         billingCache,
 	}
+}
+
+func (s *UserService) SetSettingRepository(settingRepo SettingRepository) {
+	s.settingRepo = settingRepo
 }
 
 // GetFirstAdmin 获取首个管理员用户（用于 Admin API Key 认证）
@@ -130,6 +146,17 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID int64, req Updat
 
 	if req.Concurrency != nil {
 		user.Concurrency = *req.Concurrency
+	}
+
+	if req.BalanceNotifyEnabled != nil {
+		user.BalanceNotifyEnabled = *req.BalanceNotifyEnabled
+	}
+	if req.BalanceNotifyThreshold != nil {
+		if *req.BalanceNotifyThreshold <= 0 {
+			user.BalanceNotifyThreshold = nil
+		} else {
+			user.BalanceNotifyThreshold = req.BalanceNotifyThreshold
+		}
 	}
 
 	if err := s.userRepo.Update(ctx, user); err != nil {
@@ -201,7 +228,7 @@ func (s *UserService) UpdateBalance(ctx context.Context, userID int64, amount fl
 			cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			if err := s.billingCache.InvalidateUserBalance(cacheCtx, userID); err != nil {
-				log.Printf("invalidate user balance cache failed: user_id=%d err=%v", userID, err)
+				slog.Error("invalidate user balance cache failed", "user_id", userID, "error", err)
 			}
 		}()
 	}
@@ -247,4 +274,210 @@ func (s *UserService) Delete(ctx context.Context, userID int64) error {
 		return fmt.Errorf("delete user: %w", err)
 	}
 	return nil
+}
+
+// SendNotifyEmailCode sends a verification code to an extra notification email.
+func (s *UserService) SendNotifyEmailCode(ctx context.Context, userID int64, email string, emailService *EmailService, cache EmailCache) error {
+	if emailService == nil || cache == nil {
+		return ErrEmailNotConfigured
+	}
+	if err := checkNotifyCodeRateLimit(ctx, cache, userID, email); err != nil {
+		return err
+	}
+
+	code, err := emailService.GenerateVerifyCode()
+	if err != nil {
+		return fmt.Errorf("generate code: %w", err)
+	}
+	if err := s.sendNotifyVerifyEmail(ctx, emailService, email, code); err != nil {
+		return err
+	}
+	if err := saveNotifyVerifyCode(ctx, cache, email, code); err != nil {
+		return err
+	}
+	if _, err := cache.IncrNotifyCodeUserRate(ctx, userID, notifyCodeUserRateWindow); err != nil {
+		slog.Error("failed to increment notify code user rate", "user_id", userID, "error", err)
+	}
+	return nil
+}
+
+func checkNotifyCodeRateLimit(ctx context.Context, cache EmailCache, userID int64, email string) error {
+	existing, err := cache.GetNotifyVerifyCode(ctx, email)
+	if err == nil && existing != nil && time.Since(existing.CreatedAt) < verifyCodeCooldown {
+		return ErrVerifyCodeTooFrequent
+	}
+	count, err := cache.GetNotifyCodeUserRate(ctx, userID)
+	if err == nil && count >= notifyCodeUserRateLimit {
+		return ErrNotifyCodeUserRateLimit
+	}
+	return nil
+}
+
+func saveNotifyVerifyCode(ctx context.Context, cache EmailCache, email, code string) error {
+	now := time.Now()
+	data := &VerificationCodeData{
+		Code:      code,
+		Attempts:  0,
+		CreatedAt: now,
+		ExpiresAt: now.Add(verifyCodeTTL),
+	}
+	if err := cache.SetNotifyVerifyCode(ctx, email, data, verifyCodeTTL); err != nil {
+		return fmt.Errorf("save verify code: %w", err)
+	}
+	return nil
+}
+
+func (s *UserService) sendNotifyVerifyEmail(ctx context.Context, emailService *EmailService, email, code string) error {
+	siteName := "Sub2API"
+	if s != nil && s.settingRepo != nil {
+		if name, err := s.settingRepo.GetValue(ctx, SettingKeySiteName); err == nil && name != "" {
+			siteName = name
+		}
+	}
+	subject := fmt.Sprintf("[%s] 通知邮箱验证码 / Notification Email Verification", siteName)
+	body := buildNotifyVerifyEmailBody(code, siteName)
+	return emailService.SendEmail(ctx, email, subject, body)
+}
+
+// VerifyAndAddNotifyEmail verifies the code and adds the email to the user's extra notification emails.
+func (s *UserService) VerifyAndAddNotifyEmail(ctx context.Context, userID int64, email, code string, cache EmailCache) error {
+	if cache == nil {
+		return ErrEmailNotConfigured
+	}
+	if err := verifyNotifyCode(ctx, cache, email, code); err != nil {
+		return err
+	}
+	_ = cache.DeleteNotifyVerifyCode(ctx, email)
+	return s.addOrVerifyNotifyEmail(ctx, userID, email)
+}
+
+func verifyNotifyCode(ctx context.Context, cache EmailCache, email, code string) error {
+	data, err := cache.GetNotifyVerifyCode(ctx, email)
+	if err != nil || data == nil {
+		return ErrInvalidVerifyCode
+	}
+	if data.Attempts >= maxVerifyCodeAttempts {
+		return ErrVerifyCodeMaxAttempts
+	}
+	if subtle.ConstantTimeCompare([]byte(data.Code), []byte(code)) != 1 {
+		data.Attempts++
+		remaining := time.Until(data.ExpiresAt)
+		if remaining <= 0 {
+			return ErrInvalidVerifyCode
+		}
+		if err := cache.SetNotifyVerifyCode(ctx, email, data, remaining); err != nil {
+			slog.Error("failed to update notify verify code attempts", "email", email, "error", err)
+		}
+		if data.Attempts >= maxVerifyCodeAttempts {
+			return ErrVerifyCodeMaxAttempts
+		}
+		return ErrInvalidVerifyCode
+	}
+	return nil
+}
+
+func (s *UserService) addOrVerifyNotifyEmail(ctx context.Context, userID int64, email string) error {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	for i, entry := range user.BalanceNotifyExtraEmails {
+		if strings.EqualFold(entry.Email, email) {
+			if !entry.Verified {
+				user.BalanceNotifyExtraEmails[i].Verified = true
+				return s.userRepo.Update(ctx, user)
+			}
+			return nil
+		}
+	}
+	if len(user.BalanceNotifyExtraEmails) >= maxNotifyEmails {
+		return infraerrors.BadRequest("TOO_MANY_NOTIFY_EMAILS", fmt.Sprintf("maximum %d notification emails allowed", maxNotifyEmails))
+	}
+	user.BalanceNotifyExtraEmails = append(user.BalanceNotifyExtraEmails, NotifyEmailEntry{
+		Email:    email,
+		Disabled: false,
+		Verified: true,
+	})
+	return s.userRepo.Update(ctx, user)
+}
+
+func (s *UserService) RemoveNotifyEmail(ctx context.Context, userID int64, email string) error {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	filtered := make([]NotifyEmailEntry, 0, len(user.BalanceNotifyExtraEmails))
+	found := false
+	for _, entry := range user.BalanceNotifyExtraEmails {
+		if strings.EqualFold(entry.Email, email) {
+			found = true
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+	if !found {
+		return infraerrors.BadRequest("EMAIL_NOT_FOUND", "notification email not found")
+	}
+	user.BalanceNotifyExtraEmails = filtered
+	return s.userRepo.Update(ctx, user)
+}
+
+func (s *UserService) ToggleNotifyEmail(ctx context.Context, userID int64, email string, disabled bool) error {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for i, entry := range user.BalanceNotifyExtraEmails {
+		if strings.EqualFold(entry.Email, email) {
+			user.BalanceNotifyExtraEmails[i].Disabled = disabled
+			found = true
+			break
+		}
+	}
+	if !found {
+		return infraerrors.BadRequest("EMAIL_NOT_FOUND", "notification email not found")
+	}
+	return s.userRepo.Update(ctx, user)
+}
+
+const notifyVerifyEmailTemplate = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; padding: 30px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .content { padding: 40px 30px; text-align: center; }
+        .code { font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #333; background-color: #f8f9fa; padding: 20px 30px; border-radius: 8px; display: inline-block; margin: 20px 0; font-family: monospace; }
+        .info { color: #666; font-size: 14px; line-height: 1.6; margin-top: 20px; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #999; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header"><h1>%s</h1></div>
+        <div class="content">
+            <p style="font-size: 18px; color: #333;">通知邮箱验证码 / Notification Email Verification</p>
+            <div class="code">%s</div>
+            <div class="info">
+                <p>您正在添加额外的通知邮箱，请输入此验证码完成验证。</p>
+                <p>You are adding an extra notification email. Please enter this code to verify.</p>
+                <p>此验证码将在 <strong>15 分钟</strong>后失效。</p>
+                <p>This code will expire in <strong>15 minutes</strong>.</p>
+                <p>如果您没有请求此验证码，请忽略此邮件。</p>
+                <p>If you did not request this code, please ignore this email.</p>
+            </div>
+        </div>
+        <div class="footer"><p>此邮件由系统自动发送，请勿回复。/ This is an automated message, please do not reply.</p></div>
+    </div>
+</body>
+</html>`
+
+func buildNotifyVerifyEmailBody(code, siteName string) string {
+	return fmt.Sprintf(notifyVerifyEmailTemplate, siteName, code)
 }

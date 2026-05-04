@@ -41,6 +41,10 @@ const props = defineProps<{
   initialUsername: string
 }>()
 
+const emit = defineEmits<{
+  updated: [user: import('@/types').UserProfile]
+}>()
+
 const { t } = useI18n()
 const authStore = useAuthStore()
 const appStore = useAppStore()
@@ -64,6 +68,7 @@ const handleUpdateProfile = async () => {
       username: username.value
     })
     authStore.user = updatedUser
+    emit('updated', updatedUser)
     appStore.showSuccess(t('profile.updateSuccess'))
   } catch (error: any) {
     appStore.showError(error.response?.data?.detail || t('profile.updateFailed'))

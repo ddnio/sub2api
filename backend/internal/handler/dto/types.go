@@ -23,6 +23,15 @@ type User struct {
 	Subscriptions []UserSubscription `json:"subscriptions,omitempty"`
 }
 
+type UserProfile struct {
+	User
+
+	BalanceNotifyEnabled       bool               `json:"balance_notify_enabled"`
+	BalanceNotifyThreshold     *float64           `json:"balance_notify_threshold"`
+	BalanceNotifyThresholdType string             `json:"balance_notify_threshold_type"`
+	BalanceNotifyExtraEmails   []NotifyEmailEntry `json:"balance_notify_extra_emails"`
+}
+
 // AdminUser 是管理员接口使用的 user DTO（包含敏感/内部字段）。
 // 注意：普通用户接口不得返回 notes 等管理员备注信息。
 type AdminUser struct {
@@ -413,6 +422,10 @@ type AdminUsageLog struct {
 
 	// AccountRateMultiplier 账号计费倍率快照（nil 表示按 1.0 处理）
 	AccountRateMultiplier *float64 `json:"account_rate_multiplier"`
+	// AccountStatsCost 是账号统计自定义定价成本（nil 表示使用 total_cost）
+	AccountStatsCost *float64 `json:"account_stats_cost,omitempty"`
+	// AccountCost 是管理员账号口径费用：COALESCE(account_stats_cost,total_cost) * account_rate_multiplier
+	AccountCost float64 `json:"account_cost"`
 
 	// IPAddress 用户请求 IP（仅管理员可见）
 	IPAddress *string `json:"ip_address,omitempty"`

@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from '../client'
-import type { CustomMenuItem, CustomEndpoint, ContactChannel } from '@/types'
+import type { CustomMenuItem, CustomEndpoint, ContactChannel, NotifyEmailEntry } from '@/types'
 
 export interface DefaultSubscriptionSetting {
   group_id: number
@@ -56,6 +56,11 @@ export interface SystemSettings {
   smtp_from_email: string
   smtp_from_name: string
   smtp_use_tls: boolean
+  balance_low_notify_enabled: boolean
+  balance_low_notify_threshold: number
+  balance_low_notify_recharge_url: string
+  account_quota_notify_enabled: boolean
+  account_quota_notify_emails: NotifyEmailEntry[]
   // Cloudflare Turnstile settings
   turnstile_enabled: boolean
   turnstile_site_key: string
@@ -158,6 +163,11 @@ export interface UpdateSettingsRequest {
   smtp_from_email?: string
   smtp_from_name?: string
   smtp_use_tls?: boolean
+  balance_low_notify_enabled?: boolean
+  balance_low_notify_threshold?: number
+  balance_low_notify_recharge_url?: string
+  account_quota_notify_enabled?: boolean
+  account_quota_notify_emails?: NotifyEmailEntry[]
   turnstile_enabled?: boolean
   turnstile_site_key?: string
   turnstile_secret_key?: string
@@ -478,6 +488,59 @@ export async function updateContactChannels(channels: ContactChannel[]): Promise
   return data.channels ?? []
 }
 
+// --- Web Search Emulation Config ---
+
+export interface WebSearchProviderConfig {
+  type: 'brave' | 'tavily'
+  api_key: string
+  api_key_configured: boolean
+  quota_limit: number | null
+  subscribed_at: number | null
+  quota_used?: number
+  proxy_id: number | null
+  expires_at: number | null
+}
+
+export interface WebSearchEmulationConfig {
+  enabled: boolean
+  providers: WebSearchProviderConfig[]
+}
+
+export interface WebSearchTestResult {
+  provider: string
+  results: { url: string; title: string; snippet: string; page_age?: string }[]
+  query: string
+}
+
+export async function getWebSearchEmulationConfig(): Promise<WebSearchEmulationConfig> {
+  const { data } = await apiClient.get<WebSearchEmulationConfig>(
+    '/admin/settings/web-search-emulation'
+  )
+  return data
+}
+
+export async function updateWebSearchEmulationConfig(
+  config: WebSearchEmulationConfig
+): Promise<WebSearchEmulationConfig> {
+  const { data } = await apiClient.put<WebSearchEmulationConfig>(
+    '/admin/settings/web-search-emulation',
+    config
+  )
+  return data
+}
+
+export async function testWebSearchEmulation(query: string): Promise<WebSearchTestResult> {
+  const { data } = await apiClient.post<WebSearchTestResult>(
+    '/admin/settings/web-search-emulation/test',
+    { query }
+  )
+  return data
+}
+
+export async function resetWebSearchUsage(payload: { provider_type: string }): Promise<void> {
+  await apiClient.post('/admin/settings/web-search-emulation/reset-usage', payload)
+}
+
 export const settingsAPI = {
   getSettings,
   updateSettings,
@@ -495,7 +558,11 @@ export const settingsAPI = {
   getBetaPolicySettings,
   updateBetaPolicySettings,
   getContactChannels,
-  updateContactChannels
+  updateContactChannels,
+  getWebSearchEmulationConfig,
+  updateWebSearchEmulationConfig,
+  testWebSearchEmulation,
+  resetWebSearchUsage
 }
 
 export default settingsAPI

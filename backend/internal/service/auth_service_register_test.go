@@ -57,6 +57,48 @@ type emailCacheStub struct {
 	err  error
 }
 
+type refreshTokenCacheStub struct{}
+
+func (s *refreshTokenCacheStub) StoreRefreshToken(ctx context.Context, tokenHash string, data *RefreshTokenData, ttl time.Duration) error {
+	return nil
+}
+
+func (s *refreshTokenCacheStub) GetRefreshToken(ctx context.Context, tokenHash string) (*RefreshTokenData, error) {
+	return nil, ErrRefreshTokenNotFound
+}
+
+func (s *refreshTokenCacheStub) DeleteRefreshToken(ctx context.Context, tokenHash string) error {
+	return nil
+}
+
+func (s *refreshTokenCacheStub) DeleteUserRefreshTokens(ctx context.Context, userID int64) error {
+	return nil
+}
+
+func (s *refreshTokenCacheStub) DeleteTokenFamily(ctx context.Context, familyID string) error {
+	return nil
+}
+
+func (s *refreshTokenCacheStub) AddToUserTokenSet(ctx context.Context, userID int64, tokenHash string, ttl time.Duration) error {
+	return nil
+}
+
+func (s *refreshTokenCacheStub) AddToFamilyTokenSet(ctx context.Context, familyID string, tokenHash string, ttl time.Duration) error {
+	return nil
+}
+
+func (s *refreshTokenCacheStub) GetUserTokenHashes(ctx context.Context, userID int64) ([]string, error) {
+	return nil, nil
+}
+
+func (s *refreshTokenCacheStub) GetFamilyTokenHashes(ctx context.Context, familyID string) ([]string, error) {
+	return nil, nil
+}
+
+func (s *refreshTokenCacheStub) IsTokenInFamily(ctx context.Context, familyID string, tokenHash string) (bool, error) {
+	return false, nil
+}
+
 type defaultSubscriptionAssignerStub struct {
 	calls []AssignSubscriptionInput
 	err   error
@@ -87,6 +129,18 @@ func (s *emailCacheStub) DeleteVerificationCode(ctx context.Context, email strin
 	return nil
 }
 
+func (s *emailCacheStub) GetNotifyVerifyCode(ctx context.Context, email string) (*VerificationCodeData, error) {
+	return nil, nil
+}
+
+func (s *emailCacheStub) SetNotifyVerifyCode(ctx context.Context, email string, data *VerificationCodeData, ttl time.Duration) error {
+	return nil
+}
+
+func (s *emailCacheStub) DeleteNotifyVerifyCode(ctx context.Context, email string) error {
+	return nil
+}
+
 func (s *emailCacheStub) GetPasswordResetToken(ctx context.Context, email string) (*PasswordResetTokenData, error) {
 	return nil, nil
 }
@@ -105,6 +159,14 @@ func (s *emailCacheStub) IsPasswordResetEmailInCooldown(ctx context.Context, ema
 
 func (s *emailCacheStub) SetPasswordResetEmailCooldown(ctx context.Context, email string, ttl time.Duration) error {
 	return nil
+}
+
+func (s *emailCacheStub) IncrNotifyCodeUserRate(ctx context.Context, userID int64, window time.Duration) (int64, error) {
+	return 0, nil
+}
+
+func (s *emailCacheStub) GetNotifyCodeUserRate(ctx context.Context, userID int64) (int64, error) {
+	return 0, nil
 }
 
 func newAuthService(repo *userRepoStub, settings map[string]string, emailCache EmailCache) *AuthService {
@@ -315,9 +377,46 @@ func TestAuthService_Register_Success(t *testing.T) {
 	require.Equal(t, RoleUser, user.Role)
 	require.Equal(t, StatusActive, user.Status)
 	require.Equal(t, 3.5, user.Balance)
+	require.True(t, user.BalanceNotifyEnabled)
+	require.Equal(t, "fixed", user.BalanceNotifyThresholdType)
 	require.Equal(t, 2, user.Concurrency)
 	require.Len(t, repo.created, 1)
 	require.True(t, user.CheckPassword("password"))
+}
+
+func TestAuthService_LoginOrRegisterOAuth_SetsNotifyDefaults(t *testing.T) {
+	repo := &userRepoStub{nextID: 6}
+	service := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled: "true",
+	}, nil)
+
+	token, user, err := service.LoginOrRegisterOAuth(context.Background(), "oauth@test.com", "oauth-user")
+	require.NoError(t, err)
+	require.NotEmpty(t, token)
+	require.NotNil(t, user)
+	require.True(t, user.BalanceNotifyEnabled)
+	require.Equal(t, "fixed", user.BalanceNotifyThresholdType)
+	require.Len(t, repo.created, 1)
+	require.True(t, repo.created[0].BalanceNotifyEnabled)
+	require.Equal(t, "fixed", repo.created[0].BalanceNotifyThresholdType)
+}
+
+func TestAuthService_LoginOrRegisterOAuthWithTokenPair_SetsNotifyDefaults(t *testing.T) {
+	repo := &userRepoStub{nextID: 7}
+	service := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled: "true",
+	}, nil)
+	service.refreshTokenCache = &refreshTokenCacheStub{}
+
+	pair, user, err := service.LoginOrRegisterOAuthWithTokenPair(context.Background(), "pending-oauth@test.com", "pending-user", "")
+	require.NoError(t, err)
+	require.NotNil(t, pair)
+	require.NotNil(t, user)
+	require.True(t, user.BalanceNotifyEnabled)
+	require.Equal(t, "fixed", user.BalanceNotifyThresholdType)
+	require.Len(t, repo.created, 1)
+	require.True(t, repo.created[0].BalanceNotifyEnabled)
+	require.Equal(t, "fixed", repo.created[0].BalanceNotifyThresholdType)
 }
 
 func TestAuthService_ValidateToken_ExpiredReturnsClaimsWithError(t *testing.T) {

@@ -1430,6 +1430,78 @@ func TestCreate_InvalidPricingIntervals(t *testing.T) {
 	require.Contains(t, err.Error(), "overlap")
 }
 
+func TestCreate_InvalidAccountStatsPricingIntervals(t *testing.T) {
+	repo := &mockChannelRepository{
+		existsByNameFn: func(_ context.Context, _ string) (bool, error) {
+			return false, nil
+		},
+	}
+	svc := newTestChannelService(repo)
+
+	_, err := svc.Create(context.Background(), &CreateChannelInput{
+		Name: "new-channel",
+		AccountStatsPricingRules: []AccountStatsPricingRule{{
+			Name: "custom stats",
+			Pricing: []ChannelModelPricing{{
+				Platform: "anthropic",
+				Models:   []string{"claude-opus-4"},
+				Intervals: []PricingInterval{
+					{MinTokens: 0, MaxTokens: testPtrInt(2000), InputPrice: testPtrFloat64(1e-6)},
+					{MinTokens: 1000, MaxTokens: testPtrInt(3000), InputPrice: testPtrFloat64(2e-6)},
+				},
+			}},
+		}},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "INVALID_PRICING_INTERVALS")
+	require.Contains(t, err.Error(), "overlap")
+}
+
+func TestCreate_InvalidAccountStatsPricingBillingMode(t *testing.T) {
+	repo := &mockChannelRepository{
+		existsByNameFn: func(_ context.Context, _ string) (bool, error) {
+			return false, nil
+		},
+	}
+	svc := newTestChannelService(repo)
+
+	_, err := svc.Create(context.Background(), &CreateChannelInput{
+		Name: "new-channel",
+		AccountStatsPricingRules: []AccountStatsPricingRule{{
+			Name: "custom stats",
+			Pricing: []ChannelModelPricing{{
+				Platform:    "anthropic",
+				Models:      []string{"claude-opus-4"},
+				BillingMode: BillingModePerRequest,
+			}},
+		}},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "BILLING_MODE_MISSING_PRICE")
+}
+
+func TestUpdate_InvalidAccountStatsPricingBillingMode(t *testing.T) {
+	repo := &mockChannelRepository{
+		getByIDFn: func(_ context.Context, _ int64) (*Channel, error) {
+			return &Channel{ID: 1, Name: "existing", Status: StatusActive}, nil
+		},
+	}
+	svc := newTestChannelService(repo)
+
+	_, err := svc.Update(context.Background(), 1, &UpdateChannelInput{
+		AccountStatsPricingRules: &[]AccountStatsPricingRule{{
+			Name: "custom stats",
+			Pricing: []ChannelModelPricing{{
+				Platform:    "anthropic",
+				Models:      []string{"claude-opus-4"},
+				BillingMode: BillingModePerRequest,
+			}},
+		}},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "BILLING_MODE_MISSING_PRICE")
+}
+
 func TestCreate_DefaultBillingModelSource(t *testing.T) {
 	var capturedChannel *Channel
 	repo := &mockChannelRepository{

@@ -415,6 +415,16 @@ func (s *ChannelService) GetChannelForGroup(ctx context.Context, groupID int64) 
 	return ch.Clone(), nil
 }
 
+// GetGroupPlatform returns the platform configured for a group in the channel cache.
+func (s *ChannelService) GetGroupPlatform(ctx context.Context, groupID int64) string {
+	cache, err := s.loadCache(ctx)
+	if err != nil {
+		slog.Warn("failed to load channel cache for group platform", "group_id", groupID, "error", err)
+		return ""
+	}
+	return cache.groupPlatform[groupID]
+}
+
 // channelLookup 热路径公共查找结果
 type channelLookup struct {
 	cache    *channelCache
@@ -555,7 +565,7 @@ func ReplaceModelInBody(body []byte, newModel string) []byte {
 
 // validateChannelConfig 校验渠道的定价和映射配置（冲突检测 + 区间校验 + 计费模式校验）。
 // Create 和 Update 共用此函数，避免重复。
-func validateChannelConfig(pricing []ChannelModelPricing, mapping map[string]map[string]string) error {
+func validateChannelConfig(pricing []ChannelModelPricing, mapping map[string]map[string]string, accountStatsRules []AccountStatsPricingRule) error {
 	if err := validateNoConflictingModels(pricing); err != nil {
 		return err
 	}
@@ -565,7 +575,25 @@ func validateChannelConfig(pricing []ChannelModelPricing, mapping map[string]map
 	if err := validateNoConflictingMappings(mapping); err != nil {
 		return err
 	}
+	if err := validateAccountStatsPricingRules(accountStatsRules); err != nil {
+		return err
+	}
 	return validatePricingBillingMode(pricing)
+}
+
+func validateAccountStatsPricingRules(rules []AccountStatsPricingRule) error {
+	for i := range rules {
+		if err := validateNoConflictingModels(rules[i].Pricing); err != nil {
+			return err
+		}
+		if err := validatePricingIntervals(rules[i].Pricing); err != nil {
+			return err
+		}
+		if err := validatePricingBillingMode(rules[i].Pricing); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // validatePricingBillingMode 校验计费模式配置：按次/图片模式必须配价格或区间，所有价格字段不能为负，区间至少有一个价格字段。
@@ -655,20 +683,23 @@ func (s *ChannelService) Create(ctx context.Context, input *CreateChannelInput) 
 	}
 
 	channel := &Channel{
-		Name:               input.Name,
-		Description:        input.Description,
-		Status:             StatusActive,
-		BillingModelSource: input.BillingModelSource,
-		RestrictModels:     input.RestrictModels,
-		GroupIDs:           input.GroupIDs,
-		ModelPricing:       input.ModelPricing,
-		ModelMapping:       input.ModelMapping,
+		Name:                       input.Name,
+		Description:                input.Description,
+		Status:                     StatusActive,
+		BillingModelSource:         input.BillingModelSource,
+		RestrictModels:             input.RestrictModels,
+		GroupIDs:                   input.GroupIDs,
+		ModelPricing:               input.ModelPricing,
+		ModelMapping:               input.ModelMapping,
+		FeaturesConfig:             input.FeaturesConfig,
+		ApplyPricingToAccountStats: input.ApplyPricingToAccountStats,
+		AccountStatsPricingRules:   input.AccountStatsPricingRules,
 	}
 	if channel.BillingModelSource == "" {
 		channel.BillingModelSource = BillingModelSourceChannelMapped
 	}
 
-	if err := validateChannelConfig(channel.ModelPricing, channel.ModelMapping); err != nil {
+	if err := validateChannelConfig(channel.ModelPricing, channel.ModelMapping, channel.AccountStatsPricingRules); err != nil {
 		return nil, err
 	}
 
@@ -696,7 +727,7 @@ func (s *ChannelService) Update(ctx context.Context, id int64, input *UpdateChan
 		return nil, err
 	}
 
-	if err := validateChannelConfig(channel.ModelPricing, channel.ModelMapping); err != nil {
+	if err := validateChannelConfig(channel.ModelPricing, channel.ModelMapping, channel.AccountStatsPricingRules); err != nil {
 		return nil, err
 	}
 
@@ -747,6 +778,15 @@ func (s *ChannelService) applyUpdateInput(ctx context.Context, channel *Channel,
 	}
 	if input.BillingModelSource != "" {
 		channel.BillingModelSource = input.BillingModelSource
+	}
+	if input.ApplyPricingToAccountStats != nil {
+		channel.ApplyPricingToAccountStats = *input.ApplyPricingToAccountStats
+	}
+	if input.AccountStatsPricingRules != nil {
+		channel.AccountStatsPricingRules = *input.AccountStatsPricingRules
+	}
+	if input.FeaturesConfig != nil {
+		channel.FeaturesConfig = input.FeaturesConfig
 	}
 	return nil
 }
@@ -913,23 +953,29 @@ func detectConflicts(entries []modelEntry, platform, errCode, label string) erro
 
 // CreateChannelInput 创建渠道输入
 type CreateChannelInput struct {
-	Name               string
-	Description        string
-	GroupIDs           []int64
-	ModelPricing       []ChannelModelPricing
-	ModelMapping       map[string]map[string]string // platform → {src→dst}
-	BillingModelSource string
-	RestrictModels     bool
+	Name                       string
+	Description                string
+	GroupIDs                   []int64
+	ModelPricing               []ChannelModelPricing
+	ModelMapping               map[string]map[string]string // platform → {src→dst}
+	BillingModelSource         string
+	RestrictModels             bool
+	FeaturesConfig             map[string]any
+	ApplyPricingToAccountStats bool
+	AccountStatsPricingRules   []AccountStatsPricingRule
 }
 
 // UpdateChannelInput 更新渠道输入
 type UpdateChannelInput struct {
-	Name               string
-	Description        *string
-	Status             string
-	GroupIDs           *[]int64
-	ModelPricing       *[]ChannelModelPricing
-	ModelMapping       map[string]map[string]string // platform → {src→dst}
-	BillingModelSource string
-	RestrictModels     *bool
+	Name                       string
+	Description                *string
+	Status                     string
+	GroupIDs                   *[]int64
+	ModelPricing               *[]ChannelModelPricing
+	ModelMapping               map[string]map[string]string // platform → {src→dst}
+	BillingModelSource         string
+	RestrictModels             *bool
+	FeaturesConfig             map[string]any
+	ApplyPricingToAccountStats *bool
+	AccountStatsPricingRules   *[]AccountStatsPricingRule
 }

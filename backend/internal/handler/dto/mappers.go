@@ -49,6 +49,23 @@ func UserFromService(u *service.User) *User {
 	return out
 }
 
+func UserProfileFromService(u *service.User) *UserProfile {
+	if u == nil {
+		return nil
+	}
+	base := UserFromService(u)
+	if base == nil {
+		return nil
+	}
+	return &UserProfile{
+		User:                       *base,
+		BalanceNotifyEnabled:       u.BalanceNotifyEnabled,
+		BalanceNotifyThreshold:     u.BalanceNotifyThreshold,
+		BalanceNotifyThresholdType: u.BalanceNotifyThresholdType,
+		BalanceNotifyExtraEmails:   NotifyEmailEntriesFromService(u.BalanceNotifyExtraEmails),
+	}
+}
+
 // UserFromServiceAdmin converts a service User to DTO for admin users.
 // It includes notes - user-facing endpoints must not use this.
 func UserFromServiceAdmin(u *service.User) *AdminUser {
@@ -597,6 +614,14 @@ func UsageLogFromServiceAdmin(l *service.UsageLog) *AdminUsageLog {
 	if l == nil {
 		return nil
 	}
+	accountBaseCost := l.TotalCost
+	if l.AccountStatsCost != nil {
+		accountBaseCost = *l.AccountStatsCost
+	}
+	accountRateMultiplier := 1.0
+	if l.AccountRateMultiplier != nil {
+		accountRateMultiplier = *l.AccountRateMultiplier
+	}
 	return &AdminUsageLog{
 		UsageLog:              usageLogFromServiceUser(l),
 		UpstreamModel:         l.UpstreamModel,
@@ -604,6 +629,8 @@ func UsageLogFromServiceAdmin(l *service.UsageLog) *AdminUsageLog {
 		ModelMappingChain:     l.ModelMappingChain,
 		BillingTier:           l.BillingTier,
 		AccountRateMultiplier: l.AccountRateMultiplier,
+		AccountStatsCost:      l.AccountStatsCost,
+		AccountCost:           accountBaseCost * accountRateMultiplier,
 		IPAddress:             l.IPAddress,
 		Account:               AccountSummaryFromService(l.Account),
 	}

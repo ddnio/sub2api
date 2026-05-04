@@ -102,6 +102,7 @@ func (r *userGroupRateRepository) GetByGroupID(ctx context.Context, groupID int6
 		FROM user_group_rate_multipliers ugr
 		JOIN users u ON u.id = ugr.user_id
 		WHERE ugr.group_id = $1
+		  AND u.deleted_at IS NULL
 		ORDER BY ugr.user_id
 	`
 	rows, err := r.sql.QueryContext(ctx, query, groupID)

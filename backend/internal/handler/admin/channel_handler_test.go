@@ -273,13 +273,13 @@ func TestPricingRequestToService_Defaults(t *testing.T) {
 			wantValue: string(service.BillingModeToken),
 		},
 		{
-			name: "empty platform defaults to anthropic",
+			name: "empty platform is preserved for wildcard pricing",
 			req: channelModelPricingRequest{
 				Models:   []string{"m1"},
 				Platform: "",
 			},
 			wantField: "Platform",
-			wantValue: "anthropic",
+			wantValue: "",
 		},
 	}
 
@@ -295,6 +295,18 @@ func TestPricingRequestToService_Defaults(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDefaultPricingPlatform(t *testing.T) {
+	pricing := []service.ChannelModelPricing{
+		{Models: []string{"m1"}},
+		{Platform: service.PlatformOpenAI, Models: []string{"m2"}},
+	}
+
+	defaultPricingPlatform(pricing)
+
+	require.Equal(t, service.PlatformAnthropic, pricing[0].Platform)
+	require.Equal(t, service.PlatformOpenAI, pricing[1].Platform)
 }
 
 func TestPricingRequestToService_WithAllFields(t *testing.T) {

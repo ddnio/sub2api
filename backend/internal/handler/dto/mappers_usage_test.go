@@ -107,6 +107,33 @@ func TestUsageLogFromService_IncludesServiceTierForUserAndAdmin(t *testing.T) {
 	require.InDelta(t, 1.5, *adminDTO.AccountRateMultiplier, 1e-12)
 }
 
+func TestUsageLogFromServiceAdmin_UsesAccountStatsCostForAccountCost(t *testing.T) {
+	t.Parallel()
+
+	accountStatsCost := 0.75
+	log := &service.UsageLog{
+		RequestID:             "req_account_cost",
+		Model:                 "gpt-5.4",
+		TotalCost:             2.0,
+		AccountRateMultiplier: f64Ptr(1.2),
+		AccountStatsCost:      &accountStatsCost,
+	}
+
+	userDTO := UsageLogFromService(log)
+	adminDTO := UsageLogFromServiceAdmin(log)
+
+	userJSON, err := json.Marshal(userDTO)
+	require.NoError(t, err)
+	var userPayload map[string]any
+	require.NoError(t, json.Unmarshal(userJSON, &userPayload))
+	require.NotContains(t, userPayload, "account_stats_cost")
+	require.NotContains(t, userPayload, "account_cost")
+
+	require.NotNil(t, adminDTO.AccountStatsCost)
+	require.InDelta(t, 0.75, *adminDTO.AccountStatsCost, 1e-12)
+	require.InDelta(t, 0.9, adminDTO.AccountCost, 1e-12)
+}
+
 func TestUsageLogFromService_UsesRequestedModelAndKeepsUpstreamAdminOnly(t *testing.T) {
 	t.Parallel()
 
