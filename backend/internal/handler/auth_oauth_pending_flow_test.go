@@ -309,6 +309,64 @@ func TestFindUserByNormalizedEmailRejectsDuplicates(t *testing.T) {
 	require.Equal(t, "USER_EMAIL_CONFLICT", serviceErrorReason(t, err))
 }
 
+func TestCreatePendingOAuthAccountPreservesNormalizedDuplicateConflict(t *testing.T) {
+	client := newOAuthPendingHandlerTestClient(t)
+	ctx := context.Background()
+	gin.SetMode(gin.TestMode)
+
+	_, err := client.User.Create().
+		SetEmail(" Owner@Example.com ").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+	_, err = client.User.Create().
+		SetEmail("owner@example.com").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+
+	pendingSvc := service.NewAuthPendingIdentityService(client)
+	pendingSession, err := pendingSvc.CreatePendingSession(ctx, service.CreatePendingAuthSessionInput{
+		Intent: "login",
+		Identity: service.PendingAuthIdentityKey{
+			ProviderType:    "oidc",
+			ProviderKey:     "https://issuer.example",
+			ProviderSubject: "subject-duplicate-email",
+		},
+		BrowserSessionKey:      "browser-duplicate-email",
+		UpstreamIdentityClaims: map[string]any{"email": "oidc-duplicate@oidc-connect.invalid"},
+	})
+	require.NoError(t, err)
+
+	authSvc := service.NewAuthService(client, repository.NewUserRepository(client, nil), nil, &oauthPendingRefreshTokenCacheStub{}, &config.Config{
+		JWT: config.JWTConfig{Secret: "test-secret", ExpireHour: 1, RefreshTokenExpireDays: 30},
+	}, nil, nil, nil, nil, nil, nil, nil)
+	handler := NewAuthHandler(&config.Config{}, authSvc, service.NewUserService(repository.NewUserRepository(client, nil), nil, nil), nil, nil, nil, nil)
+
+	body, err := json.Marshal(createPendingOAuthAccountRequest{
+		Email:      "owner@example.com",
+		Password:   "password",
+		VerifyCode: "123456",
+	})
+	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/pending/create-account", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: oauthPendingSessionCookieName, Value: encodeCookieValue(pendingSession.SessionToken)})
+	req.AddCookie(&http.Cookie{Name: oauthPendingBrowserCookieName, Value: encodeCookieValue(pendingSession.BrowserSessionKey)})
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = req
+
+	handler.CreatePendingOAuthAccount(c)
+
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	require.Contains(t, rec.Body.String(), "USER_EMAIL_CONFLICT")
+}
+
 func TestBindPendingOAuthLoginRequires2FAWithoutBindingOrConsumingSession(t *testing.T) {
 	client := newOAuthPendingHandlerTestClient(t)
 	ctx := context.Background()

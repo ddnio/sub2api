@@ -545,6 +545,11 @@ func (h *AuthHandler) CreatePendingOAuthAccount(c *gin.Context) {
 	email := strings.TrimSpace(strings.ToLower(req.Email))
 	existingUser, err := findUserByNormalizedEmail(c.Request.Context(), client, email)
 	if err != nil && !errors.Is(err, service.ErrUserNotFound) {
+		var appErr *infraerrors.ApplicationError
+		if errors.As(err, &appErr) {
+			response.ErrorFrom(c, err)
+			return
+		}
 		response.ErrorFrom(c, infraerrors.ServiceUnavailable("SERVICE_UNAVAILABLE", "service temporarily unavailable"))
 		return
 	}

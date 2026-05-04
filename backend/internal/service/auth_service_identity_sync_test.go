@@ -162,3 +162,53 @@ func TestAuthServiceRecordSuccessfulLoginBackfillsEmailIdentity(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, user.ID, identity.UserID)
 }
+
+func TestAuthServiceRecordSuccessfulLoginDoesNotReassignEmailIdentityOwner(t *testing.T) {
+	svc, repo, client := newAuthServiceWithIdentityEnt(t)
+	ctx := context.Background()
+
+	owner := &service.User{
+		Email:       "owner@example.com",
+		Role:        service.RoleUser,
+		Status:      service.StatusActive,
+		Balance:     1,
+		Concurrency: 1,
+	}
+	require.NoError(t, owner.SetPassword("password"))
+	require.NoError(t, repo.Create(ctx, owner))
+	other := &service.User{
+		Email:       " owner@example.com ",
+		Role:        service.RoleUser,
+		Status:      service.StatusActive,
+		Balance:     1,
+		Concurrency: 1,
+	}
+	require.NoError(t, other.SetPassword("password"))
+	require.NoError(t, repo.Create(ctx, other))
+
+	_, err := client.AuthIdentity.Create().
+		SetUserID(owner.ID).
+		SetProviderType("email").
+		SetProviderKey("email").
+		SetProviderSubject("owner@example.com").
+		SetMetadata(map[string]any{}).
+		Save(ctx)
+	require.NoError(t, err)
+
+	svc.RecordSuccessfulLogin(ctx, other.ID)
+
+	identity, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ("email"),
+			authidentity.ProviderKeyEQ("email"),
+			authidentity.ProviderSubjectEQ("owner@example.com"),
+		).
+		Only(ctx)
+	require.NoError(t, err)
+	require.Equal(t, owner.ID, identity.UserID)
+	count, err := client.AuthIdentity.Query().
+		Where(authidentity.ProviderSubjectEQ("owner@example.com")).
+		Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, count)
+}

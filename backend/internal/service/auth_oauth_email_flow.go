@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 )
@@ -221,6 +222,24 @@ func (s *AuthService) ensureEmailAuthIdentity(ctx context.Context, user *User) {
 
 	email := strings.ToLower(strings.TrimSpace(user.Email))
 	if email == "" || isReservedEmail(email) {
+		return
+	}
+
+	existing, err := s.entClient.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ("email"),
+			authidentity.ProviderKeyEQ("email"),
+			authidentity.ProviderSubjectEQ(email),
+		).
+		Only(ctx)
+	if err != nil && !dbent.IsNotFound(err) {
+		logger.LegacyPrintf("service.auth", "[Auth] Failed to query email auth identity: user_id=%d email=%s err=%v", user.ID, email, err)
+		return
+	}
+	if existing != nil {
+		if existing.UserID != user.ID {
+			logger.LegacyPrintf("service.auth", "[Auth] Email auth identity ownership conflict: user_id=%d owner_user_id=%d email=%s", user.ID, existing.UserID, email)
+		}
 		return
 	}
 
