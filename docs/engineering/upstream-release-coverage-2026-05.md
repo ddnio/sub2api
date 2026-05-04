@@ -501,7 +501,7 @@ This snapshot was refreshed while closing the `1b53ffca` websearch base import o
 | `1b7c2951` | Notify frontend composable/splits | MISSING | Notify UI absent. |
 | `74f8a30f` | Websearch/email/pricing audit | PARTIAL | Account-stats subset covered; websearch/email notify subsets open. |
 | `a9880ee7` | Security/UI audit | PARTIAL | Requires direct commit review after websearch/notify implementation. |
-| `9c09bd19` | Websearch features_config/pricing validation | PARTIAL | `features_config` and account-stats validation adapted; websearch cleanup parity still open. |
+| `9c09bd19` | Websearch features_config/pricing validation | ADAPTED | Frontend channel form already preserves unmanaged `features_config` keys while explicitly writing `web_search_emulation.anthropic` as true/false or deleting the key when no Anthropic platform is enabled, preventing stale cloned true values. Backend `validateChannelConfig` already validates `AccountStatsPricingRules` on create and update; this checkpoint adds update-path regression coverage for invalid per-request account-stats pricing. Verification: targeted channel service test, frontend typecheck, and diff-check. |
 | `0a4ece5f` | Proxy safety/intervals/SMTP/sort | PARTIAL | Websearch/account-stats subsets partly covered; notify SMTP subset missing. |
 | `b402c367` | Notify SMTP STARTTLS | MISSING | Notify email path absent. |
 | `9e0d12d3` | Websearch saved-key controls | PARTIAL | Saved-key visibility/copy controls still need direct review. |

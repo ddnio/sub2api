@@ -1480,6 +1480,28 @@ func TestCreate_InvalidAccountStatsPricingBillingMode(t *testing.T) {
 	require.Contains(t, err.Error(), "BILLING_MODE_MISSING_PRICE")
 }
 
+func TestUpdate_InvalidAccountStatsPricingBillingMode(t *testing.T) {
+	repo := &mockChannelRepository{
+		getByIDFn: func(_ context.Context, _ int64) (*Channel, error) {
+			return &Channel{ID: 1, Name: "existing", Status: StatusActive}, nil
+		},
+	}
+	svc := newTestChannelService(repo)
+
+	_, err := svc.Update(context.Background(), 1, &UpdateChannelInput{
+		AccountStatsPricingRules: &[]AccountStatsPricingRule{{
+			Name: "custom stats",
+			Pricing: []ChannelModelPricing{{
+				Platform:    "anthropic",
+				Models:      []string{"claude-opus-4"},
+				BillingMode: BillingModePerRequest,
+			}},
+		}},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "BILLING_MODE_MISSING_PRICE")
+}
+
 func TestCreate_DefaultBillingModelSource(t *testing.T) {
 	var capturedChannel *Channel
 	repo := &mockChannelRepository{
