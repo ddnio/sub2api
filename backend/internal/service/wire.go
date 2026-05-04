@@ -378,7 +378,7 @@ func ProvideSettingService(settingRepo SettingRepository, groupRepo GroupReposit
 	svc := NewSettingService(settingRepo, cfg)
 	svc.SetDefaultSubscriptionGroupReader(groupRepo)
 	svc.SetWebSearchProxyRepository(proxyRepo)
-	svc.SetWebSearchRedisClient(context.Background(), redisClient)
+	svc.SetWebSearchQuotaStore(context.Background(), redisClient)
 	return svc
 }
 

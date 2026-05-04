@@ -10,7 +10,6 @@ import (
 
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/websearch"
-	"github.com/redis/go-redis/v9"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -85,8 +84,8 @@ const (
 // GetWebSearchEmulationConfig returns the configuration with in-process cache + singleflight.
 func (s *SettingService) GetWebSearchEmulationConfig(ctx context.Context) (*WebSearchEmulationConfig, error) {
 	if cached := webSearchEmulationCache.Load(); cached != nil {
-		c := cached.(*cachedWebSearchEmulationConfig)
-		if time.Now().UnixNano() < c.expiresAt {
+		c, ok := cached.(*cachedWebSearchEmulationConfig)
+		if ok && time.Now().UnixNano() < c.expiresAt {
 			return c.config, nil
 		}
 	}
@@ -96,7 +95,11 @@ func (s *SettingService) GetWebSearchEmulationConfig(ctx context.Context) (*WebS
 	if err != nil {
 		return &WebSearchEmulationConfig{}, err
 	}
-	return result.(*WebSearchEmulationConfig), nil
+	cfg, ok := result.(*WebSearchEmulationConfig)
+	if !ok {
+		return &WebSearchEmulationConfig{}, fmt.Errorf("websearch: unexpected config cache type %T", result)
+	}
+	return cfg, nil
 }
 
 func (s *SettingService) loadWebSearchConfigFromDB() (*WebSearchEmulationConfig, error) {
@@ -206,10 +209,10 @@ func (s *SettingService) IsWebSearchEmulationEnabled(ctx context.Context) bool {
 	return cfg.Enabled && len(cfg.Providers) > 0
 }
 
-// SetWebSearchRedisClient injects the Redis client used for quota tracking.
+// SetWebSearchQuotaStore injects the store used for quota tracking.
 // Call after construction, before first use. Triggers initial Manager build.
-func (s *SettingService) SetWebSearchRedisClient(ctx context.Context, redisClient *redis.Client) {
-	s.webSearchRedis = redisClient
+func (s *SettingService) SetWebSearchQuotaStore(ctx context.Context, quotaStore websearch.RedisClient) {
+	s.webSearchQuotaStore = quotaStore
 	s.RebuildWebSearchManager(ctx)
 }
 
@@ -238,7 +241,7 @@ func (s *SettingService) RebuildWebSearchManager(ctx context.Context) {
 			ExpiresAt:    p.ExpiresAt,
 		})
 	}
-	SetWebSearchManager(websearch.NewManager(providerConfigs, s.webSearchRedis))
+	SetWebSearchManager(websearch.NewManager(providerConfigs, s.webSearchQuotaStore))
 	slog.Info("websearch: manager rebuilt", "provider_count", len(providerConfigs))
 }
 

@@ -567,13 +567,13 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{},
 			sql.NullString{},
 			false,
-			sql.NullInt64{},  // channel_id
-				sql.NullString{}, // model_mapping_chain
-				sql.NullString{}, // billing_tier
-				sql.NullString{}, // billing_mode
-				sql.NullFloat64{}, // account_stats_cost
-				now,
-			}})
+			sql.NullInt64{},   // channel_id
+			sql.NullString{},  // model_mapping_chain
+			sql.NullString{},  // billing_tier
+			sql.NullString{},  // billing_mode
+			sql.NullFloat64{}, // account_stats_cost
+			now,
+		}})
 		require.NoError(t, err)
 		require.NotNil(t, log.ServiceTier)
 		require.Equal(t, "priority", *log.ServiceTier)
@@ -615,13 +615,13 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{},
 			sql.NullString{},
 			false,
-			sql.NullInt64{},  // channel_id
-				sql.NullString{}, // model_mapping_chain
-				sql.NullString{}, // billing_tier
-				sql.NullString{}, // billing_mode
-				sql.NullFloat64{}, // account_stats_cost
-				now,
-			}})
+			sql.NullInt64{},   // channel_id
+			sql.NullString{},  // model_mapping_chain
+			sql.NullString{},  // billing_tier
+			sql.NullString{},  // billing_mode
+			sql.NullFloat64{}, // account_stats_cost
+			now,
+		}})
 		require.NoError(t, err)
 		require.NotNil(t, log.ServiceTier)
 		require.Equal(t, "flex", *log.ServiceTier)
@@ -663,13 +663,13 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{},
 			sql.NullString{},
 			false,
-			sql.NullInt64{},  // channel_id
-				sql.NullString{}, // model_mapping_chain
-				sql.NullString{}, // billing_tier
-				sql.NullString{}, // billing_mode
-				sql.NullFloat64{}, // account_stats_cost
-				now,
-			}})
+			sql.NullInt64{},   // channel_id
+			sql.NullString{},  // model_mapping_chain
+			sql.NullString{},  // billing_tier
+			sql.NullString{},  // billing_mode
+			sql.NullFloat64{}, // account_stats_cost
+			now,
+		}})
 		require.NoError(t, err)
 		require.NotNil(t, log.ServiceTier)
 		require.Equal(t, "priority", *log.ServiceTier)

@@ -18,8 +18,8 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/websearch"
 	"github.com/imroc/req/v3"
-	"github.com/redis/go-redis/v9"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -106,9 +106,9 @@ type SettingService struct {
 	settingRepo           SettingRepository
 	defaultSubGroupReader DefaultSubscriptionGroupReader
 	cfg                   *config.Config
-	onUpdate              func()        // Callback when settings are updated (for cache invalidation)
-	version               string        // Application version
-	webSearchRedis        *redis.Client // optional: Redis client for web search quota tracking
+	onUpdate              func()                // Callback when settings are updated (for cache invalidation)
+	version               string                // Application version
+	webSearchQuotaStore   websearch.RedisClient // optional: quota tracking store
 	webSearchProxyRepo    ProxyRepository
 }
 

@@ -33,10 +33,19 @@ type ProviderConfig struct {
 // Manager selects providers by quota-weighted load balancing and tracks quota via Redis.
 type Manager struct {
 	configs []ProviderConfig
-	redis   *redis.Client
+	redis   RedisClient
 
 	clientMu    sync.Mutex
 	clientCache map[string]*http.Client
+}
+
+// RedisClient is the subset of go-redis used for web search quota tracking.
+type RedisClient interface {
+	redis.Scripter
+	Decr(ctx context.Context, key string) *redis.IntCmd
+	Get(ctx context.Context, key string) *redis.StringCmd
+	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
+	Del(ctx context.Context, keys ...string) *redis.IntCmd
 }
 
 // Timeout constants for proxy and search operations.
@@ -73,7 +82,7 @@ return val
 `)
 
 // NewManager creates a Manager with the given provider configs and Redis client.
-func NewManager(configs []ProviderConfig, redisClient *redis.Client) *Manager {
+func NewManager(configs []ProviderConfig, redisClient RedisClient) *Manager {
 	copied := make([]ProviderConfig, len(configs))
 	copy(copied, configs)
 	return &Manager{
