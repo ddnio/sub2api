@@ -84,8 +84,8 @@ Current gate:
 | `v0.1.110..v0.1.111` | Final | Historical marker `fork/v0.1.111` exists. PR #1538 and PR #1545 were reprocessed under the stricter rule through PR #48, #49, #50, and #51; no release-local unresolved item remains. |
 | `v0.1.111..v0.1.112` | Final | Historical marker `fork/v0.1.112` exists. PR #40 closed the release-local migration gap and PR #41 marked fork coverage; re-confirmed after `v0.1.111` became final. |
 | `v0.1.112..v0.1.113` | Final | Historical marker `fork/v0.1.113` exists and is intentionally retained without moving. PR #54 merged the stricter closeout into `main` at `6140ec11`; CI, independent review, ToC test/prod deployment, and ToB production verification are recorded below. |
-| `v0.1.113..v0.1.114` | Provisional | PR #44 was merged and deployed, and marker `fork/v0.1.114` exists. Reconfirm only after the reopened earlier gates are closed. |
-| `v0.1.114..v0.1.115` | Parked | A partial PR #1752 worktree exists with uncommitted changes. Do not rebase, recreate, or mark this gate complete until the parked work is preserved and earlier reopened gates are closed. |
+| `v0.1.113..v0.1.114` | Final | PR #44 was merged and deployed, and marker `fork/v0.1.114` exists. Rechecked after `v0.1.112..v0.1.113` became final; every release row has a closed outcome. |
+| `v0.1.114..v0.1.115` | Next | A partial PR #1752 worktree exists with uncommitted changes. Preserve and audit that parked work before continuing this gate from latest `main`. |
 | `v0.1.115..v0.1.116` | Unstarted | Eleven upstream first-parent commits exist in this interval. Do not start it until `v0.1.114..v0.1.115` is closed and reviewed. |
 | `v0.1.116` and later | Blocked | Do not advance to later releases until earlier gates are closed in order. |
 
@@ -473,8 +473,8 @@ v0.1.113 release deployment record:
 
 Next release order after this gate:
 
-1. Reconfirm `v0.1.113..v0.1.114` under the stricter rule using the already merged/deployed PR #44 and existing `fork/v0.1.114` marker.
-2. Do not start `v0.1.114..v0.1.115` until `v0.1.113..v0.1.114` is final under this ledger.
+1. `v0.1.113..v0.1.114` has been reconfirmed under the stricter rule using the already merged/deployed PR #44 and existing `fork/v0.1.114` marker.
+2. Continue with `v0.1.114..v0.1.115` only after preserving and auditing the parked partial worktree.
 
 #### PR #1637 internal commit coverage snapshot
 
@@ -587,13 +587,13 @@ git log --oneline --first-parent --reverse v0.1.113..v0.1.114
 | `a55ead5e` | Remove empty `Antigravity-Manager` directory | Empty upstream directory is not meaningful for the fork. | SKIP | No runtime or repository behavior to port. |
 | `7ea8e7e6` | Sponsor/readme update | Sponsor branding churn. | SKIP | Does not affect runtime, schema, config, security, or fork release coverage. |
 | `e6e73b4f` / PR #1690 | WS scheduler cache flags and UI mode option | Backend behavior already landed through fork Codex slice; UI ctx-pool exposure remains fork-specific. | ADAPTED | Fork commit `60f10e5b` maps PR #1690. Current `scheduler_cache.go` preserves OpenAI WS scheduling flags and current modal UI intentionally keeps ctx-pool exposure aligned to fork settings rather than blindly importing upstream UI. |
-| `a789c8c4` | Opus 4.7 support | Partially present; this gate ports the missing low-risk mappings. | PORT | Current fork already had `backend/internal/pkg/claude/constants.go` Opus 4.7 and request tests. This PR adds Antigravity/Bedrock mappings, Antigravity model listing, adaptive Opus high-tier handling, fallback billing/pricing support, and frontend preset/whitelist entries. |
-| `5d586a9f` | Disable scheduling on upstream KYC identity verification requirement | Missing locally. | PORT | This PR makes 400 responses containing `identity verification is required` call `SetError`, with a focused unit test. No schema/config change. |
-| `c22d11ce` / PR #1702 | Outbox watermark context, retry, and per-batch dedup | Already landed through fork ops slice. | MERGED | Fork commit `11f5a6e3` maps PR #1702; current `scheduler_snapshot_service.go` has `batchSeenKey`, watermark retry, and deduped per-batch rebuild handling. |
-| `41fbdba1` / PR #1687 | Upstream response body read-limit helper dedup | Already landed through fork OpenAI core slice. | MERGED | Fork commit `2ce67ca4` maps PR #1687; current `upstream_response_limit.go` has `ReadUpstreamResponseBody`, `anthropicTooLargeError`, and `openAITooLargeError`. |
+| `a789c8c4` | Opus 4.7 support | Implemented by PR #44. | MERGED | Current fork includes Claude default model support, Antigravity default and Bedrock mappings, Antigravity model listing, adaptive Opus high-tier handling, fallback billing/pricing support, and frontend preset/whitelist entries for `claude-opus-4-7`. Evidence: `backend/internal/pkg/claude/constants.go`, `backend/internal/domain/constants.go`, `backend/internal/pkg/antigravity/claude_types.go`, `backend/internal/pkg/antigravity/request_transformer.go`, `backend/internal/service/billing_service.go`, `backend/internal/service/pricing_service.go`, `frontend/src/composables/useModelWhitelist.ts`, and related billing/pricing/Antigravity tests. |
+| `5d586a9f` | Disable scheduling on upstream KYC identity verification requirement | Implemented by PR #44. | MERGED | `ratelimit_service.go` treats HTTP 400 bodies containing `identity verification is required` as auth errors, calls `handleAuthError`, and disables scheduling for that account. `ratelimit_service_401_test.go` has focused unit coverage. No schema/config change. |
+| `c22d11ce` / PR #1702 | Outbox watermark context, retry, and per-batch dedup | Already landed through fork ops slice. | MERGED | Fork commit `11f5a6e3` maps PR #1702; current `scheduler_snapshot_service.go` has `batchSeenKey`, watermark retry, fresh retry context, and deduped per-batch rebuild handling. |
+| `41fbdba1` / PR #1687 | Upstream response body read-limit helper dedup | Already landed through fork OpenAI core slice. | MERGED | Fork commit `2ce67ca4` maps PR #1687; current `upstream_response_limit.go` has `ReadUpstreamResponseBody`, `anthropicTooLargeError`, and `openAITooLargeError`, with call sites in Anthropic, OpenAI/Gemini compatibility, and count-token paths. |
 | `358ff6a6` / PR #1683 | Inject `prompt_cache_key` for API-key Anthropic messages compatibility | Already landed through fork OpenAI core slice. | MERGED | Fork commit `2ce67ca4` maps PR #1683; current `openai_gateway_messages.go` injects `prompt_cache_key` for API key accounts when absent. |
 
-Gate status: provisional. PR #44 merged at `46ed8ff7`; test and prod were both deployed from that commit. Verification on both environments returned `{"status":"ok"}` for `/health`, HTTP 401 for unauthenticated `/v1/models`, and no `panic|fatal|error|migration|failed|traceback|异常` matches in post-deploy container logs. PR #45 bumped `backend/cmd/server/VERSION` from `0.1.113` to `0.1.114`; annotated tag `fork/v0.1.114` points at the merged fork marker commit. This gate can be final only after the reopened earlier gates are closed.
+Gate status: final. PR #44 merged at `46ed8ff7`; test and prod were both deployed from that commit. Verification on both environments returned `{"status":"ok"}` for `/health`, HTTP 401 for unauthenticated `/v1/models`, and no `panic|fatal|error|migration|failed|traceback|异常` matches in post-deploy container logs. PR #45 bumped `backend/cmd/server/VERSION` from `0.1.113` to `0.1.114`; annotated tag `fork/v0.1.114` points at the merged fork marker commit. Rechecked after `v0.1.112..v0.1.113` became final: the first-parent list for `v0.1.113..v0.1.114` has 9 mainline entries, the full release log has 15 commits, all upstream merge PR internal commits are covered by the release rows above, and no release-local unresolved `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` entries remain. This recheck changes documentation only; no additional deployment is required because the runtime changes were already deployed from merged `main` through PR #44.
 
 ### v0.1.117
 
@@ -714,8 +714,8 @@ Gate status: blocked by Anthropic global TTL HOLD. Do not mark `v0.1.121` comple
 1. Keep existing `fork/v0.1.111` through `fork/v0.1.114` tags as immutable historical markers.
 2. `v0.1.110..v0.1.111` is final under the stricter rule.
 3. `v0.1.111..v0.1.112` is final under the stricter rule.
-4. Finish `v0.1.112..v0.1.113` operational closeout: independent review, release PR CI, merge to `main`, fork marker/tag handling, and release-level ToC/ToB deployment verification.
-5. After `v0.1.113` is production-final, reconfirm `v0.1.113..v0.1.114` remains valid.
-6. Preserve the parked uncommitted `v0.1.115` quota-scheduling work before any rebase/recreate, then resume `v0.1.114..v0.1.115` only after earlier gates are final.
+4. `v0.1.112..v0.1.113` is final under the stricter rule, merged to `main`, and deployed/verified for ToC test, ToC production, and ToB production.
+5. `v0.1.113..v0.1.114` is final under the stricter rule; PR #44 runtime changes were already deployed and this final recheck is docs-only.
+6. Preserve the parked uncommitted `v0.1.115` quota-scheduling work before any rebase/recreate, then resume `v0.1.114..v0.1.115`.
 7. After `v0.1.114..v0.1.115` is final and closeout-reviewed, process `v0.1.115..v0.1.116` before `v0.1.116..v0.1.117`.
 8. Do not start later-release runtime work out of order unless it is an emergency production fix and is recorded as such.
