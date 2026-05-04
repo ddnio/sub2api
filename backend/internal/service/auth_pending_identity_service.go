@@ -234,11 +234,23 @@ func (s *AuthPendingIdentityService) consumeSession(
 	}
 
 	now := time.Now().UTC()
-	updated, err := s.entClient.PendingAuthSession.UpdateOneID(session.ID).
+	affected, err := s.entClient.PendingAuthSession.Update().
+		Where(
+			pendingauthsession.IDEQ(session.ID),
+			pendingauthsession.ConsumedAtIsNil(),
+		).
 		SetConsumedAt(now).
 		SetCompletionCodeHash("").
 		ClearCompletionCodeExpiresAt().
 		Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if affected == 0 {
+		return nil, consumedErr
+	}
+
+	updated, err := s.entClient.PendingAuthSession.Get(ctx, session.ID)
 	if err != nil {
 		return nil, err
 	}

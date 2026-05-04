@@ -572,7 +572,8 @@ export default {
       completeRegistrationFailed: '注册失败，请检查邀请码后重试。',
       bindLoginRequired: '登录已有账户以绑定此 Linux.do 登录方式。',
       bindLoginSubmit: '登录并绑定',
-      useDifferentEmail: '使用其他邮箱'
+      useDifferentEmail: '使用其他邮箱',
+      totpRequired: '请输入 {email} 的 6 位双因素验证码，以完成此 Linux.do 登录方式绑定。'
     },
     oidc: {
       signIn: '使用 {providerName} 登录',
@@ -588,7 +589,8 @@ export default {
       completeRegistrationFailed: '注册失败，请检查邀请码后重试。',
       bindLoginRequired: '登录已有账户以绑定此 {providerName} 登录方式。',
       bindLoginSubmit: '登录并绑定',
-      useDifferentEmail: '使用其他邮箱'
+      useDifferentEmail: '使用其他邮箱',
+      totpRequired: '请输入 {email} 的 6 位双因素验证码，以完成此 {providerName} 登录方式绑定。'
     },
     oauth: {
       code: '授权码',
@@ -1054,6 +1056,7 @@ export default {
       loginTitle: '双因素认证',
       loginHint: '请输入您认证器应用显示的 6 位验证码',
       loginFailed: '验证失败，请重试',
+      yourAccount: '您的账户',
       // New translations for email verification
       verifyEmailFirst: '请先验证您的邮箱',
       verifyPasswordFirst: '请先验证您的身份',

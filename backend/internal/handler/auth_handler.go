@@ -6,6 +6,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ip"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
@@ -273,6 +274,36 @@ func (h *AuthHandler) Login2FA(c *gin.Context) {
 	if h.settingSvc.IsBackendModeEnabled(c.Request.Context()) && !user.IsAdmin() {
 		response.Forbidden(c, "Backend mode is active. Only admin login is allowed.")
 		return
+	}
+
+	if session.PendingOAuthBind != nil {
+		pendingSvc, err := h.pendingIdentityService()
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+
+		pendingSession, err := pendingSvc.GetBrowserSession(c.Request.Context(), session.PendingOAuthBind.PendingSessionToken, session.PendingOAuthBind.BrowserSessionKey)
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+		if pendingSession.TargetUserID != nil && *pendingSession.TargetUserID > 0 && *pendingSession.TargetUserID != user.ID {
+			response.ErrorFrom(c, infraerrors.Conflict("PENDING_AUTH_TARGET_USER_MISMATCH", "pending oauth session must be completed by the targeted user"))
+			return
+		}
+		if err := ensurePendingOAuthIdentityForUser(c.Request.Context(), h.authService.EntClient(), pendingSession, user.ID); err != nil {
+			response.ErrorFrom(c, pendingOAuthBindApplyError(err))
+			return
+		}
+		h.authService.RecordSuccessfulLogin(c.Request.Context(), user.ID)
+		if _, err := pendingSvc.ConsumeBrowserSession(c.Request.Context(), pendingSession.SessionToken, pendingSession.BrowserSessionKey); err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+		secureCookie := isRequestHTTPS(c)
+		clearOAuthPendingSessionCookie(c, secureCookie)
+		clearOAuthPendingBrowserCookie(c, secureCookie)
 	}
 
 	// Delete the login session (only after all checks pass)

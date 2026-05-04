@@ -201,6 +201,9 @@ export interface PendingOAuthExchangeResponse {
   adoption_required?: boolean
   suggested_display_name?: string
   suggested_avatar_url?: string
+  requires_2fa?: boolean
+  temp_token?: string
+  user_email_masked?: string
 }
 
 export interface PendingOAuthAdoptionDecision {

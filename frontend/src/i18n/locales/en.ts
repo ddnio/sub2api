@@ -573,7 +573,8 @@ export default {
       completeRegistrationFailed: 'Registration failed. Please check your invitation code and try again.',
       bindLoginRequired: 'Log in to an existing account to bind this Linux.do sign-in.',
       bindLoginSubmit: 'Log in and bind',
-      useDifferentEmail: 'Use a different email'
+      useDifferentEmail: 'Use a different email',
+      totpRequired: 'Enter the 6-digit verification code for {email} to finish binding this Linux.do sign-in.'
     },
     oidc: {
       signIn: 'Continue with {providerName}',
@@ -590,7 +591,8 @@ export default {
       completeRegistrationFailed: 'Registration failed. Please check your invitation code and try again.',
       bindLoginRequired: 'Log in to an existing account to bind this {providerName} sign-in.',
       bindLoginSubmit: 'Log in and bind',
-      useDifferentEmail: 'Use a different email'
+      useDifferentEmail: 'Use a different email',
+      totpRequired: 'Enter the 6-digit verification code for {email} to finish binding this {providerName} sign-in.'
     },
     oauth: {
       code: 'Code',
@@ -1050,6 +1052,7 @@ export default {
       loginTitle: 'Two-Factor Authentication',
       loginHint: 'Enter the 6-digit code from your authenticator app',
       loginFailed: 'Verification failed, please try again',
+      yourAccount: 'your account',
       // New translations for email verification
       verifyEmailFirst: 'Please verify your email first',
       verifyPasswordFirst: 'Please verify your identity first',

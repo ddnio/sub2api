@@ -8,6 +8,7 @@ const createPendingOAuthAccount = vi.hoisted(() => vi.fn())
 const bindPendingOAuthLogin = vi.hoisted(() => vi.fn())
 const completeOIDCOAuthRegistration = vi.hoisted(() => vi.fn())
 const getPublicSettings = vi.hoisted(() => vi.fn())
+const login2FA = vi.hoisted(() => vi.fn())
 const setToken = vi.hoisted(() => vi.fn())
 const showSuccess = vi.hoisted(() => vi.fn())
 const showError = vi.hoisted(() => vi.fn())
@@ -42,6 +43,7 @@ vi.mock('@/api/auth', async () => {
     bindPendingOAuthLogin,
     completeOIDCOAuthRegistration,
     getPublicSettings,
+    login2FA,
   }
 })
 
@@ -65,6 +67,7 @@ describe('OidcCallbackView pending OAuth flow', () => {
     bindPendingOAuthLogin.mockReset()
     completeOIDCOAuthRegistration.mockReset()
     getPublicSettings.mockReset()
+    login2FA.mockReset()
     setToken.mockReset()
     showSuccess.mockReset()
     showError.mockReset()
@@ -189,6 +192,54 @@ describe('OidcCallbackView pending OAuth flow', () => {
     expect(bindPendingOAuthLogin).toHaveBeenCalledWith({
       email: 'new@example.com',
       password: 'existing-password',
+    })
+    expect(setToken).toHaveBeenCalledWith('bound-access')
+    expect(replace).toHaveBeenCalledWith('/profile')
+  })
+
+  it('finishes bind-login after a pending OAuth bind 2FA challenge', async () => {
+    exchangePendingOAuthCompletion.mockResolvedValue({
+      error: 'invitation_required',
+      email: 'new@example.com',
+      redirect: '/profile',
+    })
+    createPendingOAuthAccount.mockResolvedValue({
+      step: 'bind_login_required',
+      email: 'new@example.com',
+      redirect: '/profile',
+    })
+    bindPendingOAuthLogin.mockResolvedValue({
+      requires_2fa: true,
+      temp_token: 'temp-token',
+      user_email_masked: 'n***@example.com',
+    })
+    login2FA.mockResolvedValue({
+      access_token: 'bound-access',
+      refresh_token: 'bound-refresh',
+      expires_in: 3600,
+      token_type: 'Bearer',
+    })
+
+    const wrapper = mountView()
+
+    await flushPromises()
+    await wrapper.get('[data-testid="oidc-create-account-password"]').setValue('secret-123')
+    await wrapper.get('[data-testid="oidc-create-account-verify-code"]').setValue('246810')
+    await wrapper.get('[data-testid="oidc-create-account-submit"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="oidc-bind-login-password"]').setValue('existing-password')
+    await wrapper.get('[data-testid="oidc-bind-login-submit"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="oidc-bind-login-totp"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="oidc-bind-login-totp"]').setValue('123456')
+    await wrapper.get('[data-testid="oidc-bind-login-totp-submit"]').trigger('click')
+    await flushPromises()
+
+    expect(login2FA).toHaveBeenCalledWith({
+      temp_token: 'temp-token',
+      totp_code: '123456',
     })
     expect(setToken).toHaveBeenCalledWith('bound-access')
     expect(replace).toHaveBeenCalledWith('/profile')

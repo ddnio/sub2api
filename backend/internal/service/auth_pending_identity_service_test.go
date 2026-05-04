@@ -222,3 +222,31 @@ func TestAuthPendingIdentityService_ConsumeBrowserSession(t *testing.T) {
 	_, err = svc.ConsumeBrowserSession(ctx, session.SessionToken, "browser-session")
 	require.ErrorIs(t, err, ErrPendingAuthSessionConsumed)
 }
+
+func TestAuthPendingIdentityService_ConsumeBrowserSessionDetectsConcurrentConsumption(t *testing.T) {
+	svc, client := newAuthPendingIdentityServiceTestClient(t)
+	ctx := context.Background()
+
+	session, err := svc.CreatePendingSession(ctx, CreatePendingAuthSessionInput{
+		Intent: "login",
+		Identity: PendingAuthIdentityKey{
+			ProviderType:    "linuxdo",
+			ProviderKey:     "linuxdo",
+			ProviderSubject: "subject-concurrent",
+		},
+		BrowserSessionKey: "browser-session",
+	})
+	require.NoError(t, err)
+
+	stale, err := svc.GetBrowserSession(ctx, session.SessionToken, "browser-session")
+	require.NoError(t, err)
+	_, err = svc.ConsumeBrowserSession(ctx, session.SessionToken, "browser-session")
+	require.NoError(t, err)
+
+	_, err = svc.consumeSession(ctx, stale, "browser-session", ErrPendingAuthSessionExpired, ErrPendingAuthSessionConsumed)
+	require.ErrorIs(t, err, ErrPendingAuthSessionConsumed)
+
+	stored, err := client.PendingAuthSession.Get(ctx, session.ID)
+	require.NoError(t, err)
+	require.NotNil(t, stored.ConsumedAt)
+}

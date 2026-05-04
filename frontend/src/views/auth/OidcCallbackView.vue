@@ -15,7 +15,7 @@
       </div>
 
       <transition name="fade">
-        <div v-if="needsInvitation || needsCreateAccount || needsBindLogin" class="space-y-4">
+        <div v-if="needsInvitation || needsCreateAccount || needsBindLogin || needsTotpChallenge" class="space-y-4">
           <template v-if="needsInvitation">
             <p class="text-sm text-gray-700 dark:text-gray-300">
               {{ t('auth.oidc.invitationRequired', { providerName }) }}
@@ -108,6 +108,38 @@
               </p>
             </transition>
           </template>
+
+          <template v-else-if="needsTotpChallenge">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              {{ t('auth.oidc.totpRequired', { providerName, email: totpUserEmailMasked || t('profile.totp.yourAccount') }) }}
+            </p>
+            <div class="space-y-3">
+              <input
+                v-model="totpCode"
+                data-testid="oidc-bind-login-totp"
+                type="text"
+                inputmode="numeric"
+                maxlength="6"
+                class="input w-full"
+                :placeholder="t('profile.totp.enterCode')"
+                :disabled="isSubmitting"
+                @keyup.enter="handleSubmitTotpChallenge"
+              />
+              <button
+                data-testid="oidc-bind-login-totp-submit"
+                class="btn btn-primary w-full"
+                :disabled="isSubmitting || totpCode.trim().length !== 6"
+                @click="handleSubmitTotpChallenge"
+              >
+                {{ isSubmitting ? t('common.processing') : t('profile.totp.verify') }}
+              </button>
+            </div>
+            <transition name="fade">
+              <p v-if="totpError" class="text-sm text-red-600 dark:text-red-400">
+                {{ totpError }}
+              </p>
+            </transition>
+          </template>
         </div>
       </transition>
 
@@ -150,6 +182,7 @@ import {
   completeOIDCOAuthRegistration,
   createPendingOAuthAccount,
   getPublicSettings,
+  login2FA,
   type PendingOAuthExchangeResponse,
   type PendingOAuthTokenPairResponse,
 } from '@/api/auth'
@@ -186,6 +219,11 @@ const pendingAccountRequiresInvitation = ref(false)
 const bindLoginEmail = ref('')
 const bindLoginPassword = ref('')
 const accountActionError = ref('')
+const needsTotpChallenge = ref(false)
+const totpTempToken = ref('')
+const totpCode = ref('')
+const totpError = ref('')
+const totpUserEmailMasked = ref('')
 
 const needsCreateAccount = computed(() => pendingAccountAction.value === 'create_account')
 const needsBindLogin = computed(() => pendingAccountAction.value === 'bind_login')
@@ -212,6 +250,11 @@ function applyPendingAccountAction(payload: PendingOAuthExchangeResponse) {
   pendingAccountAction.value = action
   pendingAccountRequiresInvitation.value = payload.error === 'invitation_required'
   accountActionError.value = ''
+  needsTotpChallenge.value = false
+  totpTempToken.value = ''
+  totpCode.value = ''
+  totpError.value = ''
+  totpUserEmailMasked.value = ''
 
   const email = getPendingAccountEmail(payload)
   if (action === 'create_account') {
@@ -223,6 +266,22 @@ function applyPendingAccountAction(payload: PendingOAuthExchangeResponse) {
     bindLoginEmail.value = email
     bindLoginPassword.value = ''
   }
+}
+
+function applyTotpChallenge(payload: PendingOAuthExchangeResponse): boolean {
+  if (payload.requires_2fa !== true || !payload.temp_token) {
+    return false
+  }
+
+  pendingAccountAction.value = 'none'
+  needsInvitation.value = false
+  needsTotpChallenge.value = true
+  totpTempToken.value = payload.temp_token
+  totpCode.value = ''
+  totpError.value = ''
+  totpUserEmailMasked.value = payload.user_email_masked || ''
+  isProcessing.value = false
+  return true
 }
 
 function getRequestErrorMessage(error: unknown, fallback: string): string {
@@ -244,6 +303,10 @@ function isTokenPair(payload: PendingAccountResponse): payload is PendingOAuthTo
 }
 
 async function finalizePendingAccountResponse(payload: PendingAccountResponse) {
+  if (applyTotpChallenge(payload)) {
+    return
+  }
+
   if (isTokenPair(payload)) {
     persistTokenContext(payload)
     await authStore.setToken(payload.access_token)
@@ -325,6 +388,27 @@ async function handleBindLogin() {
     await finalizePendingAccountResponse(completion)
   } catch (e: unknown) {
     accountActionError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+async function handleSubmitTotpChallenge() {
+  totpError.value = ''
+  const code = totpCode.value.trim()
+  if (!totpTempToken.value || code.length !== 6) return
+
+  isSubmitting.value = true
+  try {
+    const tokenData = await login2FA({
+      temp_token: totpTempToken.value,
+      totp_code: code,
+    })
+    await authStore.setToken(tokenData.access_token)
+    appStore.showSuccess(t('auth.loginSuccess'))
+    await router.replace(redirectTo.value)
+  } catch (e: unknown) {
+    totpError.value = getRequestErrorMessage(e, t('profile.totp.loginFailed'))
   } finally {
     isSubmitting.value = false
   }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -448,6 +449,17 @@ func rejectPendingOAuthIdentityOwnedByAnotherUser(ctx context.Context, client *d
 	return nil
 }
 
+func pendingOAuthBindApplyError(err error) error {
+	if err == nil {
+		return nil
+	}
+	var appErr *infraerrors.ApplicationError
+	if errors.As(err, &appErr) {
+		return err
+	}
+	return infraerrors.InternalServer("PENDING_AUTH_BIND_APPLY_FAILED", "failed to bind pending oauth identity").WithCause(err)
+}
+
 func buildPendingOAuthSessionStatusPayload(session *dbent.PendingAuthSession) gin.H {
 	payload := gin.H{
 		"auth_result": "pending_session",
@@ -531,7 +543,7 @@ func (h *AuthHandler) CreatePendingOAuthAccount(c *gin.Context) {
 		return
 	}
 	if err := ensurePendingOAuthIdentityForUser(c.Request.Context(), client, session, user.ID); err != nil {
-		response.ErrorFrom(c, infraerrors.InternalServer("PENDING_AUTH_BIND_APPLY_FAILED", "failed to bind pending oauth identity").WithCause(err))
+		response.ErrorFrom(c, pendingOAuthBindApplyError(err))
 		return
 	}
 	if _, err := pendingSvc.ConsumeBrowserSession(c.Request.Context(), session.SessionToken, session.BrowserSessionKey); err != nil {
@@ -571,8 +583,27 @@ func (h *AuthHandler) BindPendingOAuthLogin(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
+	if h.totpService != nil && h.settingSvc.IsTotpEnabled(c.Request.Context()) && user.TotpEnabled {
+		tempToken, err := h.totpService.CreatePendingOAuthBindLoginSession(
+			c.Request.Context(),
+			user.ID,
+			user.Email,
+			session.SessionToken,
+			session.BrowserSessionKey,
+		)
+		if err != nil {
+			response.InternalError(c, "Failed to create 2FA session")
+			return
+		}
+		response.Success(c, TotpLoginResponse{
+			Requires2FA:     true,
+			TempToken:       tempToken,
+			UserEmailMasked: service.MaskEmail(user.Email),
+		})
+		return
+	}
 	if err := ensurePendingOAuthIdentityForUser(c.Request.Context(), h.authService.EntClient(), session, user.ID); err != nil {
-		response.ErrorFrom(c, infraerrors.InternalServer("PENDING_AUTH_BIND_APPLY_FAILED", "failed to bind pending oauth identity").WithCause(err))
+		response.ErrorFrom(c, pendingOAuthBindApplyError(err))
 		return
 	}
 	h.authService.RecordSuccessfulLogin(c.Request.Context(), user.ID)
