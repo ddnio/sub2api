@@ -575,11 +575,21 @@ This snapshot was refreshed while closing the `d402e722` PR #1637 reprocessing o
 
 Range: `v0.1.113..v0.1.114`.
 
-Source command:
+Mainline source command:
 
 ```bash
 git log --oneline --first-parent --reverse v0.1.113..v0.1.114
 ```
+
+Full release audit commands:
+
+```bash
+git rev-list --count --first-parent v0.1.113..v0.1.114
+git rev-list --count v0.1.113..v0.1.114
+git log --oneline --reverse v0.1.113..v0.1.114
+```
+
+Audit result: 9 first-parent mainline entries and 15 total commits. The first-parent list is the release entry index; the complete commit list was also checked so internal commits from upstream merge PRs are not hidden by the mainline view.
 
 | Upstream source | Area | Local state | Outcome | Evidence / decision |
 | --- | --- | --- | --- | --- |
@@ -592,6 +602,26 @@ git log --oneline --first-parent --reverse v0.1.113..v0.1.114
 | `c22d11ce` / PR #1702 | Outbox watermark context, retry, and per-batch dedup | Already landed through fork ops slice. | MERGED | Fork commit `11f5a6e3` maps PR #1702; current `scheduler_snapshot_service.go` has `batchSeenKey`, watermark retry, fresh retry context, and deduped per-batch rebuild handling. |
 | `41fbdba1` / PR #1687 | Upstream response body read-limit helper dedup | Already landed through fork OpenAI core slice. | MERGED | Fork commit `2ce67ca4` maps PR #1687; current `upstream_response_limit.go` has `ReadUpstreamResponseBody`, `anthropicTooLargeError`, and `openAITooLargeError`, with call sites in Anthropic, OpenAI/Gemini compatibility, and count-token paths. |
 | `358ff6a6` / PR #1683 | Inject `prompt_cache_key` for API-key Anthropic messages compatibility | Already landed through fork OpenAI core slice. | MERGED | Fork commit `2ce67ca4` maps PR #1683; current `openai_gateway_messages.go` injects `prompt_cache_key` for API key accounts when absent. |
+
+Expanded full-commit audit:
+
+| Full-log commit | Maps to | Local coverage |
+| --- | --- | --- |
+| `be7551b9` | Version sync | Covered by historical `fork/v0.1.113` marker. |
+| `6c89d8d3` | PR #1683 internal commit | Covered by fork OpenAI core slice `2ce67ca4`; `openai_gateway_messages.go` injects `prompt_cache_key` for API-key Anthropic messages when absent. |
+| `10699eeb` | PR #1687 internal commit | Covered by fork OpenAI core slice `2ce67ca4`; `upstream_response_limit.go` and its call sites contain the shared upstream response read-limit behavior. |
+| `3944b3d2` | PR #1690 internal commit | Covered by fork Codex slice `60f10e5b`; scheduler cache preserves OpenAI WS scheduling flags. |
+| `836092a6` | PR #1690 internal commit | Covered by the PR #1690 adapted row; fork keeps ctx-pool UI exposure aligned with current fork settings instead of blindly importing upstream account UI. |
+| `a55ead5e` | Empty directory cleanup | `SKIP`; no runtime or repository behavior. |
+| `7ea8e7e6` | Sponsor/readme churn | `SKIP`; no runtime, schema, config, security, or fork release behavior. |
+| `e6e73b4f` | PR #1690 merge | Internal commits `3944b3d2` and `836092a6` covered above. |
+| `e44baa10` | PR #1702 internal commit | Covered by fork ops slice `11f5a6e3`; scheduler snapshot rebuild dedup and watermark context handling are present. |
+| `697c41a3` | PR #1702 internal commit | Covered by fork ops slice `11f5a6e3`; watermark write retry creates fresh retry context. |
+| `a789c8c4` | Opus 4.7 support | Implemented by PR #44. |
+| `5d586a9f` | KYC scheduling disable | Implemented by PR #44. |
+| `c22d11ce` | PR #1702 merge | Internal commits `e44baa10` and `697c41a3` covered above. |
+| `41fbdba1` | PR #1687 merge | Internal commit `10699eeb` covered above. |
+| `358ff6a6` | PR #1683 merge | Internal commit `6c89d8d3` covered above. |
 
 Gate status: final. PR #44 merged at `46ed8ff7`; test and prod were both deployed from that commit. Verification on both environments returned `{"status":"ok"}` for `/health`, HTTP 401 for unauthenticated `/v1/models`, and no `panic|fatal|error|migration|failed|traceback|异常` matches in post-deploy container logs. PR #45 bumped `backend/cmd/server/VERSION` from `0.1.113` to `0.1.114`; annotated tag `fork/v0.1.114` points at the merged fork marker commit. Rechecked after `v0.1.112..v0.1.113` became final: the first-parent list for `v0.1.113..v0.1.114` has 9 mainline entries, the full release log has 15 commits, all upstream merge PR internal commits are covered by the release rows above, and no release-local unresolved `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` entries remain. This recheck changes documentation only; no additional deployment is required because the runtime changes were already deployed from merged `main` through PR #44.
 

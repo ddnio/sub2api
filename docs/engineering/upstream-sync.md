@@ -1,200 +1,144 @@
 # Upstream 同步指南
 
 upstream 仓库：`Wei-Shaw/sub2api`（`upstream` remote）
+
 我们的 fork：`ddnio/sub2api`（`origin` remote）
 
----
+本仓库当前采用 release gate 同步模型。旧的“直接 merge `upstream/main` 后处理冲突”只保留为历史背景，不再作为日常同步流程。
 
-## 什么时候同步
+## 当前原则
 
-**不建议频繁小批量同步**，推荐积累到以下情况再合并：
+1. 按 upstream tag 顺序处理，例如 `v0.1.114..v0.1.115` 完整关闭后，才能进入 `v0.1.115..v0.1.116`。
+2. release 是计划、验证、部署、打 fork marker tag 的边界。
+3. 代码合入单元优先是 upstream first-parent commit / upstream PR merge commit；必要时可拆成更小的行为子项。
+4. 不允许只因为冲突大、迁移复杂、产品含义复杂就跳过。每个 release item 最终必须有 `MERGED`、`ADAPTED`、`PRESENT`、`REJECTED`、`FROZEN` 或 `SKIP` 之一，并有证据。
+5. `HOLD`、`PORT`、`PARTIAL`、`REOPENED` 都不是 release closeout 的最终状态。
+6. 已推送的 `fork/vX.Y.Z` marker tag 不移动、不删除。发现旧 gate 有缺口时，在最新 `main` 上 forward-fix。
+7. 默认一个完整 upstream release 一个 fork PR。只有 schema/migration、auth/payment/security/data-risk、大冲突、大 CI unblock 才拆 PR。
+8. 常规 runtime 变更等整个 release gate 完成后统一部署 test/prod 验证；安全热修、迁移/schema、auth/payment/data-risk、紧急线上修复可以例外提前部署。
 
-- 落后 upstream 超过 50 commits
-- upstream 有明确的目标 feature 需要引入（如 channel 定价）
-- upstream 有重要 bugfix 影响线上（可 cherry-pick 单个 commit）
+详细 ledger 和当前 gate 状态见：
 
----
+- `docs/engineering/upstream-release-coverage-2026-05.md`
+- `docs/plans/2026-05-03-upstream-release-sync-reset.md`
 
-## 检查落后情况
+## 每个 release 的固定流程
+
+### 1. 同步基线
 
 ```bash
+git fetch origin
 git fetch upstream
-git log upstream/main --oneline | wc -l   # upstream 总提交数
-git log main..upstream/main --oneline      # 我们落后的提交列表
-git log main..upstream/main --oneline | wc -l  # 落后数量
+git switch main
+git merge --ff-only origin/main
 ```
 
----
-
-## 全量同步流程
-
-### 1. 新建同步分支
+如果 GitHub HTTPS 出现 `HTTP2 framing layer`、`Empty reply from server` 或 timeout，不要反复重试同一路径。按 ledger 里的 repeated-issue log 切到：
 
 ```bash
-git checkout main
-git checkout -b sync/upstream-YYYYMMDD
+git -c http.version=HTTP/1.1 fetch upstream
 ```
 
-### 2. 执行 merge（不要 rebase）
+仍失败时，使用 SSH remote 或 GitHub API fallback。不能在 upstream ref 未确认时扩大 release scope。
+
+### 2. 建立 release worktree
 
 ```bash
-git merge upstream/main --no-commit --no-ff
+git worktree add -b sync/v0.1.115-release .claude/worktrees/release-v0.1.115 origin/main
 ```
 
-`--no-commit` 让你在提交前先处理冲突。
+根 checkout 不直接开发。每个 release 从最新 `origin/main` 开始，不从旧 worktree 或旧分支继续推断状态。
 
-### 3. 查看冲突文件
+### 3. 生成 release commit 清单
+
+必须同时记录 first-parent 和完整 commit 列表：
 
 ```bash
-git diff --name-only --diff-filter=U
+git log --oneline --first-parent --reverse v0.1.114..v0.1.115
+git log --oneline --reverse v0.1.114..v0.1.115
 ```
 
-### 4. 解决冲突（核心原则）
+first-parent 列表用于确认 upstream 主线 PR/merge 顺序；完整列表用于防止 merge PR 内部 commit 被漏审。每个 merge PR 还要展开内部 commit 或 PR branch 历史，确认其内部 commit 都映射到同一个 release 决策或子项。
 
-| 区域 | 策略 |
-|------|------|
-| `ent/schema/*.go` | **手动合并**：保留我们的 payment/referral schema，接受 upstream 的新字段 |
-| `ent/` 生成文件 | `git checkout upstream/main -- <files>` 清除冲突，然后 `go generate ./ent/...` 重建 |
-| `wire_gen.go` | **手动合并**：同时保留 payment/channel provider 注入 |
-| `service/wire.go` `handler/wire.go` | **手动合并**：保留我们的 payment/referral + 接受 upstream 新增 provider |
-| `handler/handler.go` | **手动合并**：AdminHandlers 和 Handlers struct 两边字段都要 |
-| `service/settings_view.go` `setting_service.go` | 两边字段都要（ReferralEnabled + OIDCConnect 等） |
-| `i18n/en.ts` `i18n/zh.ts` | 删除 Sora section，保留我们的 payment/referral section |
-| `repository/api_key_repo.go` | 保留 ReferralCode，删除 SoraStorage 字段 |
+### 4. 对每个 upstream item 做直接导入审计
 
-### 5. ent 重新生成（必须步骤）
+处理顺序：
 
-本地 Go 版本可能不满足要求，用 Docker：
+1. 先确认该 commit/PR 是否已经是 fork ancestor，或已经通过某个 fork PR 落地。
+2. 如果未落地，在隔离 worktree 里 preview/cherry-pick upstream commit 或 merge PR。
+3. 如果补丁干净、范围小、不会覆盖 fork 的产品/数据语义，按 upstream commit/PR 单元合入。
+4. 如果冲突大或跨 fork 架构，先写 import audit，记录：
+   - 可直接 port 的文件；
+   - fork 已有等价行为；
+   - 冲突区域；
+   - schema/migration/Ent 影响；
+   - 产品语义影响；
+   - 必须补的测试；
+   - 最小可拆子项。
+5. 只有完成 audit 后，才允许手工 port 子项、标记 `PRESENT`、`ADAPTED`、`REJECTED` 或 `FROZEN`。
+
+遇到大 diff、冲突多、branch/worktree 状态异常、或实现开始明显偏离 upstream 原始 commit 时，立即暂停实现并写 import audit。继续手写代码通常会扩大偏差。
+
+### 5. 保留 fork 关键行为
+
+每次合 upstream 都必须显式检查这些 fork 语义没有被覆盖：
+
+| 模块 | 重点 |
+| --- | --- |
+| Payment B-2 | provider instance、provider snapshot、resume token、微信/Stripe/EasyPay flow、refund、充值/订阅订单、真实数据库迁移 |
+| Auth/OAuth/OIDC | 现有用户登录、OIDC synthetic email、pending OAuth、profile binding、session/cookie 兼容 |
+| Referral / Affiliate | fork 已有邀请/返利语义，不被 upstream affiliate 重构静默替换 |
+| Channel / Routing | fork 的 channel/provider routing、OpenAI/Codex/Anthropic compatibility、model whitelist |
+| Migrations / Ent | 不覆盖已上线 migration；新增 migration 前检查真实 DB 和 `schema_migrations` |
+| Frontend admin/user UI | 保留 fork 已有支付、账户、设置、表格偏好、i18n 和部署路径 |
+
+## 验证规则
+
+按变更范围选择验证，不用每个小 commit 都全量部署。
+
+| 变更类型 | 本地验证 | 部署 |
+| --- | --- | --- |
+| docs/ledger only | `git diff --check`、self-review | 不部署 |
+| backend runtime | targeted `go test -tags=unit ...`；共享服务改动再跑更广 package tests | release 完成后统一部署，除非高风险例外 |
+| frontend runtime | targeted Vitest、`pnpm --dir frontend typecheck`，必要时 build | release 完成后统一部署 |
+| payment/auth/data-risk | backend/frontend targeted regression、真实配置/DB preflight | 可提前 test/prod 部署验证，并记录 |
+| migration/schema | migration test、真实 DB read-only precheck、backup plan | 必须 test 后 prod，记录 schema/log 验证 |
+
+release-level deployment closeout 至少包含：
 
 ```bash
-docker run --rm -v "$PWD/backend":/app -w /app golang:1.26 go generate ./ent/...
+curl -s <test-or-prod>/health
+curl -s -o /dev/null -w '%{http_code}' <test-or-prod>/v1/models
+docker logs --since <deploy-time> <container> | egrep -i 'panic|fatal|error|migration|failed|traceback|异常'
 ```
 
-**注意**：运行前确保所有 ent 冲突文件已处理，否则编译失败。
-步骤：先 `git checkout upstream/main` 所有 ent 生成文件 → 再运行 generate。
+预期：
 
-### 6. 编译验证
+- `/health` 返回 `{"status":"ok"}`；
+- 未授权 `/v1/models` 返回 401；
+- 严重日志扫描无异常。
 
-```bash
-docker run --rm -v "$PWD/backend":/app -w /app golang:1.26 go build ./...
-```
+## Closeout 检查清单
 
-### 7. 测试验证
+release 完成前必须确认：
 
-```bash
-docker run --rm -v "$PWD/backend":/app -w /app golang:1.26 go test ./...
-```
+1. `git log --first-parent` 的每个 mainline entry 都在 ledger 中有最终 outcome。
+2. `git log --reverse` 的完整 commit 数已记录，merge PR 内部 commit 已展开或映射。
+3. release 内没有未解决的 `HOLD`、`PORT`、`PARTIAL`、`REOPENED`。
+4. 每个 runtime/code item 有本地测试证据，PR CI 已检查。
+5. 上游同步/release-gate 相关 docs/runtime PR 默认需要 Kimi review；如果某次低风险变更不用 Kimi，必须在对应 release ledger 或 PR 说明中记录原因、替代 review 方式和验证证据。
+6. release-level deploy 决策已记录；需要部署时 test/prod 均已验证。
+7. `backend/cmd/server/VERSION` 已按 fork marker 语义更新。
+8. `fork/vX.Y.Z` annotated tag 已创建并推送。
+9. 合并后拉最新 `origin/main`，再从最新 main 创建下一个 release worktree。
+10. 已合并的旧 worktree/branch 在确认无未提交改动后清理。
 
-### 8. 提交 merge
+## 历史说明
 
-```bash
-git add .
-git commit  # 填写 merge commit message
-```
+早期曾尝试过跨多个 upstream release 的 slice-based 同步，也曾保留过“全量 merge upstream/main”指南。当前实际经验表明，这会掩盖未处理的 release item，也容易覆盖 fork 的 payment/auth/migration 语义。因此后续以 release gate + itemized ledger 为准。
 
-### 9. 部署测试环境验证
+历史记录仍可参考：
 
-```bash
-git push origin sync/upstream-YYYYMMDD
-# 服务器切换分支
-ssh nio@108.160.133.141 "cd /data/service/sub2api && git fetch origin && git checkout sync/upstream-YYYYMMDD && bash deploy/deploy-server.sh test"
-```
-
-### 10. 合并到 main
-
-验证通过后：
-
-```bash
-git checkout main
-git merge sync/upstream-YYYYMMDD --no-ff
-git push origin main
-# 同步部署 prod 和 fx
-```
-
----
-
-## 我们自定义的核心模块（每次合并必须保留）
-
-| 模块 | 文件 | 说明 |
-|------|------|------|
-| 微信支付 | `repository/wxpay_provider.go`, `easypay_provider.go` | 支付 Provider |
-| 支付业务 | `service/payment_service.go` | 创单、回调、权益发放 |
-| 支付 DI | `service/wire.go` 中 ProvidePaymentService/ProvidePaymentExpiryService | Wire 注入 |
-| 邀请系统 | `service/referral_service.go`，ent schema referral_code | 用户邀请码 |
-| Migrations | `077_add_payment_tables.sql`, `078_add_refund_no.sql`, `091/092` | 数据库表 |
-
----
-
-## 自动通知：GitHub Actions 周检查
-
-在 `.github/workflows/upstream-check.yml` 添加：
-
-```yaml
-name: Check upstream updates
-on:
-  schedule:
-    - cron: '0 9 * * 1'  # 每周一 09:00
-  workflow_dispatch:
-
-jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Add upstream remote
-        run: |
-          git remote add upstream https://github.com/Wei-Shaw/sub2api.git
-          git fetch upstream
-
-      - name: Check commits behind
-        run: |
-          BEHIND=$(git log HEAD..upstream/main --oneline | wc -l)
-          echo "落后 upstream $BEHIND 个 commits"
-          if [ "$BEHIND" -gt 0 ]; then
-            echo "## Upstream 有更新" >> $GITHUB_STEP_SUMMARY
-            echo "落后 **$BEHIND** 个 commits" >> $GITHUB_STEP_SUMMARY
-            git log HEAD..upstream/main --oneline | head -20 >> $GITHUB_STEP_SUMMARY
-          fi
-```
-
-这样每周一 GitHub Actions Summary 会显示落后了多少，不需要人手盯。
-
----
-
-## 历史同步记录
-
-| 日期 | 版本范围 | 提交数 | 主要内容 | 分支 |
-|------|---------|-------|---------|------|
-| 2026-03-29 | ~ v0.1.105 | — | TLS 指纹、Privacy 模式、Responses↔Anthropic 双向转换 | main |
-| 2026-04-11 | v0.1.105 → v0.1.130 | 225 | channel 定价、OIDC 登录、删除 Sora、LoadFactor fix | feature/upstream-sync-channel-pricing |
-| 2026-04-29 | v0.1.105 → v0.1.119（中间态） | 539 | 切片增量同步：anthropic/openai/codex 修复 + ops/frontend；hold payment/auth/affiliate。详细台账 [`upstream-sync-2026-04.md`](./upstream-sync-2026-04.md) | worktree-upstream-sync-2026-04 |
-
----
-
-## 常见问题
-
-**Q: `go generate ./ent/...` 失败，提示 undefined PaymentOrderMutation**
-
-A: 需要先清除所有 ent 生成文件中的冲突标记，再 generate：
-```bash
-# 方法：checkout upstream 的 ent 生成文件（不含 schema）
-git ls-tree -r upstream/main --name-only | grep "^backend/ent/" | grep -v "/schema/" | xargs git checkout upstream/main --
-# 然后删除我们有但 upstream 没有的 payment/referral 生成文件
-rm backend/ent/paymentorder*.go backend/ent/paymentplan*.go backend/ent/userreferral*.go
-# 再 generate
-docker run --rm -v "$PWD/backend":/app -w /app golang:1.26 go generate ./ent/...
-```
-
-**Q: wire_gen.go 如何处理**
-
-A: `wire gen` 在 Go 1.26 下不可用，必须手动维护。
-合并策略：以 upstream 为基础，把我们的 payment/referral provider 注入手动加回去。
-参考行：`paymentService`, `paymentExpiryService`, `referralService` 的初始化。
-
-**Q: DashboardView.vue 编译报错 retryAll not found**
-
-A: upstream 删除了 `retryAll` 函数，统一改为 `refreshAll`。
-把模板里的 `@click="retryAll"` 改为 `@click="refreshAll"`。
+- `docs/engineering/upstream-sync-2026-04.md`
+- `docs/engineering/upstream-sync-2026-05-phase2.md`
+- `docs/engineering/payment-b2-deploy.md`
