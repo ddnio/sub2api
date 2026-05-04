@@ -141,6 +141,54 @@ func (h *AuthHandler) createOAuthPendingSession(c *gin.Context, payload oauthPen
 	return nil
 }
 
+func linuxDoInvitationPendingPayload(email, username, subject, redirectTo, browserSessionKey string) oauthPendingSessionPayload {
+	return oauthPendingSessionPayload{
+		Intent: "login",
+		Identity: service.PendingAuthIdentityKey{
+			ProviderType:    "linuxdo",
+			ProviderKey:     "linuxdo",
+			ProviderSubject: strings.TrimSpace(subject),
+		},
+		ResolvedEmail:     strings.TrimSpace(email),
+		RedirectTo:        strings.TrimSpace(redirectTo),
+		BrowserSessionKey: strings.TrimSpace(browserSessionKey),
+		UpstreamIdentityClaims: map[string]any{
+			"email":    strings.TrimSpace(email),
+			"username": strings.TrimSpace(username),
+			"subject":  strings.TrimSpace(subject),
+		},
+		CompletionResponse: map[string]any{
+			"error":    "invitation_required",
+			"redirect": strings.TrimSpace(redirectTo),
+		},
+	}
+}
+
+func oidcInvitationPendingPayload(email, username, issuer, subject string, emailVerified bool, redirectTo, browserSessionKey string) oauthPendingSessionPayload {
+	return oauthPendingSessionPayload{
+		Intent: "login",
+		Identity: service.PendingAuthIdentityKey{
+			ProviderType:    "oidc",
+			ProviderKey:     strings.TrimSpace(issuer),
+			ProviderSubject: strings.TrimSpace(subject),
+		},
+		ResolvedEmail:     strings.TrimSpace(email),
+		RedirectTo:        strings.TrimSpace(redirectTo),
+		BrowserSessionKey: strings.TrimSpace(browserSessionKey),
+		UpstreamIdentityClaims: map[string]any{
+			"email":          strings.TrimSpace(email),
+			"username":       strings.TrimSpace(username),
+			"subject":        strings.TrimSpace(subject),
+			"issuer":         strings.TrimSpace(issuer),
+			"email_verified": emailVerified,
+		},
+		CompletionResponse: map[string]any{
+			"error":    "invitation_required",
+			"redirect": strings.TrimSpace(redirectTo),
+		},
+	}
+}
+
 func readCompletionResponse(session map[string]any) (map[string]any, bool) {
 	if len(session) == 0 {
 		return nil, false

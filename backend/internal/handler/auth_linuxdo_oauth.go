@@ -161,6 +161,13 @@ func (h *AuthHandler) LinuxDoOAuthCallback(c *gin.Context) {
 	if redirectTo == "" {
 		redirectTo = linuxDoOAuthDefaultRedirectTo
 	}
+	browserSessionKey, _ := readOAuthPendingBrowserCookie(c)
+	if strings.TrimSpace(browserSessionKey) == "" {
+		browserSessionKey, _ = generateOAuthPendingBrowserSession()
+		if strings.TrimSpace(browserSessionKey) != "" {
+			setOAuthPendingBrowserCookie(c, browserSessionKey, secureCookie)
+		}
+	}
 
 	codeVerifier := ""
 	if cfg.UsePKCE {
@@ -215,6 +222,12 @@ func (h *AuthHandler) LinuxDoOAuthCallback(c *gin.Context) {
 	tokenPair, _, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, "")
 	if err != nil {
 		if errors.Is(err, service.ErrOAuthInvitationRequired) {
+			if strings.TrimSpace(browserSessionKey) != "" && strings.TrimSpace(subject) != "" {
+				if err := h.createOAuthPendingSession(c, linuxDoInvitationPendingPayload(email, username, subject, redirectTo, browserSessionKey)); err != nil {
+					redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
+					return
+				}
+			}
 			pendingToken, tokenErr := h.authService.CreatePendingOAuthToken(email, username)
 			if tokenErr != nil {
 				redirectOAuthError(c, frontendCallback, "login_failed", "service_error", "")

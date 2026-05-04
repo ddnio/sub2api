@@ -212,6 +212,13 @@ func (h *AuthHandler) OIDCOAuthCallback(c *gin.Context) {
 	if redirectTo == "" {
 		redirectTo = oidcOAuthDefaultRedirectTo
 	}
+	browserSessionKey, _ := readOAuthPendingBrowserCookie(c)
+	if strings.TrimSpace(browserSessionKey) == "" {
+		browserSessionKey, _ = generateOAuthPendingBrowserSession()
+		if strings.TrimSpace(browserSessionKey) != "" {
+			setOAuthPendingBrowserCookie(c, browserSessionKey, secureCookie)
+		}
+	}
 
 	codeVerifier := ""
 	if cfg.UsePKCE {
@@ -322,6 +329,12 @@ func (h *AuthHandler) OIDCOAuthCallback(c *gin.Context) {
 	tokenPair, _, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, "")
 	if err != nil {
 		if errors.Is(err, service.ErrOAuthInvitationRequired) {
+			if strings.TrimSpace(browserSessionKey) != "" {
+				if err := h.createOAuthPendingSession(c, oidcInvitationPendingPayload(email, username, issuer, subject, emailVerified != nil && *emailVerified, redirectTo, browserSessionKey)); err != nil {
+					redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
+					return
+				}
+			}
 			pendingToken, tokenErr := h.authService.CreatePendingOAuthToken(email, username)
 			if tokenErr != nil {
 				redirectOAuthError(c, frontendCallback, "login_failed", "service_error", "")
