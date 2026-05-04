@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/ent/authidentity"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 )
 
@@ -172,6 +173,12 @@ func (s *AuthService) ValidatePasswordCredentials(ctx context.Context, email, pa
 // RecordSuccessfulLogin updates login activity after a non-standard login flow
 // finishes with a real session.
 func (s *AuthService) RecordSuccessfulLogin(ctx context.Context, userID int64) {
+	if s != nil && s.userRepo != nil && userID > 0 {
+		user, err := s.userRepo.GetByID(ctx, userID)
+		if err == nil {
+			s.backfillEmailIdentityOnSuccessfulLogin(ctx, user)
+		}
+	}
 	s.touchUserLogin(ctx, userID)
 }
 
@@ -197,6 +204,43 @@ func (s *AuthService) touchUserLogin(ctx context.Context, userID int64) {
 		SetLastActiveAt(now).
 		Exec(ctx); err != nil {
 		logger.LegacyPrintf("service.auth", "[Auth] Failed to touch login timestamps: user_id=%d err=%v", userID, err)
+	}
+}
+
+func (s *AuthService) backfillEmailIdentityOnSuccessfulLogin(ctx context.Context, user *User) {
+	if s == nil || user == nil || user.ID <= 0 {
+		return
+	}
+	s.ensureEmailAuthIdentity(ctx, user)
+}
+
+func (s *AuthService) ensureEmailAuthIdentity(ctx context.Context, user *User) {
+	if s == nil || s.entClient == nil || user == nil || user.ID <= 0 {
+		return
+	}
+
+	email := strings.ToLower(strings.TrimSpace(user.Email))
+	if email == "" || isReservedEmail(email) {
+		return
+	}
+
+	if err := s.entClient.AuthIdentity.Create().
+		SetUserID(user.ID).
+		SetProviderType("email").
+		SetProviderKey("email").
+		SetProviderSubject(email).
+		SetVerifiedAt(time.Now().UTC()).
+		SetMetadata(map[string]any{
+			"source": "auth_service_dual_write",
+		}).
+		OnConflictColumns(
+			authidentity.FieldProviderType,
+			authidentity.FieldProviderKey,
+			authidentity.FieldProviderSubject,
+		).
+		DoNothing().
+		Exec(ctx); err != nil {
+		logger.LegacyPrintf("service.auth", "[Auth] Failed to ensure email auth identity: user_id=%d email=%s err=%v", user.ID, email, err)
 	}
 }
 

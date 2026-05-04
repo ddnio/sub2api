@@ -12,6 +12,7 @@ import (
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/ent/authidentity"
 	"github.com/Wei-Shaw/sub2api/ent/enttest"
 	"github.com/Wei-Shaw/sub2api/ent/pendingauthsession"
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -267,6 +268,47 @@ func TestPendingOAuthBindApplyErrorWrapsUnexpectedErrors(t *testing.T) {
 	require.Equal(t, "PENDING_AUTH_BIND_APPLY_FAILED", serviceErrorReason(t, wrapped))
 }
 
+func TestFindUserByNormalizedEmailMatchesLegacySpacingAndCase(t *testing.T) {
+	client := newOAuthPendingHandlerTestClient(t)
+	ctx := context.Background()
+
+	user, err := client.User.Create().
+		SetEmail(" Owner@Example.com ").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+
+	got, err := findUserByNormalizedEmail(ctx, client, "owner@example.com")
+	require.NoError(t, err)
+	require.Equal(t, user.ID, got.ID)
+}
+
+func TestFindUserByNormalizedEmailRejectsDuplicates(t *testing.T) {
+	client := newOAuthPendingHandlerTestClient(t)
+	ctx := context.Background()
+
+	_, err := client.User.Create().
+		SetEmail(" Owner@Example.com ").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+	_, err = client.User.Create().
+		SetEmail("owner@example.com").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+
+	_, err = findUserByNormalizedEmail(ctx, client, " owner@example.com ")
+	require.Error(t, err)
+	require.Equal(t, "USER_EMAIL_CONFLICT", serviceErrorReason(t, err))
+}
+
 func TestBindPendingOAuthLoginRequires2FAWithoutBindingOrConsumingSession(t *testing.T) {
 	client := newOAuthPendingHandlerTestClient(t)
 	ctx := context.Background()
@@ -444,11 +486,25 @@ func TestLogin2FACompletesPendingOAuthBindSession(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
 	require.NotEmpty(t, payload.Data.AccessToken)
 
-	identity, err := client.AuthIdentity.Query().Only(ctx)
+	identity, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ("linuxdo"),
+			authidentity.ProviderKeyEQ("linuxdo"),
+			authidentity.ProviderSubjectEQ("subject-2fa"),
+		).
+		Only(ctx)
 	require.NoError(t, err)
 	require.Equal(t, user.ID, identity.UserID)
-	require.Equal(t, "linuxdo", identity.ProviderType)
-	require.Equal(t, "subject-2fa", identity.ProviderSubject)
+
+	emailIdentity, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ("email"),
+			authidentity.ProviderKeyEQ("email"),
+			authidentity.ProviderSubjectEQ(user.Email),
+		).
+		Only(ctx)
+	require.NoError(t, err)
+	require.Equal(t, user.ID, emailIdentity.UserID)
 
 	stored, err := client.PendingAuthSession.Query().
 		Where(pendingauthsession.IDEQ(pendingSession.ID)).

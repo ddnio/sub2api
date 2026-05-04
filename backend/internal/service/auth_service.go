@@ -461,6 +461,8 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (string
 	if !user.IsActive() {
 		return "", nil, ErrUserNotActive
 	}
+	s.backfillEmailIdentityOnSuccessfulLogin(ctx, user)
+	s.touchUserLogin(ctx, user.ID)
 
 	// 生成JWT token
 	token, err := s.GenerateToken(user)
