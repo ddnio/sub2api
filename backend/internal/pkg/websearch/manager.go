@@ -186,13 +186,20 @@ func sortByStableRandomWeight(items []weightedProvider) {
 	if len(items) <= 1 {
 		return
 	}
-	factors := make([]float64, len(items))
-	for i, item := range items {
-		factors[i] = float64(item.weight) * (0.5 + rand.Float64())
+	type weightedEntry struct {
+		item   weightedProvider
+		factor float64
 	}
-	sort.Slice(items, func(i, j int) bool {
-		return factors[i] > factors[j]
+	entries := make([]weightedEntry, len(items))
+	for i, item := range items {
+		entries[i] = weightedEntry{item: item, factor: float64(item.weight) * (0.5 + rand.Float64())}
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].factor > entries[j].factor
 	})
+	for i, entry := range entries {
+		items[i] = entry.item
+	}
 }
 
 func mergeWeightedResults(withQuota, withoutQuota []weightedProvider, capacity int) []ProviderConfig {

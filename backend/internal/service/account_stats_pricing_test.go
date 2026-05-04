@@ -41,6 +41,62 @@ func TestResolveAccountStatsCostCustomRuleUsesUpstreamModel(t *testing.T) {
 	require.InDelta(t, 0.0002, *got, 1e-12)
 }
 
+func TestResolveAccountStatsCostCustomRuleUsesWildcardPlatform(t *testing.T) {
+	price := 0.000003
+	groupID := int64(11)
+	accountID := int64(22)
+	channelSvc := newTestChannelService(makeStandardRepo(Channel{
+		ID:       1,
+		Status:   StatusActive,
+		GroupIDs: []int64{groupID},
+		AccountStatsPricingRules: []AccountStatsPricingRule{{
+			AccountIDs: []int64{accountID},
+			Pricing: []ChannelModelPricing{{
+				Models:      []string{"gpt-5.1-upstream"},
+				BillingMode: BillingModeToken,
+				InputPrice:  &price,
+			}},
+		}},
+	}, map[int64]string{groupID: PlatformOpenAI}))
+
+	got := resolveAccountStatsCost(context.Background(), channelSvc, nil, accountID, groupID, "gpt-5.1-upstream", UsageTokens{
+		InputTokens: 100,
+	}, 1, 9.9)
+
+	require.NotNil(t, got)
+	require.InDelta(t, 0.0003, *got, 1e-12)
+}
+
+func TestResolveAccountStatsCostCustomRuleUsesIntervalPricing(t *testing.T) {
+	groupID := int64(11)
+	accountID := int64(22)
+	channelSvc := newTestChannelService(makeStandardRepo(Channel{
+		ID:       1,
+		Status:   StatusActive,
+		GroupIDs: []int64{groupID},
+		AccountStatsPricingRules: []AccountStatsPricingRule{{
+			AccountIDs: []int64{accountID},
+			Pricing: []ChannelModelPricing{{
+				Platform:    PlatformOpenAI,
+				Models:      []string{"gpt-5.1-upstream"},
+				BillingMode: BillingModeToken,
+				InputPrice:  testPtrFloat64(0.000001),
+				Intervals: []PricingInterval{
+					{MinTokens: 0, MaxTokens: testPtrInt(100), InputPrice: testPtrFloat64(0.000002)},
+					{MinTokens: 101, MaxTokens: nil, InputPrice: testPtrFloat64(0.000004)},
+				},
+			}},
+		}},
+	}, map[int64]string{groupID: PlatformOpenAI}))
+
+	got := resolveAccountStatsCost(context.Background(), channelSvc, nil, accountID, groupID, "gpt-5.1-upstream", UsageTokens{
+		InputTokens: 200,
+	}, 1, 9.9)
+
+	require.NotNil(t, got)
+	require.InDelta(t, 0.0008, *got, 1e-12)
+}
+
 func TestResolveAccountStatsCostApplyPricingUsesTotalCost(t *testing.T) {
 	groupID := int64(11)
 	channelSvc := newTestChannelService(makeStandardRepo(Channel{

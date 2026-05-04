@@ -248,10 +248,6 @@ func pricingRequestToService(reqs []channelModelPricingRequest) []service.Channe
 		if billingMode == "" {
 			billingMode = service.BillingModeToken
 		}
-		platform := r.Platform
-		if platform == "" {
-			platform = service.PlatformAnthropic
-		}
 		intervals := make([]service.PricingInterval, 0, len(r.Intervals))
 		for _, iv := range r.Intervals {
 			intervals = append(intervals, service.PricingInterval{
@@ -267,7 +263,7 @@ func pricingRequestToService(reqs []channelModelPricingRequest) []service.Channe
 			})
 		}
 		result = append(result, service.ChannelModelPricing{
-			Platform:         platform,
+			Platform:         r.Platform,
 			Models:           r.Models,
 			BillingMode:      billingMode,
 			InputPrice:       r.InputPrice,
@@ -288,6 +284,14 @@ func accountStatsPricingRuleRequestToService(req accountStatsPricingRuleRequest)
 		GroupIDs:   req.GroupIDs,
 		AccountIDs: req.AccountIDs,
 		Pricing:    pricingRequestToService(req.Pricing),
+	}
+}
+
+func defaultPricingPlatform(pricing []service.ChannelModelPricing) {
+	for i := range pricing {
+		if pricing[i].Platform == "" {
+			pricing[i].Platform = service.PlatformAnthropic
+		}
 	}
 }
 
@@ -349,6 +353,7 @@ func (h *ChannelHandler) Create(c *gin.Context) {
 	}
 
 	pricing := pricingRequestToService(req.ModelPricing)
+	defaultPricingPlatform(pricing)
 	statsRules := make([]service.AccountStatsPricingRule, 0, len(req.AccountStatsPricingRules))
 	for i, ruleReq := range req.AccountStatsPricingRules {
 		rule := accountStatsPricingRuleRequestToService(ruleReq)
@@ -404,6 +409,7 @@ func (h *ChannelHandler) Update(c *gin.Context) {
 	}
 	if req.ModelPricing != nil {
 		pricing := pricingRequestToService(*req.ModelPricing)
+		defaultPricingPlatform(pricing)
 		input.ModelPricing = &pricing
 	}
 	if req.AccountStatsPricingRules != nil {
