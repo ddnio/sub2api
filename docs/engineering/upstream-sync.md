@@ -10,11 +10,11 @@ upstream 仓库：`Wei-Shaw/sub2api`（`upstream` remote）
 
 1. 按 upstream tag 顺序处理，例如 `v0.1.114..v0.1.115` 完整关闭后，才能进入 `v0.1.115..v0.1.116`。
 2. release 是计划、验证、部署、打 fork marker tag 的边界。
-3. 代码合入单元优先是 upstream first-parent commit / upstream PR merge commit；必要时可拆成更小的行为子项。
+3. upstream first-parent commit / upstream PR merge commit 是 release 核算主轴。每个 upstream PR 必须在 ledger 里关闭；拆分实现时也要回填到原 upstream PR。
 4. 不允许只因为冲突大、迁移复杂、产品含义复杂就跳过。每个 release item 最终必须有 `MERGED`、`ADAPTED`、`PRESENT`、`REJECTED`、`FROZEN` 或 `SKIP` 之一，并有证据。
 5. `HOLD`、`PORT`、`PARTIAL`、`REOPENED` 都不是 release closeout 的最终状态。
 6. 已推送的 `fork/vX.Y.Z` marker tag 不移动、不删除。发现旧 gate 有缺口时，在最新 `main` 上 forward-fix。
-7. 默认一个完整 upstream release 一个 fork PR。只有 schema/migration、auth/payment/security/data-risk、大冲突、大 CI unblock 才拆 PR。
+7. 默认一个完整 upstream release 一个 fork PR。小 upstream PR 直接按 PR 导入或适配；大 upstream PR 才按依赖拆成 cluster/子项执行。只有 schema/migration、auth/payment/security/data-risk、大冲突、大 CI unblock 才拆 fork PR。
 8. 常规 runtime 变更等整个 release gate 完成后统一部署 test/prod 验证；安全热修、迁移/schema、auth/payment/data-risk、紧急线上修复可以例外提前部署。
 
 详细 ledger 和当前 gate 状态见：
@@ -61,14 +61,24 @@ git log --oneline --reverse v0.1.114..v0.1.115
 
 first-parent 列表用于确认 upstream 主线 PR/merge 顺序；完整列表用于防止 merge PR 内部 commit 被漏审。每个 merge PR 还要展开内部 commit 或 PR branch 历史，确认其内部 commit 都映射到同一个 release 决策或子项。
 
+### 3a. 选择处理粒度
+
+处理粒度按下面顺序决定：
+
+1. **先按 upstream PR 核算。** ledger 的主键是 upstream first-parent entry / PR。不能只写 cluster 名称而不说明覆盖了哪个 upstream PR、哪些内部 commit。
+2. **小 PR 直接处理。** 单域、低冲突、无 schema/data/product 语义的 upstream PR，优先直接 cherry-pick 或按 PR 适配，并在同一个 release PR 内提交。
+3. **大 PR 才启用轻量 pipeline。** 符合任一条件时，把 upstream PR 拆成依赖 cluster 或子项：文件数/行数很大、跨 auth/payment/profile/frontend/migration 多个域、包含 schema/migration、触碰线上数据、会覆盖 fork 自有功能、或 upstream PR 内部有大量 merge/fixup/noise。
+4. **依赖顺序只决定执行顺序。** migration/schema 先于 backend，backend API 先于 frontend，数据兼容先于部署；但执行完必须回填到 upstream PR ledger。
+5. **pipeline 是工具，不是额外流程负担。** 对大 PR 使用 scratch rehearsal、import audit、targeted tests、子项 closeout；对小 PR 不跑完整 pipeline，避免流程成本超过代码成本。
+
 ### 4. 对每个 upstream item 做直接导入审计
 
 处理顺序：
 
 1. 先确认该 commit/PR 是否已经是 fork ancestor，或已经通过某个 fork PR 落地。
-2. 如果未落地，在隔离 worktree 里 preview/cherry-pick upstream commit 或 merge PR。
+2. 如果未落地，先按 upstream PR 粒度判断是否可直接导入；小 PR 在隔离 worktree 里 preview/cherry-pick upstream commit 或 merge PR。
 3. 如果补丁干净、范围小、不会覆盖 fork 的产品/数据语义，按 upstream commit/PR 单元合入。
-4. 如果冲突大或跨 fork 架构，先写 import audit，记录：
+4. 如果冲突大或跨 fork 架构，不继续盲目手写；先写 import audit，记录：
    - 可直接 port 的文件；
    - fork 已有等价行为；
    - 冲突区域；
@@ -76,7 +86,7 @@ first-parent 列表用于确认 upstream 主线 PR/merge 顺序；完整列表�
    - 产品语义影响；
    - 必须补的测试；
    - 最小可拆子项。
-5. 只有完成 audit 后，才允许手工 port 子项、标记 `PRESENT`、`ADAPTED`、`REJECTED` 或 `FROZEN`。
+5. 只有完成 audit 后，才允许把该 upstream PR 拆成依赖 cluster/子项手工 port，并把每个子项回填到原 upstream PR 的 final outcome。
 
 遇到大 diff、冲突多、branch/worktree 状态异常、或实现开始明显偏离 upstream 原始 commit 时，立即暂停实现并写 import audit。继续手写代码通常会扩大偏差。
 

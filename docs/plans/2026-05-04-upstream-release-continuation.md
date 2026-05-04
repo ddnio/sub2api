@@ -4,7 +4,7 @@
 
 **Goal:** Continue upstream alignment from the current verified fork state without overwriting fork-specific product behavior or risking online data.
 
-**Architecture:** Use upstream releases as the planning, review, deployment, and fork-marker boundary. Inside each release, process upstream mainline entries in order, expand merge PR internal commits, and import or adapt only the behavior that is compatible with the fork. Keep public fork marker tags immutable and fix gaps forward on latest `main`.
+**Architecture:** Use upstream releases as the planning, review, deployment, and fork-marker boundary. Inside each release, use upstream first-parent PRs as the accounting axis: every upstream PR/direct commit must close in the ledger. Small PRs are imported or adapted directly; large PRs are split by dependency cluster only as an execution tactic, and every split result must be mapped back to the original upstream PR. Keep public fork marker tags immutable and fix gaps forward on latest `main`.
 
 **Tech Stack:** Git worktrees, GitHub PRs against `ddnio/sub2api`, Go/Ent/PostgreSQL migrations, Vue/TypeScript frontend, Kimi or local review agents, test/prod deployment smoke checks.
 
@@ -32,13 +32,26 @@ Do not restart earlier releases. Treat `v0.1.111`, `v0.1.112`, `v0.1.113`, and `
 2. Do not start `v0.1.115..v0.1.116` until `v0.1.114..v0.1.115` is closed, reviewed, merged, deployed when required, and tagged as `fork/v0.1.115`.
 3. One completed upstream release should normally produce one fork PR. Split only for migrations/schema, auth/payment/security/data-risk, very large conflict areas, or CI unblock work.
 4. Do not create one PR per commit unless the commit is high-risk or blocks the whole release.
-5. For every upstream merge PR, first-parent is only the release index. Expand and check the internal commits before claiming coverage.
+5. For every upstream merge PR, first-parent is the release accounting index. Expand and check the internal commits before claiming coverage, and map any cluster/subtask implementation back to that upstream PR.
 6. A release item cannot close as `HOLD`, `PORT`, `PARTIAL`, or `REOPENED`.
 7. Hard items cannot be skipped. Product, schema/migration, auth, payment, security, and data-risk items must become `MERGED`, `ADAPTED`, `PRESENT`, `REJECTED`, or `FROZEN` with evidence. Reserve `SKIP` for non-applicable churn such as sponsor/readme/no-op repository maintenance.
 8. Routine deployment happens once after the whole release closes. Deploy earlier only for security hotfixes, migrations/schema, payment/auth/data-risk, or urgent production fixes.
 9. For low-risk non-runtime or obviously contained code, skip Kimi if it is slowing the release down; record local self-review plus agent/code review evidence instead. Use stronger review for auth, payment, migration, schema, and data-risk work.
 10. If a cherry-pick or implementation starts producing a broad hand-written diff, conflicts across fork-specific payment/auth/migration/UI surfaces, or branch-state confusion, stop and write an import audit before coding more.
 11. Do not replace fork invitation/referral data models with upstream auth-source default grants. The fork has real online data in `redeem_codes(type=invitation)`, `users.referral_code`, and `user_referrals`; upstream auth-source grants may be added as a compatible provider-default feature only after a data audit proves they do not overwrite or reinterpret those records.
+
+## Import Granularity Rule
+
+Use this rule for speed and correctness. The goal is not to maximize cherry-pick purity; the goal is to close each upstream release item with evidence while preserving fork behavior.
+
+1. **Accounting unit:** upstream first-parent PR/direct commit. The release ledger must answer "what happened to PR #NNNN?" before the release can close.
+2. **Execution unit for small PRs:** the upstream PR itself. If it is single-domain, low-conflict, and has no schema/data/product-contract impact, cherry-pick or adapt it directly in the release branch.
+3. **Execution unit for large PRs:** dependency clusters inside that upstream PR. Split only when the upstream PR is too broad, noisy, or risky to import as one unit.
+4. **Dependency order inside a split:** schema/migration and data preflight first, backend/service/repository second, handler/routes/API third, frontend/UI/i18n fourth, release-wide tests/review last.
+5. **Pipeline trigger:** use scratch rehearsal, import audit, and targeted subtask tests only for large/high-risk PRs. Do not force this pipeline onto small low-risk PRs.
+6. **Closeout requirement:** a cluster is not complete until it states which upstream PR and internal commits it covers, what was merged/adapted/present/rejected/skipped/frozen, which fork behavior was preserved, and what verification passed.
+
+This is intentionally a hybrid model: release gate for sequencing, upstream PR for accounting, dependency cluster for large-PR execution, and one fork PR for the completed release whenever possible.
 
 ## Data Compatibility Gate
 
@@ -155,9 +168,9 @@ git -C .claude/worktrees/release-v0.1.115-closeout log --oneline origin/main..HE
 - PR #1731, PR #1749, PR #1752, PR #1753, PR #1764, PR #1766 if existing local commits already cover them.
 
 **Steps:**
-1. For each item, compare upstream commit diff with the current branch.
+1. For each item, compare upstream PR/direct-commit diff with the current branch.
 2. If the behavior is already present, mark `PRESENT` or `ADAPTED` with file/test evidence.
-3. If missing and low-risk, cherry-pick or port directly in the release branch.
+3. If missing and low-risk, cherry-pick or port directly in the release branch at upstream PR/direct-commit granularity.
 4. Keep these in the same v0.1.115 PR unless a data-risk item appears.
 
 **Verify:**
@@ -191,6 +204,13 @@ git -C .claude/worktrees/release-v0.1.115-closeout log --oneline origin/main..HE
 3. Migration filenames must avoid already-applied fork numbers; use fork-safe new filenames.
 4. Run real DB read-only preflight before deploying auth identity migrations.
 5. Preserve existing invitation-code and referral semantics. `redeem_codes(type=invitation)` remains the registration gate source when invitation codes are enabled; `users.referral_code` and `user_referrals` remain the attribution/reward source when referral is enabled. Upstream `user_provider_default_grants` is not a replacement for either model.
+6. Treat PR #1785 as the accounting unit but not the execution unit. Close it through dependency clusters, and update the PR #1785 subitem matrix after each cluster so the release ledger never drifts away from upstream PR coverage.
+7. Keep the next slices ordered by dependency unless a tiny independent follow-up can be closed faster without touching auth state:
+   - identity unbinding backend/API;
+   - identity-channel writes and adoption decision cleanup;
+   - WeChat OAuth/bind finalization and mode/default-grant decision;
+   - legacy identity migrations/reports after live DB inventory;
+   - avatar/profile adoption and user activity UI.
 
 **Verify:**
 - Auth/session/user targeted Go tests.
@@ -221,7 +241,7 @@ git -C .claude/worktrees/release-v0.1.115-closeout log --oneline origin/main..HE
 **Steps:**
 1. Re-run first-parent list for `v0.1.114..v0.1.115`.
 2. Re-run full commit list for `v0.1.114..v0.1.115`.
-3. Expand every merge PR internal commit and map it to a final release outcome.
+3. Expand every merge PR internal commit and map it to a final release outcome. For split large PRs, also confirm every cluster links back to the upstream PR and internal commits it closes.
 4. Confirm the ledger has no release-local `HOLD`, `PORT`, `PARTIAL`, or `REOPENED`.
 5. Run release-width local tests based on touched areas.
 6. Run independent code review. Use Kimi or a local code-review agent; use Kimi only where it adds value or risk demands it.
@@ -275,6 +295,9 @@ Keep these until their content is explicitly resolved:
 
 ## Speed Optimizations That Are Safe
 
+- Use upstream PRs as the checklist so coverage review is fast and not rebuilt from scratch every time.
+- Directly close small upstream PRs instead of wrapping them in a heavyweight pipeline.
+- Split only the large/high-risk PRs into dependency clusters.
 - Batch low-risk entries inside one release PR.
 - Use one release-level deployment instead of deploying every small commit.
 - Skip Kimi for docs-only or low-risk mechanical changes when a local code-review agent and tests cover the risk.
