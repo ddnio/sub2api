@@ -21,6 +21,7 @@ upstream 仓库：`Wei-Shaw/sub2api`（`upstream` remote）
 
 - `docs/engineering/upstream-release-coverage-2026-05.md`
 - `docs/plans/2026-05-03-upstream-release-sync-reset.md`
+- `docs/plans/2026-05-04-upstream-release-continuation.md`
 
 ## 每个 release 的固定流程
 
@@ -91,6 +92,21 @@ first-parent 列表用于确认 upstream 主线 PR/merge 顺序；完整列表�
 | Channel / Routing | fork 的 channel/provider routing、OpenAI/Codex/Anthropic compatibility、model whitelist |
 | Migrations / Ent | 不覆盖已上线 migration；新增 migration 前检查真实 DB 和 `schema_migrations` |
 | Frontend admin/user UI | 保留 fork 已有支付、账户、设置、表格偏好、i18n 和部署路径 |
+
+### 6. 数据兼容 gate
+
+触及 auth identity、邀请码/referral/affiliate、payment、subscription、用户余额、provider 配置、Ent schema 或 migration 的 upstream item，必须先过数据兼容 gate：
+
+1. 用只读 SQL 查 ToC test、ToC prod，以及共享 runtime 受影响时的 ToB prod，记录表结构、settings、row count、已处理/待处理状态。
+2. 写清 fork 现有概念和 upstream 新概念的映射。没有一一映射时，不能硬替换，只能 `ADAPTED`、`REJECTED` 或 `FROZEN`。
+3. 任何 accepted schema/data change 都要有 forward migration、backfill、幂等保护、回滚/restore 路径和测试。
+4. 已有线上数据不能被删除、重新生成、重复发奖、重复扣款、静默解绑或失去审计记录。
+
+邀请码/referral/affiliate 的固定边界：
+
+- `redeem_codes(type='invitation')` 是 fork 的注册准入码，不等同于 upstream affiliate。
+- `users.referral_code` + `user_referrals` 是 fork 的推荐归因和首次充值奖励状态。
+- 如果后续采用 upstream `user_affiliates` / `user_affiliate_ledger`，必须从现有 `users.referral_code` 和 `user_referrals` 做兼容 backfill；已发奖记录必须标记为 processed，待发奖记录必须继续可发或有明确迁移语义。
 
 ## 验证规则
 
