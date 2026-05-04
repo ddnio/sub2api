@@ -625,6 +625,45 @@ Expanded full-commit audit:
 
 Gate status: final. PR #44 merged at `46ed8ff7`; test and prod were both deployed from that commit. Verification on both environments returned `{"status":"ok"}` for `/health`, HTTP 401 for unauthenticated `/v1/models`, and no `panic|fatal|error|migration|failed|traceback|异常` matches in post-deploy container logs. PR #45 bumped `backend/cmd/server/VERSION` from `0.1.113` to `0.1.114`; annotated tag `fork/v0.1.114` points at the merged fork marker commit. Rechecked after `v0.1.112..v0.1.113` became final: the first-parent list for `v0.1.113..v0.1.114` has 9 mainline entries, the full release log has 15 commits, all upstream merge PR internal commits are covered by the release rows above, and no release-local unresolved `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` entries remain. This recheck changes documentation only; no additional deployment is required because the runtime changes were already deployed from merged `main` through PR #44.
 
+### v0.1.115
+
+Range: `v0.1.114..v0.1.115`.
+
+Audit commands:
+
+```bash
+git rev-list --count --first-parent v0.1.114..v0.1.115
+git rev-list --count v0.1.114..v0.1.115
+git log --oneline --first-parent --reverse v0.1.114..v0.1.115
+git log --oneline --reverse v0.1.114..v0.1.115
+```
+
+Audit result so far: 19 first-parent entries and 205 total commits. The parked branch `feature/release-gate-v0.1.115-quota-scheduling` was behind current `origin/main` by 10 commits and only covered PR #1752, so its uncommitted work was preserved as `/private/tmp/sub2api-v0.1.115-parked-uncommitted-20260504.patch`, `/private/tmp/sub2api-v0.1.115-parked-uncommitted-20260504.stat`, `/private/tmp/sub2api-v0.1.115-parked-uncommitted-20260504.name-status`, and `/private/tmp/sub2api-v0.1.115-account_quota_schedulable_test-20260504.go`. Current implementation work continues from latest `origin/main` in `sync/v0.1.115-release-closeout`.
+
+| Upstream source | Area | Local state | Outcome | Evidence / decision |
+| --- | --- | --- | --- | --- |
+| `6cfdf4ec` | Version sync to `0.1.114` | Historical fork marker `fork/v0.1.114` exists. | PRESENT | PR #45 set `backend/cmd/server/VERSION` to `0.1.114` for the historical marker. The current checkout has advanced; do not treat this as current state. |
+| `6c73b621` / PR #1734 | Payment Kyren Topup docs | Upstream docs target `docs/PAYMENT.md` and `docs/PAYMENT_CN.md`, which are not currently present in the fork. | OPEN | Needs payment-docs decision together with `c6d25f69` because this release later restores the payment docs and README links. Do not recreate removed/absent docs as a side effect of a runtime slice. |
+| `51af8df3` / PR #1731 | Rate billing, payment config hardening, autofill avoidance, upstream response limit | Broad payment/config/billing/runtime batch. | OPEN | Requires dedicated payment-b2 compatibility audit before code because upstream touches payment provider config storage, Alipay/EasyPay/Stripe UI flows, billing rate multiplier semantics, and response read-limit config. |
+| `061fd48d` / PR #1749 | `xhigh` reasoning effort in usage records | Already present in current fork. | PRESENT | `gateway_request.go` accepts `xhigh` and `max`; `gateway_request_test.go` covers `output_config.effort xhigh`; `frontend/src/utils/format.ts` formats `xhigh` as `XHigh` and `max` as `Max`. |
+| `e8be4344` / PR #1752 | Prevent quota-exceeded API key and Bedrock accounts from being scheduled | Ported from upstream internal commit `258fd145` on branch `sync/v0.1.115-release-closeout`. | MERGED | Cherry-picked with `-x`. `Account.IsSchedulable()` now returns false for API Key/Bedrock accounts with exhausted total, daily, or weekly quota; sticky-session clearing delegates account-level schedulability to `IsSchedulable`; account status UI shows `Quota Exceeded`. Verification: `GOCACHE=/Users/nio/project/nanafox/sub2api/.cache/go-build go test -tags=unit ./internal/service -run 'TestAccountIsSchedulable_QuotaExceeded|TestShouldClearStickySession'`, `pnpm --dir frontend install --frozen-lockfile`, `pnpm --dir frontend run typecheck`, and `git diff --check HEAD~1..HEAD`. |
+| `f5ee9379` / PR #1753 | Delete orphaned scheduled test plans when account is deleted | Already present in current fork. | PRESENT | Current `origin/main:backend/internal/repository/account_repo.go` deletes from `scheduled_test_plans` inside account deletion before deleting the account row. No code change required in this branch. |
+| `23def40b` | License MIT to LGPL v3.0 | Legal/project-policy change. | OPEN | Must be explicitly accepted or rejected for this fork; do not silently change license as part of runtime alignment. |
+| `a8854947` / PR #1764 | Wxpay pubkey hardening and payment/auth follow-ups | Large payment/auth/config/data-risk batch. | OPEN | Requires dedicated payment/auth audit because upstream PR includes payment order snapshots, WeChat OAuth/JSAPI restoration, provider visibility, migrations, settings persistence, and auth identity interactions. |
+| `ffc9c387` / PR #1766 | Codex removed models and prompt-cache compatibility cleanup | OpenAI/Codex model policy/runtime cleanup. | OPEN | Needs focused audit against current fork model whitelist and Codex transform behavior before code. |
+| `960b2bb8` | CLA workflow | Legal/project-policy automation. | OPEN | Must be explicitly accepted or rejected for this fork; not runtime behavior. |
+| `78f691d2` | Sponsor/readme update | Sponsor/readme churn. | OPEN | Process with README/docs items at release closeout; not runtime behavior. |
+| `8eb3f9e7` / PR #1785 | Auth identity foundation | Very large auth/schema/payment data migration family. | OPEN | Requires dedicated auth-identity migration plan, real DB preflight, rollback plan, and test/deploy plan before any code. |
+| `32107b4f` / PR #1795 | OpenAI image API sync | Image runtime/billing/scheduling feature family. | OPEN | Requires dedicated image feature alignment and billing/scheduling decision before code. |
+| `4d0483f5` | GPT image model test feature | Image-adjacent test/admin feature. | OPEN | Process with image family; do not split blindly from PR #1795 behavior. |
+| `ddf80f5e` / PR #1799 | Auth identity foundation follow-up | Very large auth/schema/payment migration follow-up. | OPEN | Process with PR #1785; includes migration-order, payment resume, OAuth, WeChat, backend-mode, and settings compatibility fixes. |
+| `45065c23` | Auth migration-order test fix | Auth identity migration test ordering. | OPEN | Process with auth identity family; do not apply before deciding the migration family. |
+| `c6d25f69` | Restore payment docs/files | Payment docs. | OPEN | Process with `6c73b621` and README follow-ups; current fork only has `docs/ADMIN_PAYMENT_INTEGRATION_API.md`, not `docs/PAYMENT.md` / `docs/PAYMENT_CN.md`. |
+| `1da4bd72` / PR #1802 | Profile auth bindings i18n | Auth identity UI/API follow-up. | OPEN | Process with auth identity family. |
+| `755c7d50` | README revert to sponsor version | README/docs churn. | OPEN | Process with README/docs closeout after deciding payment docs and license/CLA policy. |
+
+Gate status: open. Do not bump `backend/cmd/server/VERSION` to `0.1.115`, create/move `fork/v0.1.115`, or deploy release-level changes until every row above has a final outcome and the release closeout review passes.
+
 ### v0.1.117
 
 Range: `v0.1.116..v0.1.117`.
