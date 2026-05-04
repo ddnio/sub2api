@@ -33,6 +33,13 @@ func (m *mockUserRepo) GetByEmail(context.Context, string) (*User, error) { retu
 func (m *mockUserRepo) GetFirstAdmin(context.Context) (*User, error)      { return &User{}, nil }
 func (m *mockUserRepo) Update(context.Context, *User) error               { return nil }
 func (m *mockUserRepo) Delete(context.Context, int64) error               { return nil }
+func (m *mockUserRepo) GetUserAvatar(context.Context, int64) (*UserAvatar, error) {
+	return nil, nil
+}
+func (m *mockUserRepo) UpsertUserAvatar(context.Context, int64, UpsertUserAvatarInput) (*UserAvatar, error) {
+	return nil, nil
+}
+func (m *mockUserRepo) DeleteUserAvatar(context.Context, int64) error { return nil }
 func (m *mockUserRepo) List(context.Context, pagination.PaginationParams) ([]User, *pagination.PaginationResult, error) {
 	return nil, nil, nil
 }

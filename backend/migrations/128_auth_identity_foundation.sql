@@ -126,6 +126,22 @@ CREATE UNIQUE INDEX IF NOT EXISTS identity_adoption_decisions_pending_auth_sessi
 CREATE INDEX IF NOT EXISTS identity_adoption_decisions_identity_id_idx
     ON identity_adoption_decisions (identity_id);
 
+CREATE TABLE IF NOT EXISTS user_avatars (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    storage_provider VARCHAR(20) NOT NULL DEFAULT 'database',
+    storage_key TEXT NOT NULL DEFAULT '',
+    url TEXT NOT NULL DEFAULT '',
+    content_type VARCHAR(100) NOT NULL DEFAULT '',
+    byte_size INT NOT NULL DEFAULT 0,
+    sha256 VARCHAR(64) NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS user_avatars_user_id_key
+    ON user_avatars (user_id);
+
 CREATE TABLE IF NOT EXISTS auth_identity_migration_reports (
     id BIGSERIAL PRIMARY KEY,
     report_type VARCHAR(80) NOT NULL,

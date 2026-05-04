@@ -39,6 +39,11 @@ type User struct {
 	TotpEnabledAt       *time.Time // TOTP 启用时间
 
 	AuthIdentities UserIdentitySummarySet
+	AvatarURL      string
+	AvatarSource   string
+	AvatarMIME     string
+	AvatarByteSize int
+	AvatarSHA256   string
 
 	APIKeys       []APIKey
 	Subscriptions []UserSubscription
