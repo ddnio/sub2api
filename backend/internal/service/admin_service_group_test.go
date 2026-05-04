@@ -198,6 +198,21 @@ func TestAdminService_CreateGroup_NilImagePricing(t *testing.T) {
 	require.Nil(t, repo.created.ImagePrice4K)
 }
 
+func TestAdminService_CreateGroup_RejectsNonPositiveRateMultiplier(t *testing.T) {
+	repo := &groupRepoStubForAdmin{}
+	svc := &adminServiceImpl{groupRepo: repo}
+
+	for _, rate := range []float64{0, -1} {
+		_, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
+			Name:           "test-group",
+			RateMultiplier: rate,
+		})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "rate_multiplier must be > 0")
+	}
+	require.Nil(t, repo.created)
+}
+
 // TestAdminService_UpdateGroup_WithImagePricing 测试更新分组时 ImagePrice 字段正确更新
 func TestAdminService_UpdateGroup_WithImagePricing(t *testing.T) {
 	existingGroup := &Group{
@@ -622,6 +637,7 @@ func TestAdminService_CreateGroup_InvalidRequestFallbackRejectsUnsupportedPlatfo
 		Name:                            "g1",
 		Platform:                        PlatformOpenAI,
 		SubscriptionType:                SubscriptionTypeStandard,
+		RateMultiplier:                  1,
 		FallbackGroupIDOnInvalidRequest: &fallbackID,
 	})
 	require.Error(t, err)
@@ -642,6 +658,7 @@ func TestAdminService_CreateGroup_InvalidRequestFallbackRejectsSubscription(t *t
 		Name:                            "g1",
 		Platform:                        PlatformAnthropic,
 		SubscriptionType:                SubscriptionTypeSubscription,
+		RateMultiplier:                  1,
 		FallbackGroupIDOnInvalidRequest: &fallbackID,
 	})
 	require.Error(t, err)
@@ -696,6 +713,7 @@ func TestAdminService_CreateGroup_InvalidRequestFallbackRejectsFallbackGroup(t *
 				Name:                            "g1",
 				Platform:                        PlatformAnthropic,
 				SubscriptionType:                SubscriptionTypeStandard,
+				RateMultiplier:                  1,
 				FallbackGroupIDOnInvalidRequest: &fallbackID,
 			})
 			require.Error(t, err)
@@ -714,6 +732,7 @@ func TestAdminService_CreateGroup_InvalidRequestFallbackNotFound(t *testing.T) {
 		Name:                            "g1",
 		Platform:                        PlatformAnthropic,
 		SubscriptionType:                SubscriptionTypeStandard,
+		RateMultiplier:                  1,
 		FallbackGroupIDOnInvalidRequest: &fallbackID,
 	})
 	require.Error(t, err)
@@ -734,6 +753,7 @@ func TestAdminService_CreateGroup_InvalidRequestFallbackAllowsAntigravity(t *tes
 		Name:                            "g1",
 		Platform:                        PlatformAntigravity,
 		SubscriptionType:                SubscriptionTypeStandard,
+		RateMultiplier:                  1,
 		FallbackGroupIDOnInvalidRequest: &fallbackID,
 	})
 	require.NoError(t, err)
@@ -751,6 +771,7 @@ func TestAdminService_CreateGroup_InvalidRequestFallbackClearsOnZero(t *testing.
 		Name:                            "g1",
 		Platform:                        PlatformAnthropic,
 		SubscriptionType:                SubscriptionTypeStandard,
+		RateMultiplier:                  1,
 		FallbackGroupIDOnInvalidRequest: &zero,
 	})
 	require.NoError(t, err)
