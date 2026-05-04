@@ -49,7 +49,9 @@ Use this rule for speed and correctness. The goal is not to maximize cherry-pick
 3. **Execution unit for large PRs:** dependency clusters inside that upstream PR. Split only when the upstream PR is too broad, noisy, or risky to import as one unit.
 4. **Dependency order inside a split:** schema/migration and data preflight first, backend/service/repository second, handler/routes/API third, frontend/UI/i18n fourth, release-wide tests/review last.
 5. **Pipeline trigger:** use scratch rehearsal, import audit, and targeted subtask tests only for large/high-risk PRs. Do not force this pipeline onto small low-risk PRs.
-6. **Closeout requirement:** a cluster is not complete until it states which upstream PR and internal commits it covers, what was merged/adapted/present/rejected/skipped/frozen, which fork behavior was preserved, and what verification passed.
+6. **Cherry-pick first:** for an upstream commit or merge PR, first attempt `git cherry-pick -x <sha>` or `git cherry-pick -m 1 -x <sha>`. Manual code edits are only for Git-reported conflicts, missing upstream prerequisites, local file-structure differences, or fork behavior preservation.
+7. **Dependency stop rule:** if a later upstream commit depends on earlier unprocessed commits, abort that cherry-pick and process the prerequisites or record a dependency subitem. Do not silently import prerequisite behavior inside the later commit.
+8. **Closeout requirement:** a cluster is not complete until it states which upstream PR and internal commits it covers, what was merged/adapted/present/rejected/skipped/frozen, which fork behavior was preserved, and what verification passed.
 
 This is intentionally a hybrid model: release gate for sequencing, upstream PR for accounting, dependency cluster for large-PR execution, and one fork PR for the completed release whenever possible.
 
@@ -206,8 +208,10 @@ git -C .claude/worktrees/release-v0.1.115-closeout log --oneline origin/main..HE
 5. Preserve existing invitation-code and referral semantics. `redeem_codes(type=invitation)` remains the registration gate source when invitation codes are enabled; `users.referral_code` and `user_referrals` remain the attribution/reward source when referral is enabled. Upstream `user_provider_default_grants` is not a replacement for either model.
 6. Treat PR #1785 as the accounting unit but not the execution unit. Close it through dependency clusters, and update the PR #1785 subitem matrix after each cluster so the release ledger never drifts away from upstream PR coverage.
 7. Keep the next slices ordered by dependency unless a tiny independent follow-up can be closed faster without touching auth state:
-   - identity unbinding backend/API;
+   - profile auth binding/account-bindings prerequisites that later commits depend on;
+   - email binding and pending OAuth completion prerequisites;
    - identity-channel writes and adoption decision cleanup;
+   - identity unbinding backend/API after its prerequisites are present;
    - WeChat OAuth/bind finalization and mode/default-grant decision;
    - legacy identity migrations/reports after live DB inventory;
    - avatar/profile adoption and user activity UI.

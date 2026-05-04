@@ -70,6 +70,7 @@ first-parent 列表用于确认 upstream 主线 PR/merge 顺序；完整列表�
 3. **大 PR 才启用轻量 pipeline。** 符合任一条件时，把 upstream PR 拆成依赖 cluster 或子项：文件数/行数很大、跨 auth/payment/profile/frontend/migration 多个域、包含 schema/migration、触碰线上数据、会覆盖 fork 自有功能、或 upstream PR 内部有大量 merge/fixup/noise。
 4. **依赖顺序只决定执行顺序。** migration/schema 先于 backend，backend API 先于 frontend，数据兼容先于部署；但执行完必须回填到 upstream PR ledger。
 5. **pipeline 是工具，不是额外流程负担。** 对大 PR 使用 scratch rehearsal、import audit、targeted tests、子项 closeout；对小 PR 不跑完整 pipeline，避免流程成本超过代码成本。
+6. **不要先手写。** 对 upstream commit/PR 的默认入口必须是 `git cherry-pick -x <sha>` 或 merge-commit 的 `git cherry-pick -m 1 -x <sha>`。只有 Git 报出的冲突、缺失前置依赖、本地文件结构差异、或 fork 语义冲突，才允许手动改代码。
 
 ### 4. 对每个 upstream item 做直接导入审计
 
@@ -78,7 +79,8 @@ first-parent 列表用于确认 upstream 主线 PR/merge 顺序；完整列表�
 1. 先确认该 commit/PR 是否已经是 fork ancestor，或已经通过某个 fork PR 落地。
 2. 如果未落地，先按 upstream PR 粒度判断是否可直接导入；小 PR 在隔离 worktree 里 preview/cherry-pick upstream commit 或 merge PR。
 3. 如果补丁干净、范围小、不会覆盖 fork 的产品/数据语义，按 upstream commit/PR 单元合入。
-4. 如果冲突大或跨 fork 架构，不继续盲目手写；先写 import audit，记录：
+4. 如果 cherry-pick 某个 commit 时发现它依赖尚未处理的 upstream 父提交或前置结构，不要把前置结构偷偷混进当前 commit；abort 当前 cherry-pick，先回到 upstream 顺序处理依赖，或在 ledger 中明确拆出依赖子项。
+5. 如果冲突大或跨 fork 架构，不继续盲目手写；先写 import audit，记录：
    - 可直接 port 的文件；
    - fork 已有等价行为；
    - 冲突区域；
@@ -86,7 +88,7 @@ first-parent 列表用于确认 upstream 主线 PR/merge 顺序；完整列表�
    - 产品语义影响；
    - 必须补的测试；
    - 最小可拆子项。
-5. 只有完成 audit 后，才允许把该 upstream PR 拆成依赖 cluster/子项手工 port，并把每个子项回填到原 upstream PR 的 final outcome。
+6. 只有完成 audit 后，才允许把该 upstream PR 拆成依赖 cluster/子项手工 port，并把每个子项回填到原 upstream PR 的 final outcome。
 
 遇到大 diff、冲突多、branch/worktree 状态异常、或实现开始明显偏离 upstream 原始 commit 时，立即暂停实现并写 import audit。继续手写代码通常会扩大偏差。
 
