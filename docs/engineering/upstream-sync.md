@@ -88,7 +88,7 @@ first-parent 列表用于确认 upstream 主线 PR/merge 顺序；完整列表�
 | --- | --- |
 | Payment B-2 | provider instance、provider snapshot、resume token、微信/Stripe/EasyPay flow、refund、充值/订阅订单、真实数据库迁移 |
 | Auth/OAuth/OIDC | 现有用户登录、OIDC synthetic email、pending OAuth、profile binding、session/cookie 兼容 |
-| Referral / Affiliate | fork 已有邀请/返利语义，不被 upstream affiliate 重构静默替换 |
+| Referral / Affiliate | fork 已有 `redeem_codes(type=invitation)` 注册准入、`users.referral_code` 推荐码、`user_referrals` 邀请归因/奖励语义，不被 upstream affiliate 或 auth-source default-grant 重构静默替换 |
 | Channel / Routing | fork 的 channel/provider routing、OpenAI/Codex/Anthropic compatibility、model whitelist |
 | Migrations / Ent | 不覆盖已上线 migration；新增 migration 前检查真实 DB 和 `schema_migrations` |
 | Frontend admin/user UI | 保留 fork 已有支付、账户、设置、表格偏好、i18n 和部署路径 |
@@ -119,6 +119,15 @@ first-parent 列表用于确认 upstream 主线 PR/merge 顺序；完整列表�
 | frontend runtime | targeted Vitest、`pnpm --dir frontend typecheck`，必要时 build | release 完成后统一部署 |
 | payment/auth/data-risk | backend/frontend targeted regression、真实配置/DB preflight | 可提前 test/prod 部署验证，并记录 |
 | migration/schema | migration test、真实 DB read-only precheck、backup plan | 必须 test 后 prod，记录 schema/log 验证 |
+
+涉及 auth、affiliate、referral、invitation、payment reward、provider default grant 的 upstream item，必须先做真实数据库只读审计，至少确认：
+
+- 相关表是否存在；
+- 当前字段形状；
+- 历史行数和关键状态分布；
+- 当前 settings 开关；
+- 是否能无损映射到 upstream 新模型；
+- 不能无损映射时，保留 fork 数据模型并做兼容适配。
 
 release-level deployment closeout 至少包含：
 

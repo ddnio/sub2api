@@ -685,6 +685,15 @@ PR #1785 auth identity DB preflight:
 - No duplicate active normalized emails were found in any environment, and linuxdo/wechat/oidc synthetic OAuth email counts were all zero.
 - Implementation implication: the fork migration is new `128_auth_identity_foundation.sql`, not upstream filenames. It creates the auth identity core, backfills normal email identities, backfills recoverable linuxdo/wechat synthetic identities, and records manual recovery reports for synthetic OIDC/WeChat cases that cannot be safely resolved automatically. Legacy remediation SQL from upstream `113` through `116` should remain conditional/future unless a later DB inventory proves those legacy tables or rows exist.
 
+PR #1785 invitation/referral data audit:
+
+- Production `sub2api` currently has `redeem_codes`, `user_referrals`, `users`, and `settings`; it does not yet have `user_provider_default_grants` or `auth_identities` deployed.
+- Production `redeem_codes` contains real invitation data: `invitation used=9`, `invitation unused=1`.
+- Production `user_referrals` contains real attribution history: `total=10`, `rewarded=6`, `pending=4`.
+- Production active users already have `referral_code` values: `60/60`.
+- Production settings currently keep `referral_enabled=true`; `invitation_code_enabled=false` at the time of audit, but the table still preserves historical invitation-code records.
+- Implementation implication: upstream auth-source default grants cannot replace fork invitation/referral data. Keep `redeem_codes(type=invitation)` as the registration gate source when invitation codes are enabled, keep `users.referral_code`/`user_referrals` as the referral attribution and reward source, and treat upstream `user_provider_default_grants` only as an additive provider-default-grant feature if/when Subitem F is implemented.
+
 Gate status: open. Do not bump `backend/cmd/server/VERSION` to `0.1.115`, create/move `fork/v0.1.115`, or deploy release-level changes until every row above has a final outcome and the release closeout review passes.
 
 ### v0.1.117

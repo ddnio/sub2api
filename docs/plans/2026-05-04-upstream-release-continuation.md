@@ -38,6 +38,7 @@ Do not restart earlier releases. Treat `v0.1.111`, `v0.1.112`, `v0.1.113`, and `
 8. Routine deployment happens once after the whole release closes. Deploy earlier only for security hotfixes, migrations/schema, payment/auth/data-risk, or urgent production fixes.
 9. For low-risk non-runtime or obviously contained code, skip Kimi if it is slowing the release down; record local self-review plus agent/code review evidence instead. Use stronger review for auth, payment, migration, schema, and data-risk work.
 10. If a cherry-pick or implementation starts producing a broad hand-written diff, conflicts across fork-specific payment/auth/migration/UI surfaces, or branch-state confusion, stop and write an import audit before coding more.
+11. Do not replace fork invitation/referral data models with upstream auth-source default grants. The fork has real online data in `redeem_codes(type=invitation)`, `users.referral_code`, and `user_referrals`; upstream auth-source grants may be added as a compatible provider-default feature only after a data audit proves they do not overwrite or reinterpret those records.
 
 ## Data Compatibility Gate
 
@@ -189,6 +190,7 @@ git -C .claude/worktrees/release-v0.1.115-closeout log --oneline origin/main..HE
 2. Keep legacy callback fragments compatible until all current frontend flows are migrated.
 3. Migration filenames must avoid already-applied fork numbers; use fork-safe new filenames.
 4. Run real DB read-only preflight before deploying auth identity migrations.
+5. Preserve existing invitation-code and referral semantics. `redeem_codes(type=invitation)` remains the registration gate source when invitation codes are enabled; `users.referral_code` and `user_referrals` remain the attribution/reward source when referral is enabled. Upstream `user_provider_default_grants` is not a replacement for either model.
 
 **Verify:**
 - Auth/session/user targeted Go tests.
