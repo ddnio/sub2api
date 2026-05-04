@@ -44,7 +44,7 @@ type RedisClient interface {
 	redis.Scripter
 	Decr(ctx context.Context, key string) *redis.IntCmd
 	Get(ctx context.Context, key string) *redis.StringCmd
-	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
+	Set(ctx context.Context, key string, value any, expiration time.Duration) *redis.StatusCmd
 	Del(ctx context.Context, keys ...string) *redis.IntCmd
 }
 
