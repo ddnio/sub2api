@@ -83,6 +83,14 @@ import {
   completeOIDCOAuthRegistration,
   getPublicSettings
 } from '@/api/auth'
+import {
+  hasAuthTokenPayload,
+  isInvitationRequired,
+  legacyPendingOAuthTokenFromFragment,
+  parseFragmentParams,
+  resolvePendingOAuthPayload,
+  sanitizeRedirectPath,
+} from './oauthPendingCallback'
 
 const route = useRoute()
 const router = useRouter()
@@ -101,21 +109,6 @@ const isSubmitting = ref(false)
 const invitationError = ref('')
 const redirectTo = ref('/dashboard')
 const providerName = ref('OIDC')
-
-function parseFragmentParams(): URLSearchParams {
-  const raw = typeof window !== 'undefined' ? window.location.hash : ''
-  const hash = raw.startsWith('#') ? raw.slice(1) : raw
-  return new URLSearchParams(hash)
-}
-
-function sanitizeRedirectPath(path: string | null | undefined): string {
-  if (!path) return '/dashboard'
-  if (!path.startsWith('/')) return '/dashboard'
-  if (path.startsWith('//')) return '/dashboard'
-  if (path.includes('://')) return '/dashboard'
-  if (path.includes('\n') || path.includes('\r')) return '/dashboard'
-  return path
-}
 
 async function loadProviderName() {
   try {
@@ -160,20 +153,22 @@ async function handleSubmitInvitation() {
 onMounted(async () => {
   void loadProviderName()
 
-  const params = parseFragmentParams()
-  const token = params.get('access_token') || ''
-  const refreshToken = params.get('refresh_token') || ''
-  const expiresInStr = params.get('expires_in') || ''
+  const rawHash = typeof window !== 'undefined' ? window.location.hash : ''
+  const params = parseFragmentParams(rawHash)
+  const pendingPayload = await resolvePendingOAuthPayload(params)
+  const token = pendingPayload.access_token || ''
+  const refreshToken = pendingPayload.refresh_token || ''
+  const expiresIn = pendingPayload.expires_in
   const redirect = sanitizeRedirectPath(
-    params.get('redirect') || (route.query.redirect as string | undefined) || '/dashboard'
+    pendingPayload.redirect || params.get('redirect') || (route.query.redirect as string | undefined) || '/dashboard'
   )
-  const error = params.get('error')
+  const error = pendingPayload.error
   const errorDesc = params.get('error_description') || params.get('error_message') || ''
 
   if (error) {
-    if (error === 'invitation_required') {
-      pendingOAuthToken.value = params.get('pending_oauth_token') || ''
-      redirectTo.value = sanitizeRedirectPath(params.get('redirect'))
+    if (isInvitationRequired(pendingPayload)) {
+      pendingOAuthToken.value = legacyPendingOAuthTokenFromFragment(params)
+      redirectTo.value = redirect
       if (!pendingOAuthToken.value) {
         errorMessage.value = t('auth.oidc.invalidPendingToken')
         appStore.showError(errorMessage.value)
@@ -190,7 +185,7 @@ onMounted(async () => {
     return
   }
 
-  if (!token) {
+  if (!hasAuthTokenPayload(pendingPayload)) {
     errorMessage.value = t('auth.oidc.callbackMissingToken')
     appStore.showError(errorMessage.value)
     isProcessing.value = false
@@ -201,11 +196,8 @@ onMounted(async () => {
     if (refreshToken) {
       localStorage.setItem('refresh_token', refreshToken)
     }
-    if (expiresInStr) {
-      const expiresIn = parseInt(expiresInStr, 10)
-      if (!isNaN(expiresIn)) {
-        localStorage.setItem('token_expires_at', String(Date.now() + expiresIn * 1000))
-      }
+    if (expiresIn && !isNaN(expiresIn)) {
+      localStorage.setItem('token_expires_at', String(Date.now() + expiresIn * 1000))
     }
 
     await authStore.setToken(token)

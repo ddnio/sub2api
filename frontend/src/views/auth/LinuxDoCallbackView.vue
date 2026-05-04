@@ -72,6 +72,14 @@ import { AuthLayout } from '@/components/layout'
 import Icon from '@/components/icons/Icon.vue'
 import { useAuthStore, useAppStore } from '@/stores'
 import { completeLinuxDoOAuthRegistration } from '@/api/auth'
+import {
+  hasAuthTokenPayload,
+  isInvitationRequired,
+  legacyPendingOAuthTokenFromFragment,
+  parseFragmentParams,
+  resolvePendingOAuthPayload,
+  sanitizeRedirectPath,
+} from './oauthPendingCallback'
 
 const route = useRoute()
 const router = useRouter()
@@ -90,21 +98,6 @@ const invitationCode = ref('')
 const isSubmitting = ref(false)
 const invitationError = ref('')
 const redirectTo = ref('/dashboard')
-
-function parseFragmentParams(): URLSearchParams {
-  const raw = typeof window !== 'undefined' ? window.location.hash : ''
-  const hash = raw.startsWith('#') ? raw.slice(1) : raw
-  return new URLSearchParams(hash)
-}
-
-function sanitizeRedirectPath(path: string | null | undefined): string {
-  if (!path) return '/dashboard'
-  if (!path.startsWith('/')) return '/dashboard'
-  if (path.startsWith('//')) return '/dashboard'
-  if (path.includes('://')) return '/dashboard'
-  if (path.includes('\n') || path.includes('\r')) return '/dashboard'
-  return path
-}
 
 async function handleSubmitInvitation() {
   invitationError.value = ''
@@ -135,21 +128,23 @@ async function handleSubmitInvitation() {
 }
 
 onMounted(async () => {
-  const params = parseFragmentParams()
+  const rawHash = typeof window !== 'undefined' ? window.location.hash : ''
+  const params = parseFragmentParams(rawHash)
+  const pendingPayload = await resolvePendingOAuthPayload(params)
 
-  const token = params.get('access_token') || ''
-  const refreshToken = params.get('refresh_token') || ''
-  const expiresInStr = params.get('expires_in') || ''
+  const token = pendingPayload.access_token || ''
+  const refreshToken = pendingPayload.refresh_token || ''
+  const expiresIn = pendingPayload.expires_in
   const redirect = sanitizeRedirectPath(
-    params.get('redirect') || (route.query.redirect as string | undefined) || '/dashboard'
+    pendingPayload.redirect || params.get('redirect') || (route.query.redirect as string | undefined) || '/dashboard'
   )
-  const error = params.get('error')
+  const error = pendingPayload.error
   const errorDesc = params.get('error_description') || params.get('error_message') || ''
 
   if (error) {
-    if (error === 'invitation_required') {
-      pendingOAuthToken.value = params.get('pending_oauth_token') || ''
-      redirectTo.value = sanitizeRedirectPath(params.get('redirect'))
+    if (isInvitationRequired(pendingPayload)) {
+      pendingOAuthToken.value = legacyPendingOAuthTokenFromFragment(params)
+      redirectTo.value = redirect
       if (!pendingOAuthToken.value) {
         errorMessage.value = t('auth.linuxdo.invalidPendingToken')
         appStore.showError(errorMessage.value)
@@ -166,7 +161,7 @@ onMounted(async () => {
     return
   }
 
-  if (!token) {
+  if (!hasAuthTokenPayload(pendingPayload)) {
     errorMessage.value = t('auth.linuxdo.callbackMissingToken')
     appStore.showError(errorMessage.value)
     isProcessing.value = false
@@ -178,11 +173,8 @@ onMounted(async () => {
     if (refreshToken) {
       localStorage.setItem('refresh_token', refreshToken)
     }
-    if (expiresInStr) {
-      const expiresIn = parseInt(expiresInStr, 10)
-      if (!isNaN(expiresIn)) {
-        localStorage.setItem('token_expires_at', String(Date.now() + expiresIn * 1000))
-      }
+    if (expiresIn && !isNaN(expiresIn)) {
+      localStorage.setItem('token_expires_at', String(Date.now() + expiresIn * 1000))
     }
 
     await authStore.setToken(token)
@@ -209,4 +201,3 @@ onMounted(async () => {
   transform: translateY(-8px);
 }
 </style>
-
