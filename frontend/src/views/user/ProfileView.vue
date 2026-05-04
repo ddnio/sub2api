@@ -22,6 +22,12 @@
         :system-default-threshold="publicSettings?.balance_low_notify_threshold || 0"
         :user-email="profileUser.email"
       />
+      <ProfileIdentityBindingsSection
+        :user="profileUser"
+        :linuxdo-enabled="publicSettings?.linuxdo_oauth_enabled || false"
+        :oidc-enabled="publicSettings?.oidc_oauth_enabled || false"
+        :oidc-provider-name="publicSettings?.oidc_oauth_provider_name || 'OIDC'"
+      />
       <ProfilePasswordForm />
       <ProfileTotpCard />
     </div>
@@ -36,6 +42,7 @@ import StatCard from '@/components/common/StatCard.vue'
 import ProfileInfoCard from '@/components/user/profile/ProfileInfoCard.vue'
 import ProfileEditForm from '@/components/user/profile/ProfileEditForm.vue'
 import ProfileBalanceNotifyCard from '@/components/user/profile/ProfileBalanceNotifyCard.vue'
+import ProfileIdentityBindingsSection from '@/components/user/profile/ProfileIdentityBindingsSection.vue'
 import ProfilePasswordForm from '@/components/user/profile/ProfilePasswordForm.vue'
 import ProfileTotpCard from '@/components/user/profile/ProfileTotpCard.vue'
 import { Icon } from '@/components/icons'

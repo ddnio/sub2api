@@ -12,6 +12,7 @@ import {
   pendingOAuthPayloadFromFragment,
   resolvePendingOAuthPayload,
   sanitizeRedirectPath,
+  isOAuthBindCompletion,
 } from '../oauthPendingCallback'
 
 describe('oauth pending callback helpers', () => {
@@ -81,5 +82,11 @@ describe('oauth pending callback helpers', () => {
 
     expect(payload.access_token).toBe('access')
     expect(payload.expires_in).toBeUndefined()
+  })
+
+  it('recognizes browser-bound oauth bind completion without access token', () => {
+    expect(isOAuthBindCompletion({ intent: 'bind_current_user', redirect: '/profile' })).toBe(true)
+    expect(isOAuthBindCompletion({ auth_result: 'pending_session', redirect: '/profile' })).toBe(false)
+    expect(isOAuthBindCompletion({ redirect: '/profile' })).toBe(false)
   })
 })

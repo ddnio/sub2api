@@ -4,7 +4,8 @@
  */
 
 import { apiClient } from './client'
-import type { UserProfile, ChangePasswordRequest } from '@/types'
+import { prepareOAuthBindAccessTokenCookie } from './auth'
+import type { UserProfile, ChangePasswordRequest, UserAuthProvider } from '@/types'
 
 /**
  * Get current user profile
@@ -66,6 +67,31 @@ export async function toggleNotifyEmail(email: string, disabled: boolean): Promi
   return data
 }
 
+export type BindableOAuthProvider = Exclude<UserAuthProvider, 'email' | 'wechat'>
+
+export interface StartOAuthBindingResponse {
+  provider: BindableOAuthProvider
+  authorize_url: string
+  method: string
+  use_browser_redirect: boolean
+}
+
+export async function startOAuthBinding(
+  provider: BindableOAuthProvider,
+  redirectTo = '/profile'
+): Promise<void> {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  prepareOAuthBindAccessTokenCookie()
+  const { data } = await apiClient.post<StartOAuthBindingResponse>('/user/auth-identities/bind/start', {
+    provider,
+    redirect_to: redirectTo,
+  })
+  window.location.href = data.authorize_url
+}
+
 export const userAPI = {
   getProfile,
   updateProfile,
@@ -73,7 +99,8 @@ export const userAPI = {
   sendNotifyEmailCode,
   verifyNotifyEmail,
   removeNotifyEmail,
-  toggleNotifyEmail
+  toggleNotifyEmail,
+  startOAuthBinding
 }
 
 export default userAPI

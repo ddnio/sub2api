@@ -1094,6 +1094,21 @@ export default {
       maxEmailsReached: '已达到通知邮箱数量上限',
       unverified: '未验证',
       verified: '已验证'
+    },
+    authBindings: {
+      title: '登录方式绑定',
+      description: '将第三方登录方式绑定到当前账号。',
+      providers: {
+        email: '邮箱',
+        linuxdo: 'LinuxDo',
+        oidc: '{providerName}'
+      },
+      status: {
+        bound: '已绑定',
+        notBound: '未绑定'
+      },
+      bindAction: '绑定',
+      bindSuccess: '登录方式绑定成功'
     }
   },
 

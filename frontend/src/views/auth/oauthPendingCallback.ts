@@ -43,6 +43,11 @@ export function hasAuthTokenPayload(payload: PendingOAuthExchangeResponse): bool
   return Boolean(payload.access_token)
 }
 
+export function isOAuthBindCompletion(payload: PendingOAuthExchangeResponse): boolean {
+	const intent = (payload.intent || '').trim().toLowerCase()
+	return intent === 'bind_current_user'
+}
+
 export async function resolvePendingOAuthPayload(params: URLSearchParams): Promise<PendingOAuthExchangeResponse> {
   if (params.get('pending_oauth_token')) {
     return pendingOAuthPayloadFromFragment(params)

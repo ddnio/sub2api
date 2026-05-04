@@ -38,6 +38,11 @@ type UpdateProfileRequest struct {
 	BalanceNotifyThreshold *float64 `json:"balance_notify_threshold"`
 }
 
+type StartIdentityBindingRequest struct {
+	Provider   string `json:"provider" binding:"required"`
+	RedirectTo string `json:"redirect_to"`
+}
+
 // GetProfile handles getting user profile
 // GET /api/v1/users/me
 func (h *UserHandler) GetProfile(c *gin.Context) {
@@ -111,6 +116,32 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	}
 
 	response.Success(c, dto.UserProfileFromService(updatedUser))
+}
+
+// StartIdentityBinding returns the backend authorize URL for starting a third-party identity bind flow.
+// POST /api/v1/user/auth-identities/bind/start
+func (h *UserHandler) StartIdentityBinding(c *gin.Context) {
+	if _, ok := middleware2.GetAuthSubjectFromContext(c); !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	var req StartIdentityBindingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	result, err := h.userService.PrepareIdentityBindingStart(c.Request.Context(), service.StartUserIdentityBindingRequest{
+		Provider:   req.Provider,
+		RedirectTo: req.RedirectTo,
+	})
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, result)
 }
 
 type SendNotifyEmailCodeRequest struct {

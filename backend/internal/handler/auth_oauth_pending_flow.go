@@ -640,6 +640,21 @@ func (h *AuthHandler) ExchangePendingOAuthCompletion(c *gin.Context) {
 	}
 	applySuggestedProfileToCompletionResponse(payload, session.UpstreamIdentityClaims)
 
+	if strings.EqualFold(strings.TrimSpace(session.Intent), oauthIntentBindCurrentUser) {
+		if err := completePendingOAuthBindSession(c.Request.Context(), h.authService.EntClient(), session); err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+		if _, err := svc.ConsumeBrowserSession(c.Request.Context(), sessionToken, browserSessionKey); err != nil {
+			clearCookies()
+			response.ErrorFrom(c, err)
+			return
+		}
+		clearCookies()
+		response.Success(c, buildPendingOAuthSessionStatusPayload(session))
+		return
+	}
+
 	if pendingSessionWantsInvitation(payload) {
 		response.Success(c, payload)
 		return
@@ -653,4 +668,11 @@ func (h *AuthHandler) ExchangePendingOAuthCompletion(c *gin.Context) {
 
 	clearCookies()
 	response.Success(c, payload)
+}
+
+func completePendingOAuthBindSession(ctx context.Context, client *dbent.Client, session *dbent.PendingAuthSession) error {
+	if session == nil || session.TargetUserID == nil || *session.TargetUserID <= 0 {
+		return infraerrors.BadRequest("PENDING_AUTH_TARGET_USER_MISSING", "pending oauth bind target is missing")
+	}
+	return ensurePendingOAuthIdentityForUser(ctx, client, session, *session.TargetUserID)
 }

@@ -39,6 +39,24 @@ export interface User {
   updated_at: string
 }
 
+export type UserAuthProvider = 'email' | 'linuxdo' | 'oidc' | 'wechat'
+
+export interface UserAuthBindingStatus {
+  provider: UserAuthProvider
+  bound: boolean
+  bound_count?: number
+  display_name?: string
+  subject_hint?: string
+  provider_key?: string
+  verified_at?: string
+  bind_start_path?: string
+  can_bind?: boolean
+  can_unbind?: boolean
+  note?: string
+}
+
+export type UserAuthIdentitySet = Partial<Record<UserAuthProvider, UserAuthBindingStatus>>
+
 /** Notification email entry with enable/disable and verification state. */
 export interface NotifyEmailEntry {
   email: string
@@ -51,6 +69,7 @@ export interface UserProfile extends User {
   balance_notify_threshold: number | null
   balance_notify_threshold_type: 'fixed' | 'percentage' | string
   balance_notify_extra_emails: NotifyEmailEntry[]
+  identities?: UserAuthIdentitySet
 }
 
 export interface AdminUser extends User {

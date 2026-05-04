@@ -102,6 +102,21 @@ func TestParseLinuxDoTokenResponseForm(t *testing.T) {
 	require.Equal(t, int64(60), token.ExpiresIn)
 }
 
+func TestOAuthBindUserCookieIsBoundToStateAndBrowserSession(t *testing.T) {
+	value, err := buildOAuthBindUserCookieValue(42, "state-1", "browser-1", "secret")
+	require.NoError(t, err)
+
+	userID, err := parseOAuthBindUserCookieValue(value, "state-1", "browser-1", "secret")
+	require.NoError(t, err)
+	require.Equal(t, int64(42), userID)
+
+	_, err = parseOAuthBindUserCookieValue(value, "state-2", "browser-1", "secret")
+	require.Error(t, err)
+
+	_, err = parseOAuthBindUserCookieValue(value, "state-1", "browser-2", "secret")
+	require.Error(t, err)
+}
+
 func TestSingleLineStripsWhitespace(t *testing.T) {
 	require.Equal(t, "hello world", singleLine("hello\r\nworld"))
 	require.Equal(t, "", singleLine("\n\t\r"))

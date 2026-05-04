@@ -155,6 +155,7 @@ import {
 } from '@/api/auth'
 import {
   hasAuthTokenPayload,
+  isOAuthBindCompletion,
   isInvitationRequired,
   legacyPendingOAuthTokenFromFragment,
   parseFragmentParams,
@@ -377,6 +378,11 @@ onMounted(async () => {
   }
 
   if (!hasAuthTokenPayload(pendingPayload)) {
+    if (isOAuthBindCompletion(pendingPayload)) {
+      appStore.showSuccess(t('profile.authBindings.bindSuccess'))
+      await router.replace(redirect)
+      return
+    }
     errorMessage.value = t('auth.oidc.callbackMissingToken')
     appStore.showError(errorMessage.value)
     isProcessing.value = false

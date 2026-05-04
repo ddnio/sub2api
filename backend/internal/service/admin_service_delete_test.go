@@ -108,6 +108,10 @@ func (s *userRepoStub) AddGroupToAllowedGroups(ctx context.Context, userID int64
 	panic("unexpected AddGroupToAllowedGroups call")
 }
 
+func (s *userRepoStub) ListUserAuthIdentities(ctx context.Context, userID int64) ([]UserAuthIdentityRecord, error) {
+	return nil, nil
+}
+
 func (s *userRepoStub) UpdateTotpSecret(ctx context.Context, userID int64, encryptedSecret *string) error {
 	panic("unexpected UpdateTotpSecret call")
 }

@@ -63,6 +63,7 @@ func UserProfileFromService(u *service.User) *UserProfile {
 		BalanceNotifyThreshold:     u.BalanceNotifyThreshold,
 		BalanceNotifyThresholdType: u.BalanceNotifyThresholdType,
 		BalanceNotifyExtraEmails:   NotifyEmailEntriesFromService(u.BalanceNotifyExtraEmails),
+		AuthIdentities:             u.AuthIdentities,
 	}
 }
 

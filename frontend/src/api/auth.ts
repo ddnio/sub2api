@@ -227,6 +227,32 @@ export interface PendingOAuthTokenPairResponse {
   token_type: string
 }
 
+export function prepareOAuthBindAccessTokenCookie(): void {
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    return
+  }
+
+  const token = getAuthToken()
+  if (!token) {
+    return
+  }
+
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  const path = resolveOAuthBindCookiePath()
+  document.cookie =
+    `oauth_bind_access_token=${encodeURIComponent(token)}; Path=${path}/auth/oauth; Max-Age=600; SameSite=Lax${secure}`
+}
+
+function resolveOAuthBindCookiePath(): string {
+  const apiBase = ((import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1').replace(/\/$/, '')
+
+  try {
+    return new URL(apiBase, window.location.origin).pathname.replace(/\/$/, '') || '/api/v1'
+  } catch {
+    return apiBase.startsWith('/') ? apiBase : '/api/v1'
+  }
+}
+
 /**
  * Refresh the access token using the refresh token
  * @returns New token pair
@@ -477,6 +503,7 @@ export const authAPI = {
   resetPassword,
   refreshToken,
   revokeAllSessions,
+  prepareOAuthBindAccessTokenCookie,
   completeLinuxDoOAuthRegistration,
   completeOIDCOAuthRegistration,
   exchangePendingOAuthCompletion,

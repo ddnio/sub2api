@@ -55,6 +55,9 @@ func (m *mockUserRepo) AddGroupToAllowedGroups(context.Context, int64, int64) er
 func (m *mockUserRepo) RemoveGroupFromUserAllowedGroups(context.Context, int64, int64) error {
 	return nil
 }
+func (m *mockUserRepo) ListUserAuthIdentities(context.Context, int64) ([]UserAuthIdentityRecord, error) {
+	return nil, nil
+}
 func (m *mockUserRepo) UpdateTotpSecret(context.Context, int64, *string) error { return nil }
 func (m *mockUserRepo) EnableTotp(context.Context, int64) error                { return nil }
 func (m *mockUserRepo) DisableTotp(context.Context, int64) error               { return nil }
@@ -205,4 +208,38 @@ func TestNewUserService_FieldsAssignment(t *testing.T) {
 	require.Equal(t, repo, svc.userRepo)
 	require.Equal(t, auth, svc.authCacheInvalidator)
 	require.Equal(t, cache, svc.billingCache)
+}
+
+func TestPrepareIdentityBindingStart_AllowsLinuxDoAndOIDC(t *testing.T) {
+	svc := NewUserService(&mockUserRepo{}, nil, nil)
+
+	linuxDo, err := svc.PrepareIdentityBindingStart(context.Background(), StartUserIdentityBindingRequest{
+		Provider:   "linuxdo",
+		RedirectTo: "/profile?tab=security",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "linuxdo", linuxDo.Provider)
+	require.Equal(t, "/api/v1/auth/oauth/linuxdo/start?intent=bind_current_user&redirect=%2Fprofile%3Ftab%3Dsecurity", linuxDo.AuthorizeURL)
+	require.True(t, linuxDo.UseBrowserRedirect)
+
+	oidc, err := svc.PrepareIdentityBindingStart(context.Background(), StartUserIdentityBindingRequest{Provider: "oidc"})
+	require.NoError(t, err)
+	require.Equal(t, "oidc", oidc.Provider)
+	require.Equal(t, "/api/v1/auth/oauth/oidc/start?intent=bind_current_user&redirect=%2Fprofile", oidc.AuthorizeURL)
+}
+
+func TestPrepareIdentityBindingStart_RejectsUnsupportedProvidersAndUnsafeRedirect(t *testing.T) {
+	svc := NewUserService(&mockUserRepo{}, nil, nil)
+
+	_, err := svc.PrepareIdentityBindingStart(context.Background(), StartUserIdentityBindingRequest{Provider: "wechat"})
+	require.ErrorIs(t, err, ErrIdentityProviderInvalid)
+
+	_, err = svc.PrepareIdentityBindingStart(context.Background(), StartUserIdentityBindingRequest{Provider: "email"})
+	require.ErrorIs(t, err, ErrIdentityProviderInvalid)
+
+	_, err = svc.PrepareIdentityBindingStart(context.Background(), StartUserIdentityBindingRequest{
+		Provider:   "linuxdo",
+		RedirectTo: "https://evil.example",
+	})
+	require.ErrorIs(t, err, ErrIdentityRedirectInvalid)
 }

@@ -148,6 +148,38 @@ func TestEnsurePendingOAuthIdentityForUserCreatesAndRejectsOwnershipConflict(t *
 	require.Equal(t, "AUTH_IDENTITY_OWNERSHIP_CONFLICT", serviceErrorReason(t, err))
 }
 
+func TestCompletePendingOAuthBindSessionCreatesIdentity(t *testing.T) {
+	client := newOAuthPendingHandlerTestClient(t)
+	ctx := context.Background()
+
+	user, err := client.User.Create().
+		SetEmail("bind-target@example.com").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+
+	session := &dbent.PendingAuthSession{
+		ProviderType:    "linuxdo",
+		ProviderKey:     "linuxdo",
+		ProviderSubject: "subject-bind",
+		TargetUserID:    &user.ID,
+		UpstreamIdentityClaims: map[string]any{
+			"email": "linuxdo-bind@linuxdo-connect.invalid",
+		},
+	}
+
+	err = completePendingOAuthBindSession(ctx, client, session)
+	require.NoError(t, err)
+
+	identity, err := client.AuthIdentity.Query().Only(ctx)
+	require.NoError(t, err)
+	require.Equal(t, user.ID, identity.UserID)
+	require.Equal(t, "linuxdo", identity.ProviderType)
+	require.Equal(t, "subject-bind", identity.ProviderSubject)
+}
+
 func TestRejectPendingOAuthIdentityOwnedByAnotherUser(t *testing.T) {
 	client := newOAuthPendingHandlerTestClient(t)
 	ctx := context.Background()

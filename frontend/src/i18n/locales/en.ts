@@ -1090,6 +1090,21 @@ export default {
       maxEmailsReached: 'Maximum number of notification emails reached',
       unverified: 'Unverified',
       verified: 'Verified'
+    },
+    authBindings: {
+      title: 'Connected Sign-In Methods',
+      description: 'Bind third-party sign-in methods to this account.',
+      providers: {
+        email: 'Email',
+        linuxdo: 'LinuxDo',
+        oidc: '{providerName}'
+      },
+      status: {
+        bound: 'Bound',
+        notBound: 'Not bound'
+      },
+      bindAction: 'Bind',
+      bindSuccess: 'Sign-in method bound successfully'
     }
   },
 
