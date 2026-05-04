@@ -44,6 +44,14 @@ func TestOIDCSelectLoginEmailPrefersRealEmail(t *testing.T) {
 	require.Equal(t, oidcSyntheticEmailFromIdentityKey(identityKey), email)
 }
 
+func TestOIDCSubjectsConsistent(t *testing.T) {
+	require.True(t, oidcSubjectsConsistent("subject-a", "subject-a"))
+	require.True(t, oidcSubjectsConsistent("subject-a", ""))
+	require.True(t, oidcSubjectsConsistent("", "subject-a"))
+	require.True(t, oidcSubjectsConsistent(" subject-a ", "subject-a"))
+	require.False(t, oidcSubjectsConsistent("subject-a", "subject-b"))
+}
+
 func TestBuildOIDCAuthorizeURLIncludesNonceAndPKCE(t *testing.T) {
 	cfg := config.OIDCConnectConfig{
 		AuthorizeURL: "https://issuer.example.com/auth",

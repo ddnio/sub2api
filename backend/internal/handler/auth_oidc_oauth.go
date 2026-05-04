@@ -304,6 +304,10 @@ func (h *AuthHandler) OIDCOAuthCallback(c *gin.Context) {
 			return
 		}
 	}
+	if !oidcSubjectsConsistent(idClaims.Subject, userInfoClaims.Subject) {
+		redirectOAuthError(c, frontendCallback, "subject_mismatch", "userinfo subject does not match id_token", "")
+		return
+	}
 
 	identityKey := oidcIdentityKey(issuer, subject)
 	email := oidcSelectLoginEmail(userInfoClaims.Email, idClaims.Email, identityKey)
@@ -820,6 +824,12 @@ func oidcIdentityKey(issuer, subject string) string {
 	issuer = strings.TrimSpace(strings.ToLower(issuer))
 	subject = strings.TrimSpace(subject)
 	return issuer + "\x1f" + subject
+}
+
+func oidcSubjectsConsistent(idTokenSubject, userInfoSubject string) bool {
+	idTokenSubject = strings.TrimSpace(idTokenSubject)
+	userInfoSubject = strings.TrimSpace(userInfoSubject)
+	return idTokenSubject == "" || userInfoSubject == "" || idTokenSubject == userInfoSubject
 }
 
 func oidcSyntheticEmailFromIdentityKey(identityKey string) string {
