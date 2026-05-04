@@ -103,6 +103,46 @@ Release closeout review checklist:
 8. Confirm deployment notes and log checks exist for the release-level deployment when deployment is required.
 9. Only after this closeout review passes, update the fork release marker and create/push the `fork/vX.Y.Z` tag.
 
+Release-level deployment checklist:
+
+1. Deploy only after the whole release gate is closed, reviewed, merged to `main`, and tagged with the corresponding `fork/vX.Y.Z` marker. Do not deploy every small adapted commit during release work unless it is a security hotfix, data-risk migration, payment/auth change, or urgent production fix.
+2. Before deployment, confirm the merged `main` commit includes every accepted item for the release and that the ledger has no unresolved release-local `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` entries.
+3. If the release added migrations, back up the test database first and verify the migration runner will apply only the intended new filenames. For data migrations, inspect real test database shape before production.
+4. Deploy test from the merged `main` commit:
+
+```bash
+ssh nio@108.160.133.141 "cd /data/service/sub2api && git fetch origin && git checkout main && git pull --ff-only origin main && bash deploy/deploy-server.sh test"
+```
+
+5. Verify test:
+
+```bash
+ssh nio@108.160.133.141 "curl -s http://127.0.0.1:8081/health"
+ssh nio@108.160.133.141 "curl -s -o /tmp/sub2api-test-models.out -w '%{http_code}' http://127.0.0.1:8081/v1/models"
+ssh nio@108.160.133.141 "docker ps --filter name=sub2api-test"
+ssh nio@108.160.133.141 "docker logs --since 20m sub2api-test 2>&1 | egrep -i 'panic|fatal|error|migration|failed|traceback|异常' || true"
+```
+
+Expected smoke results: `/health` returns `{"status":"ok"}`, unauthenticated `/v1/models` returns `401`, the container is healthy, and the severe-log scan has no unexplained runtime/migration errors.
+
+6. For frontend-visible releases, perform a real browser/UI check on test for the changed screens before production. For payment/auth/data-risk releases, follow the domain-specific test plan in addition to the generic smoke checks.
+7. Deploy production only after test passes:
+
+```bash
+ssh nio@108.160.133.141 "cd /data/service/sub2api && git checkout main && git pull --ff-only origin main && bash deploy/deploy-server.sh prod"
+```
+
+8. Verify production:
+
+```bash
+ssh nio@108.160.133.141 "curl -s http://127.0.0.1:8080/health"
+ssh nio@108.160.133.141 "curl -s -o /tmp/sub2api-prod-models.out -w '%{http_code}' http://127.0.0.1:8080/v1/models"
+ssh nio@108.160.133.141 "docker ps --filter name=sub2api-prod"
+ssh nio@108.160.133.141 "docker logs --since 20m sub2api-prod 2>&1 | egrep -i 'panic|fatal|error|migration|failed|traceback|异常' || true"
+```
+
+9. Record the deployment evidence in this ledger or a release-specific deploy log: release gate, fork tag, merged commit, test/prod deploy time, local verification commands, migration/backup notes, health results, `/v1/models` 401 results, UI/manual checks, severe-log scan result, and rollback note.
+
 ## CI Baseline Closeout
 
 CI drift independent of release coverage was fixed in PR #36 and merged to `origin/main` at `fed065e6`.
@@ -376,7 +416,7 @@ Internal commits in `d402e722^1..d402e722^2`:
 | Branch maintenance / CI / conflict repair | `1cd033e5`, `37c23ecc`, `3d4d960d`, `49915987`, `1e6912ea`, `d6965b06`, `24e16b7f`, `b42f34c3`, `6a08efee`, `e8ee400a`, `3d202722` | REGISTERED | These commits are formatting, generated-wire repair, upstream branch maintenance, or CI repair. They do not become standalone fork features, but any touched behavior must still be covered by the functional domains below. |
 | Channel restriction / channel model pricing base | `3de77130`, `2dce4306`, `160903fc`, `e3748741`, `794e8172`, `1c63ea14`, `58677dd5` | PARTIAL | Fork has channel model pricing and upstream restriction checks in `channel_repo_pricing.go`, `ChannelsView.vue`, `gateway_service.go`, and `openai_gateway_service.go`. Branch `sync/v0.1.112-release-closeout` now also adapts `features_config` without importing upstream's incompatible `channels.features` column. Remaining parity work is channel cache/restriction logging review. |
 | Payment residuals and provider refund controls | `5bae3b05`, `3c884f8e`, `56e4a9a9`, `c738cfec`, `4aa0070e`, `f1297a36`, `c14d7393`, `5240b444`, `63f539b3` | ADAPTED | Fork payment-b2 already has provider instances, `allow_user_refund`, method limits, fee/pay amount separation, refund provider lookup, proportional gateway refund, Stripe payment type matching, inline/mobile payment flow, and payment regression tests. Keep as adapted unless a targeted diff finds a missing residual. |
-| Websearch backend and settings | `1b53ffca`, `7fad9f60`, `fda61b06`, `60b0fa81`, `d0674e0f`, `889b5b4f`, `5df73099`, `49281bbe`, `1262654d`, `74f8a30f`, `9c09bd19`, `0a4ece5f`, `9e0d12d3`, `7c729293`, `9028d208` | PARTIAL | Branch `sync/v0.1.112-release-closeout` adapts the websearch base plus the settings/quota UI work: `backend/internal/pkg/websearch`, gateway emulation service, global provider config API, channel `features_config`, account/channel UI toggles, provider-level proxy tracking, subscribed-at monthly quota TTL, admin test endpoint with 15s timeout, quota usage display, collapsible provider cards, API-key show/copy controls for currently entered keys, hidden account/channel websearch controls when the global switch has no usable provider, and a modal admin test UI. Verification: `pnpm --dir frontend typecheck`, websearch targeted Go tests, broader channel/API-contract tests, and `git diff --check`. Remaining release blockers are later websearch API-key-visibility/tri-state/quota commits. |
+| Websearch backend and settings | `1b53ffca`, `7fad9f60`, `fda61b06`, `60b0fa81`, `d0674e0f`, `889b5b4f`, `5df73099`, `49281bbe`, `1262654d`, `74f8a30f`, `9c09bd19`, `0a4ece5f`, `9e0d12d3`, `7c729293`, `9028d208` | PARTIAL | Branch `sync/v0.1.112-release-closeout` adapts the websearch base plus the settings/quota UI work: `backend/internal/pkg/websearch`, gateway emulation service, global provider config API, channel `features_config`, account/channel UI toggles, provider-level proxy tracking, subscribed-at monthly quota TTL, admin test endpoint with 15s timeout, quota usage display, collapsible provider cards, API-key show/copy controls for currently entered keys, hidden account/channel websearch controls when the global switch has no usable provider, and a modal admin test UI. The `1262654d` websearch tri-state subset is adapted: account `extra.web_search_emulation` now supports `default` / `enabled` / `disabled`, legacy bool true still forces enabled, bool false/missing follows channel default, account disabled overrides channel enabled, create/edit account UI uses a tri-state select, and migration `126_migrate_websearch_emulation_to_tristate.sql` converts legacy bool data without touching existing string values. Verification: `pnpm --dir frontend typecheck`, websearch targeted Go tests, broader channel/API-contract tests, and `git diff --check`. Remaining release blockers are later websearch API-key visibility/quota commits. |
 | Account stats pricing | `7535e312`, `80fa4844`, `11c46068`, `98c9d517`, `1262654d`, `a68df457`, `b7fb2e43`, `ca673f98`, `ed8a9d97`, `9d319cfa`, `594f0d17`, `9c09bd19`, `9028d208` | ADAPTED | Added fork migration `108_add_account_stats_pricing.sql`, `usage_logs.account_stats_cost`, channel account-stats pricing rules/intervals, service resolver priority, OpenAI/Anthropic usage-log write integration, account-cost aggregate formulas, admin channel API fields, and a basic UI entry. Verification so far: targeted service/repository tests and frontend typecheck passed. This closes the account-stats-pricing domain, but commits also touching websearch/notify remain open under those domains until implemented and release-level review confirms no shared leftovers. |
 | Balance and quota notification | `b32d1a2c`, `c3812ce1`, `30b926ad`, `f694afbb`, `9e33d0c4`, `cef22c70`, `eba289a7`, `4e96a6fa`, `79d154ed`, `81287e96`, `42280751`, `61aa197b`, `915b7a4a`, `31550a2c`, `95f9b27e`, `48e8efe3`, `42f8ef33`, `2066c478`, `ac554432`, `7141dcee`, `216bda58`, `e27335ac`, `c1eb79e4`, `48b6c481`, `f571d8ff`, `6e9146e7`, `a43da622`, `ca673f98`, `ed8a9d97`, `9d319cfa`, `594f0d17`, `1b7c2951`, `74f8a30f`, `a9880ee7`, `0a4ece5f`, `b402c367`, `7c729293`, `9028d208` | MISSING | Current fork has ops alert email infrastructure but not user balance-low/account quota notification settings, saved email verification, quota notify UI, notify-email struct migration, or the dedicated service/tests. This is a release-blocking feature domain. |
 | Frontend account/settings composition and usage queue | `a56151fe`, `3fa5b8bc`, `6ac8ccde`, `245f47ce`, `2066c478`, `ac554432`, `7141dcee`, `1b7c2951` | PARTIAL | Some fork UI equivalents exist, but websearch/notify-specific components and usage load queue need parity review with frontend tests. |
@@ -436,7 +476,7 @@ This snapshot was refreshed while closing the `1b53ffca` websearch base import o
 | `31550a2c` | Notify balance crossing | MISSING | Notify service absent. |
 | `95f9b27e` | Notify email verification | MISSING | Notify verification flow absent. |
 | `11c46068` | Account-stats upstream model | COVERED | Account-stats pricing priority and upstream model semantics adapted. |
-| `1262654d` | Mixed websearch/account-stats/quota tooltip | PARTIAL | Account-stats subset covered; websearch/notify subsets need follow-up review. |
+| `1262654d` | Mixed websearch/account-stats/quota tooltip | PARTIAL | Websearch tri-state subset adapted with backend mode parsing, gateway channel fallback/override behavior, create/edit account select UI, i18n keys, and migration `126_migrate_websearch_emulation_to_tristate.sql`. Account-stats subset is already covered. Quota notify cache and usage tooltip subsets still need dedicated review/implementation before the mixed commit can be fully closed. Verification for tri-state subset: frontend typecheck, targeted websearch Go tests, and diff-check. |
 | `a68df457` | Mixed audit fixes | PARTIAL | Account-stats subset covered; websearch/notify subsets need follow-up review. |
 | `b7fb2e43` | Mixed audit fixes | PARTIAL | Account-stats subset covered; websearch/notify subsets need follow-up review. |
 | `b1875f0b` | Notify SMTP hardening | MISSING | Notify email path absent. |

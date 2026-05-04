@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/websearch"
 	"github.com/stretchr/testify/require"
@@ -91,6 +92,113 @@ func TestIsWebSearchEmulationEnabledByChannel_Disabled(t *testing.T) {
 	}
 
 	require.False(t, svc.isWebSearchEmulationEnabledByChannel(context.Background(), account))
+}
+
+func TestShouldEmulateWebSearch_AccountDisabledOverridesChannelEnabled(t *testing.T) {
+	svc := newGatewayServiceWithWebSearchChannel(t, true)
+	account := &Account{
+		Platform:      PlatformAnthropic,
+		Type:          AccountTypeAPIKey,
+		Extra:         map[string]any{featureKeyWebSearchEmulation: WebSearchModeDisabled},
+		AccountGroups: []AccountGroup{{GroupID: 10}},
+	}
+
+	require.False(t, svc.shouldEmulateWebSearch(context.Background(), account, []byte(`{"tools":[{"type":"web_search"}]}`)))
+}
+
+func TestShouldEmulateWebSearch_DefaultFollowsChannel(t *testing.T) {
+	svc := newGatewayServiceWithWebSearchChannel(t, true)
+	account := &Account{
+		Platform:      PlatformAnthropic,
+		Type:          AccountTypeAPIKey,
+		Extra:         map[string]any{featureKeyWebSearchEmulation: WebSearchModeDefault},
+		AccountGroups: []AccountGroup{{GroupID: 10}},
+	}
+
+	require.True(t, svc.shouldEmulateWebSearch(context.Background(), account, []byte(`{"tools":[{"type":"web_search"}]}`)))
+}
+
+func TestShouldEmulateWebSearch_AccountEnabledForcesOn(t *testing.T) {
+	svc := newGatewayServiceWithWebSearchChannel(t, false)
+	account := &Account{
+		Platform:      PlatformAnthropic,
+		Type:          AccountTypeAPIKey,
+		Extra:         map[string]any{featureKeyWebSearchEmulation: WebSearchModeEnabled},
+		AccountGroups: []AccountGroup{{GroupID: 10}},
+	}
+
+	require.True(t, svc.shouldEmulateWebSearch(context.Background(), account, []byte(`{"tools":[{"type":"web_search"}]}`)))
+}
+
+func newGatewayServiceWithWebSearchChannel(t *testing.T, channelEnabled bool) *GatewayService {
+	t.Helper()
+	SetWebSearchManager(websearch.NewManager([]websearch.ProviderConfig{{Type: "brave", APIKey: "test-key"}}, nil))
+	webSearchEmulationSF.Forget(sfKeyWebSearchConfig)
+	webSearchEmulationCache.Store(&cachedWebSearchEmulationConfig{
+		config: &WebSearchEmulationConfig{
+			Enabled:   true,
+			Providers: []WebSearchProviderConfig{{Type: "brave", APIKey: "test-key"}},
+		},
+		expiresAt: time.Now().Add(time.Minute).UnixNano(),
+	})
+	t.Cleanup(func() {
+		SetWebSearchManager(nil)
+		webSearchEmulationSF.Forget(sfKeyWebSearchConfig)
+		webSearchEmulationCache.Store(&cachedWebSearchEmulationConfig{
+			config:    &WebSearchEmulationConfig{},
+			expiresAt: 0,
+		})
+	})
+
+	repo := makeStandardRepo(Channel{
+		ID:       1,
+		Status:   StatusActive,
+		GroupIDs: []int64{10},
+		FeaturesConfig: map[string]any{
+			featureKeyWebSearchEmulation: map[string]any{"anthropic": channelEnabled},
+		},
+	}, map[int64]string{10: PlatformAnthropic})
+	return &GatewayService{
+		channelService: newTestChannelService(repo),
+		settingService: NewSettingService(&webSearchSettingRepoStub{values: map[string]string{
+			SettingKeyWebSearchEmulationConfig: `{"enabled":true,"providers":[{"type":"brave","api_key":"test-key"}]}`,
+		}}, nil),
+	}
+}
+
+type webSearchSettingRepoStub struct {
+	values map[string]string
+}
+
+func (s *webSearchSettingRepoStub) Get(context.Context, string) (*Setting, error) {
+	panic("unexpected Get call")
+}
+
+func (s *webSearchSettingRepoStub) GetValue(_ context.Context, key string) (string, error) {
+	if value, ok := s.values[key]; ok {
+		return value, nil
+	}
+	return "", ErrSettingNotFound
+}
+
+func (s *webSearchSettingRepoStub) Set(context.Context, string, string) error {
+	panic("unexpected Set call")
+}
+
+func (s *webSearchSettingRepoStub) GetMultiple(context.Context, []string) (map[string]string, error) {
+	panic("unexpected GetMultiple call")
+}
+
+func (s *webSearchSettingRepoStub) SetMultiple(context.Context, map[string]string) error {
+	panic("unexpected SetMultiple call")
+}
+
+func (s *webSearchSettingRepoStub) GetAll(context.Context) (map[string]string, error) {
+	panic("unexpected GetAll call")
+}
+
+func (s *webSearchSettingRepoStub) Delete(context.Context, string) error {
+	panic("unexpected Delete call")
 }
 
 // --- extractSearchQueryFromBody ---

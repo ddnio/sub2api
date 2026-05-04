@@ -2488,6 +2488,9 @@ export default {
         webSearchEmulation: 'Web Search Emulation',
         webSearchEmulationDesc:
           'Enable web search emulation for this API Key account. When a pure web_search request is detected, the gateway calls a third-party search API and constructs the response locally.',
+        webSearchDefault: 'Default (follow channel)',
+        webSearchEnabled: 'Enabled',
+        webSearchDisabled: 'Disabled',
       },
       modelRestriction: 'Model Restriction (Optional)',
       modelWhitelist: 'Model Whitelist',

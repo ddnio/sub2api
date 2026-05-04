@@ -2635,6 +2635,9 @@ export default {
         webSearchEmulation: 'Web Search 模拟',
         webSearchEmulationDesc:
           '为该 API Key 账号启用 web search 模拟。客户端发送纯 web_search 请求时，由网关调用第三方搜索 API 并构造响应返回。',
+        webSearchDefault: '默认（跟随渠道）',
+        webSearchEnabled: '开启',
+        webSearchDisabled: '关闭',
       },
       modelRestriction: '模型限制（可选）',
       modelWhitelist: '模型白名单',

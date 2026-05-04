@@ -1161,7 +1161,11 @@
               {{ t('admin.accounts.anthropic.webSearchEmulationDesc') }}
             </p>
           </div>
-          <Toggle v-model="webSearchEmulationEnabled" />
+          <select v-model="webSearchEmulationMode" class="input w-40 text-sm">
+            <option value="default">{{ t('admin.accounts.anthropic.webSearchDefault') }}</option>
+            <option value="enabled">{{ t('admin.accounts.anthropic.webSearchEnabled') }}</option>
+            <option value="disabled">{{ t('admin.accounts.anthropic.webSearchDisabled') }}</option>
+          </select>
         </div>
       </div>
 
@@ -1808,7 +1812,6 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'
 import Icon from '@/components/icons/Icon.vue'
 import ProxySelector from '@/components/common/ProxySelector.vue'
-import Toggle from '@/components/common/Toggle.vue'
 import GroupSelector from '@/components/common/GroupSelector.vue'
 import ModelWhitelistSelector from '@/components/account/ModelWhitelistSelector.vue'
 import QuotaLimitCard from '@/components/account/QuotaLimitCard.vue'
@@ -1950,7 +1953,7 @@ const openaiOAuthResponsesWebSocketV2Mode = ref<OpenAIWSMode>(OPENAI_WS_MODE_OFF
 const openaiAPIKeyResponsesWebSocketV2Mode = ref<OpenAIWSMode>(OPENAI_WS_MODE_OFF)
 const codexCLIOnlyEnabled = ref(false)
 const anthropicPassthroughEnabled = ref(false)
-const webSearchEmulationEnabled = ref(false)
+const webSearchEmulationMode = ref<'default' | 'enabled' | 'disabled'>('default')
 const webSearchGlobalEnabled = ref(false)
 const editQuotaLimit = ref<number | null>(null)
 const editQuotaDailyLimit = ref<number | null>(null)
@@ -2129,7 +2132,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   openaiAPIKeyResponsesWebSocketV2Mode.value = OPENAI_WS_MODE_OFF
   codexCLIOnlyEnabled.value = false
   anthropicPassthroughEnabled.value = false
-  webSearchEmulationEnabled.value = false
+  webSearchEmulationMode.value = 'default'
   if (newAccount.platform === 'openai' && (newAccount.type === 'oauth' || newAccount.type === 'apikey')) {
     openaiPassthroughEnabled.value = extra?.openai_passthrough === true || extra?.openai_oauth_passthrough === true
     openaiOAuthResponsesWebSocketV2Mode.value = resolveOpenAIWSModeFromExtra(extra, {
@@ -2150,7 +2153,14 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   }
   if (newAccount.platform === 'anthropic' && newAccount.type === 'apikey') {
     anthropicPassthroughEnabled.value = extra?.anthropic_passthrough === true
-    webSearchEmulationEnabled.value = extra?.web_search_emulation === true
+    const webSearchValue = extra?.web_search_emulation
+    if (webSearchValue === 'enabled' || webSearchValue === 'disabled') {
+      webSearchEmulationMode.value = webSearchValue
+    } else if (webSearchValue === true) {
+      webSearchEmulationMode.value = 'enabled'
+    } else {
+      webSearchEmulationMode.value = 'default'
+    }
   }
 
   // Load quota limit for apikey/bedrock accounts (bedrock quota is also loaded in its own branch above)
@@ -3115,10 +3125,10 @@ const handleSubmit = async () => {
       } else {
         delete newExtra.anthropic_passthrough
       }
-      if (webSearchEmulationEnabled.value) {
-        newExtra.web_search_emulation = true
-      } else {
+      if (webSearchEmulationMode.value === 'default') {
         delete newExtra.web_search_emulation
+      } else {
+        newExtra.web_search_emulation = webSearchEmulationMode.value
       }
       updatePayload.extra = newExtra
     }

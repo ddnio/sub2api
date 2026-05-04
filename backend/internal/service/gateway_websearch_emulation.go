@@ -49,7 +49,8 @@ func getWebSearchManager() *websearch.Manager {
 
 // shouldEmulateWebSearch checks whether a request should be intercepted.
 //
-// Judgment chain: manager exists → only web_search tool → global enabled → account or channel enabled.
+// Judgment chain: manager exists → only web_search tool → global enabled → account/channel enabled.
+// Account mode: "enabled" forces on, "disabled" forces off, "default" follows channel config.
 func (s *GatewayService) shouldEmulateWebSearch(ctx context.Context, account *Account, body []byte) bool {
 	if getWebSearchManager() == nil {
 		return false
@@ -60,10 +61,14 @@ func (s *GatewayService) shouldEmulateWebSearch(ctx context.Context, account *Ac
 	if !s.settingService.IsWebSearchEmulationEnabled(ctx) {
 		return false
 	}
-	if account.IsWebSearchEmulationEnabled() {
+	switch account.GetWebSearchEmulationMode() {
+	case WebSearchModeEnabled:
 		return true
+	case WebSearchModeDisabled:
+		return false
+	default:
+		return s.isWebSearchEmulationEnabledByChannel(ctx, account)
 	}
-	return s.isWebSearchEmulationEnabledByChannel(ctx, account)
 }
 
 func (s *GatewayService) isWebSearchEmulationEnabledByChannel(ctx context.Context, account *Account) bool {
