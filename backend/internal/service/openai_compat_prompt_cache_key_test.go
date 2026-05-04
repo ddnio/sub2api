@@ -21,6 +21,13 @@ func TestShouldAutoInjectPromptCacheKeyForCompat(t *testing.T) {
 	require.False(t, shouldAutoInjectPromptCacheKeyForCompat("gpt-4o"))
 }
 
+func TestShouldAutoInjectPromptCacheKeyForChatCompat_UsesOriginalModel(t *testing.T) {
+	require.True(t, shouldAutoInjectPromptCacheKeyForChatCompat("gpt-5.4", "gpt-5.4"))
+	require.True(t, shouldAutoInjectPromptCacheKeyForChatCompat("gpt-5.3-codex", "gpt-5.3-codex"))
+	require.False(t, shouldAutoInjectPromptCacheKeyForChatCompat("gpt-4o", "gpt-5.4"))
+	require.False(t, shouldAutoInjectPromptCacheKeyForChatCompat("claude-sonnet-4-6", "gpt-5.4"))
+}
+
 func TestDeriveCompatPromptCacheKey_StableAcrossLaterTurns(t *testing.T) {
 	base := &apicompat.ChatCompletionsRequest{
 		Model: "gpt-5.4",

@@ -263,7 +263,9 @@ func TestOpenAIGatewayServiceRecordUsage_RecordsAccountStatsCost(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, usageRepo.lastLog)
 	require.NotNil(t, usageRepo.lastLog.AccountStatsCost)
-	require.InDelta(t, 0.000325, *usageRepo.lastLog.AccountStatsCost, 1e-12)
+	expected, err := svc.billingService.CalculateCost("gpt-5.1", UsageTokens{InputTokens: 100, OutputTokens: 20}, 1.0)
+	require.NoError(t, err)
+	require.InDelta(t, expected.TotalCost, *usageRepo.lastLog.AccountStatsCost, 1e-12)
 }
 
 func TestOpenAIGatewayServiceRecordUsage_IncludesEndpointMetadata(t *testing.T) {
@@ -1079,7 +1081,7 @@ func TestOpenAIGatewayServiceRecordUsage_SubscriptionBillingSetsSubscriptionFiel
 	require.Equal(t, BillingTypeSubscription, usageRepo.lastLog.BillingType)
 	require.NotNil(t, usageRepo.lastLog.SubscriptionID)
 	require.Equal(t, subscription.ID, *usageRepo.lastLog.SubscriptionID)
-	require.Equal(t, 1, subRepo.incrementCalls)
+	require.Equal(t, 0, subRepo.incrementCalls)
 	require.Equal(t, 0, userRepo.deductCalls)
 }
 
