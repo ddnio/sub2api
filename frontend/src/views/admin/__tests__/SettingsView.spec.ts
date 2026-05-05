@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+<<<<<<< HEAD
 import { defineComponent, h, ref } from "vue";
+=======
+import { defineComponent, h } from "vue";
+>>>>>>> v0.1.116
 import { flushPromises, mount } from "@vue/test-utils";
 
 import SettingsView from "../SettingsView.vue";
@@ -16,11 +20,18 @@ const {
   getBetaPolicySettings,
   getGroups,
   listProxies,
+<<<<<<< HEAD
   getAllProxies,
   getProviders,
   listProviders,
   getPaymentConfig,
   updatePaymentConfig,
+=======
+  getProviders,
+  updateProvider,
+  createProvider,
+  deleteProvider,
+>>>>>>> v0.1.116
   fetchPublicSettings,
   adminSettingsFetch,
   showError,
@@ -37,17 +48,29 @@ const {
   getBetaPolicySettings: vi.fn(),
   getGroups: vi.fn(),
   listProxies: vi.fn(),
+<<<<<<< HEAD
   getAllProxies: vi.fn(),
   getProviders: vi.fn(),
   listProviders: vi.fn(),
   getPaymentConfig: vi.fn(),
   updatePaymentConfig: vi.fn(),
+=======
+  getProviders: vi.fn(),
+  updateProvider: vi.fn(),
+  createProvider: vi.fn(),
+  deleteProvider: vi.fn(),
+>>>>>>> v0.1.116
   fetchPublicSettings: vi.fn(),
   adminSettingsFetch: vi.fn(),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));
 
+<<<<<<< HEAD
+=======
+const localeRef = vi.hoisted(() => ({ value: "zh-CN" }));
+
+>>>>>>> v0.1.116
 vi.mock("@/api", () => ({
   adminAPI: {
     settings: {
@@ -66,6 +89,7 @@ vi.mock("@/api", () => ({
     },
     proxies: {
       list: listProxies,
+<<<<<<< HEAD
       getAll: getAllProxies,
     },
     payment: {
@@ -73,6 +97,14 @@ vi.mock("@/api", () => ({
       listProviders,
       getPaymentConfig,
       updatePaymentConfig,
+=======
+    },
+    payment: {
+      getProviders,
+      updateProvider,
+      createProvider,
+      deleteProvider,
+>>>>>>> v0.1.116
     },
   },
 }));
@@ -101,16 +133,82 @@ vi.mock("@/composables/useClipboard", () => ({
 
 vi.mock("@/utils/apiError", () => ({
   extractApiErrorMessage: () => "error",
+<<<<<<< HEAD
   extractI18nErrorMessage: () => "error",
+=======
+>>>>>>> v0.1.116
 }));
 
 vi.mock("vue-i18n", async () => {
   const actual = await vi.importActual<typeof import("vue-i18n")>("vue-i18n");
+<<<<<<< HEAD
   return {
     ...actual,
     useI18n: () => ({
       t: (key: string) => key,
       locale: ref("zh-CN"),
+=======
+  const translations: Record<string, string> = {
+    "admin.settings.wechatConnect.title": "微信登录",
+    "admin.settings.wechatConnect.description": "用于微信开放平台或公众号/小程序的第三方登录配置。",
+    "admin.settings.wechatConnect.enabledLabel": "启用微信登录",
+    "admin.settings.wechatConnect.enabledHint": "开启后可使用微信第三方登录回调与授权配置。",
+    "admin.settings.wechatConnect.appIdLabel": "AppID",
+    "admin.settings.wechatConnect.appIdPlaceholder": "微信开放平台 AppID",
+    "admin.settings.wechatConnect.appSecretLabel": "AppSecret",
+    "admin.settings.wechatConnect.appSecretConfiguredPlaceholder": "密钥已配置，留空以保留当前值。",
+    "admin.settings.wechatConnect.appSecretPlaceholder": "微信开放平台 AppSecret",
+    "admin.settings.wechatConnect.appSecretConfiguredHint": "密钥已配置，留空以保留当前值。",
+    "admin.settings.wechatConnect.appSecretHint": "填写后会覆盖当前微信密钥。",
+    "admin.settings.wechatConnect.modeLabel": "模式",
+    "admin.settings.wechatConnect.openModeLabel": "非微信环境使用开放平台",
+    "admin.settings.wechatConnect.openModeHint": "浏览器不在微信内时，自动走开放平台扫码授权。",
+    "admin.settings.wechatConnect.mpModeLabel": "微信环境使用公众号",
+    "admin.settings.wechatConnect.mpModeHint": "浏览器在微信内时，自动走公众号授权。",
+    "admin.settings.wechatConnect.redirectUrlLabel": "回调地址",
+    "admin.settings.wechatConnect.redirectUrlPlaceholder": "https://your-site.com/api/v1/auth/oauth/wechat/callback",
+    "admin.settings.wechatConnect.generateAndCopy": "使用当前站点生成并复制",
+    "admin.settings.wechatConnect.redirectUrlSetAndCopied": "已使用当前站点生成回调地址并复制到剪贴板",
+    "admin.settings.wechatConnect.frontendRedirectUrlLabel": "前端回调地址",
+    "admin.settings.wechatConnect.frontendRedirectUrlPlaceholder": "/auth/wechat/callback",
+    "admin.settings.wechatConnect.frontendRedirectUrlHint": "通常用于前端路由回调地址，需与后端配置保持一致。",
+    "admin.settings.authSourceDefaults.title": "认证来源默认值",
+    "admin.settings.authSourceDefaults.description": "按注册来源配置新用户默认余额、并发、订阅与授权策略。",
+    "admin.settings.authSourceDefaults.requireEmailLabel": "第三方注册强制补充邮箱",
+    "admin.settings.authSourceDefaults.requireEmailHint": "启用后，Linux DO、OIDC、微信注册缺少邮箱时必须先补充邮箱地址。",
+    "admin.settings.authSourceDefaults.enabledHint": "以下默认值会在该来源注册新用户时发放；首次绑定时授权仅作用于已有账号绑定该来源。",
+    "admin.settings.authSourceDefaults.sources.email.title": "邮箱注册",
+    "admin.settings.authSourceDefaults.sources.email.description": "适用于邮箱密码注册的新用户默认配额。",
+    "admin.settings.authSourceDefaults.sources.linuxdo.title": "Linux DO 登录",
+    "admin.settings.authSourceDefaults.sources.linuxdo.description": "适用于 Linux DO 第三方注册的新用户默认配额。",
+    "admin.settings.authSourceDefaults.sources.oidc.title": "OIDC 登录",
+    "admin.settings.authSourceDefaults.sources.oidc.description": "适用于 OIDC 第三方注册的新用户默认配额。",
+    "admin.settings.authSourceDefaults.sources.wechat.title": "微信登录",
+    "admin.settings.authSourceDefaults.sources.wechat.description": "适用于微信第三方注册的新用户默认配额。",
+    "admin.settings.authSourceDefaults.grantOnFirstBindLabel": "首次绑定时授权",
+    "admin.settings.authSourceDefaults.grantOnFirstBindHint": "已有账号首次绑定该来源时发放默认权益。",
+    "admin.settings.authSourceDefaults.defaultSubscriptionsLabel": "默认订阅",
+    "admin.settings.authSourceDefaults.defaultSubscriptionsHint": "仅对当前认证来源生效，未配置时不追加来源专属订阅。",
+    "admin.settings.authSourceDefaults.noSourceSubscriptions": "当前来源未配置专属默认订阅。",
+    "admin.settings.paymentVisibleMethods.methodLabel": "{title} 可见方式",
+    "admin.settings.paymentVisibleMethods.methodHint": "控制前台结算页是否展示该方式，以及展示时使用的来源键。",
+    "admin.settings.paymentVisibleMethods.sourceLabel": "支付来源",
+    "admin.settings.paymentVisibleMethods.sourceHint": "启用后必须明确选择一个来源；未配置状态不会对外展示该支付方式。",
+    "admin.settings.paymentVisibleMethods.sourceRequiredError": "{title} 已启用，请先选择支付来源。",
+    "admin.settings.payment.configGuide": "查看支付配置说明",
+    "admin.settings.payment.findProvider": "查看支持的支付方式",
+    "admin.settings.openaiExperimentalScheduler.title": "OpenAI 实验调度策略",
+    "admin.settings.openaiExperimentalScheduler.description": "默认关闭。开启后仅影响本网关在 OpenAI 账号间的实验性调度选择逻辑，不代表上游 OpenAI 官方能力。",
+    "admin.settings.site.uploadImage": "上传图片",
+    "admin.settings.site.remove": "移除",
+  };
+  return {
+    ...actual,
+    useI18n: () => ({
+      t: (key: string, params?: Record<string, string>) =>
+        (translations[key] ?? key).replace(/\{(\w+)\}/g, (_, token) => params?.[token] ?? `{${token}}`),
+      locale: localeRef,
+>>>>>>> v0.1.116
     }),
   };
 });
@@ -189,6 +287,40 @@ const SelectStub = defineComponent({
   },
 });
 
+<<<<<<< HEAD
+=======
+const ImageUploadStub = defineComponent({
+  props: {
+    modelValue: {
+      type: String,
+      default: "",
+    },
+    uploadLabel: {
+      type: String,
+      default: "",
+    },
+    removeLabel: {
+      type: String,
+      default: "",
+    },
+    placeholder: {
+      type: String,
+      default: "",
+    },
+  },
+  setup(props) {
+    return () =>
+      h("div", {
+        class: "image-upload-stub",
+        "data-model-value": props.modelValue,
+        "data-upload-label": props.uploadLabel,
+        "data-remove-label": props.removeLabel,
+        "data-placeholder": props.placeholder,
+      });
+  },
+});
+
+>>>>>>> v0.1.116
 const baseSettingsResponse = {
   registration_enabled: true,
   email_verify_enabled: false,
@@ -310,6 +442,7 @@ const baseSettingsResponse = {
   account_quota_notify_emails: [],
 };
 
+<<<<<<< HEAD
 const basePaymentConfigResponse = {
   enabled: true,
   min_amount: 1,
@@ -331,6 +464,8 @@ const basePaymentConfigResponse = {
   payment_visible_method_wxpay_enabled: true,
 };
 
+=======
+>>>>>>> v0.1.116
 function mountView() {
   return mount(SettingsView, {
     global: {
@@ -345,7 +480,11 @@ function mountView() {
         GroupBadge: true,
         GroupOptionItem: true,
         ProxySelector: true,
+<<<<<<< HEAD
         ImageUpload: true,
+=======
+        ImageUpload: ImageUploadStub,
+>>>>>>> v0.1.116
         BackupSettings: true,
       },
     },
@@ -395,15 +534,26 @@ describe("admin SettingsView payment visible method controls", () => {
     getBetaPolicySettings.mockReset();
     getGroups.mockReset();
     listProxies.mockReset();
+<<<<<<< HEAD
     getAllProxies.mockReset();
     getProviders.mockReset();
     listProviders.mockReset();
     getPaymentConfig.mockReset();
     updatePaymentConfig.mockReset();
+=======
+    getProviders.mockReset();
+    updateProvider.mockReset();
+    createProvider.mockReset();
+    deleteProvider.mockReset();
+>>>>>>> v0.1.116
     fetchPublicSettings.mockReset();
     adminSettingsFetch.mockReset();
     showError.mockReset();
     showSuccess.mockReset();
+<<<<<<< HEAD
+=======
+    localeRef.value = "zh-CN";
+>>>>>>> v0.1.116
 
     getSettings.mockResolvedValue({ ...baseSettingsResponse });
     updateSettings.mockImplementation(async (payload) => ({
@@ -447,6 +597,7 @@ describe("admin SettingsView payment visible method controls", () => {
     listProxies.mockResolvedValue({
       items: [],
     });
+<<<<<<< HEAD
     getAllProxies.mockResolvedValue([]);
     getProviders.mockResolvedValue({
       data: [],
@@ -457,16 +608,26 @@ describe("admin SettingsView payment visible method controls", () => {
       ...basePaymentConfigResponse,
       ...payload,
     }));
+=======
+    getProviders.mockResolvedValue({
+      data: [],
+    });
+>>>>>>> v0.1.116
     fetchPublicSettings.mockResolvedValue(undefined);
     adminSettingsFetch.mockResolvedValue(undefined);
   });
 
+<<<<<<< HEAD
   it("loads canonical source options and normalizes existing values", async () => {
+=======
+  it("does not render legacy visible payment method controls", async () => {
+>>>>>>> v0.1.116
     const wrapper = mountView();
 
     await flushPromises();
     await openPaymentTab(wrapper);
 
+<<<<<<< HEAD
     const paymentSourceSelects = wrapper
       .findAll("select.select-stub")
       .filter((node) =>
@@ -494,11 +655,19 @@ describe("admin SettingsView payment visible method controls", () => {
   });
 
   it("saves canonical source keys selected from the dropdowns", async () => {
+=======
+    expect(wrapper.text()).not.toContain("可见方式");
+    expect(wrapper.text()).not.toContain("支付来源");
+  });
+
+  it("links payment guidance to README sections instead of removed payment docs", async () => {
+>>>>>>> v0.1.116
     const wrapper = mountView();
 
     await flushPromises();
     await openPaymentTab(wrapper);
 
+<<<<<<< HEAD
     const paymentSourceSelects = wrapper
       .findAll("select.select-stub")
       .filter((node) =>
@@ -514,10 +683,36 @@ describe("admin SettingsView payment visible method controls", () => {
 
     await alipaySelect?.setValue("easypay_alipay");
     await wxpaySelect?.setValue("official_wxpay");
+=======
+    const paymentLinks = wrapper
+      .findAll("a")
+      .filter((node) =>
+        ["查看支付配置说明", "查看支持的支付方式"].includes(node.text()),
+      );
+
+    expect(paymentLinks).toHaveLength(2);
+    expect(paymentLinks[0]?.attributes("href")).toBe(
+      "https://github.com/Wei-Shaw/sub2api/blob/main/docs/PAYMENT_CN.md",
+    );
+    expect(paymentLinks[1]?.attributes("href")).toBe(
+      "https://github.com/Wei-Shaw/sub2api/blob/main/docs/PAYMENT_CN.md#支持的支付方式",
+    );
+    for (const link of paymentLinks) {
+      expect(link.attributes("href")).toContain("docs/PAYMENT");
+    }
+  });
+
+  it("does not submit legacy visible payment method settings", async () => {
+    const wrapper = mountView();
+
+    await flushPromises();
+    await openPaymentTab(wrapper);
+>>>>>>> v0.1.116
     await wrapper.find("form").trigger("submit.prevent");
     await flushPromises();
 
     expect(updateSettings).toHaveBeenCalledTimes(1);
+<<<<<<< HEAD
     expect(updateSettings).toHaveBeenCalledWith(
       expect.objectContaining({
         payment_visible_method_alipay_source: "easypay_alipay",
@@ -553,6 +748,76 @@ describe("admin SettingsView payment visible method controls", () => {
     expect(String(showError.mock.calls.at(-1)?.[0] ?? "")).toContain(
       "sourceRequiredError",
     );
+=======
+    const payload = updateSettings.mock.calls[0]?.[0];
+    expect(payload).not.toHaveProperty("payment_visible_method_alipay_source");
+    expect(payload).not.toHaveProperty("payment_visible_method_wxpay_source");
+    expect(payload).not.toHaveProperty("payment_visible_method_alipay_enabled");
+    expect(payload).not.toHaveProperty("payment_visible_method_wxpay_enabled");
+  });
+
+  it("updates provider enablement immediately and reloads providers", async () => {
+    const provider = {
+      id: 7,
+      provider_key: "alipay",
+      name: "Official Alipay",
+      config: {},
+      supported_types: ["alipay"],
+      enabled: false,
+      payment_mode: "",
+      refund_enabled: false,
+      allow_user_refund: false,
+      limits: "",
+      sort_order: 0,
+    };
+    getProviders.mockReset();
+    getProviders
+      .mockResolvedValueOnce({ data: [provider] })
+      .mockResolvedValueOnce({ data: [{ ...provider, enabled: true }] });
+    updateProvider.mockResolvedValue({ data: { ...provider, enabled: true } });
+
+    const PaymentProviderListStub = defineComponent({
+      emits: ["toggleField"],
+      setup(_, { emit }) {
+        return () =>
+          h(
+            "button",
+            {
+              class: "provider-toggle-stub",
+              onClick: () => emit("toggleField", provider, "enabled"),
+            },
+            "toggle provider",
+          );
+      },
+    });
+
+    const wrapper = mount(SettingsView, {
+      global: {
+        stubs: {
+          AppLayout: AppLayoutStub,
+          Select: SelectStub,
+          Toggle: ToggleStub,
+          Icon: true,
+          ConfirmDialog: true,
+          PaymentProviderList: PaymentProviderListStub,
+          PaymentProviderDialog: true,
+          GroupBadge: true,
+          GroupOptionItem: true,
+          ProxySelector: true,
+          ImageUpload: ImageUploadStub,
+          BackupSettings: true,
+        },
+      },
+    });
+
+    await flushPromises();
+    await openPaymentTab(wrapper);
+    await wrapper.get(".provider-toggle-stub").trigger("click");
+    await flushPromises();
+
+    expect(updateProvider).toHaveBeenCalledWith(7, { enabled: true });
+    expect(getProviders).toHaveBeenCalledTimes(2);
+>>>>>>> v0.1.116
   });
 
   it("renders advanced scheduler copy as local experimental gateway policy", async () => {
@@ -560,12 +825,39 @@ describe("admin SettingsView payment visible method controls", () => {
 
     await flushPromises();
 
+<<<<<<< HEAD
     expect(wrapper.text()).toContain("admin.settings.openaiExperimentalScheduler.title");
     expect(wrapper.text()).toContain(
       "admin.settings.openaiExperimentalScheduler.description",
     );
     expect(wrapper.text()).not.toContain("OpenAI 高级调度器");
   });
+=======
+    expect(wrapper.text()).toContain("OpenAI 实验调度策略");
+    expect(wrapper.text()).toContain(
+      "默认关闭。开启后仅影响本网关在 OpenAI 账号间的实验性调度选择逻辑",
+    );
+    expect(wrapper.text()).not.toContain("OpenAI 高级调度器");
+  });
+
+  it("passes translated upload and remove labels to the payment help image uploader", async () => {
+    const wrapper = mountView();
+
+    await flushPromises();
+    await openPaymentTab(wrapper);
+
+    const imageUploads = wrapper.findAll(".image-upload-stub");
+    expect(imageUploads.length).toBeGreaterThan(0);
+
+    const paymentHelpImageUpload = imageUploads.find(
+      (node) => node.attributes("data-placeholder") === "admin.settings.payment.helpImagePlaceholder",
+    );
+
+    expect(paymentHelpImageUpload).toBeDefined();
+    expect(paymentHelpImageUpload?.attributes("data-upload-label")).toBe("上传图片");
+    expect(paymentHelpImageUpload?.attributes("data-remove-label")).toBe("移除");
+  });
+>>>>>>> v0.1.116
 });
 
 describe("admin SettingsView wechat connect controls", () => {
@@ -582,6 +874,12 @@ describe("admin SettingsView wechat connect controls", () => {
     getGroups.mockReset();
     listProxies.mockReset();
     getProviders.mockReset();
+<<<<<<< HEAD
+=======
+    updateProvider.mockReset();
+    createProvider.mockReset();
+    deleteProvider.mockReset();
+>>>>>>> v0.1.116
     fetchPublicSettings.mockReset();
     adminSettingsFetch.mockReset();
     showError.mockReset();
@@ -760,4 +1058,31 @@ describe("admin SettingsView wechat connect controls", () => {
     ).toBe(true);
     expect(wrapper.text()).toContain("首次绑定时授权");
   });
+<<<<<<< HEAD
+=======
+
+  it("preserves optional OIDC compatibility flags instead of forcing them on save", async () => {
+    getSettings.mockResolvedValueOnce({
+      ...baseSettingsResponse,
+      oidc_connect_enabled: true,
+      oidc_connect_use_pkce: false,
+      oidc_connect_validate_id_token: false,
+    });
+
+    const wrapper = mountView();
+
+    await flushPromises();
+    await openSecurityTab(wrapper);
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+
+    expect(updateSettings).toHaveBeenCalledTimes(1);
+    expect(updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        oidc_connect_use_pkce: false,
+        oidc_connect_validate_id_token: false,
+      }),
+    );
+  });
+>>>>>>> v0.1.116
 });

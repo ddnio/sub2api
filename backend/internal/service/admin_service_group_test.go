@@ -198,21 +198,6 @@ func TestAdminService_CreateGroup_NilImagePricing(t *testing.T) {
 	require.Nil(t, repo.created.ImagePrice4K)
 }
 
-func TestAdminService_CreateGroup_RejectsNonPositiveRateMultiplier(t *testing.T) {
-	repo := &groupRepoStubForAdmin{}
-	svc := &adminServiceImpl{groupRepo: repo}
-
-	for _, rate := range []float64{0, -1} {
-		_, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
-			Name:           "test-group",
-			RateMultiplier: rate,
-		})
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "rate_multiplier must be > 0")
-	}
-	require.Nil(t, repo.created)
-}
-
 // TestAdminService_UpdateGroup_WithImagePricing 测试更新分组时 ImagePrice 字段正确更新
 func TestAdminService_UpdateGroup_WithImagePricing(t *testing.T) {
 	existingGroup := &Group{
@@ -279,6 +264,31 @@ func TestAdminService_UpdateGroup_PartialImagePricing(t *testing.T) {
 	require.NotNil(t, repo.updated.ImagePrice2K)
 	require.InDelta(t, 0.15, *repo.updated.ImagePrice2K, 0.0001) // 原值保持
 	require.Nil(t, repo.updated.ImagePrice4K)
+}
+
+func TestAdminService_UpdateGroup_InvalidatesAuthCacheOnRPMLimitChange(t *testing.T) {
+	existingGroup := &Group{
+		ID:       1,
+		Name:     "existing-group",
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+		RPMLimit: 10,
+	}
+	repo := &groupRepoStubForAdmin{getByID: existingGroup}
+	invalidator := &authCacheInvalidatorStub{}
+	svc := &adminServiceImpl{
+		groupRepo:            repo,
+		authCacheInvalidator: invalidator,
+	}
+
+	rpmLimit := 60
+	group, err := svc.UpdateGroup(context.Background(), 1, &UpdateGroupInput{
+		RPMLimit: &rpmLimit,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, group)
+	require.Equal(t, 60, repo.updated.RPMLimit)
+	require.Equal(t, []int64{1}, invalidator.groupIDs, "分组 RPMLimit 写入 auth snapshot，变更后必须失效 API Key 认证缓存")
 }
 
 func TestAdminService_CreateGroup_NormalizesMessagesDispatchModelConfig(t *testing.T) {
@@ -636,8 +646,8 @@ func TestAdminService_CreateGroup_InvalidRequestFallbackRejectsUnsupportedPlatfo
 	_, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
 		Name:                            "g1",
 		Platform:                        PlatformOpenAI,
+		RateMultiplier:                  1.0,
 		SubscriptionType:                SubscriptionTypeStandard,
-		RateMultiplier:                  1,
 		FallbackGroupIDOnInvalidRequest: &fallbackID,
 	})
 	require.Error(t, err)
@@ -657,8 +667,8 @@ func TestAdminService_CreateGroup_InvalidRequestFallbackRejectsSubscription(t *t
 	_, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
 		Name:                            "g1",
 		Platform:                        PlatformAnthropic,
+		RateMultiplier:                  1.0,
 		SubscriptionType:                SubscriptionTypeSubscription,
-		RateMultiplier:                  1,
 		FallbackGroupIDOnInvalidRequest: &fallbackID,
 	})
 	require.Error(t, err)
@@ -712,8 +722,8 @@ func TestAdminService_CreateGroup_InvalidRequestFallbackRejectsFallbackGroup(t *
 			_, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
 				Name:                            "g1",
 				Platform:                        PlatformAnthropic,
+				RateMultiplier:                  1.0,
 				SubscriptionType:                SubscriptionTypeStandard,
-				RateMultiplier:                  1,
 				FallbackGroupIDOnInvalidRequest: &fallbackID,
 			})
 			require.Error(t, err)
@@ -731,8 +741,8 @@ func TestAdminService_CreateGroup_InvalidRequestFallbackNotFound(t *testing.T) {
 	_, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
 		Name:                            "g1",
 		Platform:                        PlatformAnthropic,
+		RateMultiplier:                  1.0,
 		SubscriptionType:                SubscriptionTypeStandard,
-		RateMultiplier:                  1,
 		FallbackGroupIDOnInvalidRequest: &fallbackID,
 	})
 	require.Error(t, err)
@@ -752,8 +762,8 @@ func TestAdminService_CreateGroup_InvalidRequestFallbackAllowsAntigravity(t *tes
 	group, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
 		Name:                            "g1",
 		Platform:                        PlatformAntigravity,
+		RateMultiplier:                  1.0,
 		SubscriptionType:                SubscriptionTypeStandard,
-		RateMultiplier:                  1,
 		FallbackGroupIDOnInvalidRequest: &fallbackID,
 	})
 	require.NoError(t, err)
@@ -770,8 +780,8 @@ func TestAdminService_CreateGroup_InvalidRequestFallbackClearsOnZero(t *testing.
 	group, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
 		Name:                            "g1",
 		Platform:                        PlatformAnthropic,
+		RateMultiplier:                  1.0,
 		SubscriptionType:                SubscriptionTypeStandard,
-		RateMultiplier:                  1,
 		FallbackGroupIDOnInvalidRequest: &zero,
 	})
 	require.NoError(t, err)

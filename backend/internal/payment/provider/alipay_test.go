@@ -189,8 +189,8 @@ func TestCreateTradeUsesPagePayForDesktop(t *testing.T) {
 	if resp.PayURL == "" {
 		t.Fatal("expected pay_url for desktop page pay")
 	}
-	if resp.QRCode != "" {
-		t.Fatalf("qr_code = %q, want empty for page pay fallback", resp.QRCode)
+	if resp.QRCode != resp.PayURL {
+		t.Fatalf("qr_code = %q, want same as pay_url %q", resp.QRCode, resp.PayURL)
 	}
 }
 

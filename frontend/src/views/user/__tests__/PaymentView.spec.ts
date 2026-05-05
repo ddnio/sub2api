@@ -19,7 +19,10 @@ const showInfo = vi.hoisted(() => vi.fn())
 const showWarning = vi.hoisted(() => vi.fn())
 const getCheckoutInfo = vi.hoisted(() => vi.fn())
 const bridgeInvoke = vi.hoisted(() => vi.fn())
+<<<<<<< HEAD
 const scrollTo = vi.hoisted(() => vi.fn())
+=======
+>>>>>>> v0.1.116
 
 vi.mock('vue-router', async () => {
   const actual = await vi.importActual<typeof import('vue-router')>('vue-router')
@@ -181,6 +184,7 @@ function oauthOrderFixture() {
   }
 }
 
+<<<<<<< HEAD
 function qrOrderFixture(overrides: Record<string, unknown> = {}) {
   return {
     order_id: 789,
@@ -196,6 +200,8 @@ function qrOrderFixture(overrides: Record<string, unknown> = {}) {
   }
 }
 
+=======
+>>>>>>> v0.1.116
 describe('PaymentView WeChat JSAPI flow', () => {
   beforeEach(() => {
     routeState.path = '/purchase'
@@ -214,11 +220,14 @@ describe('PaymentView WeChat JSAPI flow', () => {
     showWarning.mockReset()
     getCheckoutInfo.mockReset().mockResolvedValue(checkoutInfoFixture())
     bridgeInvoke.mockReset()
+<<<<<<< HEAD
     scrollTo.mockReset()
     Object.defineProperty(window, 'scrollTo', {
       value: scrollTo,
       writable: true,
     })
+=======
+>>>>>>> v0.1.116
     window.localStorage.clear()
     ;(window as Window & { WeixinJSBridge?: { invoke: typeof bridgeInvoke } }).WeixinJSBridge = {
       invoke: bridgeInvoke,
@@ -234,7 +243,10 @@ describe('PaymentView WeChat JSAPI flow', () => {
     shallowMount(PaymentView, {
       global: {
         stubs: {
+<<<<<<< HEAD
           AppLayout: { template: '<div><slot /></div>' },
+=======
+>>>>>>> v0.1.116
           Teleport: true,
           Transition: false,
         },
@@ -285,7 +297,10 @@ describe('PaymentView WeChat JSAPI flow', () => {
     const wrapper = shallowMount(PaymentView, {
       global: {
         stubs: {
+<<<<<<< HEAD
           AppLayout: { template: '<div><slot /></div>' },
+=======
+>>>>>>> v0.1.116
           Teleport: true,
           Transition: false,
         },
@@ -434,6 +449,7 @@ describe('PaymentView WeChat JSAPI flow', () => {
     expect(showError).not.toHaveBeenCalled()
     expect(window.localStorage.getItem(PAYMENT_RECOVERY_STORAGE_KEY)).toContain('weixin://wxpay/bizpayurl?pr=fallback-native')
   })
+<<<<<<< HEAD
 
   it('passes server effective recharge limits to the amount input', async () => {
     routeState.query = {}
@@ -661,4 +677,6 @@ describe('PaymentView WeChat JSAPI flow', () => {
     }))
     expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
   })
+=======
+>>>>>>> v0.1.116
 })

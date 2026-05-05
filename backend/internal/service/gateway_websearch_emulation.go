@@ -50,8 +50,8 @@ func getWebSearchManager() *websearch.Manager {
 // shouldEmulateWebSearch checks whether a request should be intercepted.
 //
 // Judgment chain: manager exists → only web_search tool → global enabled → account/channel enabled.
-// Account mode: "enabled" forces on, "disabled" forces off, "default" follows channel config.
-func (s *GatewayService) shouldEmulateWebSearch(ctx context.Context, account *Account, body []byte) bool {
+// Account-level mode: "enabled" (force on), "disabled" (force off), "default" (follow channel).
+func (s *GatewayService) shouldEmulateWebSearch(ctx context.Context, account *Account, groupID *int64, body []byte) bool {
 	if getWebSearchManager() == nil {
 		return false
 	}
@@ -61,43 +61,23 @@ func (s *GatewayService) shouldEmulateWebSearch(ctx context.Context, account *Ac
 	if !s.settingService.IsWebSearchEmulationEnabled(ctx) {
 		return false
 	}
-	switch account.GetWebSearchEmulationMode() {
+
+	mode := account.GetWebSearchEmulationMode()
+	switch mode {
 	case WebSearchModeEnabled:
 		return true
 	case WebSearchModeDisabled:
 		return false
-	default:
-		return s.isWebSearchEmulationEnabledByChannel(ctx, account)
-	}
-}
-
-func (s *GatewayService) isWebSearchEmulationEnabledByChannel(ctx context.Context, account *Account) bool {
-	if s.channelService == nil || account == nil {
-		return false
-	}
-	for _, groupID := range account.GroupIDs {
-		if s.isWebSearchEmulationEnabledForGroup(ctx, groupID, account.Platform) {
-			return true
+	default: // "default" → follow channel config
+		if groupID == nil || s.channelService == nil {
+			return false
 		}
-	}
-	for _, accountGroup := range account.AccountGroups {
-		if s.isWebSearchEmulationEnabledForGroup(ctx, accountGroup.GroupID, account.Platform) {
-			return true
+		ch, err := s.channelService.GetChannelForGroup(ctx, *groupID)
+		if err != nil || ch == nil {
+			return false
 		}
+		return ch.IsWebSearchEmulationEnabled(account.Platform)
 	}
-	return false
-}
-
-func (s *GatewayService) isWebSearchEmulationEnabledForGroup(ctx context.Context, groupID int64, platform string) bool {
-	if groupID <= 0 {
-		return false
-	}
-	channel, err := s.channelService.GetChannelForGroup(ctx, groupID)
-	if err != nil {
-		slog.Warn("failed to check channel websearch config", "group_id", groupID, "error", err)
-		return false
-	}
-	return channel != nil && channel.IsWebSearchEmulationEnabled(platform)
 }
 
 // isOnlyWebSearchToolInBody checks if the body contains exactly one web_search tool.

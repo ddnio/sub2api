@@ -4,11 +4,9 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
-	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
-	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/websearch"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,13 +17,11 @@ func TestValidateWebSearchConfig_Nil(t *testing.T) {
 }
 
 func TestValidateWebSearchConfig_Valid(t *testing.T) {
-	quotaLimit := int64(1000)
-	quotaLimit2 := int64(500)
 	cfg := &WebSearchEmulationConfig{
 		Enabled: true,
 		Providers: []WebSearchProviderConfig{
-			{Type: "brave", QuotaLimit: &quotaLimit},
-			{Type: "tavily", QuotaLimit: &quotaLimit2},
+			{Type: "brave", QuotaLimit: int64Ptr(1000)},
+			{Type: "tavily", QuotaLimit: int64Ptr(500)},
 		},
 	}
 	require.NoError(t, validateWebSearchConfig(cfg))
@@ -48,11 +44,10 @@ func TestValidateWebSearchConfig_InvalidType(t *testing.T) {
 }
 
 func TestValidateWebSearchConfig_NegativeQuotaLimit(t *testing.T) {
-	quotaLimit := int64(-1)
 	cfg := &WebSearchEmulationConfig{
-		Providers: []WebSearchProviderConfig{{Type: "brave", QuotaLimit: &quotaLimit}},
+		Providers: []WebSearchProviderConfig{{Type: "brave", QuotaLimit: int64Ptr(-1)}},
 	}
-	require.ErrorContains(t, validateWebSearchConfig(cfg), "quota_limit must be >= 0 or null")
+	require.ErrorContains(t, validateWebSearchConfig(cfg), "quota_limit must be > 0 or null")
 }
 
 func TestValidateWebSearchConfig_DuplicateType(t *testing.T) {
@@ -65,15 +60,7 @@ func TestValidateWebSearchConfig_DuplicateType(t *testing.T) {
 	require.ErrorContains(t, validateWebSearchConfig(cfg), "duplicate type")
 }
 
-func TestValidateWebSearchConfig_ZeroQuotaLimitAllowedForLegacyUnlimited(t *testing.T) {
-	quotaLimit := int64(0)
-	cfg := &WebSearchEmulationConfig{
-		Providers: []WebSearchProviderConfig{{Type: "brave", QuotaLimit: &quotaLimit}},
-	}
-	require.NoError(t, validateWebSearchConfig(cfg))
-}
-
-func TestValidateWebSearchConfig_NilQuotaLimitUnlimited(t *testing.T) {
+func TestValidateWebSearchConfig_NilQuotaLimit(t *testing.T) {
 	cfg := &WebSearchEmulationConfig{
 		Providers: []WebSearchProviderConfig{{Type: "brave", QuotaLimit: nil}},
 	}
@@ -103,26 +90,12 @@ func TestParseWebSearchConfigJSON_InvalidJSON(t *testing.T) {
 }
 
 func TestParseWebSearchConfigJSON_BackwardCompatibility(t *testing.T) {
+	// Old config with priority and quota_refresh_interval should parse without error
 	raw := `{"enabled":true,"providers":[{"type":"brave","priority":1,"quota_refresh_interval":"monthly","quota_limit":1000}]}`
 	cfg := parseWebSearchConfigJSON(raw)
 	require.True(t, cfg.Enabled)
 	require.Len(t, cfg.Providers, 1)
-	require.NotNil(t, cfg.Providers[0].QuotaLimit)
 	require.Equal(t, int64(1000), *cfg.Providers[0].QuotaLimit)
-}
-
-func TestParseWebSearchConfigJSON_NullQuotaLimit(t *testing.T) {
-	raw := `{"enabled":true,"providers":[{"type":"brave","quota_limit":null}]}`
-	cfg := parseWebSearchConfigJSON(raw)
-	require.True(t, cfg.Enabled)
-	require.Len(t, cfg.Providers, 1)
-	require.Nil(t, cfg.Providers[0].QuotaLimit)
-}
-
-func TestWebSearchProviderConfig_RejectsStringQuotaLimit(t *testing.T) {
-	var cfg WebSearchEmulationConfig
-	err := json.Unmarshal([]byte(`{"providers":[{"type":"brave","quota_limit":""}]}`), &cfg)
-	require.Error(t, err)
 }
 
 // --- SanitizeWebSearchConfig ---
@@ -153,16 +126,14 @@ func TestSanitizeWebSearchConfig_Nil(t *testing.T) {
 }
 
 func TestSanitizeWebSearchConfig_PreservesOtherFields(t *testing.T) {
-	quotaLimit := int64(1000)
 	cfg := &WebSearchEmulationConfig{
 		Enabled: true,
 		Providers: []WebSearchProviderConfig{
-			{Type: "brave", APIKey: "secret", QuotaLimit: &quotaLimit},
+			{Type: "brave", APIKey: "secret", QuotaLimit: int64Ptr(1000)},
 		},
 	}
 	out := SanitizeWebSearchConfig(context.Background(), cfg)
 	require.True(t, out.Enabled)
-	require.NotNil(t, out.Providers[0].QuotaLimit)
 	require.Equal(t, int64(1000), *out.Providers[0].QuotaLimit)
 }
 
@@ -174,147 +145,122 @@ func TestSanitizeWebSearchConfig_DoesNotMutateOriginal(t *testing.T) {
 	require.Equal(t, "secret", cfg.Providers[0].APIKey)
 }
 
-func TestResolveWebSearchProviderProxyURL_ActiveProxy(t *testing.T) {
-	proxyID := int64(10)
-	svc := &SettingService{webSearchProxyRepo: &webSearchProxyRepoStub{
-		proxies: map[int64]*Proxy{
-			proxyID: {
-				ID:       proxyID,
-				Protocol: "http",
-				Host:     "proxy.example.com",
-				Port:     8080,
-				Username: "user",
-				Password: "pass",
-				Status:   StatusActive,
-			},
-		},
-	}}
+// --- PopulateWebSearchUsage ---
 
-	require.Equal(t, "http://user:pass@proxy.example.com:8080", svc.resolveWebSearchProviderProxyURL(context.Background(), &proxyID))
+func TestPopulateWebSearchUsage_NilInput(t *testing.T) {
+	require.Nil(t, PopulateWebSearchUsage(context.Background(), nil))
 }
 
-func TestResolveWebSearchProviderProxyURL_DisabledProxy(t *testing.T) {
-	proxyID := int64(10)
-	svc := &SettingService{webSearchProxyRepo: &webSearchProxyRepoStub{
-		proxies: map[int64]*Proxy{
-			proxyID: {ID: proxyID, Protocol: "http", Host: "proxy.example.com", Port: 8080, Status: StatusDisabled},
-		},
-	}}
-
-	require.Equal(t, "", svc.resolveWebSearchProviderProxyURL(context.Background(), &proxyID))
-}
-
-func TestResolveWebSearchProviderProxyURL_NoRepo(t *testing.T) {
-	proxyID := int64(10)
-	svc := &SettingService{}
-
-	require.Equal(t, "", svc.resolveWebSearchProviderProxyURL(context.Background(), &proxyID))
-}
-
-func TestWebSearchProxyIDValue(t *testing.T) {
-	proxyID := int64(10)
-	require.Equal(t, int64(10), webSearchProxyIDValue(&proxyID))
-	require.Equal(t, int64(0), webSearchProxyIDValue(nil))
-}
-
-func TestWebSearchQuotaLimitValue(t *testing.T) {
-	quotaLimit := int64(10)
-	require.Equal(t, int64(10), webSearchQuotaLimitValue(&quotaLimit))
-	require.Equal(t, int64(0), webSearchQuotaLimitValue(nil))
-}
-
-func TestResetWebSearchUsage_NoManager(t *testing.T) {
+func TestPopulateWebSearchUsage_NoManager_QuotaUsedZero(t *testing.T) {
+	// Ensure no global manager is set
 	SetWebSearchManager(nil)
-	require.ErrorContains(t, ResetWebSearchUsage(context.Background(), "brave"), "manager not initialized")
-}
+	defer SetWebSearchManager(nil)
 
-func TestSaveWebSearchEmulationConfig_RejectsEnabledProviderWithoutAPIKey(t *testing.T) {
-	repo := newMockSettingRepo()
-	svc := NewSettingService(repo, nil)
-
-	err := svc.SaveWebSearchEmulationConfig(context.Background(), &WebSearchEmulationConfig{
-		Enabled:   true,
-		Providers: []WebSearchProviderConfig{{Type: "brave"}},
-	})
-
-	require.Error(t, err)
-	require.Equal(t, "MISSING_API_KEY", infraerrors.Reason(err))
-}
-
-func TestSaveWebSearchEmulationConfig_MergesExistingAPIKeyBeforeValidation(t *testing.T) {
-	repo := newMockSettingRepo()
-	existing := `{"enabled":true,"providers":[{"type":"brave","api_key":"saved-key"}]}`
-	require.NoError(t, repo.Set(context.Background(), SettingKeyWebSearchEmulationConfig, existing))
-	svc := NewSettingService(repo, nil)
-
-	err := svc.SaveWebSearchEmulationConfig(context.Background(), &WebSearchEmulationConfig{
-		Enabled:   true,
-		Providers: []WebSearchProviderConfig{{Type: "brave"}},
-	})
-
-	require.NoError(t, err)
-	saved, err := repo.GetValue(context.Background(), SettingKeyWebSearchEmulationConfig)
-	require.NoError(t, err)
-	var cfg WebSearchEmulationConfig
-	require.NoError(t, json.Unmarshal([]byte(saved), &cfg))
-	require.Equal(t, "saved-key", cfg.Providers[0].APIKey)
-}
-
-type webSearchProxyRepoStub struct {
-	proxies map[int64]*Proxy
-}
-
-func (s *webSearchProxyRepoStub) Create(ctx context.Context, proxy *Proxy) error {
-	return nil
-}
-
-func (s *webSearchProxyRepoStub) GetByID(ctx context.Context, id int64) (*Proxy, error) {
-	if proxy, ok := s.proxies[id]; ok {
-		return proxy, nil
+	cfg := &WebSearchEmulationConfig{
+		Enabled: true,
+		Providers: []WebSearchProviderConfig{
+			{Type: "brave", APIKey: "sk-key", QuotaLimit: int64Ptr(1000)},
+		},
 	}
-	return nil, ErrProxyNotFound
+	out := PopulateWebSearchUsage(context.Background(), cfg)
+	require.NotNil(t, out)
+	require.Len(t, out.Providers, 1)
+	require.Equal(t, int64(0), out.Providers[0].QuotaUsed)
 }
 
-func (s *webSearchProxyRepoStub) ListByIDs(ctx context.Context, ids []int64) ([]Proxy, error) {
-	return nil, nil
+func TestPopulateWebSearchUsage_APIKeyConfigured_True(t *testing.T) {
+	SetWebSearchManager(nil)
+	defer SetWebSearchManager(nil)
+
+	cfg := &WebSearchEmulationConfig{
+		Providers: []WebSearchProviderConfig{
+			{Type: "brave", APIKey: "sk-key"},
+		},
+	}
+	out := PopulateWebSearchUsage(context.Background(), cfg)
+	require.True(t, out.Providers[0].APIKeyConfigured)
 }
 
-func (s *webSearchProxyRepoStub) Update(ctx context.Context, proxy *Proxy) error {
-	return nil
+func TestPopulateWebSearchUsage_APIKeyConfigured_False(t *testing.T) {
+	SetWebSearchManager(nil)
+	defer SetWebSearchManager(nil)
+
+	cfg := &WebSearchEmulationConfig{
+		Providers: []WebSearchProviderConfig{
+			{Type: "brave", APIKey: ""},
+		},
+	}
+	out := PopulateWebSearchUsage(context.Background(), cfg)
+	require.False(t, out.Providers[0].APIKeyConfigured)
 }
 
-func (s *webSearchProxyRepoStub) Delete(ctx context.Context, id int64) error {
-	return nil
+func TestPopulateWebSearchUsage_NilQuotaLimit(t *testing.T) {
+	SetWebSearchManager(nil)
+	defer SetWebSearchManager(nil)
+
+	cfg := &WebSearchEmulationConfig{
+		Providers: []WebSearchProviderConfig{
+			{Type: "brave", APIKey: "sk-key", QuotaLimit: nil},
+		},
+	}
+	out := PopulateWebSearchUsage(context.Background(), cfg)
+	require.Nil(t, out.Providers[0].QuotaLimit)
 }
 
-func (s *webSearchProxyRepoStub) List(ctx context.Context, params pagination.PaginationParams) ([]Proxy, *pagination.PaginationResult, error) {
-	return nil, nil, nil
+func TestPopulateWebSearchUsage_NonNilQuotaLimit(t *testing.T) {
+	SetWebSearchManager(nil)
+	defer SetWebSearchManager(nil)
+
+	cfg := &WebSearchEmulationConfig{
+		Providers: []WebSearchProviderConfig{
+			{Type: "brave", APIKey: "sk-key", QuotaLimit: int64Ptr(500)},
+		},
+	}
+	out := PopulateWebSearchUsage(context.Background(), cfg)
+	require.NotNil(t, out.Providers[0].QuotaLimit)
+	require.Equal(t, int64(500), *out.Providers[0].QuotaLimit)
 }
 
-func (s *webSearchProxyRepoStub) ListWithFilters(ctx context.Context, params pagination.PaginationParams, protocol, status, search string) ([]Proxy, *pagination.PaginationResult, error) {
-	return nil, nil, nil
+func TestPopulateWebSearchUsage_WithManager_NilRedis(t *testing.T) {
+	// Manager with nil Redis returns 0 usage without error
+	mgr := websearch.NewManager([]websearch.ProviderConfig{
+		{Type: "brave", APIKey: "k"},
+	}, nil)
+	SetWebSearchManager(mgr)
+	defer SetWebSearchManager(nil)
+
+	cfg := &WebSearchEmulationConfig{
+		Providers: []WebSearchProviderConfig{
+			{Type: "brave", APIKey: "sk-key", QuotaLimit: int64Ptr(1000)},
+		},
+	}
+	out := PopulateWebSearchUsage(context.Background(), cfg)
+	require.Equal(t, int64(0), out.Providers[0].QuotaUsed)
+	require.True(t, out.Providers[0].APIKeyConfigured)
 }
 
-func (s *webSearchProxyRepoStub) ListWithFiltersAndAccountCount(ctx context.Context, params pagination.PaginationParams, protocol, status, search string) ([]ProxyWithAccountCount, *pagination.PaginationResult, error) {
-	return nil, nil, nil
+func TestPopulateWebSearchUsage_DoesNotMutateOriginal(t *testing.T) {
+	SetWebSearchManager(nil)
+	defer SetWebSearchManager(nil)
+
+	cfg := &WebSearchEmulationConfig{
+		Providers: []WebSearchProviderConfig{
+			{Type: "brave", APIKey: "secret", QuotaLimit: int64Ptr(100)},
+		},
+	}
+	_ = PopulateWebSearchUsage(context.Background(), cfg)
+	// Original should be unchanged
+	require.Equal(t, "secret", cfg.Providers[0].APIKey)
+	require.Equal(t, int64(0), cfg.Providers[0].QuotaUsed)
 }
 
-func (s *webSearchProxyRepoStub) ListActive(ctx context.Context) ([]Proxy, error) {
-	return nil, nil
-}
+// --- ResetWebSearchUsage ---
 
-func (s *webSearchProxyRepoStub) ListActiveWithAccountCount(ctx context.Context) ([]ProxyWithAccountCount, error) {
-	return nil, nil
-}
+func TestResetWebSearchUsage_NilManager(t *testing.T) {
+	SetWebSearchManager(nil)
+	defer SetWebSearchManager(nil)
 
-func (s *webSearchProxyRepoStub) ExistsByHostPortAuth(ctx context.Context, host string, port int, username, password string) (bool, error) {
-	return false, nil
-}
-
-func (s *webSearchProxyRepoStub) CountAccountsByProxyID(ctx context.Context, proxyID int64) (int64, error) {
-	return 0, nil
-}
-
-func (s *webSearchProxyRepoStub) ListAccountSummariesByProxyID(ctx context.Context, proxyID int64) ([]ProxyAccountSummary, error) {
-	return nil, nil
+	err := ResetWebSearchUsage(context.Background(), "brave")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "not initialized")
 }

@@ -1,3 +1,29 @@
+CREATE OR REPLACE FUNCTION public.__migration_115_safe_legacy_metadata_jsonb(input_text TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    parsed JSONB;
+BEGIN
+    IF input_text IS NULL OR BTRIM(input_text) = '' THEN
+        RETURN '{}'::jsonb;
+    END IF;
+
+    BEGIN
+        parsed := input_text::jsonb;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RETURN '{}'::jsonb;
+    END;
+
+    IF jsonb_typeof(parsed) = 'object' THEN
+        RETURN parsed;
+    END IF;
+
+    RETURN jsonb_build_object('_legacy_metadata_raw_json', parsed);
+END;
+$$;
+
 DO $$
 BEGIN
     IF to_regclass('public.user_external_identities') IS NULL THEN
@@ -5,6 +31,41 @@ BEGIN
     END IF;
 
     EXECUTE $sql$
+WITH legacy AS (
+    SELECT
+        uei.id,
+        uei.user_id,
+        BTRIM(uei.provider_user_id) AS provider_user_id,
+        BTRIM(uei.provider_username) AS provider_username,
+        BTRIM(uei.display_name) AS display_name,
+        public.__migration_115_safe_legacy_metadata_jsonb(uei.metadata) AS metadata_json,
+        uei.created_at,
+        uei.updated_at
+    FROM user_external_identities AS uei
+    JOIN users AS u ON u.id = uei.user_id
+    WHERE u.deleted_at IS NULL
+      AND LOWER(BTRIM(COALESCE(uei.provider, ''))) = 'linuxdo'
+      AND BTRIM(COALESCE(uei.provider_user_id, '')) <> ''
+),
+legacy_subjects AS (
+    SELECT
+        provider_user_id AS provider_subject,
+        COUNT(DISTINCT user_id) AS distinct_user_count
+    FROM legacy
+    GROUP BY provider_user_id
+),
+canonical_legacy AS (
+    SELECT
+        legacy.*,
+        ROW_NUMBER() OVER (
+            PARTITION BY legacy.provider_user_id
+            ORDER BY COALESCE(legacy.updated_at, legacy.created_at, NOW()) DESC, legacy.id DESC
+        ) AS canonical_row_num
+    FROM legacy
+    JOIN legacy_subjects AS subjects
+      ON subjects.provider_subject = legacy.provider_user_id
+     AND subjects.distinct_user_count = 1
+)
 INSERT INTO auth_identities (
     user_id,
     provider_type,
@@ -26,26 +87,48 @@ SELECT
         'display_name', legacy.display_name,
         'migration', '115_auth_identity_legacy_external_backfill'
     )
-FROM (
+FROM canonical_legacy AS legacy
+WHERE legacy.canonical_row_num = 1
+ON CONFLICT (provider_type, provider_key, provider_subject) DO NOTHING;
+$sql$;
+
+    EXECUTE $sql$
+WITH legacy AS (
     SELECT
         uei.id,
         uei.user_id,
         BTRIM(uei.provider_user_id) AS provider_user_id,
+        BTRIM(uei.provider_union_id) AS provider_union_id,
         BTRIM(uei.provider_username) AS provider_username,
         BTRIM(uei.display_name) AS display_name,
-        COALESCE(NULLIF(BTRIM(COALESCE(uei.metadata, '')), '')::jsonb, '{}'::jsonb) AS metadata_json,
+        public.__migration_115_safe_legacy_metadata_jsonb(uei.metadata) AS metadata_json,
         uei.created_at,
         uei.updated_at
     FROM user_external_identities AS uei
     JOIN users AS u ON u.id = uei.user_id
     WHERE u.deleted_at IS NULL
-      AND LOWER(BTRIM(COALESCE(uei.provider, ''))) = 'linuxdo'
-      AND BTRIM(COALESCE(uei.provider_user_id, '')) <> ''
-) AS legacy
-ON CONFLICT (provider_type, provider_key, provider_subject) DO NOTHING;
-$sql$;
-
-    EXECUTE $sql$
+      AND LOWER(BTRIM(COALESCE(uei.provider, ''))) = 'wechat'
+      AND BTRIM(COALESCE(uei.provider_union_id, '')) <> ''
+),
+legacy_subjects AS (
+    SELECT
+        provider_union_id AS provider_subject,
+        COUNT(DISTINCT user_id) AS distinct_user_count
+    FROM legacy
+    GROUP BY provider_union_id
+),
+canonical_legacy AS (
+    SELECT
+        legacy.*,
+        ROW_NUMBER() OVER (
+            PARTITION BY legacy.provider_union_id
+            ORDER BY COALESCE(legacy.updated_at, legacy.created_at, NOW()) DESC, legacy.id DESC
+        ) AS canonical_row_num
+    FROM legacy
+    JOIN legacy_subjects AS subjects
+      ON subjects.provider_subject = legacy.provider_union_id
+     AND subjects.distinct_user_count = 1
+)
 INSERT INTO auth_identities (
     user_id,
     provider_type,
@@ -70,27 +153,36 @@ SELECT
         'display_name', legacy.display_name,
         'migration', '115_auth_identity_legacy_external_backfill'
     )
-FROM (
-    SELECT
-        uei.id,
-        uei.user_id,
-        BTRIM(uei.provider_user_id) AS provider_user_id,
-        BTRIM(uei.provider_union_id) AS provider_union_id,
-        BTRIM(uei.provider_username) AS provider_username,
-        BTRIM(uei.display_name) AS display_name,
-        COALESCE(NULLIF(BTRIM(COALESCE(uei.metadata, '')), '')::jsonb, '{}'::jsonb) AS metadata_json,
-        uei.created_at,
-        uei.updated_at
-    FROM user_external_identities AS uei
-    JOIN users AS u ON u.id = uei.user_id
-    WHERE u.deleted_at IS NULL
-      AND LOWER(BTRIM(COALESCE(uei.provider, ''))) = 'wechat'
-      AND BTRIM(COALESCE(uei.provider_union_id, '')) <> ''
-) AS legacy
+FROM canonical_legacy AS legacy
+WHERE legacy.canonical_row_num = 1
 ON CONFLICT (provider_type, provider_key, provider_subject) DO NOTHING;
 $sql$;
 
     EXECUTE $sql$
+WITH legacy AS (
+    SELECT
+        uei.user_id,
+        BTRIM(uei.provider_user_id) AS provider_user_id,
+        BTRIM(uei.provider_union_id) AS provider_union_id,
+        BTRIM(COALESCE(meta.metadata_json ->> 'channel', '')) AS channel,
+        BTRIM(COALESCE(meta.metadata_json ->> 'channel_app_id', meta.metadata_json ->> 'appid', meta.metadata_json ->> 'app_id', '')) AS channel_app_id,
+        meta.metadata_json
+    FROM user_external_identities AS uei
+    JOIN users AS u ON u.id = uei.user_id
+    CROSS JOIN LATERAL (
+        SELECT public.__migration_115_safe_legacy_metadata_jsonb(uei.metadata) AS metadata_json
+    ) AS meta
+    WHERE u.deleted_at IS NULL
+      AND LOWER(BTRIM(COALESCE(uei.provider, ''))) = 'wechat'
+      AND BTRIM(COALESCE(uei.provider_union_id, '')) <> ''
+),
+legacy_subjects AS (
+    SELECT
+        provider_union_id AS provider_subject,
+        COUNT(DISTINCT user_id) AS distinct_user_count
+    FROM legacy
+    GROUP BY provider_union_id
+)
 INSERT INTO auth_identity_channels (
     identity_id,
     provider_type,
@@ -112,23 +204,10 @@ SELECT
         'unionid', legacy.provider_union_id,
         'migration', '115_auth_identity_legacy_external_backfill'
     )
-FROM (
-    SELECT
-        uei.user_id,
-        BTRIM(uei.provider_user_id) AS provider_user_id,
-        BTRIM(uei.provider_union_id) AS provider_union_id,
-        BTRIM(COALESCE(meta.metadata_json ->> 'channel', '')) AS channel,
-        BTRIM(COALESCE(meta.metadata_json ->> 'channel_app_id', meta.metadata_json ->> 'appid', meta.metadata_json ->> 'app_id', '')) AS channel_app_id,
-        meta.metadata_json
-    FROM user_external_identities AS uei
-    JOIN users AS u ON u.id = uei.user_id
-    CROSS JOIN LATERAL (
-        SELECT COALESCE(NULLIF(BTRIM(COALESCE(uei.metadata, '')), '')::jsonb, '{}'::jsonb) AS metadata_json
-    ) AS meta
-    WHERE u.deleted_at IS NULL
-      AND LOWER(BTRIM(COALESCE(uei.provider, ''))) = 'wechat'
-      AND BTRIM(COALESCE(uei.provider_union_id, '')) <> ''
-) AS legacy
+FROM legacy
+JOIN legacy_subjects AS subjects
+  ON subjects.provider_subject = legacy.provider_union_id
+ AND subjects.distinct_user_count = 1
 JOIN auth_identities AS ai
   ON ai.user_id = legacy.user_id
  AND ai.provider_type = 'wechat'
@@ -157,7 +236,7 @@ FROM (
         uei.id,
         uei.user_id,
         BTRIM(uei.provider_user_id) AS provider_user_id,
-        COALESCE(NULLIF(BTRIM(COALESCE(uei.metadata, '')), '')::jsonb, '{}'::jsonb) AS metadata_json
+        public.__migration_115_safe_legacy_metadata_jsonb(uei.metadata) AS metadata_json
     FROM user_external_identities AS uei
     JOIN users AS u ON u.id = uei.user_id
     WHERE u.deleted_at IS NULL
@@ -185,3 +264,5 @@ WHERE ai.provider_type = 'wechat'
   AND COALESCE(ai.metadata ->> 'backfill_source', '') = 'synthetic_email'
   AND BTRIM(COALESCE(ai.metadata ->> 'unionid', '')) = ''
 ON CONFLICT (report_type, report_key) DO NOTHING;
+
+DROP FUNCTION IF EXISTS public.__migration_115_safe_legacy_metadata_jsonb(TEXT);

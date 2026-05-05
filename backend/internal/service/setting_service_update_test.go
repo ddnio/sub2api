@@ -13,8 +13,6 @@ import (
 )
 
 type settingUpdateRepoStub struct {
-	values  map[string]string
-	err     error
 	updates map[string]string
 }
 
@@ -23,13 +21,7 @@ func (s *settingUpdateRepoStub) Get(ctx context.Context, key string) (*Setting, 
 }
 
 func (s *settingUpdateRepoStub) GetValue(ctx context.Context, key string) (string, error) {
-	if s.err != nil {
-		return "", s.err
-	}
-	if v, ok := s.values[key]; ok {
-		return v, nil
-	}
-	return "", ErrSettingNotFound
+	panic("unexpected GetValue call")
 }
 
 func (s *settingUpdateRepoStub) Set(ctx context.Context, key, value string) error {
@@ -99,23 +91,6 @@ func TestSettingService_UpdateSettings_DefaultSubscriptions_ValidGroup(t *testin
 	require.Equal(t, []DefaultSubscriptionSetting{
 		{GroupID: 11, ValidityDays: 30},
 	}, got)
-}
-
-func TestSettingService_InitializeDefaultSettings_IncludesNotifyDefaults(t *testing.T) {
-	repo := &settingUpdateRepoStub{}
-	svc := NewSettingService(repo, &config.Config{
-		Default: config.DefaultConfig{
-			UserConcurrency: 2,
-			UserBalance:     3.5,
-		},
-	})
-
-	require.NoError(t, svc.InitializeDefaultSettings(context.Background()))
-	require.Equal(t, "false", repo.updates[SettingKeyBalanceLowNotifyEnabled])
-	require.Equal(t, "0", repo.updates[SettingKeyBalanceLowNotifyThreshold])
-	require.Equal(t, "", repo.updates[SettingKeyBalanceLowNotifyRechargeURL])
-	require.Equal(t, "false", repo.updates[SettingKeyAccountQuotaNotifyEnabled])
-	require.Equal(t, "[]", repo.updates[SettingKeyAccountQuotaNotifyEmails])
 }
 
 func TestSettingService_UpdateSettings_DefaultSubscriptions_RejectsNonSubscriptionGroup(t *testing.T) {
@@ -246,5 +221,36 @@ func TestSettingService_UpdateSettings_TablePreferences(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, "1000", repo.updates[SettingKeyTableDefaultPageSize])
-	require.Equal(t, "[20,100,1000]", repo.updates[SettingKeyTablePageSizeOptions])
+	require.Equal(t, "[20,100]", repo.updates[SettingKeyTablePageSizeOptions])
+}
+
+func TestSettingService_UpdateSettings_PaymentVisibleMethodsAndAdvancedScheduler(t *testing.T) {
+	repo := &settingUpdateRepoStub{}
+	svc := NewSettingService(repo, &config.Config{})
+
+	err := svc.UpdateSettings(context.Background(), &SystemSettings{
+		PaymentVisibleMethodAlipaySource:  "alipay",
+		PaymentVisibleMethodWxpaySource:   "easypay",
+		PaymentVisibleMethodAlipayEnabled: true,
+		PaymentVisibleMethodWxpayEnabled:  false,
+		OpenAIAdvancedSchedulerEnabled:    true,
+	})
+	require.NoError(t, err)
+	require.Equal(t, VisibleMethodSourceOfficialAlipay, repo.updates[SettingPaymentVisibleMethodAlipaySource])
+	require.Equal(t, VisibleMethodSourceEasyPayWechat, repo.updates[SettingPaymentVisibleMethodWxpaySource])
+	require.Equal(t, "true", repo.updates[SettingPaymentVisibleMethodAlipayEnabled])
+	require.Equal(t, "false", repo.updates[SettingPaymentVisibleMethodWxpayEnabled])
+	require.Equal(t, "true", repo.updates[openAIAdvancedSchedulerSettingKey])
+}
+
+func TestSettingService_UpdateSettings_RejectsInvalidPaymentVisibleMethodSource(t *testing.T) {
+	repo := &settingUpdateRepoStub{}
+	svc := NewSettingService(repo, &config.Config{})
+
+	err := svc.UpdateSettings(context.Background(), &SystemSettings{
+		PaymentVisibleMethodAlipaySource: "not-a-provider",
+	})
+	require.Error(t, err)
+	require.Equal(t, "INVALID_PAYMENT_VISIBLE_METHOD_SOURCE", infraerrors.Reason(err))
+	require.Nil(t, repo.updates)
 }

@@ -165,18 +165,6 @@ func (f PaymentOrderFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PaymentOrderMutation", m)
 }
 
-// The PaymentPlanFunc type is an adapter to allow the use of ordinary
-// function as PaymentPlan mutator.
-type PaymentPlanFunc func(context.Context, *ent.PaymentPlanMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f PaymentPlanFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.PaymentPlanMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PaymentPlanMutation", m)
-}
-
 // The PaymentProviderInstanceFunc type is an adapter to allow the use of ordinary
 // function as PaymentProviderInstance mutator.
 type PaymentProviderInstanceFunc func(context.Context, *ent.PaymentProviderInstanceMutation) (ent.Value, error)
@@ -367,18 +355,6 @@ func (f UserAttributeValueFunc) Mutate(ctx context.Context, m ent.Mutation) (ent
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserAttributeValueMutation", m)
-}
-
-// The UserReferralFunc type is an adapter to allow the use of ordinary
-// function as UserReferral mutator.
-type UserReferralFunc func(context.Context, *ent.UserReferralMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f UserReferralFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.UserReferralMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserReferralMutation", m)
 }
 
 // The UserSubscriptionFunc type is an adapter to allow the use of ordinary

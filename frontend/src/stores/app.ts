@@ -6,6 +6,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Toast, ToastType, PublicSettings } from '@/types'
+import { i18n } from '@/i18n'
 import {
   checkUpdates as checkUpdatesAPI,
   type VersionInfo,
@@ -209,7 +210,10 @@ export const useAppStore = defineStore('app', () => {
     try {
       return await operation()
     } catch (error) {
-      const message = errorMessage || (error as { message?: string }).message || 'An error occurred'
+      const message =
+        errorMessage ||
+        (error as { message?: string }).message ||
+        i18n.global.t('common.unknownError')
       showError(message)
       return null
     } finally {
@@ -332,8 +336,12 @@ export const useAppStore = defineStore('app', () => {
         doc_url: docUrl.value,
         home_content: '',
         hide_ccs_import_button: false,
+<<<<<<< HEAD
         purchase_subscription_enabled: false,
         purchase_subscription_url: '',
+=======
+        payment_enabled: false,
+>>>>>>> v0.1.116
         table_default_page_size: 20,
         table_page_size_options: [10, 20, 50, 100],
         custom_menu_items: [],
@@ -345,13 +353,19 @@ export const useAppStore = defineStore('app', () => {
         wechat_oauth_mobile_enabled: false,
         oidc_oauth_enabled: false,
         oidc_oauth_provider_name: 'OIDC',
-        sora_client_enabled: false,
         backend_mode_enabled: false,
+<<<<<<< HEAD
         contact_channels: [],
         version: siteVersion.value,
         balance_low_notify_enabled: false,
         account_quota_notify_enabled: false,
         balance_low_notify_threshold: 0
+=======
+        version: siteVersion.value,
+        balance_low_notify_enabled: false,
+        account_quota_notify_enabled: false,
+        balance_low_notify_threshold: 0,
+>>>>>>> v0.1.116
       }
     }
 

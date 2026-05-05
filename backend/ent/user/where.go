@@ -90,31 +90,6 @@ func Balance(v float64) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldBalance, v))
 }
 
-// BalanceNotifyEnabled applies equality check predicate on the "balance_notify_enabled" field. It's identical to BalanceNotifyEnabledEQ.
-func BalanceNotifyEnabled(v bool) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldBalanceNotifyEnabled, v))
-}
-
-// BalanceNotifyThreshold applies equality check predicate on the "balance_notify_threshold" field. It's identical to BalanceNotifyThresholdEQ.
-func BalanceNotifyThreshold(v float64) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldBalanceNotifyThreshold, v))
-}
-
-// BalanceNotifyExtraEmails applies equality check predicate on the "balance_notify_extra_emails" field. It's identical to BalanceNotifyExtraEmailsEQ.
-func BalanceNotifyExtraEmails(v string) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldBalanceNotifyExtraEmails, v))
-}
-
-// BalanceNotifyThresholdType applies equality check predicate on the "balance_notify_threshold_type" field. It's identical to BalanceNotifyThresholdTypeEQ.
-func BalanceNotifyThresholdType(v string) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldBalanceNotifyThresholdType, v))
-}
-
-// TotalRecharged applies equality check predicate on the "total_recharged" field. It's identical to TotalRechargedEQ.
-func TotalRecharged(v float64) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldTotalRecharged, v))
-}
-
 // Concurrency applies equality check predicate on the "concurrency" field. It's identical to ConcurrencyEQ.
 func Concurrency(v int) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldConcurrency, v))
@@ -165,9 +140,34 @@ func LastActiveAt(v time.Time) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldLastActiveAt, v))
 }
 
-// ReferralCode applies equality check predicate on the "referral_code" field. It's identical to ReferralCodeEQ.
-func ReferralCode(v string) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldReferralCode, v))
+// BalanceNotifyEnabled applies equality check predicate on the "balance_notify_enabled" field. It's identical to BalanceNotifyEnabledEQ.
+func BalanceNotifyEnabled(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBalanceNotifyEnabled, v))
+}
+
+// BalanceNotifyThresholdType applies equality check predicate on the "balance_notify_threshold_type" field. It's identical to BalanceNotifyThresholdTypeEQ.
+func BalanceNotifyThresholdType(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBalanceNotifyThresholdType, v))
+}
+
+// BalanceNotifyThreshold applies equality check predicate on the "balance_notify_threshold" field. It's identical to BalanceNotifyThresholdEQ.
+func BalanceNotifyThreshold(v float64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBalanceNotifyThreshold, v))
+}
+
+// BalanceNotifyExtraEmails applies equality check predicate on the "balance_notify_extra_emails" field. It's identical to BalanceNotifyExtraEmailsEQ.
+func BalanceNotifyExtraEmails(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBalanceNotifyExtraEmails, v))
+}
+
+// TotalRecharged applies equality check predicate on the "total_recharged" field. It's identical to TotalRechargedEQ.
+func TotalRecharged(v float64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldTotalRecharged, v))
+}
+
+// RpmLimit applies equality check predicate on the "rpm_limit" field. It's identical to RpmLimitEQ.
+func RpmLimit(v int) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldRpmLimit, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
@@ -533,236 +533,6 @@ func BalanceLT(v float64) predicate.User {
 // BalanceLTE applies the LTE predicate on the "balance" field.
 func BalanceLTE(v float64) predicate.User {
 	return predicate.User(sql.FieldLTE(FieldBalance, v))
-}
-
-// BalanceNotifyEnabledEQ applies the EQ predicate on the "balance_notify_enabled" field.
-func BalanceNotifyEnabledEQ(v bool) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldBalanceNotifyEnabled, v))
-}
-
-// BalanceNotifyEnabledNEQ applies the NEQ predicate on the "balance_notify_enabled" field.
-func BalanceNotifyEnabledNEQ(v bool) predicate.User {
-	return predicate.User(sql.FieldNEQ(FieldBalanceNotifyEnabled, v))
-}
-
-// BalanceNotifyThresholdEQ applies the EQ predicate on the "balance_notify_threshold" field.
-func BalanceNotifyThresholdEQ(v float64) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldBalanceNotifyThreshold, v))
-}
-
-// BalanceNotifyThresholdNEQ applies the NEQ predicate on the "balance_notify_threshold" field.
-func BalanceNotifyThresholdNEQ(v float64) predicate.User {
-	return predicate.User(sql.FieldNEQ(FieldBalanceNotifyThreshold, v))
-}
-
-// BalanceNotifyThresholdIn applies the In predicate on the "balance_notify_threshold" field.
-func BalanceNotifyThresholdIn(vs ...float64) predicate.User {
-	return predicate.User(sql.FieldIn(FieldBalanceNotifyThreshold, vs...))
-}
-
-// BalanceNotifyThresholdNotIn applies the NotIn predicate on the "balance_notify_threshold" field.
-func BalanceNotifyThresholdNotIn(vs ...float64) predicate.User {
-	return predicate.User(sql.FieldNotIn(FieldBalanceNotifyThreshold, vs...))
-}
-
-// BalanceNotifyThresholdGT applies the GT predicate on the "balance_notify_threshold" field.
-func BalanceNotifyThresholdGT(v float64) predicate.User {
-	return predicate.User(sql.FieldGT(FieldBalanceNotifyThreshold, v))
-}
-
-// BalanceNotifyThresholdGTE applies the GTE predicate on the "balance_notify_threshold" field.
-func BalanceNotifyThresholdGTE(v float64) predicate.User {
-	return predicate.User(sql.FieldGTE(FieldBalanceNotifyThreshold, v))
-}
-
-// BalanceNotifyThresholdLT applies the LT predicate on the "balance_notify_threshold" field.
-func BalanceNotifyThresholdLT(v float64) predicate.User {
-	return predicate.User(sql.FieldLT(FieldBalanceNotifyThreshold, v))
-}
-
-// BalanceNotifyThresholdLTE applies the LTE predicate on the "balance_notify_threshold" field.
-func BalanceNotifyThresholdLTE(v float64) predicate.User {
-	return predicate.User(sql.FieldLTE(FieldBalanceNotifyThreshold, v))
-}
-
-// BalanceNotifyThresholdIsNil applies the IsNil predicate on the "balance_notify_threshold" field.
-func BalanceNotifyThresholdIsNil() predicate.User {
-	return predicate.User(sql.FieldIsNull(FieldBalanceNotifyThreshold))
-}
-
-// BalanceNotifyThresholdNotNil applies the NotNil predicate on the "balance_notify_threshold" field.
-func BalanceNotifyThresholdNotNil() predicate.User {
-	return predicate.User(sql.FieldNotNull(FieldBalanceNotifyThreshold))
-}
-
-// BalanceNotifyExtraEmailsEQ applies the EQ predicate on the "balance_notify_extra_emails" field.
-func BalanceNotifyExtraEmailsEQ(v string) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldBalanceNotifyExtraEmails, v))
-}
-
-// BalanceNotifyExtraEmailsNEQ applies the NEQ predicate on the "balance_notify_extra_emails" field.
-func BalanceNotifyExtraEmailsNEQ(v string) predicate.User {
-	return predicate.User(sql.FieldNEQ(FieldBalanceNotifyExtraEmails, v))
-}
-
-// BalanceNotifyExtraEmailsIn applies the In predicate on the "balance_notify_extra_emails" field.
-func BalanceNotifyExtraEmailsIn(vs ...string) predicate.User {
-	return predicate.User(sql.FieldIn(FieldBalanceNotifyExtraEmails, vs...))
-}
-
-// BalanceNotifyExtraEmailsNotIn applies the NotIn predicate on the "balance_notify_extra_emails" field.
-func BalanceNotifyExtraEmailsNotIn(vs ...string) predicate.User {
-	return predicate.User(sql.FieldNotIn(FieldBalanceNotifyExtraEmails, vs...))
-}
-
-// BalanceNotifyExtraEmailsGT applies the GT predicate on the "balance_notify_extra_emails" field.
-func BalanceNotifyExtraEmailsGT(v string) predicate.User {
-	return predicate.User(sql.FieldGT(FieldBalanceNotifyExtraEmails, v))
-}
-
-// BalanceNotifyExtraEmailsGTE applies the GTE predicate on the "balance_notify_extra_emails" field.
-func BalanceNotifyExtraEmailsGTE(v string) predicate.User {
-	return predicate.User(sql.FieldGTE(FieldBalanceNotifyExtraEmails, v))
-}
-
-// BalanceNotifyExtraEmailsLT applies the LT predicate on the "balance_notify_extra_emails" field.
-func BalanceNotifyExtraEmailsLT(v string) predicate.User {
-	return predicate.User(sql.FieldLT(FieldBalanceNotifyExtraEmails, v))
-}
-
-// BalanceNotifyExtraEmailsLTE applies the LTE predicate on the "balance_notify_extra_emails" field.
-func BalanceNotifyExtraEmailsLTE(v string) predicate.User {
-	return predicate.User(sql.FieldLTE(FieldBalanceNotifyExtraEmails, v))
-}
-
-// BalanceNotifyExtraEmailsContains applies the Contains predicate on the "balance_notify_extra_emails" field.
-func BalanceNotifyExtraEmailsContains(v string) predicate.User {
-	return predicate.User(sql.FieldContains(FieldBalanceNotifyExtraEmails, v))
-}
-
-// BalanceNotifyExtraEmailsHasPrefix applies the HasPrefix predicate on the "balance_notify_extra_emails" field.
-func BalanceNotifyExtraEmailsHasPrefix(v string) predicate.User {
-	return predicate.User(sql.FieldHasPrefix(FieldBalanceNotifyExtraEmails, v))
-}
-
-// BalanceNotifyExtraEmailsHasSuffix applies the HasSuffix predicate on the "balance_notify_extra_emails" field.
-func BalanceNotifyExtraEmailsHasSuffix(v string) predicate.User {
-	return predicate.User(sql.FieldHasSuffix(FieldBalanceNotifyExtraEmails, v))
-}
-
-// BalanceNotifyExtraEmailsEqualFold applies the EqualFold predicate on the "balance_notify_extra_emails" field.
-func BalanceNotifyExtraEmailsEqualFold(v string) predicate.User {
-	return predicate.User(sql.FieldEqualFold(FieldBalanceNotifyExtraEmails, v))
-}
-
-// BalanceNotifyExtraEmailsContainsFold applies the ContainsFold predicate on the "balance_notify_extra_emails" field.
-func BalanceNotifyExtraEmailsContainsFold(v string) predicate.User {
-	return predicate.User(sql.FieldContainsFold(FieldBalanceNotifyExtraEmails, v))
-}
-
-// BalanceNotifyThresholdTypeEQ applies the EQ predicate on the "balance_notify_threshold_type" field.
-func BalanceNotifyThresholdTypeEQ(v string) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldBalanceNotifyThresholdType, v))
-}
-
-// BalanceNotifyThresholdTypeNEQ applies the NEQ predicate on the "balance_notify_threshold_type" field.
-func BalanceNotifyThresholdTypeNEQ(v string) predicate.User {
-	return predicate.User(sql.FieldNEQ(FieldBalanceNotifyThresholdType, v))
-}
-
-// BalanceNotifyThresholdTypeIn applies the In predicate on the "balance_notify_threshold_type" field.
-func BalanceNotifyThresholdTypeIn(vs ...string) predicate.User {
-	return predicate.User(sql.FieldIn(FieldBalanceNotifyThresholdType, vs...))
-}
-
-// BalanceNotifyThresholdTypeNotIn applies the NotIn predicate on the "balance_notify_threshold_type" field.
-func BalanceNotifyThresholdTypeNotIn(vs ...string) predicate.User {
-	return predicate.User(sql.FieldNotIn(FieldBalanceNotifyThresholdType, vs...))
-}
-
-// BalanceNotifyThresholdTypeGT applies the GT predicate on the "balance_notify_threshold_type" field.
-func BalanceNotifyThresholdTypeGT(v string) predicate.User {
-	return predicate.User(sql.FieldGT(FieldBalanceNotifyThresholdType, v))
-}
-
-// BalanceNotifyThresholdTypeGTE applies the GTE predicate on the "balance_notify_threshold_type" field.
-func BalanceNotifyThresholdTypeGTE(v string) predicate.User {
-	return predicate.User(sql.FieldGTE(FieldBalanceNotifyThresholdType, v))
-}
-
-// BalanceNotifyThresholdTypeLT applies the LT predicate on the "balance_notify_threshold_type" field.
-func BalanceNotifyThresholdTypeLT(v string) predicate.User {
-	return predicate.User(sql.FieldLT(FieldBalanceNotifyThresholdType, v))
-}
-
-// BalanceNotifyThresholdTypeLTE applies the LTE predicate on the "balance_notify_threshold_type" field.
-func BalanceNotifyThresholdTypeLTE(v string) predicate.User {
-	return predicate.User(sql.FieldLTE(FieldBalanceNotifyThresholdType, v))
-}
-
-// BalanceNotifyThresholdTypeContains applies the Contains predicate on the "balance_notify_threshold_type" field.
-func BalanceNotifyThresholdTypeContains(v string) predicate.User {
-	return predicate.User(sql.FieldContains(FieldBalanceNotifyThresholdType, v))
-}
-
-// BalanceNotifyThresholdTypeHasPrefix applies the HasPrefix predicate on the "balance_notify_threshold_type" field.
-func BalanceNotifyThresholdTypeHasPrefix(v string) predicate.User {
-	return predicate.User(sql.FieldHasPrefix(FieldBalanceNotifyThresholdType, v))
-}
-
-// BalanceNotifyThresholdTypeHasSuffix applies the HasSuffix predicate on the "balance_notify_threshold_type" field.
-func BalanceNotifyThresholdTypeHasSuffix(v string) predicate.User {
-	return predicate.User(sql.FieldHasSuffix(FieldBalanceNotifyThresholdType, v))
-}
-
-// BalanceNotifyThresholdTypeEqualFold applies the EqualFold predicate on the "balance_notify_threshold_type" field.
-func BalanceNotifyThresholdTypeEqualFold(v string) predicate.User {
-	return predicate.User(sql.FieldEqualFold(FieldBalanceNotifyThresholdType, v))
-}
-
-// BalanceNotifyThresholdTypeContainsFold applies the ContainsFold predicate on the "balance_notify_threshold_type" field.
-func BalanceNotifyThresholdTypeContainsFold(v string) predicate.User {
-	return predicate.User(sql.FieldContainsFold(FieldBalanceNotifyThresholdType, v))
-}
-
-// TotalRechargedEQ applies the EQ predicate on the "total_recharged" field.
-func TotalRechargedEQ(v float64) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldTotalRecharged, v))
-}
-
-// TotalRechargedNEQ applies the NEQ predicate on the "total_recharged" field.
-func TotalRechargedNEQ(v float64) predicate.User {
-	return predicate.User(sql.FieldNEQ(FieldTotalRecharged, v))
-}
-
-// TotalRechargedIn applies the In predicate on the "total_recharged" field.
-func TotalRechargedIn(vs ...float64) predicate.User {
-	return predicate.User(sql.FieldIn(FieldTotalRecharged, vs...))
-}
-
-// TotalRechargedNotIn applies the NotIn predicate on the "total_recharged" field.
-func TotalRechargedNotIn(vs ...float64) predicate.User {
-	return predicate.User(sql.FieldNotIn(FieldTotalRecharged, vs...))
-}
-
-// TotalRechargedGT applies the GT predicate on the "total_recharged" field.
-func TotalRechargedGT(v float64) predicate.User {
-	return predicate.User(sql.FieldGT(FieldTotalRecharged, v))
-}
-
-// TotalRechargedGTE applies the GTE predicate on the "total_recharged" field.
-func TotalRechargedGTE(v float64) predicate.User {
-	return predicate.User(sql.FieldGTE(FieldTotalRecharged, v))
-}
-
-// TotalRechargedLT applies the LT predicate on the "total_recharged" field.
-func TotalRechargedLT(v float64) predicate.User {
-	return predicate.User(sql.FieldLT(FieldTotalRecharged, v))
-}
-
-// TotalRechargedLTE applies the LTE predicate on the "total_recharged" field.
-func TotalRechargedLTE(v float64) predicate.User {
-	return predicate.User(sql.FieldLTE(FieldTotalRecharged, v))
 }
 
 // ConcurrencyEQ applies the EQ predicate on the "concurrency" field.
@@ -1300,79 +1070,274 @@ func LastActiveAtNotNil() predicate.User {
 	return predicate.User(sql.FieldNotNull(FieldLastActiveAt))
 }
 
-// ReferralCodeEQ applies the EQ predicate on the "referral_code" field.
-func ReferralCodeEQ(v string) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldReferralCode, v))
+// BalanceNotifyEnabledEQ applies the EQ predicate on the "balance_notify_enabled" field.
+func BalanceNotifyEnabledEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBalanceNotifyEnabled, v))
 }
 
-// ReferralCodeNEQ applies the NEQ predicate on the "referral_code" field.
-func ReferralCodeNEQ(v string) predicate.User {
-	return predicate.User(sql.FieldNEQ(FieldReferralCode, v))
+// BalanceNotifyEnabledNEQ applies the NEQ predicate on the "balance_notify_enabled" field.
+func BalanceNotifyEnabledNEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldBalanceNotifyEnabled, v))
 }
 
-// ReferralCodeIn applies the In predicate on the "referral_code" field.
-func ReferralCodeIn(vs ...string) predicate.User {
-	return predicate.User(sql.FieldIn(FieldReferralCode, vs...))
+// BalanceNotifyThresholdTypeEQ applies the EQ predicate on the "balance_notify_threshold_type" field.
+func BalanceNotifyThresholdTypeEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBalanceNotifyThresholdType, v))
 }
 
-// ReferralCodeNotIn applies the NotIn predicate on the "referral_code" field.
-func ReferralCodeNotIn(vs ...string) predicate.User {
-	return predicate.User(sql.FieldNotIn(FieldReferralCode, vs...))
+// BalanceNotifyThresholdTypeNEQ applies the NEQ predicate on the "balance_notify_threshold_type" field.
+func BalanceNotifyThresholdTypeNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldBalanceNotifyThresholdType, v))
 }
 
-// ReferralCodeGT applies the GT predicate on the "referral_code" field.
-func ReferralCodeGT(v string) predicate.User {
-	return predicate.User(sql.FieldGT(FieldReferralCode, v))
+// BalanceNotifyThresholdTypeIn applies the In predicate on the "balance_notify_threshold_type" field.
+func BalanceNotifyThresholdTypeIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldBalanceNotifyThresholdType, vs...))
 }
 
-// ReferralCodeGTE applies the GTE predicate on the "referral_code" field.
-func ReferralCodeGTE(v string) predicate.User {
-	return predicate.User(sql.FieldGTE(FieldReferralCode, v))
+// BalanceNotifyThresholdTypeNotIn applies the NotIn predicate on the "balance_notify_threshold_type" field.
+func BalanceNotifyThresholdTypeNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldBalanceNotifyThresholdType, vs...))
 }
 
-// ReferralCodeLT applies the LT predicate on the "referral_code" field.
-func ReferralCodeLT(v string) predicate.User {
-	return predicate.User(sql.FieldLT(FieldReferralCode, v))
+// BalanceNotifyThresholdTypeGT applies the GT predicate on the "balance_notify_threshold_type" field.
+func BalanceNotifyThresholdTypeGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldBalanceNotifyThresholdType, v))
 }
 
-// ReferralCodeLTE applies the LTE predicate on the "referral_code" field.
-func ReferralCodeLTE(v string) predicate.User {
-	return predicate.User(sql.FieldLTE(FieldReferralCode, v))
+// BalanceNotifyThresholdTypeGTE applies the GTE predicate on the "balance_notify_threshold_type" field.
+func BalanceNotifyThresholdTypeGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldBalanceNotifyThresholdType, v))
 }
 
-// ReferralCodeContains applies the Contains predicate on the "referral_code" field.
-func ReferralCodeContains(v string) predicate.User {
-	return predicate.User(sql.FieldContains(FieldReferralCode, v))
+// BalanceNotifyThresholdTypeLT applies the LT predicate on the "balance_notify_threshold_type" field.
+func BalanceNotifyThresholdTypeLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldBalanceNotifyThresholdType, v))
 }
 
-// ReferralCodeHasPrefix applies the HasPrefix predicate on the "referral_code" field.
-func ReferralCodeHasPrefix(v string) predicate.User {
-	return predicate.User(sql.FieldHasPrefix(FieldReferralCode, v))
+// BalanceNotifyThresholdTypeLTE applies the LTE predicate on the "balance_notify_threshold_type" field.
+func BalanceNotifyThresholdTypeLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldBalanceNotifyThresholdType, v))
 }
 
-// ReferralCodeHasSuffix applies the HasSuffix predicate on the "referral_code" field.
-func ReferralCodeHasSuffix(v string) predicate.User {
-	return predicate.User(sql.FieldHasSuffix(FieldReferralCode, v))
+// BalanceNotifyThresholdTypeContains applies the Contains predicate on the "balance_notify_threshold_type" field.
+func BalanceNotifyThresholdTypeContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldBalanceNotifyThresholdType, v))
 }
 
-// ReferralCodeIsNil applies the IsNil predicate on the "referral_code" field.
-func ReferralCodeIsNil() predicate.User {
-	return predicate.User(sql.FieldIsNull(FieldReferralCode))
+// BalanceNotifyThresholdTypeHasPrefix applies the HasPrefix predicate on the "balance_notify_threshold_type" field.
+func BalanceNotifyThresholdTypeHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldBalanceNotifyThresholdType, v))
 }
 
-// ReferralCodeNotNil applies the NotNil predicate on the "referral_code" field.
-func ReferralCodeNotNil() predicate.User {
-	return predicate.User(sql.FieldNotNull(FieldReferralCode))
+// BalanceNotifyThresholdTypeHasSuffix applies the HasSuffix predicate on the "balance_notify_threshold_type" field.
+func BalanceNotifyThresholdTypeHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldBalanceNotifyThresholdType, v))
 }
 
-// ReferralCodeEqualFold applies the EqualFold predicate on the "referral_code" field.
-func ReferralCodeEqualFold(v string) predicate.User {
-	return predicate.User(sql.FieldEqualFold(FieldReferralCode, v))
+// BalanceNotifyThresholdTypeEqualFold applies the EqualFold predicate on the "balance_notify_threshold_type" field.
+func BalanceNotifyThresholdTypeEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldBalanceNotifyThresholdType, v))
 }
 
-// ReferralCodeContainsFold applies the ContainsFold predicate on the "referral_code" field.
-func ReferralCodeContainsFold(v string) predicate.User {
-	return predicate.User(sql.FieldContainsFold(FieldReferralCode, v))
+// BalanceNotifyThresholdTypeContainsFold applies the ContainsFold predicate on the "balance_notify_threshold_type" field.
+func BalanceNotifyThresholdTypeContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldBalanceNotifyThresholdType, v))
+}
+
+// BalanceNotifyThresholdEQ applies the EQ predicate on the "balance_notify_threshold" field.
+func BalanceNotifyThresholdEQ(v float64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBalanceNotifyThreshold, v))
+}
+
+// BalanceNotifyThresholdNEQ applies the NEQ predicate on the "balance_notify_threshold" field.
+func BalanceNotifyThresholdNEQ(v float64) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldBalanceNotifyThreshold, v))
+}
+
+// BalanceNotifyThresholdIn applies the In predicate on the "balance_notify_threshold" field.
+func BalanceNotifyThresholdIn(vs ...float64) predicate.User {
+	return predicate.User(sql.FieldIn(FieldBalanceNotifyThreshold, vs...))
+}
+
+// BalanceNotifyThresholdNotIn applies the NotIn predicate on the "balance_notify_threshold" field.
+func BalanceNotifyThresholdNotIn(vs ...float64) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldBalanceNotifyThreshold, vs...))
+}
+
+// BalanceNotifyThresholdGT applies the GT predicate on the "balance_notify_threshold" field.
+func BalanceNotifyThresholdGT(v float64) predicate.User {
+	return predicate.User(sql.FieldGT(FieldBalanceNotifyThreshold, v))
+}
+
+// BalanceNotifyThresholdGTE applies the GTE predicate on the "balance_notify_threshold" field.
+func BalanceNotifyThresholdGTE(v float64) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldBalanceNotifyThreshold, v))
+}
+
+// BalanceNotifyThresholdLT applies the LT predicate on the "balance_notify_threshold" field.
+func BalanceNotifyThresholdLT(v float64) predicate.User {
+	return predicate.User(sql.FieldLT(FieldBalanceNotifyThreshold, v))
+}
+
+// BalanceNotifyThresholdLTE applies the LTE predicate on the "balance_notify_threshold" field.
+func BalanceNotifyThresholdLTE(v float64) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldBalanceNotifyThreshold, v))
+}
+
+// BalanceNotifyThresholdIsNil applies the IsNil predicate on the "balance_notify_threshold" field.
+func BalanceNotifyThresholdIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldBalanceNotifyThreshold))
+}
+
+// BalanceNotifyThresholdNotNil applies the NotNil predicate on the "balance_notify_threshold" field.
+func BalanceNotifyThresholdNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldBalanceNotifyThreshold))
+}
+
+// BalanceNotifyExtraEmailsEQ applies the EQ predicate on the "balance_notify_extra_emails" field.
+func BalanceNotifyExtraEmailsEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBalanceNotifyExtraEmails, v))
+}
+
+// BalanceNotifyExtraEmailsNEQ applies the NEQ predicate on the "balance_notify_extra_emails" field.
+func BalanceNotifyExtraEmailsNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldBalanceNotifyExtraEmails, v))
+}
+
+// BalanceNotifyExtraEmailsIn applies the In predicate on the "balance_notify_extra_emails" field.
+func BalanceNotifyExtraEmailsIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldBalanceNotifyExtraEmails, vs...))
+}
+
+// BalanceNotifyExtraEmailsNotIn applies the NotIn predicate on the "balance_notify_extra_emails" field.
+func BalanceNotifyExtraEmailsNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldBalanceNotifyExtraEmails, vs...))
+}
+
+// BalanceNotifyExtraEmailsGT applies the GT predicate on the "balance_notify_extra_emails" field.
+func BalanceNotifyExtraEmailsGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldBalanceNotifyExtraEmails, v))
+}
+
+// BalanceNotifyExtraEmailsGTE applies the GTE predicate on the "balance_notify_extra_emails" field.
+func BalanceNotifyExtraEmailsGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldBalanceNotifyExtraEmails, v))
+}
+
+// BalanceNotifyExtraEmailsLT applies the LT predicate on the "balance_notify_extra_emails" field.
+func BalanceNotifyExtraEmailsLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldBalanceNotifyExtraEmails, v))
+}
+
+// BalanceNotifyExtraEmailsLTE applies the LTE predicate on the "balance_notify_extra_emails" field.
+func BalanceNotifyExtraEmailsLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldBalanceNotifyExtraEmails, v))
+}
+
+// BalanceNotifyExtraEmailsContains applies the Contains predicate on the "balance_notify_extra_emails" field.
+func BalanceNotifyExtraEmailsContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldBalanceNotifyExtraEmails, v))
+}
+
+// BalanceNotifyExtraEmailsHasPrefix applies the HasPrefix predicate on the "balance_notify_extra_emails" field.
+func BalanceNotifyExtraEmailsHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldBalanceNotifyExtraEmails, v))
+}
+
+// BalanceNotifyExtraEmailsHasSuffix applies the HasSuffix predicate on the "balance_notify_extra_emails" field.
+func BalanceNotifyExtraEmailsHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldBalanceNotifyExtraEmails, v))
+}
+
+// BalanceNotifyExtraEmailsEqualFold applies the EqualFold predicate on the "balance_notify_extra_emails" field.
+func BalanceNotifyExtraEmailsEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldBalanceNotifyExtraEmails, v))
+}
+
+// BalanceNotifyExtraEmailsContainsFold applies the ContainsFold predicate on the "balance_notify_extra_emails" field.
+func BalanceNotifyExtraEmailsContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldBalanceNotifyExtraEmails, v))
+}
+
+// TotalRechargedEQ applies the EQ predicate on the "total_recharged" field.
+func TotalRechargedEQ(v float64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldTotalRecharged, v))
+}
+
+// TotalRechargedNEQ applies the NEQ predicate on the "total_recharged" field.
+func TotalRechargedNEQ(v float64) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldTotalRecharged, v))
+}
+
+// TotalRechargedIn applies the In predicate on the "total_recharged" field.
+func TotalRechargedIn(vs ...float64) predicate.User {
+	return predicate.User(sql.FieldIn(FieldTotalRecharged, vs...))
+}
+
+// TotalRechargedNotIn applies the NotIn predicate on the "total_recharged" field.
+func TotalRechargedNotIn(vs ...float64) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldTotalRecharged, vs...))
+}
+
+// TotalRechargedGT applies the GT predicate on the "total_recharged" field.
+func TotalRechargedGT(v float64) predicate.User {
+	return predicate.User(sql.FieldGT(FieldTotalRecharged, v))
+}
+
+// TotalRechargedGTE applies the GTE predicate on the "total_recharged" field.
+func TotalRechargedGTE(v float64) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldTotalRecharged, v))
+}
+
+// TotalRechargedLT applies the LT predicate on the "total_recharged" field.
+func TotalRechargedLT(v float64) predicate.User {
+	return predicate.User(sql.FieldLT(FieldTotalRecharged, v))
+}
+
+// TotalRechargedLTE applies the LTE predicate on the "total_recharged" field.
+func TotalRechargedLTE(v float64) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldTotalRecharged, v))
+}
+
+// RpmLimitEQ applies the EQ predicate on the "rpm_limit" field.
+func RpmLimitEQ(v int) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldRpmLimit, v))
+}
+
+// RpmLimitNEQ applies the NEQ predicate on the "rpm_limit" field.
+func RpmLimitNEQ(v int) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldRpmLimit, v))
+}
+
+// RpmLimitIn applies the In predicate on the "rpm_limit" field.
+func RpmLimitIn(vs ...int) predicate.User {
+	return predicate.User(sql.FieldIn(FieldRpmLimit, vs...))
+}
+
+// RpmLimitNotIn applies the NotIn predicate on the "rpm_limit" field.
+func RpmLimitNotIn(vs ...int) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldRpmLimit, vs...))
+}
+
+// RpmLimitGT applies the GT predicate on the "rpm_limit" field.
+func RpmLimitGT(v int) predicate.User {
+	return predicate.User(sql.FieldGT(FieldRpmLimit, v))
+}
+
+// RpmLimitGTE applies the GTE predicate on the "rpm_limit" field.
+func RpmLimitGTE(v int) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldRpmLimit, v))
+}
+
+// RpmLimitLT applies the LT predicate on the "rpm_limit" field.
+func RpmLimitLT(v int) predicate.User {
+	return predicate.User(sql.FieldLT(FieldRpmLimit, v))
+}
+
+// RpmLimitLTE applies the LTE predicate on the "rpm_limit" field.
+func RpmLimitLTE(v int) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldRpmLimit, v))
 }
 
 // HasAPIKeys applies the HasEdge predicate on the "api_keys" edge.
@@ -1597,52 +1562,6 @@ func HasPaymentOrders() predicate.User {
 func HasPaymentOrdersWith(preds ...predicate.PaymentOrder) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := newPaymentOrdersStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasReferralsAsInviter applies the HasEdge predicate on the "referrals_as_inviter" edge.
-func HasReferralsAsInviter() predicate.User {
-	return predicate.User(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ReferralsAsInviterTable, ReferralsAsInviterColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasReferralsAsInviterWith applies the HasEdge predicate on the "referrals_as_inviter" edge with a given conditions (other predicates).
-func HasReferralsAsInviterWith(preds ...predicate.UserReferral) predicate.User {
-	return predicate.User(func(s *sql.Selector) {
-		step := newReferralsAsInviterStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasReferralsAsInvitee applies the HasEdge predicate on the "referrals_as_invitee" edge.
-func HasReferralsAsInvitee() predicate.User {
-	return predicate.User(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ReferralsAsInviteeTable, ReferralsAsInviteeColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasReferralsAsInviteeWith applies the HasEdge predicate on the "referrals_as_invitee" edge with a given conditions (other predicates).
-func HasReferralsAsInviteeWith(preds ...predicate.UserReferral) predicate.User {
-	return predicate.User(func(s *sql.Selector) {
-		step := newReferralsAsInviteeStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

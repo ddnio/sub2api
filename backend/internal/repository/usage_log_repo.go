@@ -876,6 +876,7 @@ func buildUsageLogBatchInsertQuery(keys []string, preparedByKey map[string]usage
 				model_mapping_chain,
 				billing_tier,
 				billing_mode,
+				account_stats_cost,
 				created_at
 			)
 			SELECT
@@ -923,6 +924,7 @@ func buildUsageLogBatchInsertQuery(keys []string, preparedByKey map[string]usage
 				model_mapping_chain,
 				billing_tier,
 				billing_mode,
+				account_stats_cost,
 				created_at
 			FROM input
 			ON CONFLICT (request_id, api_key_id) DO NOTHING
@@ -1292,14 +1294,14 @@ func prepareUsageLogInsert(log *service.UsageLog) usageLogInsertPrepared {
 			modelMappingChain,
 			billingTier,
 			billingMode,
-			log.AccountStatsCost,
+			log.AccountStatsCost, // account_stats_cost
 			createdAt,
 		},
 	}
 }
 
 func usageLogBatchKey(requestID string, apiKeyID int64) string {
-	return requestID + "\x1f" + strconv.FormatInt(apiKeyID, 10)
+	return requestID + "" + strconv.FormatInt(apiKeyID, 10)
 }
 
 func sendUsageLogCreateResult(ch chan usageLogCreateResult, res usageLogCreateResult) {
@@ -4169,7 +4171,6 @@ func scanUsageLog(scanner interface{ Scan(...any) error }) (*service.UsageLog, e
 		TotalCost:             totalCost,
 		ActualCost:            actualCost,
 		RateMultiplier:        rateMultiplier,
-		AccountStatsCost:      nullFloat64Ptr(accountStatsCost),
 		AccountRateMultiplier: nullFloat64Ptr(accountRateMultiplier),
 		BillingType:           int8(billingType),
 		RequestType:           service.RequestTypeFromInt16(requestTypeRaw),
@@ -4238,6 +4239,9 @@ func scanUsageLog(scanner interface{ Scan(...any) error }) (*service.UsageLog, e
 	}
 	if billingMode.Valid {
 		log.BillingMode = &billingMode.String
+	}
+	if accountStatsCost.Valid {
+		log.AccountStatsCost = &accountStatsCost.Float64
 	}
 
 	return log, nil

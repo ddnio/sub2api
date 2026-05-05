@@ -2,87 +2,105 @@ package routes
 
 import (
 	"github.com/Wei-Shaw/sub2api/internal/handler"
+	"github.com/Wei-Shaw/sub2api/internal/handler/admin"
 	"github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
 )
 
-// RegisterPaymentRoutes registers the upstream payment v2 HTTP surface.
+// RegisterPaymentRoutes registers all payment-related routes:
+// user-facing endpoints, webhook endpoints, and admin endpoints.
 func RegisterPaymentRoutes(
 	v1 *gin.RouterGroup,
-	h *handler.Handlers,
+	paymentHandler *handler.PaymentHandler,
+	webhookHandler *handler.PaymentWebhookHandler,
+	adminPaymentHandler *admin.PaymentHandler,
 	jwtAuth middleware.JWTAuthMiddleware,
 	adminAuth middleware.AdminAuthMiddleware,
 	settingService *service.SettingService,
 ) {
+	// --- User-facing payment endpoints (authenticated) ---
 	authenticated := v1.Group("/payment")
 	authenticated.Use(gin.HandlerFunc(jwtAuth))
 	authenticated.Use(middleware.BackendModeUserGuard(settingService))
 	{
-		authenticated.GET("/config", h.Payment.GetPaymentConfig)
-		authenticated.GET("/checkout-info", h.Payment.GetCheckoutInfo)
-		authenticated.GET("/plans", h.Payment.GetPlans)
-		authenticated.GET("/channels", h.Payment.GetChannels)
-		authenticated.GET("/limits", h.Payment.GetLimits)
+		authenticated.GET("/config", paymentHandler.GetPaymentConfig)
+		authenticated.GET("/checkout-info", paymentHandler.GetCheckoutInfo)
+		authenticated.GET("/plans", paymentHandler.GetPlans)
+		authenticated.GET("/channels", paymentHandler.GetChannels)
+		authenticated.GET("/limits", paymentHandler.GetLimits)
 
 		orders := authenticated.Group("/orders")
 		{
-			orders.POST("", h.Payment.CreateOrder)
-			orders.POST("/verify", h.Payment.VerifyOrder)
-			orders.GET("/my", h.Payment.GetMyOrders)
-			orders.GET("/refund-eligible-providers", h.Payment.GetRefundEligibleProviders)
-			orders.GET("/:id", h.Payment.GetOrder)
-			orders.POST("/:id/cancel", h.Payment.CancelOrder)
-			orders.POST("/:id/refund-request", h.Payment.RequestRefund)
+			orders.POST("", paymentHandler.CreateOrder)
+			orders.POST("/verify", paymentHandler.VerifyOrder)
+			orders.GET("/my", paymentHandler.GetMyOrders)
+			orders.GET("/:id", paymentHandler.GetOrder)
+			orders.POST("/:id/cancel", paymentHandler.CancelOrder)
+			orders.POST("/:id/refund-request", paymentHandler.RequestRefund)
+			orders.GET("/refund-eligible-providers", paymentHandler.GetRefundEligibleProviders)
 		}
 	}
 
+	// --- Public payment endpoints (no auth) ---
+	// Signed resume-token recovery is the preferred public lookup path.
+	// The legacy anonymous out_trade_no verify endpoint remains available as a
+	// persisted-state compatibility path for staggered upgrades.
 	public := v1.Group("/payment/public")
 	{
-		public.POST("/orders/verify", h.Payment.VerifyOrderPublic)
-		public.POST("/orders/resolve", h.Payment.ResolveOrderPublicByResumeToken)
+		public.POST("/orders/verify", paymentHandler.VerifyOrderPublic)
+		public.POST("/orders/resolve", paymentHandler.ResolveOrderPublicByResumeToken)
 	}
 
+	// --- Webhook endpoints (no auth) ---
 	webhook := v1.Group("/payment/webhook")
 	{
-		webhook.GET("/easypay", h.PaymentWebhook.EasyPayNotify)
-		webhook.POST("/easypay", h.PaymentWebhook.EasyPayNotify)
-		webhook.POST("/alipay", h.PaymentWebhook.AlipayNotify)
-		webhook.POST("/wxpay", h.PaymentWebhook.WxpayNotify)
-		webhook.POST("/stripe", h.PaymentWebhook.StripeWebhook)
+		// EasyPay sends GET callbacks with query params
+		webhook.GET("/easypay", webhookHandler.EasyPayNotify)
+		webhook.POST("/easypay", webhookHandler.EasyPayNotify)
+		webhook.POST("/alipay", webhookHandler.AlipayNotify)
+		webhook.POST("/wxpay", webhookHandler.WxpayNotify)
+		webhook.POST("/stripe", webhookHandler.StripeWebhook)
 	}
 
+	// --- Admin payment endpoints (admin auth) ---
 	adminGroup := v1.Group("/admin/payment")
 	adminGroup.Use(gin.HandlerFunc(adminAuth))
 	{
-		adminGroup.GET("/dashboard", h.Admin.Payment.GetDashboard)
-		adminGroup.GET("/config", h.Admin.Payment.GetConfig)
-		adminGroup.PUT("/config", h.Admin.Payment.UpdateConfig)
+		// Dashboard
+		adminGroup.GET("/dashboard", adminPaymentHandler.GetDashboard)
 
+		// Config
+		adminGroup.GET("/config", adminPaymentHandler.GetConfig)
+		adminGroup.PUT("/config", adminPaymentHandler.UpdateConfig)
+
+		// Orders
 		adminOrders := adminGroup.Group("/orders")
 		{
-			adminOrders.GET("", h.Admin.Payment.ListOrders)
-			adminOrders.GET("/:id", h.Admin.Payment.GetOrderDetail)
-			adminOrders.POST("/:id/cancel", h.Admin.Payment.CancelOrder)
-			adminOrders.POST("/:id/retry", h.Admin.Payment.RetryFulfillment)
-			adminOrders.POST("/:id/refund", h.Admin.Payment.ProcessRefund)
+			adminOrders.GET("", adminPaymentHandler.ListOrders)
+			adminOrders.GET("/:id", adminPaymentHandler.GetOrderDetail)
+			adminOrders.POST("/:id/cancel", adminPaymentHandler.CancelOrder)
+			adminOrders.POST("/:id/retry", adminPaymentHandler.RetryFulfillment)
+			adminOrders.POST("/:id/refund", adminPaymentHandler.ProcessRefund)
 		}
 
+		// Subscription Plans
 		plans := adminGroup.Group("/plans")
 		{
-			plans.GET("", h.Admin.Payment.ListPlans)
-			plans.POST("", h.Admin.Payment.CreatePlan)
-			plans.PUT("/:id", h.Admin.Payment.UpdatePlan)
-			plans.DELETE("/:id", h.Admin.Payment.DeletePlan)
+			plans.GET("", adminPaymentHandler.ListPlans)
+			plans.POST("", adminPaymentHandler.CreatePlan)
+			plans.PUT("/:id", adminPaymentHandler.UpdatePlan)
+			plans.DELETE("/:id", adminPaymentHandler.DeletePlan)
 		}
 
+		// Provider Instances
 		providers := adminGroup.Group("/providers")
 		{
-			providers.GET("", h.Admin.Payment.ListProviders)
-			providers.POST("", h.Admin.Payment.CreateProvider)
-			providers.PUT("/:id", h.Admin.Payment.UpdateProvider)
-			providers.DELETE("/:id", h.Admin.Payment.DeleteProvider)
+			providers.GET("", adminPaymentHandler.ListProviders)
+			providers.POST("", adminPaymentHandler.CreateProvider)
+			providers.PUT("/:id", adminPaymentHandler.UpdateProvider)
+			providers.DELETE("/:id", adminPaymentHandler.DeleteProvider)
 		}
 	}
 }

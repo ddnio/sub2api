@@ -81,7 +81,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/auth/OAuthCallbackView.vue'),
     meta: {
       requiresAuth: false,
-      title: 'OAuth Callback'
+      title: 'OAuth Callback',
+      titleKey: 'auth.oauthCallbackPageTitle'
     }
   },
   {
@@ -90,7 +91,28 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/auth/LinuxDoCallbackView.vue'),
     meta: {
       requiresAuth: false,
-      title: 'LinuxDo OAuth Callback'
+      title: 'LinuxDo OAuth Callback',
+      titleKey: 'auth.linuxdoCallbackPageTitle'
+    }
+  },
+  {
+    path: '/auth/wechat/callback',
+    name: 'WeChatOAuthCallback',
+    component: () => import('@/views/auth/WechatCallbackView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'WeChat OAuth Callback',
+      titleKey: 'auth.wechatCallbackPageTitle'
+    }
+  },
+  {
+    path: '/auth/wechat/payment/callback',
+    name: 'WeChatPaymentOAuthCallback',
+    component: () => import('@/views/auth/WechatPaymentCallbackView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'WeChat Payment Callback',
+      titleKey: 'auth.wechatPaymentCallbackPageTitle'
     }
   },
   {
@@ -99,7 +121,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/auth/OidcCallbackView.vue'),
     meta: {
       requiresAuth: false,
-      title: 'OIDC OAuth Callback'
+      title: 'OIDC OAuth Callback',
+      titleKey: 'auth.oidcCallbackPageTitle'
     }
   },
   {
@@ -273,7 +296,71 @@ const routes: RouteRecordRaw[] = [
       requiresAdmin: false,
       title: 'Purchase Subscription',
       titleKey: 'nav.buySubscription',
+<<<<<<< HEAD
       descriptionKey: 'purchase.description'
+=======
+      descriptionKey: 'purchase.description',
+      requiresPayment: true
+    }
+  },
+  {
+    path: '/orders',
+    name: 'OrderList',
+    component: () => import('@/views/user/UserOrdersView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'My Orders',
+      titleKey: 'nav.myOrders',
+      requiresPayment: true
+    }
+  },
+  {
+    path: '/payment/qrcode',
+    name: 'PaymentQRCode',
+    component: () => import('@/views/user/PaymentQRCodeView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Payment',
+      titleKey: 'payment.qr.scanToPay',
+      requiresPayment: true
+    }
+  },
+  {
+    path: '/payment/result',
+    name: 'PaymentResult',
+    component: () => import('@/views/user/PaymentResultView.vue'),
+    meta: {
+      requiresAuth: false,
+      requiresAdmin: false,
+      title: 'Payment Result',
+      titleKey: 'payment.result.success',
+      requiresPayment: false
+    }
+  },
+  {
+    path: '/payment/stripe',
+    name: 'StripePayment',
+    component: () => import('@/views/user/StripePaymentView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Stripe Payment',
+      titleKey: 'payment.stripePay',
+      requiresPayment: true
+    }
+  },
+  {
+    path: '/payment/stripe-popup',
+    name: 'StripePopup',
+    component: () => import('@/views/user/StripePopupView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Payment',
+      requiresPayment: true
+>>>>>>> v0.1.116
     }
   },
   {
@@ -539,6 +626,45 @@ const routes: RouteRecordRaw[] = [
     }
   },
 
+
+  // ==================== Payment Admin Routes ====================
+  {
+    path: '/admin/orders/dashboard',
+    name: 'AdminPaymentDashboard',
+    component: () => import('@/views/admin/orders/AdminPaymentDashboardView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Payment Dashboard',
+      titleKey: 'nav.paymentDashboard',
+      requiresPayment: true
+    }
+  },
+  {
+    path: '/admin/orders',
+    name: 'AdminOrders',
+    component: () => import('@/views/admin/orders/AdminOrdersView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Order Management',
+      titleKey: 'nav.orderManagement',
+      requiresPayment: true
+    }
+  },
+  {
+    path: '/admin/orders/plans',
+    name: 'AdminPaymentPlans',
+    component: () => import('@/views/admin/orders/AdminPaymentPlansView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Subscription Plans',
+      titleKey: 'nav.paymentPlans',
+      requiresPayment: true
+    }
+  },
+
   // ==================== 404 Not Found ====================
   {
     path: '/:pathMatch(.*)*',
@@ -575,7 +701,35 @@ let authInitialized = false
 const navigationLoading = useNavigationLoadingState()
 // 延迟初始化预加载，传入 router 实例
 let routePrefetch: ReturnType<typeof useRoutePrefetch> | null = null
+<<<<<<< HEAD
 const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result', '/payment/stripe', '/payment/stripe-popup', '/auth/wechat/callback', '/auth/wechat/payment/callback']
+=======
+const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result']
+const BACKEND_MODE_CALLBACK_PATHS = [
+  '/auth/callback',
+  '/auth/linuxdo/callback',
+  '/auth/oidc/callback',
+  '/auth/wechat/callback',
+  '/auth/wechat/payment/callback',
+]
+const BACKEND_MODE_PENDING_AUTH_PATHS = ['/register', '/email-verify']
+
+function isBackendModePublicRouteAllowed(path: string, hasPendingAuthSession: boolean): boolean {
+  if (BACKEND_MODE_ALLOWED_PATHS.some((allowedPath) => path === allowedPath || path.startsWith(allowedPath))) {
+    return true
+  }
+
+  if (BACKEND_MODE_CALLBACK_PATHS.some((callbackPath) => path === callbackPath)) {
+    return true
+  }
+
+  if (hasPendingAuthSession && BACKEND_MODE_PENDING_AUTH_PATHS.some((allowedPath) => path === allowedPath)) {
+    return true
+  }
+
+  return false
+}
+>>>>>>> v0.1.116
 
 router.beforeEach((to, _from, next) => {
   // 开始导航加载状态
@@ -628,7 +782,7 @@ router.beforeEach((to, _from, next) => {
     }
     // Backend mode: block public pages for unauthenticated users (except login, key-usage, setup)
     if (appStore.backendModeEnabled && !authStore.isAuthenticated) {
-      const isAllowed = BACKEND_MODE_ALLOWED_PATHS.some((p) => to.path === p || to.path.startsWith(p))
+      const isAllowed = isBackendModePublicRouteAllowed(to.path, authStore.hasPendingAuthSession)
       if (!isAllowed) {
         next('/login')
         return
@@ -655,6 +809,16 @@ router.beforeEach((to, _from, next) => {
     return
   }
 
+
+  // Check payment requirement (internal payment system only)
+  if (to.meta.requiresPayment) {
+    const paymentEnabled = appStore.cachedPublicSettings?.payment_enabled
+    if (!paymentEnabled) {
+      next(authStore.isAdmin ? '/admin/dashboard' : '/dashboard')
+      return
+    }
+  }
+
   // 简易模式下限制访问某些页面
   if (authStore.isSimpleMode) {
     const restrictedPaths = [
@@ -678,7 +842,7 @@ router.beforeEach((to, _from, next) => {
       next()
       return
     }
-    const isAllowed = BACKEND_MODE_ALLOWED_PATHS.some((p) => to.path === p || to.path.startsWith(p))
+    const isAllowed = isBackendModePublicRouteAllowed(to.path, authStore.hasPendingAuthSession)
     if (!isAllowed) {
       next('/login')
       return

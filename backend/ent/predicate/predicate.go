@@ -45,9 +45,6 @@ type PaymentAuditLog func(*sql.Selector)
 // PaymentOrder is the predicate function for paymentorder builders.
 type PaymentOrder func(*sql.Selector)
 
-// PaymentPlan is the predicate function for paymentplan builders.
-type PaymentPlan func(*sql.Selector)
-
 // PaymentProviderInstance is the predicate function for paymentproviderinstance builders.
 type PaymentProviderInstance func(*sql.Selector)
 
@@ -95,9 +92,6 @@ type UserAttributeDefinition func(*sql.Selector)
 
 // UserAttributeValue is the predicate function for userattributevalue builders.
 type UserAttributeValue func(*sql.Selector)
-
-// UserReferral is the predicate function for userreferral builders.
-type UserReferral func(*sql.Selector)
 
 // UserSubscription is the predicate function for usersubscription builders.
 type UserSubscription func(*sql.Selector)

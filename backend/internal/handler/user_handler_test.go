@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -83,12 +84,6 @@ func (s *userHandlerRepoStub) List(context.Context, pagination.PaginationParams)
 func (s *userHandlerRepoStub) ListWithFilters(context.Context, pagination.PaginationParams, service.UserListFilters) ([]service.User, *pagination.PaginationResult, error) {
 	return nil, nil, nil
 }
-func (s *userHandlerRepoStub) GetLatestUsedAtByUserIDs(context.Context, []int64) (map[int64]*time.Time, error) {
-	return map[int64]*time.Time{}, nil
-}
-func (s *userHandlerRepoStub) GetLatestUsedAtByUserID(context.Context, int64) (*time.Time, error) {
-	return nil, nil
-}
 func (s *userHandlerRepoStub) UpdateBalance(context.Context, int64, float64) error { return nil }
 func (s *userHandlerRepoStub) DeductBalance(context.Context, int64, float64) error { return nil }
 func (s *userHandlerRepoStub) UpdateConcurrency(context.Context, int64, int) error { return nil }
@@ -97,6 +92,18 @@ func (s *userHandlerRepoStub) RemoveGroupFromAllowedGroups(context.Context, int6
 	return 0, nil
 }
 func (s *userHandlerRepoStub) AddGroupToAllowedGroups(context.Context, int64, int64) error {
+	return nil
+}
+func (s *userHandlerRepoStub) GetLatestUsedAtByUserIDs(context.Context, []int64) (map[int64]*time.Time, error) {
+	return map[int64]*time.Time{}, nil
+}
+func (s *userHandlerRepoStub) GetLatestUsedAtByUserID(context.Context, int64) (*time.Time, error) {
+	return nil, nil
+}
+func (s *userHandlerRepoStub) UpdateUserLastActiveAt(_ context.Context, _ int64, activeAt time.Time) error {
+	if s.user != nil {
+		s.user.LastActiveAt = &activeAt
+	}
 	return nil
 }
 func (s *userHandlerRepoStub) RemoveGroupFromUserAllowedGroups(context.Context, int64, int64) error {
@@ -135,7 +142,7 @@ func TestUserHandlerUpdateProfileReturnsAvatarURL(t *testing.T) {
 			Status:   service.StatusActive,
 		},
 	}
-	handler := NewUserHandler(service.NewUserService(repo, nil, nil), nil, nil)
+	handler := NewUserHandler(service.NewUserService(repo, nil, nil, nil), nil, nil, nil)
 
 	body := []byte(`{"avatar_url":"https://cdn.example.com/avatar.png"}`)
 	recorder := httptest.NewRecorder()
@@ -193,7 +200,7 @@ func TestUserHandlerGetProfileReturnsIdentitySummaries(t *testing.T) {
 			},
 		},
 	}
-	handler := NewUserHandler(service.NewUserService(repo, nil, nil), nil, nil)
+	handler := NewUserHandler(service.NewUserService(repo, nil, nil, nil), nil, nil, nil)
 
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
@@ -246,7 +253,7 @@ func TestUserHandlerGetProfileReturnsIdentitySummaries(t *testing.T) {
 	require.Equal(t, "https://issuer.example.com", resp.Data.Identities.OIDC.ProviderKey)
 	require.False(t, resp.Data.Identities.WeChat.Bound)
 	require.True(t, resp.Data.Identities.WeChat.CanBind)
-	require.Contains(t, resp.Data.Identities.WeChat.BindStartPath, "/api/v1/auth/oauth/wechat/start")
+	require.Contains(t, resp.Data.Identities.WeChat.BindStartPath, "/api/v1/auth/oauth/wechat/bind/start")
 }
 
 func TestUserHandlerGetProfileReturnsLegacyCompatibilityFields(t *testing.T) {
@@ -263,19 +270,20 @@ func TestUserHandlerGetProfileReturnsLegacyCompatibilityFields(t *testing.T) {
 			AvatarURL:    "https://cdn.example.com/linuxdo.png",
 			AvatarSource: "remote_url",
 		},
-		identities: []service.UserAuthIdentityRecord{
-			{
-				ProviderType:    "linuxdo",
-				ProviderKey:     "linuxdo",
-				ProviderSubject: "linuxdo-subject-21",
-				VerifiedAt:      &verifiedAt,
-				Metadata: map[string]any{
-					"username": "linuxdo-handle",
+			identities: []service.UserAuthIdentityRecord{
+				{
+					ProviderType:    "linuxdo",
+					ProviderKey:     "linuxdo",
+					ProviderSubject: "linuxdo-subject-21",
+					VerifiedAt:      &verifiedAt,
+					Metadata: map[string]any{
+						"username":   "linuxdo-handle",
+						"avatar_url": "https://cdn.example.com/linuxdo.png",
+					},
 				},
 			},
-		},
-	}
-	handler := NewUserHandler(service.NewUserService(repo, nil, nil), nil, nil)
+		}
+	handler := NewUserHandler(service.NewUserService(repo, nil, nil, nil), nil, nil, nil)
 
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
@@ -329,48 +337,206 @@ func TestUserHandlerGetProfileReturnsLegacyCompatibilityFields(t *testing.T) {
 	require.Equal(t, "linuxdo", usernameSource["source"])
 }
 
-func TestUserHandlerStartIdentityBindingReturnsAuthorizeURL(t *testing.T) {
+func TestUserHandlerGetProfileDoesNotInferEditedProfileSourcesWithoutMatchingIdentityMetadata(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &userHandlerRepoStub{
+		user: &service.User{
+			ID:           22,
+			Email:        "edited-profile@example.com",
+			Username:     "custom-name",
+			Role:         service.RoleUser,
+			Status:       service.StatusActive,
+			AvatarURL:    "https://cdn.example.com/custom.png",
+			AvatarSource: "remote_url",
+		},
+		identities: []service.UserAuthIdentityRecord{
+			{
+				ProviderType:    "linuxdo",
+				ProviderKey:     "linuxdo",
+				ProviderSubject: "linuxdo-subject-22",
+				Metadata: map[string]any{
+					"username":   "linuxdo-handle",
+					"avatar_url": "https://cdn.example.com/linuxdo.png",
+				},
+			},
+		},
+	}
+	handler := NewUserHandler(service.NewUserService(repo, nil, nil, nil), nil, nil, nil)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/user/profile", nil)
+	c.Set(string(middleware2.ContextKeyUser), middleware2.AuthSubject{UserID: 22})
+
+	handler.GetProfile(c)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+
+	var resp struct {
+		Code int            `json:"code"`
+		Data map[string]any `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &resp))
+	require.Equal(t, 0, resp.Code)
+	require.NotContains(t, resp.Data, "avatar_source")
+	require.NotContains(t, resp.Data, "username_source")
+	require.NotContains(t, resp.Data, "profile_sources")
+}
+
+type userHandlerEmailCacheStub struct {
+	data *service.VerificationCodeData
+}
+
+type userHandlerRefreshTokenCacheStub struct {
+	revokedUserIDs []int64
+}
+
+func (s *userHandlerRefreshTokenCacheStub) StoreRefreshToken(context.Context, string, *service.RefreshTokenData, time.Duration) error {
+	return nil
+}
+
+func (s *userHandlerRefreshTokenCacheStub) GetRefreshToken(context.Context, string) (*service.RefreshTokenData, error) {
+	return nil, service.ErrRefreshTokenNotFound
+}
+
+func (s *userHandlerRefreshTokenCacheStub) DeleteRefreshToken(context.Context, string) error {
+	return nil
+}
+
+func (s *userHandlerRefreshTokenCacheStub) DeleteUserRefreshTokens(_ context.Context, userID int64) error {
+	s.revokedUserIDs = append(s.revokedUserIDs, userID)
+	return nil
+}
+
+func (s *userHandlerRefreshTokenCacheStub) DeleteTokenFamily(context.Context, string) error {
+	return nil
+}
+
+func (s *userHandlerRefreshTokenCacheStub) AddToUserTokenSet(context.Context, int64, string, time.Duration) error {
+	return nil
+}
+
+func (s *userHandlerRefreshTokenCacheStub) AddToFamilyTokenSet(context.Context, string, string, time.Duration) error {
+	return nil
+}
+
+func (s *userHandlerRefreshTokenCacheStub) GetUserTokenHashes(context.Context, int64) ([]string, error) {
+	return nil, nil
+}
+
+func (s *userHandlerRefreshTokenCacheStub) GetFamilyTokenHashes(context.Context, string) ([]string, error) {
+	return nil, nil
+}
+
+func (s *userHandlerRefreshTokenCacheStub) IsTokenInFamily(context.Context, string, string) (bool, error) {
+	return false, nil
+}
+
+func (s *userHandlerEmailCacheStub) GetVerificationCode(context.Context, string) (*service.VerificationCodeData, error) {
+	return s.data, nil
+}
+
+func (s *userHandlerEmailCacheStub) SetVerificationCode(context.Context, string, *service.VerificationCodeData, time.Duration) error {
+	return nil
+}
+
+func (s *userHandlerEmailCacheStub) DeleteVerificationCode(context.Context, string) error {
+	return nil
+}
+
+func (s *userHandlerEmailCacheStub) GetNotifyVerifyCode(context.Context, string) (*service.VerificationCodeData, error) {
+	return nil, nil
+}
+
+func (s *userHandlerEmailCacheStub) SetNotifyVerifyCode(context.Context, string, *service.VerificationCodeData, time.Duration) error {
+	return nil
+}
+
+func (s *userHandlerEmailCacheStub) DeleteNotifyVerifyCode(context.Context, string) error {
+	return nil
+}
+
+func (s *userHandlerEmailCacheStub) GetPasswordResetToken(context.Context, string) (*service.PasswordResetTokenData, error) {
+	return nil, nil
+}
+
+func (s *userHandlerEmailCacheStub) SetPasswordResetToken(context.Context, string, *service.PasswordResetTokenData, time.Duration) error {
+	return nil
+}
+
+func (s *userHandlerEmailCacheStub) DeletePasswordResetToken(context.Context, string) error {
+	return nil
+}
+
+func (s *userHandlerEmailCacheStub) IsPasswordResetEmailInCooldown(context.Context, string) bool {
+	return false
+}
+
+func (s *userHandlerEmailCacheStub) SetPasswordResetEmailCooldown(context.Context, string, time.Duration) error {
+	return nil
+}
+
+func (s *userHandlerEmailCacheStub) GetNotifyCodeUserRate(context.Context, int64) (int64, error) {
+	return 0, nil
+}
+
+func (s *userHandlerEmailCacheStub) IncrNotifyCodeUserRate(context.Context, int64, time.Duration) (int64, error) {
+	return 0, nil
+}
+
+func TestUserHandlerBindEmailIdentityReturnsProfileResponse(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	repo := &userHandlerRepoStub{
 		user: &service.User{
 			ID:       11,
-			Email:    "identity@example.com",
-			Username: "identity-user",
+			Email:    "legacy-user" + service.LinuxDoConnectSyntheticEmailDomain,
+			Username: "legacy-user",
 			Role:     service.RoleUser,
 			Status:   service.StatusActive,
 		},
 	}
-	handler := NewUserHandler(service.NewUserService(repo, nil, nil), nil, nil)
+	emailCache := &userHandlerEmailCacheStub{
+		data: &service.VerificationCodeData{
+			Code:      "123456",
+			CreatedAt: time.Now().UTC(),
+			ExpiresAt: time.Now().UTC().Add(10 * time.Minute),
+		},
+	}
+	cfg := &config.Config{
+		JWT: config.JWTConfig{
+			Secret:     "test-secret",
+			ExpireHour: 1,
+		},
+	}
+	emailService := service.NewEmailService(nil, emailCache)
+	authService := service.NewAuthService(nil, repo, nil, nil, cfg, nil, emailService, nil, nil, nil, nil)
+	handler := NewUserHandler(service.NewUserService(repo, nil, nil, nil), authService, nil, nil)
 
-	body := []byte(`{"provider":"wechat","redirect_to":"/settings/profile"}`)
+	body := []byte(`{"email":"new@example.com","verify_code":"123456","password":"new-password"}`)
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
-	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/user/auth-identities/bind/start", bytes.NewReader(body))
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/user/account-bindings/email", bytes.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
+	c.Params = gin.Params{{Key: "provider", Value: "email"}}
 	c.Set(string(middleware2.ContextKeyUser), middleware2.AuthSubject{UserID: 11})
 
-	handler.StartIdentityBinding(c)
+	handler.BindEmailIdentity(c)
 
 	require.Equal(t, http.StatusOK, recorder.Code)
 
 	var resp struct {
 		Code int `json:"code"`
 		Data struct {
-			Provider           string `json:"provider"`
-			AuthorizeURL       string `json:"authorize_url"`
-			Method             string `json:"method"`
-			UseBrowserRedirect bool   `json:"use_browser_redirect"`
+			Email      string `json:"email"`
+			EmailBound bool   `json:"email_bound"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &resp))
 	require.Equal(t, 0, resp.Code)
-	require.Equal(t, "wechat", resp.Data.Provider)
-	require.Equal(t, "GET", resp.Data.Method)
-	require.True(t, resp.Data.UseBrowserRedirect)
-	require.Contains(t, resp.Data.AuthorizeURL, "/api/v1/auth/oauth/wechat/start")
-	require.Contains(t, resp.Data.AuthorizeURL, "intent=bind_current_user")
-	require.Contains(t, resp.Data.AuthorizeURL, "redirect=%2Fsettings%2Fprofile")
+	require.Equal(t, "new@example.com", resp.Data.Email)
+	require.True(t, resp.Data.EmailBound)
 }
 
 func TestUserHandlerUnbindIdentityReturnsUpdatedProfile(t *testing.T) {
@@ -400,7 +566,7 @@ func TestUserHandlerUnbindIdentityReturnsUpdatedProfile(t *testing.T) {
 			},
 		},
 	}
-	handler := NewUserHandler(service.NewUserService(repo, nil, nil), nil, nil)
+	handler := NewUserHandler(service.NewUserService(repo, nil, nil, nil), nil, nil, nil)
 
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
@@ -425,4 +591,193 @@ func TestUserHandlerUnbindIdentityReturnsUpdatedProfile(t *testing.T) {
 	linuxdoBinding, ok := authBindings["linuxdo"].(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, false, linuxdoBinding["bound"])
+}
+
+func TestUserHandlerUnbindIdentityRevokesAllUserSessionsWhenAuthServiceConfigured(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &userHandlerRepoStub{
+		user: &service.User{
+			ID:           23,
+			Email:        "identity@example.com",
+			Username:     "identity-user",
+			Role:         service.RoleUser,
+			Status:       service.StatusActive,
+			TokenVersion: 4,
+		},
+		identities: []service.UserAuthIdentityRecord{
+			{
+				ProviderType:    "email",
+				ProviderKey:     "email",
+				ProviderSubject: "identity@example.com",
+			},
+			{
+				ProviderType:    "linuxdo",
+				ProviderKey:     "linuxdo",
+				ProviderSubject: "linuxdo-subject-23",
+			},
+		},
+	}
+	refreshTokenCache := &userHandlerRefreshTokenCacheStub{}
+	cfg := &config.Config{
+		JWT: config.JWTConfig{
+			Secret:     "test-secret",
+			ExpireHour: 1,
+		},
+	}
+	authService := service.NewAuthService(nil, repo, nil, refreshTokenCache, cfg, nil, nil, nil, nil, nil, nil)
+	handler := NewUserHandler(service.NewUserService(repo, nil, nil, nil), authService, nil, nil)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/v1/user/account-bindings/linuxdo", nil)
+	c.Set(string(middleware2.ContextKeyUser), middleware2.AuthSubject{UserID: 23})
+	c.Params = gin.Params{{Key: "provider", Value: "linuxdo"}}
+
+	handler.UnbindIdentity(c)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	require.Equal(t, []int64{23}, refreshTokenCache.revokedUserIDs)
+	require.Equal(t, int64(5), repo.user.TokenVersion)
+}
+
+func TestUserHandlerUnbindIdentityDoesNotRevokeSessionsWhenNothingWasUnbound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &userHandlerRepoStub{
+		user: &service.User{
+			ID:           24,
+			Email:        "identity@example.com",
+			Username:     "identity-user",
+			Role:         service.RoleUser,
+			Status:       service.StatusActive,
+			TokenVersion: 4,
+		},
+		identities: []service.UserAuthIdentityRecord{
+			{
+				ProviderType:    "email",
+				ProviderKey:     "email",
+				ProviderSubject: "identity@example.com",
+			},
+		},
+	}
+	refreshTokenCache := &userHandlerRefreshTokenCacheStub{}
+	cfg := &config.Config{
+		JWT: config.JWTConfig{
+			Secret:     "test-secret",
+			ExpireHour: 1,
+		},
+	}
+	authService := service.NewAuthService(nil, repo, nil, refreshTokenCache, cfg, nil, nil, nil, nil, nil, nil)
+	handler := NewUserHandler(service.NewUserService(repo, nil, nil, nil), authService, nil, nil)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/v1/user/account-bindings/linuxdo", nil)
+	c.Set(string(middleware2.ContextKeyUser), middleware2.AuthSubject{UserID: 24})
+	c.Params = gin.Params{{Key: "provider", Value: "linuxdo"}}
+
+	handler.UnbindIdentity(c)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	require.Empty(t, repo.unbound)
+	require.Empty(t, refreshTokenCache.revokedUserIDs)
+	require.Equal(t, int64(4), repo.user.TokenVersion)
+}
+
+func TestUserHandlerBindEmailIdentityRejectsWrongCurrentPasswordForBoundEmail(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	user := &service.User{
+		ID:       11,
+		Email:    "current@example.com",
+		Username: "bound-user",
+		Role:     service.RoleUser,
+		Status:   service.StatusActive,
+	}
+	require.NoError(t, user.SetPassword("current-password"))
+
+	repo := &userHandlerRepoStub{user: user}
+	emailCache := &userHandlerEmailCacheStub{
+		data: &service.VerificationCodeData{
+			Code:      "123456",
+			CreatedAt: time.Now().UTC(),
+			ExpiresAt: time.Now().UTC().Add(10 * time.Minute),
+		},
+	}
+	cfg := &config.Config{
+		JWT: config.JWTConfig{
+			Secret:     "test-secret",
+			ExpireHour: 1,
+		},
+	}
+	emailService := service.NewEmailService(nil, emailCache)
+	authService := service.NewAuthService(nil, repo, nil, nil, cfg, nil, emailService, nil, nil, nil, nil)
+	handler := NewUserHandler(service.NewUserService(repo, nil, nil, nil), authService, nil, nil)
+
+	body := []byte(`{"email":"new@example.com","verify_code":"123456","password":"wrong-password"}`)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/user/account-bindings/email", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set(string(middleware2.ContextKeyUser), middleware2.AuthSubject{UserID: 11})
+
+	handler.BindEmailIdentity(c)
+
+	require.Equal(t, http.StatusBadRequest, recorder.Code)
+
+	var resp struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+		Reason  string `json:"reason"`
+	}
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &resp))
+	require.Equal(t, http.StatusBadRequest, resp.Code)
+	require.Equal(t, "PASSWORD_INCORRECT", resp.Reason)
+	require.Equal(t, "current password is incorrect", resp.Message)
+	require.Equal(t, "current@example.com", repo.user.Email)
+}
+
+func TestUserHandlerStartIdentityBindingReturnsAuthorizeURL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &userHandlerRepoStub{
+		user: &service.User{
+			ID:       11,
+			Email:    "identity@example.com",
+			Username: "identity-user",
+			Role:     service.RoleUser,
+			Status:   service.StatusActive,
+		},
+	}
+	handler := NewUserHandler(service.NewUserService(repo, nil, nil, nil), nil, nil, nil)
+
+	body := []byte(`{"provider":"wechat","redirect_to":"/settings/profile"}`)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/user/auth-identities/bind/start", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set(string(middleware2.ContextKeyUser), middleware2.AuthSubject{UserID: 11})
+
+	handler.StartIdentityBinding(c)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+
+	var resp struct {
+		Code int `json:"code"`
+		Data struct {
+			Provider           string `json:"provider"`
+			AuthorizeURL       string `json:"authorize_url"`
+			Method             string `json:"method"`
+			UseBrowserRedirect bool   `json:"use_browser_redirect"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &resp))
+	require.Equal(t, 0, resp.Code)
+	require.Equal(t, "wechat", resp.Data.Provider)
+	require.Equal(t, "GET", resp.Data.Method)
+	require.True(t, resp.Data.UseBrowserRedirect)
+	require.Contains(t, resp.Data.AuthorizeURL, "/api/v1/auth/oauth/wechat/bind/start")
+	require.Contains(t, resp.Data.AuthorizeURL, "intent=bind_current_user")
+	require.Contains(t, resp.Data.AuthorizeURL, "redirect=%2Fsettings%2Fprofile")
 }

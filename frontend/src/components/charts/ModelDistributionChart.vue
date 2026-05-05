@@ -115,6 +115,7 @@
               <th class="pb-2 text-right">{{ t('admin.dashboard.tokens') }}</th>
               <th class="pb-2 text-right">{{ t('usage.accountBilled') }}</th>
               <th class="pb-2 text-right">{{ t('admin.dashboard.actual') }}</th>
+              <th class="pb-2 text-right">{{ t('admin.dashboard.accountCost') }}</th>
               <th class="pb-2 text-right">{{ t('admin.dashboard.standard') }}</th>
             </tr>
           </thead>
@@ -145,6 +146,9 @@
                 </td>
                 <td class="py-1.5 text-right text-green-600 dark:text-green-400">
                   ${{ formatCost(model.actual_cost) }}
+                </td>
+                <td class="py-1.5 text-right text-orange-500 dark:text-orange-400">
+                  ${{ formatCost(model.account_cost) }}
                 </td>
                 <td class="py-1.5 text-right text-gray-400 dark:text-gray-500">
                   ${{ formatCost(model.cost) }}

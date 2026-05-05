@@ -5,11 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
@@ -99,6 +98,7 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		})
 	}
 
+	// Load payment config
 	var paymentCfg *service.PaymentConfig
 	if h.paymentConfigService != nil {
 		paymentCfg, _ = h.paymentConfigService.GetPaymentConfig(c.Request.Context())
@@ -115,9 +115,6 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		PasswordResetEnabled:                   settings.PasswordResetEnabled,
 		FrontendURL:                            settings.FrontendURL,
 		InvitationCodeEnabled:                  settings.InvitationCodeEnabled,
-		ReferralEnabled:                        settings.ReferralEnabled,
-		ReferralInviterAmount:                  settings.ReferralInviterAmount,
-		ReferralInviteeAmount:                  settings.ReferralInviteeAmount,
 		TotpEnabled:                            settings.TotpEnabled,
 		TotpEncryptionKeyConfigured:            h.settingService.IsTotpEncryptionKeyConfigured(),
 		SMTPHost:                               settings.SMTPHost,
@@ -188,6 +185,7 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		CustomEndpoints:                        dto.ParseCustomEndpoints(settings.CustomEndpoints),
 		DefaultConcurrency:                     settings.DefaultConcurrency,
 		DefaultBalance:                         settings.DefaultBalance,
+		DefaultUserRPMLimit:                    settings.DefaultUserRPMLimit,
 		DefaultSubscriptions:                   defaultSubscriptions,
 		EnableModelFallback:                    settings.EnableModelFallback,
 		FallbackModelAnthropic:                 settings.FallbackModelAnthropic,
@@ -252,9 +250,6 @@ type UpdateSettingsRequest struct {
 	PasswordResetEnabled             bool     `json:"password_reset_enabled"`
 	FrontendURL                      string   `json:"frontend_url"`
 	InvitationCodeEnabled            bool     `json:"invitation_code_enabled"`
-	ReferralEnabled                  bool     `json:"referral_enabled"`
-	ReferralInviterAmount            float64  `json:"referral_inviter_amount"`
-	ReferralInviteeAmount            float64  `json:"referral_invitee_amount"`
 	TotpEnabled                      bool     `json:"totp_enabled"` // TOTP 双因素认证
 
 	// 邮件服务设置
@@ -265,12 +260,6 @@ type UpdateSettingsRequest struct {
 	SMTPFrom     string `json:"smtp_from_email"`
 	SMTPFromName string `json:"smtp_from_name"`
 	SMTPUseTLS   bool   `json:"smtp_use_tls"`
-
-	BalanceLowNotifyEnabled     *bool                   `json:"balance_low_notify_enabled"`
-	BalanceLowNotifyThreshold   *float64                `json:"balance_low_notify_threshold"`
-	BalanceLowNotifyRechargeURL *string                 `json:"balance_low_notify_recharge_url"`
-	AccountQuotaNotifyEnabled   *bool                   `json:"account_quota_notify_enabled"`
-	AccountQuotaNotifyEmails    *[]dto.NotifyEmailEntry `json:"account_quota_notify_emails"`
 
 	// Cloudflare Turnstile 设置
 	TurnstileEnabled   bool   `json:"turnstile_enabled"`
@@ -316,8 +305,8 @@ type UpdateSettingsRequest struct {
 	OIDCConnectRedirectURL          string `json:"oidc_connect_redirect_url"`
 	OIDCConnectFrontendRedirectURL  string `json:"oidc_connect_frontend_redirect_url"`
 	OIDCConnectTokenAuthMethod      string `json:"oidc_connect_token_auth_method"`
-	OIDCConnectUsePKCE              bool   `json:"oidc_connect_use_pkce"`
-	OIDCConnectValidateIDToken      bool   `json:"oidc_connect_validate_id_token"`
+	OIDCConnectUsePKCE              *bool  `json:"oidc_connect_use_pkce"`
+	OIDCConnectValidateIDToken      *bool  `json:"oidc_connect_validate_id_token"`
 	OIDCConnectAllowedSigningAlgs   string `json:"oidc_connect_allowed_signing_algs"`
 	OIDCConnectClockSkewSeconds     int    `json:"oidc_connect_clock_skew_seconds"`
 	OIDCConnectRequireEmailVerified bool   `json:"oidc_connect_require_email_verified"`
@@ -344,6 +333,7 @@ type UpdateSettingsRequest struct {
 	// 默认配置
 	DefaultConcurrency                       int                               `json:"default_concurrency"`
 	DefaultBalance                           float64                           `json:"default_balance"`
+	DefaultUserRPMLimit                      int                               `json:"default_user_rpm_limit"`
 	DefaultSubscriptions                     []dto.DefaultSubscriptionSetting  `json:"default_subscriptions"`
 	AuthSourceDefaultEmailBalance            *float64                          `json:"auth_source_default_email_balance"`
 	AuthSourceDefaultEmailConcurrency        *int                              `json:"auth_source_default_email_concurrency"`
@@ -398,12 +388,23 @@ type UpdateSettingsRequest struct {
 	EnableMetadataPassthrough    *bool `json:"enable_metadata_passthrough"`
 	EnableCCHSigning             *bool `json:"enable_cch_signing"`
 
+	// Payment visible method routing
 	PaymentVisibleMethodAlipaySource  *string `json:"payment_visible_method_alipay_source"`
 	PaymentVisibleMethodWxpaySource   *string `json:"payment_visible_method_wxpay_source"`
 	PaymentVisibleMethodAlipayEnabled *bool   `json:"payment_visible_method_alipay_enabled"`
 	PaymentVisibleMethodWxpayEnabled  *bool   `json:"payment_visible_method_wxpay_enabled"`
-	OpenAIAdvancedSchedulerEnabled    *bool   `json:"openai_advanced_scheduler_enabled"`
 
+	// OpenAI account scheduling
+	OpenAIAdvancedSchedulerEnabled *bool `json:"openai_advanced_scheduler_enabled"`
+
+	// Balance low notification
+	BalanceLowNotifyEnabled     *bool                   `json:"balance_low_notify_enabled"`
+	BalanceLowNotifyThreshold   *float64                `json:"balance_low_notify_threshold"`
+	BalanceLowNotifyRechargeURL *string                 `json:"balance_low_notify_recharge_url"`
+	AccountQuotaNotifyEnabled   *bool                   `json:"account_quota_notify_enabled"`
+	AccountQuotaNotifyEmails    *[]dto.NotifyEmailEntry `json:"account_quota_notify_emails"`
+
+	// Payment configuration (integrated into settings, full replace)
 	PaymentEnabled                   *bool    `json:"payment_enabled"`
 	PaymentMinAmount                 *float64 `json:"payment_min_amount"`
 	PaymentMaxAmount                 *float64 `json:"payment_max_amount"`
@@ -420,6 +421,7 @@ type UpdateSettingsRequest struct {
 	PaymentHelpImageURL              *string  `json:"payment_help_image_url"`
 	PaymentHelpText                  *string  `json:"payment_help_text"`
 
+	// Cancel rate limit
 	PaymentCancelRateLimitEnabled *bool   `json:"payment_cancel_rate_limit_enabled"`
 	PaymentCancelRateLimitMax     *int    `json:"payment_cancel_rate_limit_max"`
 	PaymentCancelRateLimitWindow  *int    `json:"payment_cancel_rate_limit_window"`
@@ -454,18 +456,9 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 	if req.DefaultBalance < 0 {
 		req.DefaultBalance = 0
 	}
-	if req.ReferralInviterAmount < 0 {
-		req.ReferralInviterAmount = 0
-	}
-	if req.ReferralInviteeAmount < 0 {
-		req.ReferralInviteeAmount = 0
-	}
 	// 通用表格配置：兼容旧客户端未传字段时保留当前值。
 	if req.TableDefaultPageSize <= 0 {
 		req.TableDefaultPageSize = previousSettings.TableDefaultPageSize
-		if req.TableDefaultPageSize <= 0 {
-			req.TableDefaultPageSize = 20
-		}
 	}
 	if req.TablePageSizeOptions == nil {
 		req.TablePageSizeOptions = previousSettings.TablePageSizeOptions
@@ -574,6 +567,15 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		req.WeChatConnectScopes = strings.TrimSpace(req.WeChatConnectScopes)
 		req.WeChatConnectRedirectURL = strings.TrimSpace(req.WeChatConnectRedirectURL)
 		req.WeChatConnectFrontendRedirectURL = strings.TrimSpace(req.WeChatConnectFrontendRedirectURL)
+		req.WeChatConnectAppID = strings.TrimSpace(firstNonEmpty(req.WeChatConnectAppID, previousSettings.WeChatConnectAppID))
+		req.WeChatConnectRedirectURL = strings.TrimSpace(firstNonEmpty(req.WeChatConnectRedirectURL, previousSettings.WeChatConnectRedirectURL))
+		req.WeChatConnectFrontendRedirectURL = strings.TrimSpace(firstNonEmpty(req.WeChatConnectFrontendRedirectURL, previousSettings.WeChatConnectFrontendRedirectURL))
+		if req.WeChatConnectMode == "" {
+			req.WeChatConnectMode = strings.ToLower(strings.TrimSpace(previousSettings.WeChatConnectMode))
+		}
+		if req.WeChatConnectScopes == "" {
+			req.WeChatConnectScopes = strings.TrimSpace(previousSettings.WeChatConnectScopes)
+		}
 
 		if req.WeChatConnectMPEnabled && req.WeChatConnectMobileEnabled {
 			response.BadRequest(c, "WeChat Official Account and Mobile App cannot be enabled at the same time")
@@ -607,9 +609,9 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			}
 		}
 
-		req.WeChatConnectOpenAppID = strings.TrimSpace(firstNonEmpty(req.WeChatConnectOpenAppID, req.WeChatConnectAppID))
-		req.WeChatConnectMPAppID = strings.TrimSpace(firstNonEmpty(req.WeChatConnectMPAppID, req.WeChatConnectAppID))
-		req.WeChatConnectMobileAppID = strings.TrimSpace(firstNonEmpty(req.WeChatConnectMobileAppID, req.WeChatConnectAppID))
+		req.WeChatConnectOpenAppID = strings.TrimSpace(firstNonEmpty(req.WeChatConnectOpenAppID, req.WeChatConnectAppID, previousSettings.WeChatConnectOpenAppID, previousSettings.WeChatConnectAppID))
+		req.WeChatConnectMPAppID = strings.TrimSpace(firstNonEmpty(req.WeChatConnectMPAppID, req.WeChatConnectAppID, previousSettings.WeChatConnectMPAppID, previousSettings.WeChatConnectAppID))
+		req.WeChatConnectMobileAppID = strings.TrimSpace(firstNonEmpty(req.WeChatConnectMobileAppID, req.WeChatConnectAppID, previousSettings.WeChatConnectMobileAppID, previousSettings.WeChatConnectAppID))
 
 		if req.WeChatConnectOpenAppSecret == "" {
 			req.WeChatConnectOpenAppSecret = strings.TrimSpace(firstNonEmpty(previousSettings.WeChatConnectOpenAppSecret, previousSettings.WeChatConnectAppSecret, req.WeChatConnectAppSecret))
@@ -662,24 +664,31 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 				req.WeChatConnectScopes = service.DefaultWeChatConnectScopesForMode(req.WeChatConnectMode)
 			}
 		}
-		if req.WeChatConnectRedirectURL == "" {
-			response.BadRequest(c, "WeChat Redirect URL is required when enabled")
-			return
-		}
-		if err := config.ValidateAbsoluteHTTPURL(req.WeChatConnectRedirectURL); err != nil {
-			response.BadRequest(c, "WeChat Redirect URL must be an absolute http(s) URL")
-			return
-		}
-		if req.WeChatConnectFrontendRedirectURL == "" {
-			req.WeChatConnectFrontendRedirectURL = "/auth/wechat/callback"
-		}
-		if err := config.ValidateFrontendRedirectURL(req.WeChatConnectFrontendRedirectURL); err != nil {
-			response.BadRequest(c, "WeChat Frontend Redirect URL is invalid")
-			return
+		if req.WeChatConnectOpenEnabled || req.WeChatConnectMPEnabled {
+			if req.WeChatConnectRedirectURL == "" {
+				response.BadRequest(c, "WeChat Redirect URL is required when web oauth is enabled")
+				return
+			}
+			if err := config.ValidateAbsoluteHTTPURL(req.WeChatConnectRedirectURL); err != nil {
+				response.BadRequest(c, "WeChat Redirect URL must be an absolute http(s) URL")
+				return
+			}
+			if req.WeChatConnectFrontendRedirectURL == "" {
+				req.WeChatConnectFrontendRedirectURL = "/auth/wechat/callback"
+			}
+			if err := config.ValidateFrontendRedirectURL(req.WeChatConnectFrontendRedirectURL); err != nil {
+				response.BadRequest(c, "WeChat Frontend Redirect URL is invalid")
+				return
+			}
 		}
 	}
 
 	// Generic OIDC 参数验证
+	oidcUsePKCE, oidcValidateIDToken, err := h.settingService.OIDCSecurityWriteDefaults(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
 	if req.OIDCConnectEnabled {
 		req.OIDCConnectProviderName = strings.TrimSpace(req.OIDCConnectProviderName)
 		req.OIDCConnectClientID = strings.TrimSpace(req.OIDCConnectClientID)
@@ -698,10 +707,35 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		req.OIDCConnectUserInfoEmailPath = strings.TrimSpace(req.OIDCConnectUserInfoEmailPath)
 		req.OIDCConnectUserInfoIDPath = strings.TrimSpace(req.OIDCConnectUserInfoIDPath)
 		req.OIDCConnectUserInfoUsernamePath = strings.TrimSpace(req.OIDCConnectUserInfoUsernamePath)
-
-		if req.OIDCConnectProviderName == "" {
-			req.OIDCConnectProviderName = "OIDC"
+		req.OIDCConnectProviderName = strings.TrimSpace(firstNonEmpty(req.OIDCConnectProviderName, previousSettings.OIDCConnectProviderName, "OIDC"))
+		req.OIDCConnectClientID = strings.TrimSpace(firstNonEmpty(req.OIDCConnectClientID, previousSettings.OIDCConnectClientID))
+		req.OIDCConnectIssuerURL = strings.TrimSpace(firstNonEmpty(req.OIDCConnectIssuerURL, previousSettings.OIDCConnectIssuerURL))
+		req.OIDCConnectDiscoveryURL = strings.TrimSpace(firstNonEmpty(req.OIDCConnectDiscoveryURL, previousSettings.OIDCConnectDiscoveryURL))
+		req.OIDCConnectAuthorizeURL = strings.TrimSpace(firstNonEmpty(req.OIDCConnectAuthorizeURL, previousSettings.OIDCConnectAuthorizeURL))
+		req.OIDCConnectTokenURL = strings.TrimSpace(firstNonEmpty(req.OIDCConnectTokenURL, previousSettings.OIDCConnectTokenURL))
+		req.OIDCConnectUserInfoURL = strings.TrimSpace(firstNonEmpty(req.OIDCConnectUserInfoURL, previousSettings.OIDCConnectUserInfoURL))
+		req.OIDCConnectJWKSURL = strings.TrimSpace(firstNonEmpty(req.OIDCConnectJWKSURL, previousSettings.OIDCConnectJWKSURL))
+		req.OIDCConnectScopes = strings.TrimSpace(firstNonEmpty(req.OIDCConnectScopes, previousSettings.OIDCConnectScopes, "openid email profile"))
+		req.OIDCConnectRedirectURL = strings.TrimSpace(firstNonEmpty(req.OIDCConnectRedirectURL, previousSettings.OIDCConnectRedirectURL))
+		req.OIDCConnectFrontendRedirectURL = strings.TrimSpace(firstNonEmpty(req.OIDCConnectFrontendRedirectURL, previousSettings.OIDCConnectFrontendRedirectURL, "/auth/oidc/callback"))
+		req.OIDCConnectTokenAuthMethod = strings.ToLower(strings.TrimSpace(firstNonEmpty(req.OIDCConnectTokenAuthMethod, previousSettings.OIDCConnectTokenAuthMethod, "client_secret_post")))
+		req.OIDCConnectAllowedSigningAlgs = strings.TrimSpace(firstNonEmpty(req.OIDCConnectAllowedSigningAlgs, previousSettings.OIDCConnectAllowedSigningAlgs, "RS256,ES256,PS256"))
+		req.OIDCConnectUserInfoEmailPath = strings.TrimSpace(firstNonEmpty(req.OIDCConnectUserInfoEmailPath, previousSettings.OIDCConnectUserInfoEmailPath))
+		req.OIDCConnectUserInfoIDPath = strings.TrimSpace(firstNonEmpty(req.OIDCConnectUserInfoIDPath, previousSettings.OIDCConnectUserInfoIDPath))
+		req.OIDCConnectUserInfoUsernamePath = strings.TrimSpace(firstNonEmpty(req.OIDCConnectUserInfoUsernamePath, previousSettings.OIDCConnectUserInfoUsernamePath))
+		if req.OIDCConnectUsePKCE != nil {
+			oidcUsePKCE = *req.OIDCConnectUsePKCE
 		}
+		if req.OIDCConnectValidateIDToken != nil {
+			oidcValidateIDToken = *req.OIDCConnectValidateIDToken
+		}
+		if req.OIDCConnectClockSkewSeconds == 0 {
+			req.OIDCConnectClockSkewSeconds = previousSettings.OIDCConnectClockSkewSeconds
+			if req.OIDCConnectClockSkewSeconds == 0 {
+				req.OIDCConnectClockSkewSeconds = 120
+			}
+		}
+
 		if req.OIDCConnectClientID == "" {
 			response.BadRequest(c, "OIDC Client ID is required when enabled")
 			return
@@ -764,19 +798,13 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			response.BadRequest(c, "OIDC Token Auth Method must be one of client_secret_post/client_secret_basic/none")
 			return
 		}
-		if req.OIDCConnectTokenAuthMethod == "none" && !req.OIDCConnectUsePKCE {
-			response.BadRequest(c, "OIDC PKCE must be enabled when token_auth_method=none")
-			return
-		}
 		if req.OIDCConnectClockSkewSeconds < 0 || req.OIDCConnectClockSkewSeconds > 600 {
 			response.BadRequest(c, "OIDC clock skew seconds must be between 0 and 600")
 			return
 		}
-		if req.OIDCConnectValidateIDToken {
-			if req.OIDCConnectAllowedSigningAlgs == "" {
-				response.BadRequest(c, "OIDC Allowed Signing Algs is required when validate_id_token=true")
-				return
-			}
+		if oidcValidateIDToken && req.OIDCConnectAllowedSigningAlgs == "" {
+			response.BadRequest(c, "OIDC Allowed Signing Algs is required when validate_id_token=true")
+			return
 		}
 		if req.OIDCConnectJWKSURL != "" {
 			if err := config.ValidateAbsoluteHTTPURL(req.OIDCConnectJWKSURL); err != nil {
@@ -1010,9 +1038,6 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		PasswordResetEnabled:             req.PasswordResetEnabled,
 		FrontendURL:                      req.FrontendURL,
 		InvitationCodeEnabled:            req.InvitationCodeEnabled,
-		ReferralEnabled:                  req.ReferralEnabled,
-		ReferralInviterAmount:            req.ReferralInviterAmount,
-		ReferralInviteeAmount:            req.ReferralInviteeAmount,
 		TotpEnabled:                      req.TotpEnabled,
 		SMTPHost:                         req.SMTPHost,
 		SMTPPort:                         req.SMTPPort,
@@ -1058,8 +1083,8 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		OIDCConnectRedirectURL:           req.OIDCConnectRedirectURL,
 		OIDCConnectFrontendRedirectURL:   req.OIDCConnectFrontendRedirectURL,
 		OIDCConnectTokenAuthMethod:       req.OIDCConnectTokenAuthMethod,
-		OIDCConnectUsePKCE:               req.OIDCConnectUsePKCE,
-		OIDCConnectValidateIDToken:       req.OIDCConnectValidateIDToken,
+		OIDCConnectUsePKCE:               oidcUsePKCE,
+		OIDCConnectValidateIDToken:       oidcValidateIDToken,
 		OIDCConnectAllowedSigningAlgs:    req.OIDCConnectAllowedSigningAlgs,
 		OIDCConnectClockSkewSeconds:      req.OIDCConnectClockSkewSeconds,
 		OIDCConnectRequireEmailVerified:  req.OIDCConnectRequireEmailVerified,
@@ -1082,6 +1107,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		CustomEndpoints:                  customEndpointsJSON,
 		DefaultConcurrency:               req.DefaultConcurrency,
 		DefaultBalance:                   req.DefaultBalance,
+		DefaultUserRPMLimit:              req.DefaultUserRPMLimit,
 		DefaultSubscriptions:             defaultSubscriptions,
 		EnableModelFallback:              req.EnableModelFallback,
 		FallbackModelAnthropic:           req.FallbackModelAnthropic,
@@ -1234,6 +1260,8 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		return
 	}
 
+	// Update payment configuration (integrated into system settings).
+	// Skip if no payment fields were provided (prevents accidental wipe).
 	if h.paymentConfigService != nil && hasPaymentFields(req) {
 		paymentReq := service.UpdatePaymentConfigRequest{
 			Enabled:                   req.PaymentEnabled,
@@ -1261,6 +1289,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			response.ErrorFrom(c, err)
 			return
 		}
+		// Refresh in-memory provider registry so config changes take effect immediately
 		if h.paymentService != nil {
 			h.paymentService.RefreshProviders(c.Request.Context())
 		}
@@ -1286,6 +1315,8 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			ValidityDays: sub.ValidityDays,
 		})
 	}
+
+	// Reload payment config for response
 	var updatedPaymentCfg *service.PaymentConfig
 	if h.paymentConfigService != nil {
 		updatedPaymentCfg, _ = h.paymentConfigService.GetPaymentConfig(c.Request.Context())
@@ -1302,9 +1333,6 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		PasswordResetEnabled:                   updatedSettings.PasswordResetEnabled,
 		FrontendURL:                            updatedSettings.FrontendURL,
 		InvitationCodeEnabled:                  updatedSettings.InvitationCodeEnabled,
-		ReferralEnabled:                        updatedSettings.ReferralEnabled,
-		ReferralInviterAmount:                  updatedSettings.ReferralInviterAmount,
-		ReferralInviteeAmount:                  updatedSettings.ReferralInviteeAmount,
 		TotpEnabled:                            updatedSettings.TotpEnabled,
 		TotpEncryptionKeyConfigured:            h.settingService.IsTotpEncryptionKeyConfigured(),
 		SMTPHost:                               updatedSettings.SMTPHost,
@@ -1375,6 +1403,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		CustomEndpoints:                        dto.ParseCustomEndpoints(updatedSettings.CustomEndpoints),
 		DefaultConcurrency:                     updatedSettings.DefaultConcurrency,
 		DefaultBalance:                         updatedSettings.DefaultBalance,
+		DefaultUserRPMLimit:                    updatedSettings.DefaultUserRPMLimit,
 		DefaultSubscriptions:                   updatedDefaultSubscriptions,
 		EnableModelFallback:                    updatedSettings.EnableModelFallback,
 		FallbackModelAnthropic:                 updatedSettings.FallbackModelAnthropic,
@@ -1394,7 +1423,6 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		EnableFingerprintUnification:           updatedSettings.EnableFingerprintUnification,
 		EnableMetadataPassthrough:              updatedSettings.EnableMetadataPassthrough,
 		EnableCCHSigning:                       updatedSettings.EnableCCHSigning,
-		WebSearchEmulationEnabled:              updatedSettings.WebSearchEmulationEnabled,
 		PaymentVisibleMethodAlipaySource:       updatedSettings.PaymentVisibleMethodAlipaySource,
 		PaymentVisibleMethodWxpaySource:        updatedSettings.PaymentVisibleMethodWxpaySource,
 		PaymentVisibleMethodAlipayEnabled:      updatedSettings.PaymentVisibleMethodAlipayEnabled,
@@ -1429,6 +1457,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 	response.Success(c, systemSettingsResponseData(payload, updatedAuthSourceDefaults))
 }
 
+// hasPaymentFields returns true if any payment-related field was explicitly provided.
 func hasPaymentFields(req UpdateSettingsRequest) bool {
 	return req.PaymentEnabled != nil || req.PaymentMinAmount != nil ||
 		req.PaymentMaxAmount != nil || req.PaymentDailyLimit != nil ||
@@ -1454,11 +1483,11 @@ func (h *SettingHandler) auditSettingsUpdate(c *gin.Context, before *service.Sys
 
 	subject, _ := middleware.GetAuthSubjectFromContext(c)
 	role, _ := middleware.GetUserRoleFromContext(c)
-	log.Printf("AUDIT: settings updated at=%s user_id=%d role=%s changed=%v",
-		time.Now().UTC().Format(time.RFC3339),
-		subject.UserID,
-		role,
-		changed,
+	slog.Info("settings updated",
+		"audit", true,
+		"user_id", subject.UserID,
+		"role", role,
+		"changed", changed,
 	)
 }
 
@@ -1472,6 +1501,12 @@ func diffSettings(before *service.SystemSettings, after *service.SystemSettings,
 	}
 	if !equalStringSlice(before.RegistrationEmailSuffixWhitelist, after.RegistrationEmailSuffixWhitelist) {
 		changed = append(changed, "registration_email_suffix_whitelist")
+	}
+	if before.PromoCodeEnabled != after.PromoCodeEnabled {
+		changed = append(changed, "promo_code_enabled")
+	}
+	if before.InvitationCodeEnabled != after.InvitationCodeEnabled {
+		changed = append(changed, "invitation_code_enabled")
 	}
 	if before.PasswordResetEnabled != after.PasswordResetEnabled {
 		changed = append(changed, "password_reset_enabled")
@@ -1731,6 +1766,9 @@ func diffSettings(before *service.SystemSettings, after *service.SystemSettings,
 	if before.CustomMenuItems != after.CustomMenuItems {
 		changed = append(changed, "custom_menu_items")
 	}
+	if before.CustomEndpoints != after.CustomEndpoints {
+		changed = append(changed, "custom_endpoints")
+	}
 	if before.EnableFingerprintUnification != after.EnableFingerprintUnification {
 		changed = append(changed, "enable_fingerprint_unification")
 	}
@@ -1739,6 +1777,21 @@ func diffSettings(before *service.SystemSettings, after *service.SystemSettings,
 	}
 	if before.EnableCCHSigning != after.EnableCCHSigning {
 		changed = append(changed, "enable_cch_signing")
+	}
+	if before.PaymentVisibleMethodAlipaySource != after.PaymentVisibleMethodAlipaySource {
+		changed = append(changed, "payment_visible_method_alipay_source")
+	}
+	if before.PaymentVisibleMethodWxpaySource != after.PaymentVisibleMethodWxpaySource {
+		changed = append(changed, "payment_visible_method_wxpay_source")
+	}
+	if before.PaymentVisibleMethodAlipayEnabled != after.PaymentVisibleMethodAlipayEnabled {
+		changed = append(changed, "payment_visible_method_alipay_enabled")
+	}
+	if before.PaymentVisibleMethodWxpayEnabled != after.PaymentVisibleMethodWxpayEnabled {
+		changed = append(changed, "payment_visible_method_wxpay_enabled")
+	}
+	if before.OpenAIAdvancedSchedulerEnabled != after.OpenAIAdvancedSchedulerEnabled {
+		changed = append(changed, "openai_advanced_scheduler_enabled")
 	}
 	// Balance & quota notification
 	if before.BalanceLowNotifyEnabled != after.BalanceLowNotifyEnabled {
@@ -2427,75 +2480,7 @@ func (h *SettingHandler) UpdateStreamTimeoutSettings(c *gin.Context) {
 	})
 }
 
-// =========================
-// Contact Channels (悬浮联系按钮渠道配置)
-// =========================
-
-func contactChannelsToDTO(in []service.ContactChannel) []dto.ContactChannel {
-	out := make([]dto.ContactChannel, 0, len(in))
-	for _, c := range in {
-		out = append(out, dto.ContactChannel{
-			Type:        c.Type,
-			Label:       c.Label,
-			QRImage:     c.QRImage,
-			Description: c.Description,
-			ExtraInfo:   c.ExtraInfo,
-			Enabled:     c.Enabled,
-			Priority:    c.Priority,
-		})
-	}
-	return out
-}
-
-func contactChannelsFromDTO(in []dto.ContactChannel) []service.ContactChannel {
-	out := make([]service.ContactChannel, 0, len(in))
-	for _, c := range in {
-		out = append(out, service.ContactChannel{
-			Type:        c.Type,
-			Label:       c.Label,
-			QRImage:     c.QRImage,
-			Description: c.Description,
-			ExtraInfo:   c.ExtraInfo,
-			Enabled:     c.Enabled,
-			Priority:    c.Priority,
-		})
-	}
-	return out
-}
-
-// GetContactChannels 获取联系渠道完整列表（admin 视图，含 disabled）
-// GET /api/v1/admin/settings/contact-channels
-func (h *SettingHandler) GetContactChannels(c *gin.Context) {
-	channels, err := h.settingService.GetContactChannelsForAdmin(c.Request.Context())
-	if err != nil {
-		response.ErrorFrom(c, err)
-		return
-	}
-	response.Success(c, gin.H{"channels": contactChannelsToDTO(channels)})
-}
-
-// UpdateContactChannelsRequest 更新联系渠道请求
-type UpdateContactChannelsRequest struct {
-	Channels []dto.ContactChannel `json:"channels"`
-}
-
-// UpdateContactChannels 更新联系渠道列表
-// PUT /api/v1/admin/settings/contact-channels
-func (h *SettingHandler) UpdateContactChannels(c *gin.Context) {
-	var req UpdateContactChannelsRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "Invalid request: "+err.Error())
-		return
-	}
-	updated, err := h.settingService.UpdateContactChannels(c.Request.Context(), contactChannelsFromDTO(req.Channels))
-	if err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-	response.Success(c, gin.H{"channels": contactChannelsToDTO(updated)})
-}
-
-// GetWebSearchEmulationConfig 获取 Web Search 模拟配置。
+// GetWebSearchEmulationConfig 获取 Web Search 模拟配置
 // GET /api/v1/admin/settings/web-search-emulation
 func (h *SettingHandler) GetWebSearchEmulationConfig(c *gin.Context) {
 	cfg, err := h.settingService.GetWebSearchEmulationConfig(c.Request.Context())
@@ -2503,10 +2488,10 @@ func (h *SettingHandler) GetWebSearchEmulationConfig(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	response.Success(c, service.SanitizeWebSearchConfig(c.Request.Context(), cfg))
+	response.Success(c, service.PopulateWebSearchUsage(c.Request.Context(), cfg))
 }
 
-// UpdateWebSearchEmulationConfig 更新 Web Search 模拟配置。
+// UpdateWebSearchEmulationConfig 更新 Web Search 模拟配置
 // PUT /api/v1/admin/settings/web-search-emulation
 func (h *SettingHandler) UpdateWebSearchEmulationConfig(c *gin.Context) {
 	var cfg service.WebSearchEmulationConfig
@@ -2520,15 +2505,16 @@ func (h *SettingHandler) UpdateWebSearchEmulationConfig(c *gin.Context) {
 		return
 	}
 
+	// Re-read (with sanitized api keys) to return current state
 	updated, err := h.settingService.GetWebSearchEmulationConfig(c.Request.Context())
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
 	}
-	response.Success(c, service.SanitizeWebSearchConfig(c.Request.Context(), updated))
+	response.Success(c, service.PopulateWebSearchUsage(c.Request.Context(), updated))
 }
 
-// ResetWebSearchUsage 重置指定 provider 的配额用量。
+// ResetWebSearchUsage 重置指定 provider 的配额用量
 // POST /api/v1/admin/settings/web-search-emulation/reset-usage
 func (h *SettingHandler) ResetWebSearchUsage(c *gin.Context) {
 	var req struct {
@@ -2538,7 +2524,6 @@ func (h *SettingHandler) ResetWebSearchUsage(c *gin.Context) {
 		response.BadRequest(c, "Invalid request: "+err.Error())
 		return
 	}
-	req.ProviderType = strings.TrimSpace(req.ProviderType)
 	if req.ProviderType == "" {
 		response.BadRequest(c, "provider_type is required")
 		return
@@ -2550,7 +2535,7 @@ func (h *SettingHandler) ResetWebSearchUsage(c *gin.Context) {
 	response.Success(c, nil)
 }
 
-// TestWebSearchEmulation 测试 Web Search 搜索。
+// TestWebSearchEmulation 测试 Web Search 搜索
 // POST /api/v1/admin/settings/web-search-emulation/test
 func (h *SettingHandler) TestWebSearchEmulation(c *gin.Context) {
 	var req struct {
@@ -2560,12 +2545,11 @@ func (h *SettingHandler) TestWebSearchEmulation(c *gin.Context) {
 		response.BadRequest(c, "Invalid request: "+err.Error())
 		return
 	}
-	query := strings.TrimSpace(req.Query)
-	if query == "" {
-		query = "搜索今年世界大事件"
+	if strings.TrimSpace(req.Query) == "" {
+		req.Query = "搜索今年世界大事件"
 	}
 
-	result, err := service.TestWebSearch(c.Request.Context(), query)
+	result, err := service.TestWebSearch(c.Request.Context(), req.Query)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return

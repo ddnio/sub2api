@@ -33,8 +33,8 @@ func ProvideAdminHandlers(
 	tlsFingerprintProfileHandler *admin.TLSFingerprintProfileHandler,
 	apiKeyHandler *admin.AdminAPIKeyHandler,
 	scheduledTestHandler *admin.ScheduledTestHandler,
-	paymentHandler *admin.PaymentHandler,
 	channelHandler *admin.ChannelHandler,
+	paymentHandler *admin.PaymentHandler,
 ) *AdminHandlers {
 	return &AdminHandlers{
 		Dashboard:             dashboardHandler,
@@ -61,8 +61,8 @@ func ProvideAdminHandlers(
 		TLSFingerprintProfile: tlsFingerprintProfileHandler,
 		APIKey:                apiKeyHandler,
 		ScheduledTest:         scheduledTestHandler,
-		Payment:               paymentHandler,
 		Channel:               channelHandler,
+		Payment:               paymentHandler,
 	}
 }
 
@@ -90,12 +90,10 @@ func ProvideHandlers(
 	openaiGatewayHandler *OpenAIGatewayHandler,
 	settingHandler *SettingHandler,
 	totpHandler *TotpHandler,
-	_ *service.IdempotencyCoordinator,
-	_ *service.IdempotencyCleanupService,
 	paymentHandler *PaymentHandler,
 	paymentWebhookHandler *PaymentWebhookHandler,
-	pricingHandler *PricingHandler,
-	referralHandler *ReferralHandler,
+	_ *service.IdempotencyCoordinator,
+	_ *service.IdempotencyCleanupService,
 ) *Handlers {
 	return &Handlers{
 		Auth:           authHandler,
@@ -112,8 +110,6 @@ func ProvideHandlers(
 		Totp:           totpHandler,
 		Payment:        paymentHandler,
 		PaymentWebhook: paymentWebhookHandler,
-		Pricing:        pricingHandler,
-		Referral:       referralHandler,
 	}
 }
 
@@ -131,6 +127,8 @@ var ProviderSet = wire.NewSet(
 	NewOpenAIGatewayHandler,
 	NewTotpHandler,
 	ProvideSettingHandler,
+	NewPaymentHandler,
+	NewPaymentWebhookHandler,
 
 	// Admin handlers
 	admin.NewDashboardHandler,
@@ -157,13 +155,8 @@ var ProviderSet = wire.NewSet(
 	admin.NewTLSFingerprintProfileHandler,
 	admin.NewAdminAPIKeyHandler,
 	admin.NewScheduledTestHandler,
-	admin.NewPaymentHandler,
 	admin.NewChannelHandler,
-
-	// User-facing payment handlers
-	NewPaymentHandler,
-	NewPaymentWebhookHandler,
-	NewPricingHandler,
+	admin.NewPaymentHandler,
 
 	// AdminHandlers and Handlers constructors
 	ProvideAdminHandlers,

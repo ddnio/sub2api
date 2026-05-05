@@ -44,6 +44,7 @@ describe('oauth adoption auth api', () => {
     })
   })
 
+<<<<<<< HEAD
   it('keeps linuxdo legacy invitation completion token-based', async () => {
     const { completeLinuxDoOAuthRegistration } = await import('@/api/auth')
 
@@ -92,14 +93,69 @@ describe('oauth adoption auth api', () => {
     await createPendingOAuthAccount({
       email: 'oidc@example.com',
       password: 'secret-123',
+=======
+  it('posts linuxdo invitation completion with adoption decisions', async () => {
+    const { completeLinuxDoOAuthRegistration } = await import('@/api/auth')
+
+    await completeLinuxDoOAuthRegistration('invite-code', {
+      adoptDisplayName: true,
+      adoptAvatar: false
+    })
+
+    expect(post).toHaveBeenCalledWith('/auth/oauth/linuxdo/complete-registration', {
+>>>>>>> v0.1.116
       invitation_code: 'invite-code',
       adopt_display_name: true,
       adopt_avatar: false
     })
+<<<<<<< HEAD
 
     expect(post).toHaveBeenCalledWith('/auth/oauth/pending/create-account', {
       email: 'oidc@example.com',
       password: 'secret-123',
+=======
+  })
+
+  it('posts linuxdo create-account completion with adoption decisions', async () => {
+    const { createPendingLinuxDoOAuthAccount } = await import('@/api/auth')
+
+    await createPendingLinuxDoOAuthAccount('invite-code', {
+      adoptDisplayName: false,
+      adoptAvatar: true
+    })
+
+    expect(post).toHaveBeenCalledWith('/auth/oauth/linuxdo/complete-registration', {
+      invitation_code: 'invite-code',
+      adopt_display_name: false,
+      adopt_avatar: true
+    })
+  })
+
+  it('posts oidc invitation completion with adoption decisions', async () => {
+    const { completeOIDCOAuthRegistration } = await import('@/api/auth')
+
+    await completeOIDCOAuthRegistration('invite-code', {
+      adoptDisplayName: false,
+      adoptAvatar: true
+    })
+
+    expect(post).toHaveBeenCalledWith('/auth/oauth/oidc/complete-registration', {
+      invitation_code: 'invite-code',
+      adopt_display_name: false,
+      adopt_avatar: true
+    })
+  })
+
+  it('posts oidc create-account completion with adoption decisions', async () => {
+    const { createPendingOIDCOAuthAccount } = await import('@/api/auth')
+
+    await createPendingOIDCOAuthAccount('invite-code', {
+      adoptDisplayName: true,
+      adoptAvatar: false
+    })
+
+    expect(post).toHaveBeenCalledWith('/auth/oauth/oidc/complete-registration', {
+>>>>>>> v0.1.116
       invitation_code: 'invite-code',
       adopt_display_name: true,
       adopt_avatar: false
@@ -175,6 +231,7 @@ describe('oauth adoption auth api', () => {
     expect(hasPendingOAuthSuggestedProfile({})).toBe(false)
   })
 
+<<<<<<< HEAD
   it('prepares an oauth bind access token cookie before redirect binding', async () => {
     localStorage.setItem('auth_token', 'access-token-value')
     const setCookie = vi.fn()
@@ -190,5 +247,14 @@ describe('oauth adoption auth api', () => {
 
     expect(setCookie).toHaveBeenCalledTimes(1)
     expect(setCookie.mock.calls[0]?.[0]).toContain('oauth_bind_access_token=access-token-value')
+=======
+  it('requests an HttpOnly oauth bind cookie before redirect binding', async () => {
+    localStorage.setItem('auth_token', 'access-token-value')
+    const { prepareOAuthBindAccessTokenCookie } = await import('@/api/auth')
+
+    await prepareOAuthBindAccessTokenCookie()
+
+    expect(post).toHaveBeenCalledWith('/auth/oauth/bind-token')
+>>>>>>> v0.1.116
   })
 })

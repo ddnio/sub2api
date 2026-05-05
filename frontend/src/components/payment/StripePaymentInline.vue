@@ -5,7 +5,11 @@
     </div>
     <div v-else-if="initError" class="card p-6 text-center">
       <p class="text-sm text-red-600 dark:text-red-400">{{ initError }}</p>
+<<<<<<< HEAD
       <button type="button" class="btn btn-secondary mt-4" @click="$emit('back')">{{ t('payment.result.backToRecharge') }}</button>
+=======
+      <button class="btn btn-secondary mt-4" @click="$emit('back')">{{ t('payment.result.backToRecharge') }}</button>
+>>>>>>> v0.1.116
     </div>
     <!-- Success -->
     <template v-else-if="success">
@@ -31,7 +35,11 @@
               </div>
             </div>
           </div>
+<<<<<<< HEAD
           <button type="button" class="btn btn-primary" @click="$emit('done')">{{ t('common.confirm') }}</button>
+=======
+          <button class="btn btn-primary" @click="$emit('done')">{{ t('common.confirm') }}</button>
+>>>>>>> v0.1.116
         </div>
       </div>
     </template>
@@ -47,7 +55,11 @@
       <div class="card p-6">
         <div ref="stripeMount" class="min-h-[200px]"></div>
         <p v-if="error" class="mt-4 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+<<<<<<< HEAD
         <button type="button" class="btn btn-stripe mt-6 w-full py-3 text-base" :disabled="submitting || !ready" @click="handlePay">
+=======
+        <button class="btn btn-stripe mt-6 w-full py-3 text-base" :disabled="submitting || !ready" @click="handlePay">
+>>>>>>> v0.1.116
           <span v-if="submitting" class="flex items-center justify-center gap-2">
             <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
             {{ t('common.processing') }}
@@ -56,7 +68,11 @@
         </button>
       </div>
       <!-- Cancel order -->
+<<<<<<< HEAD
       <button type="button" class="btn btn-secondary w-full" :disabled="cancelling" @click="handleCancel">
+=======
+      <button class="btn btn-secondary w-full" :disabled="cancelling" @click="handleCancel">
+>>>>>>> v0.1.116
         {{ cancelling ? t('common.processing') : t('payment.qr.cancelOrder') }}
       </button>
     </template>

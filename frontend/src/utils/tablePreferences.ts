@@ -14,7 +14,11 @@ const sanitizePageSize = (value: unknown): number | null => {
 const parsePageSizeForSelection = (value: unknown): number | null => {
   const size = Number(value)
   if (!Number.isInteger(size)) return null
+<<<<<<< HEAD
   if (size < MIN_TABLE_PAGE_SIZE || size > MAX_TABLE_PAGE_SIZE) return null
+=======
+  if (size < MIN_TABLE_PAGE_SIZE) return null
+>>>>>>> v0.1.116
   return size
 }
 
@@ -59,7 +63,11 @@ export const getConfiguredTablePageSizeOptions = (): number[] => {
     return [...DEFAULT_TABLE_PAGE_SIZE_OPTIONS]
   }
 
+<<<<<<< HEAD
   return unique
+=======
+  return unique.length > 0 ? unique : [...DEFAULT_TABLE_PAGE_SIZE_OPTIONS]
+>>>>>>> v0.1.116
 }
 
 export const normalizeTablePageSize = (value: unknown): number => {

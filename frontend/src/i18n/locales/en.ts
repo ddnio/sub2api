@@ -360,6 +360,8 @@ export default {
     justNow: 'just now',
     view: 'View',
     save: 'Save',
+    saved: 'Saved successfully',
+    deleted: 'Deleted successfully',
     cancel: 'Cancel',
     delete: 'Delete',
     edit: 'Edit',
@@ -420,10 +422,14 @@ export default {
     select: 'Select',
     selectedCount: '({count} selected)',
     refresh: 'Refresh',
+    view: 'View',
     settings: 'Settings',
     chooseFile: 'Choose File',
+    copy: 'Copy',
     notAvailable: 'N/A',
     now: 'Now',
+    today: 'Today',
+    tomorrow: 'Tomorrow',
     unknown: 'Unknown',
     minutes: 'min',
     time: {
@@ -474,10 +480,18 @@ export default {
     paymentDashboard: 'Payment Dashboard',
     paymentPlans: 'Subscription Plans',
     docs: 'Docs',
+<<<<<<< HEAD
     sora: 'Sora Studio',
     payment: 'Recharge / Plans',
     paymentManagement: 'Payment Management',
     pricing: 'Model Pricing',
+=======
+    myOrders: 'My Orders',
+    orderManagement: 'Orders',
+    paymentDashboard: 'Payment Dashboard',
+    paymentConfig: 'Payment Config',
+    paymentPlans: 'Plans'
+>>>>>>> v0.1.116
   },
 
   // Auth
@@ -524,7 +538,11 @@ export default {
     verificationCode: 'Verification Code',
     verificationCodeHint: 'Enter the 6-digit code sent to your email',
     sendingCode: 'Sending...',
+<<<<<<< HEAD
     sendCode: 'Send verification code',
+=======
+    sendCode: 'Send code',
+>>>>>>> v0.1.116
     clickToResend: 'Click to resend code',
     resendCode: 'Resend verification code',
     sendCodeDesc: "We'll send a verification code to",
@@ -595,7 +613,51 @@ export default {
       useDifferentEmail: 'Use a different email',
       totpRequired: 'Enter the 6-digit verification code for {email} to finish binding this {providerName} sign-in.'
     },
+    oauthFlow: {
+      profileDetailsTitle: 'Use {providerName} profile details',
+      profileDetailsDescription: 'Choose whether to apply the nickname or avatar from {providerName} to this account.',
+      useDisplayName: 'Use display name',
+      useAvatar: 'Use avatar',
+      avatarAlt: '{providerName} avatar',
+      reviewProfileBeforeContinue: 'Review the {providerName} profile details before continuing.',
+      chooseHowToContinue: 'Choose how to continue',
+      chooseAccountActionHint: 'Choose whether to bind an existing account or create a new one.',
+      suggestedEmail: 'Suggested email: {email}',
+      bindExistingAccount: 'Bind existing account',
+      createNewAccount: 'Create new account',
+      createAccountHint: 'Enter an email address to create your account and continue.',
+      bindLoginHint: 'Log in to an existing account to bind this {providerName} sign-in.',
+      signInThenBindDescription: 'Sign in to an existing account, then bind this {providerName} sign-in to it.',
+      bindSignInToExistingAccount: 'Bind this {providerName} sign-in to an existing account.',
+      bindCurrentAccountTitle: 'Bind the current account',
+      bindCurrentAccountDescription: 'Bind this {providerName} sign-in to the account currently signed in on this browser.',
+      bindCurrentAccount: 'Bind current account',
+      logInAndBind: 'Log in and bind',
+      useDifferentEmail: 'Use a different email',
+      backToOptions: 'Back to options',
+      yourAccount: 'your account',
+      totpHint: 'Enter the 6-digit verification code for {account} to finish binding this {providerName} sign-in.',
+      verifyAndContinue: 'Verify and continue',
+      wechatAvailabilityUnknown: 'WeChat sign-in availability could not be confirmed. Refresh and retry.',
+      wechatSystemBrowserOnly: 'This WeChat sign-in flow is only available in your system browser.',
+      wechatBrowserOnly: 'This WeChat sign-in flow is only available inside the WeChat browser.',
+      wechatNotConfigured: 'WeChat sign-in is not configured yet.'
+    },
+    linuxdoCallbackPageTitle: 'LinuxDo Sign-In Callback',
+    oidcCallbackPageTitle: 'OIDC Sign-In Callback',
+    oauthCallbackPageTitle: 'OAuth Callback',
+    wechatProviderName: 'WeChat',
+    wechatCallbackPageTitle: 'WeChat Sign-In Callback',
+    wechatPaymentCallbackPageTitle: 'WeChat Payment Callback',
+    wechatPayment: {
+      callbackTitle: 'Resuming WeChat payment',
+      callbackProcessing: 'Resuming WeChat payment...',
+      backToPayment: 'Back to payment',
+      callbackMissingResumeToken: 'The WeChat payment callback is missing the resume token.'
+    },
     oauth: {
+      callbackTitle: 'OAuth Callback',
+      callbackHint: 'Copy the code and state back to the admin authorization flow when needed.',
       code: 'Code',
       state: 'State',
       fullUrl: 'Full URL'
@@ -863,6 +925,7 @@ export default {
     totalCost: 'Total Cost',
     standardCost: 'Standard',
     actualCost: 'Actual',
+    accountCost: 'Cost',
     userBilled: 'User billed',
     accountBilled: 'Account billed',
     accountMultiplier: 'Account rate',
@@ -908,6 +971,8 @@ export default {
     inputTokenPrice: 'Input price',
     outputTokenPrice: 'Output price',
     perMillionTokens: '/ 1M tokens',
+    unitPrice: 'Per-request price',
+    imageUnitPrice: 'Per-image price',
     cacheRead: 'Read',
     cacheWrite: 'Write',
     serviceTier: 'Service tier',
@@ -1001,10 +1066,23 @@ export default {
     description: 'Manage your account information and settings',
     accountBalance: 'Account Balance',
     concurrencyLimit: 'Concurrency Limit',
+    rpmLimit: 'RPM Limit',
+    rpmUnlimited: 'Unlimited',
     memberSince: 'Member Since',
+    overviewTitle: 'Account Overview',
+    overviewDescription: 'Check account status, profile sources, and common actions at a glance.',
+    basicsTitle: 'Profile & Avatar',
+    basicsDescription: 'Keep your public profile details and avatar aligned.',
+    linkedProfileSources: 'Profile Sources',
+    linkedProfileSourcesDescription: 'Some profile details may stay synced from third-party sign-in methods.',
+    securityTitle: 'Security Settings',
+    securityDescription: 'Password, two-factor authentication, and alerts live in the right rail.',
     administrator: 'Administrator',
     user: 'User',
     username: 'Username',
+    email: 'Email',
+    status: 'Status',
+    role: 'Role',
     enterUsername: 'Enter username',
     editProfile: 'Edit Profile',
     updateProfile: 'Update Profile',
@@ -1093,6 +1171,7 @@ export default {
       emailDuplicate: 'This email already exists',
       maxEmailsReached: 'Maximum number of notification emails reached',
       unverified: 'Unverified',
+<<<<<<< HEAD
       verified: 'Verified'
     },
     avatar: {
@@ -1106,15 +1185,32 @@ export default {
       deleteSuccess: 'Avatar removed',
       invalidType: 'Please choose an image file',
       fileTooLarge: 'Avatar image must be 100KB or smaller',
+=======
+      verified: 'Verified',
+    },
+    avatar: {
+      title: 'Profile Avatar',
+      description: 'Upload an avatar image. Static uploads are compressed to 20KB before saving.',
+      uploadAction: 'Upload image',
+      uploadHint: 'Static uploads are compressed to 20KB when possible. GIF uploads must already be within 20KB.',
+      uploadRequired: 'Upload an avatar image first',
+      saveSuccess: 'Avatar updated',
+      deleteSuccess: 'Avatar removed',
+      invalidType: 'Please choose an image file',
+>>>>>>> v0.1.116
       gifTooLarge: 'GIF avatars must already be 20KB or smaller',
       compressTooLarge: 'Unable to compress this image below 20KB. Try a smaller image.',
       compressFailed: 'Failed to compress the selected image.',
       readFailed: 'Failed to read the selected image.',
+<<<<<<< HEAD
       invalidValue: 'Enter a valid avatar URL or image data URL',
+=======
+>>>>>>> v0.1.116
       emptyDeleteHint: 'Avatar is already empty',
     },
     authBindings: {
       title: 'Connected Sign-In Methods',
+<<<<<<< HEAD
       description: 'Bind third-party sign-in methods to this account.',
       providers: {
         email: 'Email',
@@ -1128,6 +1224,44 @@ export default {
       bindAction: 'Bind',
       unbindAction: 'Unbind',
       bindSuccess: 'Sign-in method bound successfully'
+=======
+      description: 'View current bindings and connect another provider to this account.',
+      bindAction: 'Bind {providerName}',
+      bindSuccess: 'Account linked successfully',
+      emailPlaceholder: 'Enter email address',
+      codePlaceholder: 'Enter verification code',
+      passwordPlaceholder: 'Set a login password',
+      replaceEmailPasswordPlaceholder: 'Enter current password',
+      sendCodeAction: 'Send code',
+      manageEmailAction: 'Manage email',
+      hideEmailFormAction: 'Hide email form',
+      confirmEmailBindAction: 'Bind email',
+      confirmEmailReplaceAction: 'Replace primary email',
+      codeSentTo: 'Code sent to {email}',
+      replaceSuccess: 'Primary email updated',
+      unbindAction: 'Unbind',
+      unbindSuccess: '{providerName} unbound',
+      boundCount: '{count} linked records',
+      status: {
+        bound: 'Bound',
+        notBound: 'Not bound',
+      },
+      providers: {
+        email: 'Email',
+        linuxdo: 'LinuxDo',
+        oidc: '{providerName}',
+        wechat: 'WeChat',
+      },
+      notes: {
+        emailManagedFromProfile: 'Primary email is managed in the profile form',
+        canUnbind: 'You can unbind this sign-in method',
+        bindAnotherBeforeUnbind: 'Bind another sign-in method before unbinding',
+      },
+      source: {
+        avatar: 'Avatar is currently synced from {providerName}',
+        username: 'Nickname is currently synced from {providerName}',
+      },
+>>>>>>> v0.1.116
     }
   },
 
@@ -1228,6 +1362,7 @@ export default {
       tokens: 'Tokens',
       actual: 'Actual',
       standard: 'Standard',
+      accountCost: 'Cost',
       noDataAvailable: 'No data available',
       recentUsage: 'Recent Usage',
       viewModelDistribution: 'Model Distribution',
@@ -1566,8 +1701,14 @@ export default {
       copyPassword: 'Copy password',
       creating: 'Creating...',
       updating: 'Updating...',
+      form: {
+        rpmLimit: 'Requests Per Minute (RPM)',
+        rpmLimitPlaceholder: '0 = unlimited',
+        rpmLimitHint: 'Max requests per minute for this user; 0 = unlimited. Acts as a fallback only when the group has no rpm_limit set.'
+      },
       columns: {
         user: 'User',
+        id: 'ID',
         email: 'Email',
         username: 'Username',
         notes: 'Notes',
@@ -1579,6 +1720,8 @@ export default {
         concurrency: 'Concurrency',
         referralCode: 'Referral Code',
         status: 'Status',
+        lastActive: 'Last Active',
+        lastUsed: 'Last Used',
         created: 'Created',
         actions: 'Actions'
       },
@@ -1784,6 +1927,10 @@ export default {
         name: 'Name',
         platform: 'Platform',
         rateMultiplier: 'Rate Multiplier',
+        rpmOverride: 'RPM Override',
+        rpmOverrideHint: 'Per-user RPM cap in this group; empty = group default; 0 = unlimited',
+        rateDefault: 'default',
+        rpmDefault: 'default',
         type: 'Type',
         accounts: 'Accounts',
         capacity: 'Capacity',
@@ -1810,7 +1957,10 @@ export default {
         platform: 'Platform',
         rateMultiplier: 'Rate Multiplier',
         status: 'Status',
-        exclusive: 'Exclusive Group'
+        exclusive: 'Exclusive Group',
+        rpmLimit: 'Requests Per Minute (RPM)',
+        rpmLimitPlaceholder: '0 = unlimited',
+        rpmLimitHint: 'Max requests per minute for each user in this group; 0 = unlimited. Once set, it takes over per-user rate limiting in this group (overrides the user-level rpm_limit fallback).'
       },
       enterGroupName: 'Enter group name',
       optionalDescription: 'Optional description',
@@ -1842,6 +1992,12 @@ export default {
       rateMultipliers: 'Rate Multipliers',
       rateMultipliersTitle: 'Group Rate Multipliers',
       addUserRate: 'Add User Rate Multiplier',
+      rpmOverrides: 'RPM Overrides',
+      rpmOverridesTitle: 'Group RPM Overrides',
+      addUserRpm: 'Add User RPM Override',
+      noRpmOverrides: 'No users have an RPM override yet',
+      rpmSaved: 'RPM overrides saved',
+      groupRpmDefault: 'Group default RPM',
       searchUserPlaceholder: 'Search user email...',
       noRateMultipliers: 'No user rate multipliers configured',
       rateUpdated: 'Rate multiplier updated',
@@ -2084,7 +2240,20 @@ export default {
         noPlatforms: 'Click "Add Platform" to start configuring the channel',
         mappingCount: 'mappings',
         pricingEntry: 'Pricing Entry',
-        noModels: 'No models added'
+        noModels: 'No models added',
+        applyPricingToAccountStats: 'Apply Pricing to Account Stats',
+        applyPricingToAccountStatsDesc: 'When enabled, requests not matched by custom rules will use standard model pricing for account stats calculation',
+        accountStatsPricingRules: 'Custom Account Stats Pricing Rules',
+        addRule: 'Add Rule',
+        noRulesConfigured: 'No custom rules configured. Channel model pricing above will be used.',
+        ruleName: 'Rule name (optional)',
+        ruleGroups: 'Groups',
+        ruleAccounts: 'Accounts',
+        searchAccountPlaceholder: 'Search accounts...',
+        ruleAccountsHint: 'Leave empty to match all accounts',
+        ruleModelPricing: 'Model Pricing',
+        noGroupsInChannel: 'No groups selected in platform tabs above',
+        unnamed: 'Unnamed'
       }
     },
 
@@ -2458,6 +2627,12 @@ export default {
       },
       quotaLimitAmount: 'Total Limit',
       quotaLimitAmountHint: 'Cumulative spending limit. Does not auto-reset.',
+      quotaNotify: {
+        alert: 'Alert',
+        enabled: 'Enable Alert',
+        threshold: 'Alert Amount',
+        thresholdPlaceholder: 'Enter percentage',
+      },
       testConnection: 'Test Connection',
       reAuthorize: 'Re-Authorize',
       refreshToken: 'Refresh Token',
@@ -2842,6 +3017,13 @@ export default {
             'Option 1: Copy the complete URL\n(http://localhost:xxx/auth/callback?code=...)\nOption 2: Copy only the code parameter value',
           authCodeHint:
             'You can copy the entire URL or just the code parameter value, the system will auto-detect',
+          failedToGenerateUrl: 'Failed to generate OpenAI auth URL',
+          failedToExchangeCode: 'Failed to exchange OpenAI auth code',
+          failedToValidateRT: 'Failed to validate refresh token',
+          errors: {
+            OPENAI_OAUTH_PROXY_REQUIRED:
+              'No proxy is configured and this server could not reach OpenAI directly, so the OpenAI OAuth request failed. Select a proxy that can access OpenAI and retry; if the authorization code has expired, regenerate the authorization URL.'
+          },
           // Refresh Token auth
           refreshTokenAuth: 'Manual RT Input',
           refreshTokenDesc: 'Enter your existing OpenAI Refresh Token(s). Supports batch input (one per line). The system will automatically validate and create accounts.',
@@ -4452,8 +4634,11 @@ export default {
         gateway: 'Gateway',
         email: 'Email',
         backup: 'Backup',
+<<<<<<< HEAD
         data: 'Sora Storage',
         contact: 'Contact',
+=======
+>>>>>>> v0.1.116
         payment: 'Payment',
       },
       emailTabDisabledTitle: 'Email Verification Not Enabled',
@@ -4578,6 +4763,8 @@ export default {
         defaultBalanceHint: 'Initial balance for new users',
         defaultConcurrency: 'Default Concurrency',
         defaultConcurrencyHint: 'Maximum concurrent requests for new users',
+        defaultUserRpmLimit: 'Default User RPM Limit',
+        defaultUserRpmLimitHint: 'Default max requests per minute for new users; 0 = unlimited. Only applied at new user creation.',
         defaultSubscriptions: 'Default Subscriptions',
         defaultSubscriptionsHint: 'Auto-assign these subscriptions when a new user is created or registered',
         addDefaultSubscription: 'Add Default Subscription',
@@ -4626,9 +4813,15 @@ export default {
         apiKey: 'API Key',
         apiKeyPlaceholder: 'Enter API Key',
         apiKeyConfigured: 'Configured',
+<<<<<<< HEAD
         showApiKey: 'Show API key',
         hideApiKey: 'Hide API key',
         copyApiKey: 'Copy API key',
+=======
+        showApiKey: 'Show',
+        hideApiKey: 'Hide',
+        copyApiKey: 'Copy',
+>>>>>>> v0.1.116
         copied: 'Copied',
         quotaLimit: 'Quota Limit',
         quotaLimitHint: 'Leave empty for unlimited; must be > 0 if set',
@@ -4640,13 +4833,20 @@ export default {
         resetUsageConfirm: 'Reset usage counter for this provider?',
         resetUsageSuccess: 'Usage counter reset',
         proxy: 'Proxy',
+<<<<<<< HEAD
         expiresAt: 'Expires At',
+=======
+>>>>>>> v0.1.116
         removeProvider: 'Remove',
         noProviders: 'No search providers configured',
         test: 'Test',
         testDefaultQuery: 'Major world events this year',
         testing: 'Searching...',
+<<<<<<< HEAD
         testResultTitle: 'Web Search Test',
+=======
+        testResultTitle: 'Search Results',
+>>>>>>> v0.1.116
         testResultProvider: 'Provider',
         testNoResults: 'No results found',
       },
@@ -4666,6 +4866,7 @@ export default {
         apiBaseUrlPlaceholder: 'https://api.example.com',
         apiBaseUrlHint:
           'Used for "Use Key" and "Import to CC Switch" features. Leave empty to use current site URL.',
+<<<<<<< HEAD
         tablePreferencesTitle: 'Table Pagination Settings',
         tablePreferencesDescription: 'Configure default page size and selectable page-size options for admin tables',
         tableDefaultPageSize: 'Default Page Size',
@@ -4675,6 +4876,17 @@ export default {
         tablePageSizeOptionsHint: 'Separate options with commas. Values must be between {min} and {max}; the default page size is added automatically.',
         tableDefaultPageSizeRangeError: 'Default page size must be between {min} and {max}',
         tablePageSizeOptionsFormatError: 'Page size options must be comma-separated integers between {min} and {max}',
+=======
+        tablePreferencesTitle: 'Global Table Preferences',
+        tablePreferencesDescription: 'Configure default pagination behavior for shared table components',
+        tableDefaultPageSize: 'Default Rows Per Page',
+        tableDefaultPageSizeHint: 'Must be an integer between 5 and 1000',
+        tablePageSizeOptions: 'Rows Per Page Options',
+        tablePageSizeOptionsPlaceholder: '10, 20, 50, 100',
+        tablePageSizeOptionsHint: 'Use commas to separate integers between 5 and 1000; values are deduplicated and sorted on save',
+        tableDefaultPageSizeRangeError: 'Default rows per page must be between {min} and {max}',
+        tablePageSizeOptionsFormatError: 'Invalid options format. Enter comma-separated integers between {min} and {max}',
+>>>>>>> v0.1.116
         customEndpoints: {
           title: 'Custom Endpoints',
           description: 'Add additional API endpoint URLs for users to quickly copy on the API Keys page',
@@ -4747,6 +4959,149 @@ export default {
         moveUp: 'Move Up',
         moveDown: 'Move Down',
       },
+<<<<<<< HEAD
+=======
+      payment: {
+        title: 'Payment Settings',
+        description: 'Configure payment system options',
+        configGuide: 'Configuration Guide',
+        enabled: 'Enable Payment',
+        enabledHint: 'Enable or disable the payment system',
+        enabledPaymentTypes: 'Enabled Providers',
+        enabledPaymentTypesHint: 'Disabling a provider will also disable its instances.',
+        findProvider: 'Looking for a suitable EasyPay provider?',
+        minAmount: 'Minimum Amount',
+        maxAmount: 'Maximum Amount',
+        dailyLimit: 'Daily Limit',
+        balanceRechargeMultiplier: 'Balance Recharge Multiplier',
+        balanceRechargeMultiplierHint: 'How many USD balance the user receives for each 1 CNY paid',
+        balanceRechargePreview: 'Preview: 1 CNY = {usd} USD',
+        rechargeFeeRate: 'Recharge Fee Rate',
+        rechargeFeeRateHint: 'Percentage of service fee charged on top of recharge amount, 0 means no fee',
+        rechargeFeePreview: 'Preview: Recharge 100, fee {fee}',
+        orderTimeout: 'Order Timeout',
+        orderTimeoutHint: 'In minutes, minimum 1',
+        maxPendingOrders: 'Max Pending Orders',
+        cancelRateLimit: 'Limit Cancel Rate',
+        cancelRateLimitHint: 'When enabled, users who exceed the cancel limit within the time window cannot create new orders',
+        cancelRateLimitEvery: 'Every',
+        cancelRateLimitAllowMax: 'allow max',
+        cancelRateLimitTimes: 'cancels',
+        cancelRateLimitWindow: 'Window',
+        cancelRateLimitUnit: 'Unit',
+        cancelRateLimitMax: 'Max Cancels',
+        cancelRateLimitUnitMinute: 'Minutes',
+        cancelRateLimitUnitHour: 'Hours',
+        cancelRateLimitUnitDay: 'Days',
+        cancelRateLimitWindowMode: 'Window Mode',
+        cancelRateLimitWindowModeRolling: 'Rolling',
+        cancelRateLimitWindowModeFixed: 'Fixed',
+        helpText: 'Help Text',
+        helpImageUrl: 'Help Image URL',
+        manageProviders: 'Manage Providers',
+        balancePaymentDisabled: 'Disable Balance Recharge',
+        noLimit: 'Empty = no limit',
+        helpImage: 'Help Image',
+        helpImagePlaceholder: 'Upload or enter image URL',
+        helpTextPlaceholder: 'Enter help text...',
+        providerEasypay: 'EasyPay',
+        providerAlipay: 'Alipay (Direct)',
+        providerWxpay: 'WeChat Pay (Direct)',
+        providerStripe: 'Stripe',
+        typeDisabled: 'type disabled',
+        enableTypesFirst: 'Enable at least one payment type above first',
+        easypayRedirect: 'Redirect',
+        paymentMode: 'Payment Mode',
+        modeRedirect: 'Redirect',
+        modeQRCode: 'QR Code',
+        modePopup: 'Popup',
+        validationNameRequired: 'Provider name is required',
+        validationTypesRequired: 'Please select at least one supported payment type',
+        validationFieldRequired: '{field} is required',
+        field_apiBase: 'API Base URL',
+        field_notifyUrl: 'Notify URL',
+        field_returnUrl: 'Return URL',
+        callbackBaseUrl: 'Callback Base URL',
+        field_privateKey: 'Private Key',
+        field_publicKey: 'Public Key',
+        field_mpAppId: 'MP App ID',
+        field_mchId: 'Merchant ID',
+        field_apiV3Key: 'API v3 Key',
+        field_publicKeyId: 'Public Key ID',
+        field_certSerial: 'Certificate Serial',
+        field_h5AppName: 'H5 App Name',
+        field_h5AppUrl: 'H5 App URL',
+        wxpayConfigHint: 'WeChat Pay usually only needs App ID. Fill MP App ID, H5 App Name, and H5 App URL only when your Official Account or H5 flow specifically requires them.',
+        wxpayAdvancedOptions: 'WeChat Pay Advanced Options',
+        field_secretKey: 'Secret Key',
+        field_publishableKey: 'Publishable Key',
+        field_webhookSecret: 'Webhook Secret',
+        field_cid: 'Channel ID',
+        field_cidAlipay: 'Alipay Channel ID',
+        field_cidWxpay: 'WeChat Channel ID',
+        stripeWebhookHint: 'Configure the following URL as a Webhook endpoint in Stripe Dashboard:',
+        limitsTitle: 'Limits',
+        limitSingleMin: 'Min per order',
+        limitSingleMax: 'Max per order',
+        limitDaily: 'Daily limit',
+        limitsHint: 'All empty = use global config; partially filled = empty means no limit',
+        limitsUseGlobal: 'Use global',
+        limitsNoLimit: 'No limit',
+        productNamePrefix: 'Product Name Prefix',
+        productNameSuffix: 'Product Name Suffix',
+        preview: 'Preview',
+        loadBalanceStrategy: 'Load Balance Strategy',
+        strategyRoundRobin: 'Round Robin',
+        strategyLeastAmount: 'Least Daily Amount',
+        providerManagement: 'Provider Management',
+        providerManagementDesc: 'Manage payment provider instances',
+        createProvider: 'Add Provider',
+        editProvider: 'Edit Provider',
+        deleteProvider: 'Delete Provider',
+        deleteProviderConfirm: 'Are you sure you want to delete this provider?',
+        providerName: 'Provider Name',
+        providerKey: 'Provider Type',
+        selectProviderKey: 'Select Provider Type',
+        providerConfig: 'Credentials',
+        paymentGuideTrigger: 'View payment guide',
+        guideOpenLabel: 'Enable: ',
+        guideCallLabel: 'Call: ',
+        guideFallbackLabel: 'Fallback: ',
+        alipayGuideSummary: 'Desktop prefers QR precreate and falls back to cashier; mobile prefers WAP checkout.',
+        alipayGuideFaceToFaceTitle: 'Face-to-face / QR Payment',
+        alipayGuideFaceToFaceOpen: 'Enable face-to-face or QR payment capability.',
+        alipayGuideFaceToFaceCall: 'Desktop orders call alipay.trade.precreate first and render the QR code directly.',
+        alipayGuideFaceToFaceFallback: 'If unavailable or failed, the flow falls back to website checkout automatically.',
+        alipayGuidePagePayTitle: 'Website Payment',
+        alipayGuidePagePayOpen: 'Enable website payment.',
+        alipayGuidePagePayCall: 'When face-to-face is unavailable on desktop, the flow calls alipay.trade.page.pay and still renders the returned link as a QR code.',
+        alipayGuidePagePayFallback: 'The cashier link stays available so users can reopen the checkout page manually.',
+        alipayGuideWapTitle: 'WAP Payment',
+        alipayGuideWapOpen: 'Enable mobile website payment.',
+        alipayGuideWapCall: 'Mobile orders call alipay.trade.wap.pay first and jump to Alipay checkout.',
+        alipayGuideWapFallback: 'If mobile payment is unavailable or fails, the frontend switches to QR payment and shows a notice.',
+        wxpayGuideSummary: 'Desktop prefers Native QR; mobile routes to JSAPI or H5 based on browser context.',
+        wxpayGuideNote: 'The current form defaults to one shared App ID, which fits the common single-subject web, mobile, and Official Account setup.',
+        wxpayGuideNativeTitle: 'Native / QR Payment',
+        wxpayGuideNativeOpen: 'Enable Native or QR payment capability.',
+        wxpayGuideNativeCall: 'Desktop orders use Native by default and the frontend renders the QR payload.',
+        wxpayGuideNativeFallback: 'Mobile flows also fall back here when JSAPI or H5 cannot be used.',
+        wxpayGuideJsapiTitle: 'JSAPI / Official Account',
+        wxpayGuideJsapiOpen: 'Enable Official Account payment and ensure the browser is inside WeChat with an available OpenID.',
+        wxpayGuideJsapiCall: 'Inside WeChat, the app calls JSAPI after authorization and launches WeChat Pay directly.',
+        wxpayGuideJsapiFallback: 'If configuration is missing, the bridge is unavailable, or launch fails, the flow falls back to QR payment.',
+        wxpayGuideH5Title: 'H5 Payment',
+        wxpayGuideH5Open: 'Enable H5 payment.',
+        wxpayGuideH5Call: 'On mobile browsers outside WeChat, the app calls H5 payment when a client IP is available.',
+        wxpayGuideH5Fallback: 'If H5 is unavailable or order creation fails, the flow falls back to QR payment.',
+        noProviders: 'No provider instances configured',
+        supportedTypes: 'Supported Payment Types',
+        supportedTypesHint: 'Comma-separated, e.g. alipay,wxpay',
+        refundEnabled: 'Allow Refund',
+        allowUserRefund: 'Allow User Refund',
+        enableConflict: '{method} already has an enabled provider instance: {provider}. Disable the existing instance before switching.',
+      },
+>>>>>>> v0.1.116
       balanceNotify: {
         title: 'Balance Low Notification',
         description: 'Send email notification when user balance falls below threshold',
@@ -5011,6 +5366,7 @@ export default {
         presetOpusOnlyDesc: 'Pass for Opus, filter others',
         commonPatterns: 'Common patterns'
       },
+<<<<<<< HEAD
 
       // Floating contact button (admin config)
       contact: {
@@ -5035,6 +5391,64 @@ export default {
       paymentVisibleMethods: {
         title: 'Checkout visible methods',
         description: 'Choose which payment methods appear on checkout and which source key each method uses.',
+=======
+      wechatConnect: {
+        title: 'WeChat Connect',
+        description: 'Third-party login configuration for WeChat Open Platform or Official Account / Mini Program.',
+        enabledLabel: 'Enable WeChat Connect',
+        enabledHint: 'Enable this to configure WeChat OAuth callbacks and authorization.',
+        appIdLabel: 'App ID',
+        appIdPlaceholder: 'WeChat App ID',
+        appSecretLabel: 'App Secret',
+        appSecretConfiguredPlaceholder: 'Secret configured. Leave empty to keep the current value.',
+        appSecretPlaceholder: 'WeChat App Secret',
+        appSecretConfiguredHint: 'Secret configured. Leave empty to keep the current value.',
+        appSecretHint: 'Enter a new secret to replace the current WeChat credential.',
+        modeLabel: 'Mode',
+        openModeLabel: 'Use Open outside WeChat',
+        openModeHint: 'Use Open Platform QR authorization outside the WeChat browser.',
+        mpModeLabel: 'Use MP inside WeChat',
+        mpModeHint: 'Use Official Account authorization inside the WeChat browser.',
+        redirectUrlLabel: 'Redirect URL',
+        redirectUrlPlaceholder: 'https://your-site.com/api/v1/auth/oauth/wechat/callback',
+        generateAndCopy: 'Generate & Copy (current site)',
+        redirectUrlSetAndCopied: 'Redirect URL generated and copied to clipboard',
+        frontendRedirectUrlLabel: 'Frontend redirect URL',
+        frontendRedirectUrlPlaceholder: '/auth/wechat/callback',
+        frontendRedirectUrlHint: 'Usually the frontend route callback path; keep it aligned with the backend.'
+      },
+      authSourceDefaults: {
+        title: 'Auth Source Defaults',
+        description: 'Configure per-source default balance, concurrency, subscriptions, and grant rules.',
+        requireEmailLabel: 'Require email on third-party signup',
+        requireEmailHint: 'When enabled, Linux DO, OIDC, and WeChat signups must provide an email before account creation.',
+        enabledHint: 'These defaults apply when a new user registers through this source. Grant on first bind only applies when an existing user binds this source.',
+        sources: {
+          email: {
+            title: 'Email signup',
+            description: 'Default quota grants for email-password signups.'
+          },
+          linuxdo: {
+            title: 'Linux DO signup',
+            description: 'Default quota grants for Linux DO signups.'
+          },
+          oidc: {
+            title: 'OIDC signup',
+            description: 'Default quota grants for OIDC signups.'
+          },
+          wechat: {
+            title: 'WeChat signup',
+            description: 'Default quota grants for WeChat signups.'
+          }
+        },
+        grantOnFirstBindLabel: 'Grant on first bind',
+        grantOnFirstBindHint: 'Grant default entitlements when an existing user first binds this source.',
+        defaultSubscriptionsLabel: 'Default subscriptions',
+        defaultSubscriptionsHint: 'Applies only to this auth source. Leave empty to skip source-specific subscriptions.',
+        noSourceSubscriptions: 'No source-specific default subscriptions configured.'
+      },
+      paymentVisibleMethods: {
+>>>>>>> v0.1.116
         methodLabel: '{title} visible method',
         methodHint: 'Controls whether checkout shows this method and which source key it exposes.',
         sourceLabel: 'Payment source',
@@ -5045,7 +5459,10 @@ export default {
         title: 'OpenAI experimental scheduler policy',
         description: "Disabled by default. When enabled, this only changes the gateway's experimental account-selection policy for OpenAI traffic; it does not indicate an upstream OpenAI capability."
       },
+<<<<<<< HEAD
 
+=======
+>>>>>>> v0.1.116
       saveSettings: 'Save Settings',
       saving: 'Saving...',
       settingsSaved: 'Settings saved successfully',
@@ -5467,7 +5884,10 @@ export default {
   // Payment System
   payment: {
     title: 'Recharge / Subscription',
+<<<<<<< HEAD
     description: 'Purchase a plan or top up your balance',
+=======
+>>>>>>> v0.1.116
     amountLabel: 'Amount',
     paymentAmount: 'Payment Amount',
     creditedBalance: 'Credited Balance',
@@ -5659,11 +6079,16 @@ export default {
       colUser: 'User',
       topUsers: 'Top Users',
       noData: 'No data',
+<<<<<<< HEAD
       day: 'day',
       days: 'days',
       week: 'week',
       weeks: 'weeks',
       month: 'month',
+=======
+      days: 'days',
+      weeks: 'weeks',
+>>>>>>> v0.1.116
       months: 'months',
       searchOrders: 'Search orders...',
       allStatuses: 'All Statuses',
@@ -5747,6 +6172,7 @@ export default {
       noProvidersHint: 'Create a provider instance to start accepting payments',
       supportedTypes: 'Supported Payment Types',
       supportedTypesHint: 'Select the payment types this provider supports',
+<<<<<<< HEAD
       easypayRedirect: 'Redirect Payment',
       enableConflict: '{method} is currently bound to {current}. Disable the conflicting provider before enabling {next}.',
       providerEasypay: 'EasyPay',
@@ -5818,6 +6244,8 @@ export default {
       wxpayGuideH5Open: 'Enable H5 Pay and configure payment domains.',
       wxpayGuideH5Call: 'Redirect mobile browsers to the WeChat H5 payment URL.',
       wxpayGuideH5Fallback: 'Fallback to Native QR when unavailable.',
+=======
+>>>>>>> v0.1.116
       rateMultiplier: 'Rate Multiplier',
       dashboardTitle: 'Payment Dashboard',
       dashboardDesc: 'Recharge order analytics and insights',
@@ -5852,6 +6280,7 @@ export default {
     },
   },
 
+<<<<<<< HEAD
   // Pricing
   pricing: {
     title: 'Model Pricing',
@@ -5933,4 +6362,6 @@ export default {
     providerConfig: 'Config (JSON)',
     provider: 'Provider'
   }
+=======
+>>>>>>> v0.1.116
 }

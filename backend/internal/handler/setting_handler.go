@@ -22,23 +22,6 @@ func NewSettingHandler(settingService *service.SettingService, version string) *
 	}
 }
 
-// mapContactChannels 把 service 层结构映射为 dto 层（两边字段同名同序，但属于不同 package）
-func mapContactChannels(in []service.ContactChannel) []dto.ContactChannel {
-	out := make([]dto.ContactChannel, 0, len(in))
-	for _, c := range in {
-		out = append(out, dto.ContactChannel{
-			Type:        c.Type,
-			Label:       c.Label,
-			QRImage:     c.QRImage,
-			Description: c.Description,
-			ExtraInfo:   c.ExtraInfo,
-			Enabled:     c.Enabled,
-			Priority:    c.Priority,
-		})
-	}
-	return out
-}
-
 // GetPublicSettings 获取公开设置
 // GET /api/v1/settings/public
 func (h *SettingHandler) GetPublicSettings(c *gin.Context) {
@@ -69,6 +52,8 @@ func (h *SettingHandler) GetPublicSettings(c *gin.Context) {
 		HideCcsImportButton:              settings.HideCcsImportButton,
 		PurchaseSubscriptionEnabled:      settings.PurchaseSubscriptionEnabled,
 		PurchaseSubscriptionURL:          settings.PurchaseSubscriptionURL,
+		TableDefaultPageSize:             settings.TableDefaultPageSize,
+		TablePageSizeOptions:             settings.TablePageSizeOptions,
 		CustomMenuItems:                  dto.ParseUserVisibleMenuItems(settings.CustomMenuItems),
 		CustomEndpoints:                  dto.ParseCustomEndpoints(settings.CustomEndpoints),
 		LinuxDoOAuthEnabled:              settings.LinuxDoOAuthEnabled,
@@ -79,12 +64,11 @@ func (h *SettingHandler) GetPublicSettings(c *gin.Context) {
 		OIDCOAuthEnabled:                 settings.OIDCOAuthEnabled,
 		OIDCOAuthProviderName:            settings.OIDCOAuthProviderName,
 		BackendModeEnabled:               settings.BackendModeEnabled,
-		ReferralEnabled:                  settings.ReferralEnabled,
-		ContactChannels:                  mapContactChannels(settings.ContactChannels),
+		PaymentEnabled:                   settings.PaymentEnabled,
 		Version:                          h.version,
 		BalanceLowNotifyEnabled:          settings.BalanceLowNotifyEnabled,
+		AccountQuotaNotifyEnabled:        settings.AccountQuotaNotifyEnabled,
 		BalanceLowNotifyThreshold:        settings.BalanceLowNotifyThreshold,
 		BalanceLowNotifyRechargeURL:      settings.BalanceLowNotifyRechargeURL,
-		AccountQuotaNotifyEnabled:        settings.AccountQuotaNotifyEnabled,
 	})
 }

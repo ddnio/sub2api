@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -555,36 +554,24 @@ func isMobile(c *gin.Context) bool {
 	return false
 }
 
-func sanitizePaymentOrdersForResponse(orders []*dbent.PaymentOrder) []map[string]any {
+func sanitizePaymentOrdersForResponse(orders []*dbent.PaymentOrder) []*dbent.PaymentOrder {
 	if len(orders) == 0 {
-		return []map[string]any{}
+		return orders
 	}
-	out := make([]map[string]any, 0, len(orders))
+	out := make([]*dbent.PaymentOrder, 0, len(orders))
 	for _, order := range orders {
 		out = append(out, sanitizePaymentOrderForResponse(order))
 	}
 	return out
 }
 
-func sanitizePaymentOrderForResponse(order *dbent.PaymentOrder) map[string]any {
+func sanitizePaymentOrderForResponse(order *dbent.PaymentOrder) *dbent.PaymentOrder {
 	if order == nil {
 		return nil
 	}
 	cloned := *order
 	cloned.ProviderSnapshot = nil
-	raw, err := json.Marshal(&cloned)
-	if err != nil {
-		return map[string]any{}
-	}
-	var out map[string]any
-	if err := json.Unmarshal(raw, &out); err != nil {
-		return map[string]any{}
-	}
-	out["amount"] = cloned.Amount
-	out["pay_amount"] = cloned.PayAmount
-	out["fee_rate"] = cloned.FeeRate
-	out["refund_amount"] = cloned.RefundAmount
-	return out
+	return &cloned
 }
 
 func isWeChatBrowser(c *gin.Context) bool {

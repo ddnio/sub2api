@@ -240,20 +240,3 @@ func (s *PaymentConfigService) resolveEnabledVisibleMethodInstance(
 	}
 	return selectVisibleMethodInstanceByProviderKey(matching, providerKey), nil
 }
-
-// normalizeVisibleMethodSettingSource normalizes a payment visible method source setting.
-// [fork patch] Inlined from upstream setting_service.go to avoid pulling in WeChatConnect dependencies.
-func normalizeVisibleMethodSettingSource(method, source string, _ bool) (string, error) {
-	source = strings.TrimSpace(source)
-	if source == "" {
-		return "", nil
-	}
-	normalized := NormalizeVisibleMethodSource(method, source)
-	if normalized == "" {
-		return "", infraerrors.BadRequest(
-			"INVALID_PAYMENT_VISIBLE_METHOD_SOURCE",
-			fmt.Sprintf("%s source must be one of the supported payment providers", method),
-		)
-	}
-	return normalized, nil
-}

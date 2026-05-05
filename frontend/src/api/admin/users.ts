@@ -8,15 +8,22 @@ import type { AdminUser, UpdateUserRequest, PaginatedResponse, ApiKey } from '@/
 
 export interface AdminBindAuthIdentityChannelRequest {
   channel: string
+<<<<<<< HEAD
   channel_app_id?: string
   channel_subject: string
   metadata?: Record<string, unknown>
+=======
+  channel_app_id: string
+  channel_subject: string
+  metadata?: Record<string, unknown> | null
+>>>>>>> v0.1.116
 }
 
 export interface AdminBindAuthIdentityRequest {
   provider_type: string
   provider_key: string
   provider_subject: string
+<<<<<<< HEAD
   issuer?: string
   metadata?: Record<string, unknown>
   channel?: AdminBindAuthIdentityChannelRequest
@@ -28,6 +35,33 @@ export interface AdminBoundAuthIdentity {
   provider_key: string
   provider_subject: string
   channel_id?: number | null
+=======
+  issuer?: string | null
+  metadata?: Record<string, unknown> | null
+  channel?: AdminBindAuthIdentityChannelRequest
+}
+
+export interface AdminBoundAuthIdentityChannel {
+  channel: string
+  channel_app_id: string
+  channel_subject: string
+  metadata: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AdminBoundAuthIdentity {
+  user_id: number
+  provider_type: string
+  provider_key: string
+  provider_subject: string
+  verified_at?: string | null
+  issuer?: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+  channel?: AdminBoundAuthIdentityChannel | null
+>>>>>>> v0.1.116
 }
 
 /**

@@ -25,12 +25,19 @@ func RegisterUserRoutes(
 			user.GET("/profile", h.User.GetProfile)
 			user.PUT("/password", h.User.ChangePassword)
 			user.PUT("", h.User.UpdateProfile)
-			user.POST("/notify-email/send-code", h.User.SendNotifyEmailCode)
-			user.POST("/notify-email/verify", h.User.VerifyNotifyEmail)
-			user.PUT("/notify-email/toggle", h.User.ToggleNotifyEmail)
-			user.DELETE("/notify-email", h.User.RemoveNotifyEmail)
+			user.POST("/account-bindings/email/send-code", h.User.SendEmailBindingCode)
+			user.POST("/account-bindings/email", h.User.BindEmailIdentity)
 			user.DELETE("/account-bindings/:provider", h.User.UnbindIdentity)
 			user.POST("/auth-identities/bind/start", h.User.StartIdentityBinding)
+
+			// 通知邮箱管理
+			notifyEmail := user.Group("/notify-email")
+			{
+				notifyEmail.POST("/send-code", h.User.SendNotifyEmailCode)
+				notifyEmail.POST("/verify", h.User.VerifyNotifyEmail)
+				notifyEmail.PUT("/toggle", h.User.ToggleNotifyEmail)
+				notifyEmail.DELETE("", h.User.RemoveNotifyEmail)
+			}
 
 			// TOTP 双因素认证
 			totp := user.Group("/totp")
@@ -96,29 +103,5 @@ func RegisterUserRoutes(
 			subscriptions.GET("/progress", h.Subscription.GetProgress)
 			subscriptions.GET("/summary", h.Subscription.GetSummary)
 		}
-
-		// 模型定价
-		pricing := authenticated.Group("/pricing")
-		{
-			pricing.GET("/models", h.Pricing.GetModelPricing)
-		}
-
-		// 推荐码
-		referral := authenticated.Group("/referral")
-		{
-			referral.GET("", h.Referral.GetReferralInfo)
-			referral.GET("/list", h.Referral.ListReferrals)
-		}
-	}
-}
-
-// RegisterPaymentCallbackRoutes registers the payment webhook routes (no JWT required)
-func RegisterPaymentCallbackRoutes(v1 *gin.RouterGroup, h *handler.Handlers) {
-	paymentCb := v1.Group("/payment")
-	{
-		paymentCb.POST("/webhook/wxpay", h.PaymentWebhook.WxpayNotify)
-		paymentCb.POST("/webhook/alipay", h.PaymentWebhook.AlipayNotify)
-		paymentCb.POST("/webhook/easypay", h.PaymentWebhook.EasyPayNotify)
-		paymentCb.POST("/webhook/stripe", h.PaymentWebhook.StripeWebhook)
 	}
 }

@@ -26,7 +26,6 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/userallowedgroup"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
-	"github.com/Wei-Shaw/sub2api/ent/userreferral"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 )
 
@@ -47,8 +46,6 @@ type UserQuery struct {
 	withAttributeValues       *UserAttributeValueQuery
 	withPromoCodeUsages       *PromoCodeUsageQuery
 	withPaymentOrders         *PaymentOrderQuery
-	withReferralsAsInviter    *UserReferralQuery
-	withReferralsAsInvitee    *UserReferralQuery
 	withAuthIdentities        *AuthIdentityQuery
 	withPendingAuthSessions   *PendingAuthSessionQuery
 	withUserAllowedGroups     *UserAllowedGroupQuery
@@ -302,50 +299,6 @@ func (_q *UserQuery) QueryPaymentOrders() *PaymentOrderQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.PaymentOrdersTable, user.PaymentOrdersColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryReferralsAsInviter chains the current query on the "referrals_as_inviter" edge.
-func (_q *UserQuery) QueryReferralsAsInviter() *UserReferralQuery {
-	query := (&UserReferralClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, selector),
-			sqlgraph.To(userreferral.Table, userreferral.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.ReferralsAsInviterTable, user.ReferralsAsInviterColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryReferralsAsInvitee chains the current query on the "referrals_as_invitee" edge.
-func (_q *UserQuery) QueryReferralsAsInvitee() *UserReferralQuery {
-	query := (&UserReferralClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, selector),
-			sqlgraph.To(userreferral.Table, userreferral.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.ReferralsAsInviteeTable, user.ReferralsAsInviteeColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -621,8 +574,6 @@ func (_q *UserQuery) Clone() *UserQuery {
 		withAttributeValues:       _q.withAttributeValues.Clone(),
 		withPromoCodeUsages:       _q.withPromoCodeUsages.Clone(),
 		withPaymentOrders:         _q.withPaymentOrders.Clone(),
-		withReferralsAsInviter:    _q.withReferralsAsInviter.Clone(),
-		withReferralsAsInvitee:    _q.withReferralsAsInvitee.Clone(),
 		withAuthIdentities:        _q.withAuthIdentities.Clone(),
 		withPendingAuthSessions:   _q.withPendingAuthSessions.Clone(),
 		withUserAllowedGroups:     _q.withUserAllowedGroups.Clone(),
@@ -742,28 +693,6 @@ func (_q *UserQuery) WithPaymentOrders(opts ...func(*PaymentOrderQuery)) *UserQu
 	return _q
 }
 
-// WithReferralsAsInviter tells the query-builder to eager-load the nodes that are connected to
-// the "referrals_as_inviter" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *UserQuery) WithReferralsAsInviter(opts ...func(*UserReferralQuery)) *UserQuery {
-	query := (&UserReferralClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withReferralsAsInviter = query
-	return _q
-}
-
-// WithReferralsAsInvitee tells the query-builder to eager-load the nodes that are connected to
-// the "referrals_as_invitee" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *UserQuery) WithReferralsAsInvitee(opts ...func(*UserReferralQuery)) *UserQuery {
-	query := (&UserReferralClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withReferralsAsInvitee = query
-	return _q
-}
-
 // WithAuthIdentities tells the query-builder to eager-load the nodes that are connected to
 // the "auth_identities" edge. The optional arguments are used to configure the query builder of the edge.
 func (_q *UserQuery) WithAuthIdentities(opts ...func(*AuthIdentityQuery)) *UserQuery {
@@ -875,7 +804,7 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [15]bool{
+		loadedTypes = [13]bool{
 			_q.withAPIKeys != nil,
 			_q.withRedeemCodes != nil,
 			_q.withSubscriptions != nil,
@@ -886,8 +815,6 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 			_q.withAttributeValues != nil,
 			_q.withPromoCodeUsages != nil,
 			_q.withPaymentOrders != nil,
-			_q.withReferralsAsInviter != nil,
-			_q.withReferralsAsInvitee != nil,
 			_q.withAuthIdentities != nil,
 			_q.withPendingAuthSessions != nil,
 			_q.withUserAllowedGroups != nil,
@@ -983,20 +910,6 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := _q.loadPaymentOrders(ctx, query, nodes,
 			func(n *User) { n.Edges.PaymentOrders = []*PaymentOrder{} },
 			func(n *User, e *PaymentOrder) { n.Edges.PaymentOrders = append(n.Edges.PaymentOrders, e) }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withReferralsAsInviter; query != nil {
-		if err := _q.loadReferralsAsInviter(ctx, query, nodes,
-			func(n *User) { n.Edges.ReferralsAsInviter = []*UserReferral{} },
-			func(n *User, e *UserReferral) { n.Edges.ReferralsAsInviter = append(n.Edges.ReferralsAsInviter, e) }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withReferralsAsInvitee; query != nil {
-		if err := _q.loadReferralsAsInvitee(ctx, query, nodes,
-			func(n *User) { n.Edges.ReferralsAsInvitee = []*UserReferral{} },
-			func(n *User, e *UserReferral) { n.Edges.ReferralsAsInvitee = append(n.Edges.ReferralsAsInvitee, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -1343,7 +1256,6 @@ func (_q *UserQuery) loadPaymentOrders(ctx context.Context, query *PaymentOrderQ
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
 	if len(query.ctx.Fields) > 0 {
 		query.ctx.AppendFieldOnce(paymentorder.FieldUserID)
 	}
@@ -1359,66 +1271,6 @@ func (_q *UserQuery) loadPaymentOrders(ctx context.Context, query *PaymentOrderQ
 		node, ok := nodeids[fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
-		}
-		assign(node, n)
-	}
-	return nil
-}
-func (_q *UserQuery) loadReferralsAsInviter(ctx context.Context, query *UserReferralQuery, nodes []*User, init func(*User), assign func(*User, *UserReferral)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int64]*User)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(userreferral.FieldInviterID)
-	}
-	query.Where(predicate.UserReferral(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(user.ReferralsAsInviterColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.InviterID
-		node, ok := nodeids[fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "inviter_id" returned %v for node %v`, fk, n.ID)
-		}
-		assign(node, n)
-	}
-	return nil
-}
-func (_q *UserQuery) loadReferralsAsInvitee(ctx context.Context, query *UserReferralQuery, nodes []*User, init func(*User), assign func(*User, *UserReferral)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int64]*User)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(userreferral.FieldInviteeID)
-	}
-	query.Where(predicate.UserReferral(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(user.ReferralsAsInviteeColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.InviteeID
-		node, ok := nodeids[fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "invitee_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

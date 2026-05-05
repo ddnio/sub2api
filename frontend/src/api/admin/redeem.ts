@@ -25,6 +25,8 @@ export async function list(
     type?: RedeemCodeType
     status?: 'active' | 'used' | 'expired' | 'unused'
     search?: string
+    sort_by?: string
+    sort_order?: 'asc' | 'desc'
   },
   options?: {
     signal?: AbortSignal
@@ -151,8 +153,15 @@ export async function getStats(): Promise<{
  */
 export async function exportCodes(filters?: {
   type?: RedeemCodeType
+<<<<<<< HEAD
   status?: 'active' | 'used' | 'expired' | 'unused'
   search?: string
+=======
+  status?: 'used' | 'expired' | 'unused'
+  search?: string
+  sort_by?: string
+  sort_order?: 'asc' | 'desc'
+>>>>>>> v0.1.116
 }): Promise<Blob> {
   const response = await apiClient.get('/admin/redeem-codes/export', {
     params: filters,

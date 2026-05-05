@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -343,7 +344,7 @@ func requestNeedsWeChatJSAPICompatibility(req CreateOrderRequest) bool {
 	if payment.GetBasePaymentType(req.PaymentType) != payment.TypeWxpay {
 		return false
 	}
-	return strings.TrimSpace(req.OpenID) != ""
+	return req.IsWeChatBrowser || strings.TrimSpace(req.OpenID) != ""
 }
 
 func (s *PaymentService) usesOfficialWxpayVisibleMethod(ctx context.Context) bool {
@@ -492,10 +493,36 @@ func (s *PaymentService) maybeBuildWeChatOAuthRequiredResponseForSelection(ctx c
 	if strings.TrimSpace(req.OpenID) != "" || !req.IsWeChatBrowser || payment.GetBasePaymentType(req.PaymentType) != payment.TypeWxpay {
 		return nil, nil
 	}
-	// This fork does not provide WeChat MP OAuth/JSAPI credentials. Do not force
-	// WeChat-browser users into JSAPI; allow the selected wxpay provider to use
-	// H5/native modes when no OpenID is present.
-	return nil, nil
+	return s.buildWeChatOAuthRequiredResponse(ctx, req, amount, payAmount, feeRate)
+}
+
+func (s *PaymentService) buildWeChatOAuthRequiredResponse(ctx context.Context, req CreateOrderRequest, amount, payAmount, feeRate float64) (*CreateOrderResponse, error) {
+	appID, _, err := s.getWeChatPaymentOAuthCredential(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.paymentResume().ensureSigningKey(); err != nil {
+		return nil, err
+	}
+
+	authorizeURL, err := buildWeChatPaymentOAuthStartURL(req, "snsapi_base")
+	if err != nil {
+		return nil, err
+	}
+
+	return &CreateOrderResponse{
+		Amount:      amount,
+		PayAmount:   payAmount,
+		FeeRate:     feeRate,
+		ResultType:  payment.CreatePaymentResultOAuthRequired,
+		PaymentType: req.PaymentType,
+		OAuth: &payment.WechatOAuthInfo{
+			AuthorizeURL: authorizeURL,
+			AppID:        appID,
+			Scope:        "snsapi_base",
+			RedirectURL:  "/auth/wechat/payment/callback",
+		},
+	}, nil
 }
 
 func (s *PaymentService) validateSelectedCreateOrderInstance(ctx context.Context, req CreateOrderRequest, sel *payment.InstanceSelection) error {
@@ -517,7 +544,7 @@ func requiresWeChatJSAPICompatibleSelection(req CreateOrderRequest, sel *payment
 	if sel == nil || sel.ProviderKey != payment.TypeWxpay || payment.GetBasePaymentType(req.PaymentType) != payment.TypeWxpay {
 		return false
 	}
-	return strings.TrimSpace(req.OpenID) != ""
+	return req.IsWeChatBrowser || strings.TrimSpace(req.OpenID) != ""
 }
 
 func (s *PaymentService) getWeChatPaymentOAuthCredential(ctx context.Context) (string, string, error) {
@@ -577,6 +604,71 @@ func buildCreateOrderResponse(order *dbent.PaymentOrder, req CreateOrderRequest,
 	}
 }
 
+func buildWeChatPaymentOAuthStartURL(req CreateOrderRequest, scope string) (string, error) {
+	u, err := url.Parse("/api/v1/auth/oauth/wechat/payment/start")
+	if err != nil {
+		return "", fmt.Errorf("build wechat payment oauth start url: %w", err)
+	}
+	q := u.Query()
+	q.Set("payment_type", strings.TrimSpace(req.PaymentType))
+	if req.Amount > 0 {
+		q.Set("amount", strconv.FormatFloat(req.Amount, 'f', -1, 64))
+	}
+	if orderType := strings.TrimSpace(req.OrderType); orderType != "" {
+		q.Set("order_type", orderType)
+	}
+	if req.PlanID > 0 {
+		q.Set("plan_id", strconv.FormatInt(req.PlanID, 10))
+	}
+	if scope = strings.TrimSpace(scope); scope != "" {
+		q.Set("scope", scope)
+	}
+	if redirectTo := paymentRedirectPathFromURL(req.SrcURL); redirectTo != "" {
+		q.Set("redirect", redirectTo)
+	}
+	u.RawQuery = q.Encode()
+	return u.String(), nil
+}
+
+func paymentRedirectPathFromURL(rawURL string) string {
+	rawURL = strings.TrimSpace(rawURL)
+	if rawURL == "" {
+		return "/purchase"
+	}
+	if strings.HasPrefix(rawURL, "/") && !strings.HasPrefix(rawURL, "//") {
+		return normalizePaymentRedirectPath(rawURL)
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "/purchase"
+	}
+	path := strings.TrimSpace(u.EscapedPath())
+	if path == "" {
+		path = strings.TrimSpace(u.Path)
+	}
+	if path == "" || !strings.HasPrefix(path, "/") || strings.HasPrefix(path, "//") {
+		return "/purchase"
+	}
+	if strings.TrimSpace(u.RawQuery) != "" {
+		path += "?" + u.RawQuery
+	}
+	return normalizePaymentRedirectPath(path)
+}
+
+func normalizePaymentRedirectPath(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return "/purchase"
+	}
+	if path == "/payment" {
+		return "/purchase"
+	}
+	if strings.HasPrefix(path, "/payment?") {
+		return "/purchase" + strings.TrimPrefix(path, "/payment")
+	}
+	return path
+}
+
 // --- Order Queries ---
 
 func (s *PaymentService) GetOrder(ctx context.Context, orderID, userID int64) (*dbent.PaymentOrder, error) {
@@ -623,8 +715,6 @@ func (s *PaymentService) GetUserOrders(ctx context.Context, userID int64, p Orde
 
 // AdminListOrders returns a paginated list of orders. If userID > 0, filters by user.
 func (s *PaymentService) AdminListOrders(ctx context.Context, userID int64, p OrderListParams) ([]*dbent.PaymentOrder, int, error) {
-	const maxAdminOrderKeywordRunes = 64
-
 	q := s.entClient.PaymentOrder.Query()
 	if userID > 0 {
 		q = q.Where(paymentorder.UserIDEQ(userID))
@@ -638,15 +728,11 @@ func (s *PaymentService) AdminListOrders(ctx context.Context, userID int64, p Or
 	if p.PaymentType != "" {
 		q = q.Where(paymentorder.PaymentTypeEQ(p.PaymentType))
 	}
-	keyword := strings.TrimSpace(p.Keyword)
-	if len([]rune(keyword)) > maxAdminOrderKeywordRunes {
-		return nil, 0, infraerrors.BadRequest("INVALID_KEYWORD", "keyword is too long")
-	}
-	if keyword != "" {
+	if p.Keyword != "" {
 		q = q.Where(paymentorder.Or(
-			paymentorder.OutTradeNoContainsFold(keyword),
-			paymentorder.UserEmailContainsFold(keyword),
-			paymentorder.UserNameContainsFold(keyword),
+			paymentorder.OutTradeNoContainsFold(p.Keyword),
+			paymentorder.UserEmailContainsFold(p.Keyword),
+			paymentorder.UserNameContainsFold(p.Keyword),
 		))
 	}
 	total, err := q.Clone().Count(ctx)

@@ -29,16 +29,6 @@ const (
 	FieldRole = "role"
 	// FieldBalance holds the string denoting the balance field in the database.
 	FieldBalance = "balance"
-	// FieldBalanceNotifyEnabled holds the string denoting the balance_notify_enabled field in the database.
-	FieldBalanceNotifyEnabled = "balance_notify_enabled"
-	// FieldBalanceNotifyThreshold holds the string denoting the balance_notify_threshold field in the database.
-	FieldBalanceNotifyThreshold = "balance_notify_threshold"
-	// FieldBalanceNotifyExtraEmails holds the string denoting the balance_notify_extra_emails field in the database.
-	FieldBalanceNotifyExtraEmails = "balance_notify_extra_emails"
-	// FieldBalanceNotifyThresholdType holds the string denoting the balance_notify_threshold_type field in the database.
-	FieldBalanceNotifyThresholdType = "balance_notify_threshold_type"
-	// FieldTotalRecharged holds the string denoting the total_recharged field in the database.
-	FieldTotalRecharged = "total_recharged"
 	// FieldConcurrency holds the string denoting the concurrency field in the database.
 	FieldConcurrency = "concurrency"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -59,8 +49,18 @@ const (
 	FieldLastLoginAt = "last_login_at"
 	// FieldLastActiveAt holds the string denoting the last_active_at field in the database.
 	FieldLastActiveAt = "last_active_at"
-	// FieldReferralCode holds the string denoting the referral_code field in the database.
-	FieldReferralCode = "referral_code"
+	// FieldBalanceNotifyEnabled holds the string denoting the balance_notify_enabled field in the database.
+	FieldBalanceNotifyEnabled = "balance_notify_enabled"
+	// FieldBalanceNotifyThresholdType holds the string denoting the balance_notify_threshold_type field in the database.
+	FieldBalanceNotifyThresholdType = "balance_notify_threshold_type"
+	// FieldBalanceNotifyThreshold holds the string denoting the balance_notify_threshold field in the database.
+	FieldBalanceNotifyThreshold = "balance_notify_threshold"
+	// FieldBalanceNotifyExtraEmails holds the string denoting the balance_notify_extra_emails field in the database.
+	FieldBalanceNotifyExtraEmails = "balance_notify_extra_emails"
+	// FieldTotalRecharged holds the string denoting the total_recharged field in the database.
+	FieldTotalRecharged = "total_recharged"
+	// FieldRpmLimit holds the string denoting the rpm_limit field in the database.
+	FieldRpmLimit = "rpm_limit"
 	// EdgeAPIKeys holds the string denoting the api_keys edge name in mutations.
 	EdgeAPIKeys = "api_keys"
 	// EdgeRedeemCodes holds the string denoting the redeem_codes edge name in mutations.
@@ -81,10 +81,6 @@ const (
 	EdgePromoCodeUsages = "promo_code_usages"
 	// EdgePaymentOrders holds the string denoting the payment_orders edge name in mutations.
 	EdgePaymentOrders = "payment_orders"
-	// EdgeReferralsAsInviter holds the string denoting the referrals_as_inviter edge name in mutations.
-	EdgeReferralsAsInviter = "referrals_as_inviter"
-	// EdgeReferralsAsInvitee holds the string denoting the referrals_as_invitee edge name in mutations.
-	EdgeReferralsAsInvitee = "referrals_as_invitee"
 	// EdgeAuthIdentities holds the string denoting the auth_identities edge name in mutations.
 	EdgeAuthIdentities = "auth_identities"
 	// EdgePendingAuthSessions holds the string denoting the pending_auth_sessions edge name in mutations.
@@ -161,20 +157,6 @@ const (
 	PaymentOrdersInverseTable = "payment_orders"
 	// PaymentOrdersColumn is the table column denoting the payment_orders relation/edge.
 	PaymentOrdersColumn = "user_id"
-	// ReferralsAsInviterTable is the table that holds the referrals_as_inviter relation/edge.
-	ReferralsAsInviterTable = "user_referrals"
-	// ReferralsAsInviterInverseTable is the table name for the UserReferral entity.
-	// It exists in this package in order to avoid circular dependency with the "userreferral" package.
-	ReferralsAsInviterInverseTable = "user_referrals"
-	// ReferralsAsInviterColumn is the table column denoting the referrals_as_inviter relation/edge.
-	ReferralsAsInviterColumn = "inviter_id"
-	// ReferralsAsInviteeTable is the table that holds the referrals_as_invitee relation/edge.
-	ReferralsAsInviteeTable = "user_referrals"
-	// ReferralsAsInviteeInverseTable is the table name for the UserReferral entity.
-	// It exists in this package in order to avoid circular dependency with the "userreferral" package.
-	ReferralsAsInviteeInverseTable = "user_referrals"
-	// ReferralsAsInviteeColumn is the table column denoting the referrals_as_invitee relation/edge.
-	ReferralsAsInviteeColumn = "invitee_id"
 	// AuthIdentitiesTable is the table that holds the auth_identities relation/edge.
 	AuthIdentitiesTable = "auth_identities"
 	// AuthIdentitiesInverseTable is the table name for the AuthIdentity entity.
@@ -208,11 +190,6 @@ var Columns = []string{
 	FieldPasswordHash,
 	FieldRole,
 	FieldBalance,
-	FieldBalanceNotifyEnabled,
-	FieldBalanceNotifyThreshold,
-	FieldBalanceNotifyExtraEmails,
-	FieldBalanceNotifyThresholdType,
-	FieldTotalRecharged,
 	FieldConcurrency,
 	FieldStatus,
 	FieldUsername,
@@ -223,7 +200,12 @@ var Columns = []string{
 	FieldSignupSource,
 	FieldLastLoginAt,
 	FieldLastActiveAt,
-	FieldReferralCode,
+	FieldBalanceNotifyEnabled,
+	FieldBalanceNotifyThresholdType,
+	FieldBalanceNotifyThreshold,
+	FieldBalanceNotifyExtraEmails,
+	FieldTotalRecharged,
+	FieldRpmLimit,
 }
 
 var (
@@ -266,16 +248,6 @@ var (
 	RoleValidator func(string) error
 	// DefaultBalance holds the default value on creation for the "balance" field.
 	DefaultBalance float64
-	// DefaultBalanceNotifyEnabled holds the default value on creation for the "balance_notify_enabled" field.
-	DefaultBalanceNotifyEnabled bool
-	// DefaultBalanceNotifyExtraEmails holds the default value on creation for the "balance_notify_extra_emails" field.
-	DefaultBalanceNotifyExtraEmails string
-	// DefaultBalanceNotifyThresholdType holds the default value on creation for the "balance_notify_threshold_type" field.
-	DefaultBalanceNotifyThresholdType string
-	// BalanceNotifyThresholdTypeValidator is a validator for the "balance_notify_threshold_type" field. It is called by the builders before save.
-	BalanceNotifyThresholdTypeValidator func(string) error
-	// DefaultTotalRecharged holds the default value on creation for the "total_recharged" field.
-	DefaultTotalRecharged float64
 	// DefaultConcurrency holds the default value on creation for the "concurrency" field.
 	DefaultConcurrency int
 	// DefaultStatus holds the default value on creation for the "status" field.
@@ -294,8 +266,16 @@ var (
 	DefaultSignupSource string
 	// SignupSourceValidator is a validator for the "signup_source" field. It is called by the builders before save.
 	SignupSourceValidator func(string) error
-	// ReferralCodeValidator is a validator for the "referral_code" field. It is called by the builders before save.
-	ReferralCodeValidator func(string) error
+	// DefaultBalanceNotifyEnabled holds the default value on creation for the "balance_notify_enabled" field.
+	DefaultBalanceNotifyEnabled bool
+	// DefaultBalanceNotifyThresholdType holds the default value on creation for the "balance_notify_threshold_type" field.
+	DefaultBalanceNotifyThresholdType string
+	// DefaultBalanceNotifyExtraEmails holds the default value on creation for the "balance_notify_extra_emails" field.
+	DefaultBalanceNotifyExtraEmails string
+	// DefaultTotalRecharged holds the default value on creation for the "total_recharged" field.
+	DefaultTotalRecharged float64
+	// DefaultRpmLimit holds the default value on creation for the "rpm_limit" field.
+	DefaultRpmLimit int
 )
 
 // OrderOption defines the ordering options for the User queries.
@@ -339,31 +319,6 @@ func ByRole(opts ...sql.OrderTermOption) OrderOption {
 // ByBalance orders the results by the balance field.
 func ByBalance(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBalance, opts...).ToFunc()
-}
-
-// ByBalanceNotifyEnabled orders the results by the balance_notify_enabled field.
-func ByBalanceNotifyEnabled(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldBalanceNotifyEnabled, opts...).ToFunc()
-}
-
-// ByBalanceNotifyThreshold orders the results by the balance_notify_threshold field.
-func ByBalanceNotifyThreshold(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldBalanceNotifyThreshold, opts...).ToFunc()
-}
-
-// ByBalanceNotifyExtraEmails orders the results by the balance_notify_extra_emails field.
-func ByBalanceNotifyExtraEmails(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldBalanceNotifyExtraEmails, opts...).ToFunc()
-}
-
-// ByBalanceNotifyThresholdType orders the results by the balance_notify_threshold_type field.
-func ByBalanceNotifyThresholdType(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldBalanceNotifyThresholdType, opts...).ToFunc()
-}
-
-// ByTotalRecharged orders the results by the total_recharged field.
-func ByTotalRecharged(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldTotalRecharged, opts...).ToFunc()
 }
 
 // ByConcurrency orders the results by the concurrency field.
@@ -416,9 +371,34 @@ func ByLastActiveAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastActiveAt, opts...).ToFunc()
 }
 
-// ByReferralCode orders the results by the referral_code field.
-func ByReferralCode(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldReferralCode, opts...).ToFunc()
+// ByBalanceNotifyEnabled orders the results by the balance_notify_enabled field.
+func ByBalanceNotifyEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBalanceNotifyEnabled, opts...).ToFunc()
+}
+
+// ByBalanceNotifyThresholdType orders the results by the balance_notify_threshold_type field.
+func ByBalanceNotifyThresholdType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBalanceNotifyThresholdType, opts...).ToFunc()
+}
+
+// ByBalanceNotifyThreshold orders the results by the balance_notify_threshold field.
+func ByBalanceNotifyThreshold(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBalanceNotifyThreshold, opts...).ToFunc()
+}
+
+// ByBalanceNotifyExtraEmails orders the results by the balance_notify_extra_emails field.
+func ByBalanceNotifyExtraEmails(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBalanceNotifyExtraEmails, opts...).ToFunc()
+}
+
+// ByTotalRecharged orders the results by the total_recharged field.
+func ByTotalRecharged(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTotalRecharged, opts...).ToFunc()
+}
+
+// ByRpmLimit orders the results by the rpm_limit field.
+func ByRpmLimit(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRpmLimit, opts...).ToFunc()
 }
 
 // ByAPIKeysCount orders the results by api_keys count.
@@ -561,34 +541,6 @@ func ByPaymentOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// ByReferralsAsInviterCount orders the results by referrals_as_inviter count.
-func ByReferralsAsInviterCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newReferralsAsInviterStep(), opts...)
-	}
-}
-
-// ByReferralsAsInviter orders the results by referrals_as_inviter terms.
-func ByReferralsAsInviter(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newReferralsAsInviterStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
-// ByReferralsAsInviteeCount orders the results by referrals_as_invitee count.
-func ByReferralsAsInviteeCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newReferralsAsInviteeStep(), opts...)
-	}
-}
-
-// ByReferralsAsInvitee orders the results by referrals_as_invitee terms.
-func ByReferralsAsInvitee(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newReferralsAsInviteeStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
 // ByAuthIdentitiesCount orders the results by auth_identities count.
 func ByAuthIdentitiesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -698,20 +650,6 @@ func newPaymentOrdersStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PaymentOrdersInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, PaymentOrdersTable, PaymentOrdersColumn),
-	)
-}
-func newReferralsAsInviterStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ReferralsAsInviterInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ReferralsAsInviterTable, ReferralsAsInviterColumn),
-	)
-}
-func newReferralsAsInviteeStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ReferralsAsInviteeInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ReferralsAsInviteeTable, ReferralsAsInviteeColumn),
 	)
 }
 func newAuthIdentitiesStep() *sqlgraph.Step {

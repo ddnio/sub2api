@@ -37,8 +37,10 @@ type Channel struct {
 	Name               string
 	Description        string
 	Status             string
-	BillingModelSource string // "requested", "upstream", or "channel_mapped"
-	RestrictModels     bool   // 是否限制模型（仅允许定价列表中的模型）
+	BillingModelSource string         // "requested", "upstream", or "channel_mapped"
+	RestrictModels     bool           // 是否限制模型（仅允许定价列表中的模型）
+	Features           string         // 渠道特性描述（JSON 数组），用于支付页面展示
+	FeaturesConfig     map[string]any // 渠道功能配置（如 web search emulation）
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 
@@ -49,28 +51,14 @@ type Channel struct {
 	// 渠道级模型映射（按平台分组：platform → {src→dst}）
 	ModelMapping map[string]map[string]string
 
-	// 渠道特性配置（如 {"web_search_emulation": {"anthropic": true}}）
-	FeaturesConfig map[string]any
-
 	// 账号统计定价
-	ApplyPricingToAccountStats bool
-	AccountStatsPricingRules   []AccountStatsPricingRule
+	ApplyPricingToAccountStats bool                      // 是否应用渠道模型定价到账号统计
+	AccountStatsPricingRules   []AccountStatsPricingRule // 自定义账号统计定价规则（按 SortOrder 排序，先命中为准）
 }
 
-// IsWebSearchEmulationEnabled 返回该渠道是否为指定平台启用了 web search 模拟。
-func (c *Channel) IsWebSearchEmulationEnabled(platform string) bool {
-	if c == nil || c.FeaturesConfig == nil {
-		return false
-	}
-	wse, ok := c.FeaturesConfig[featureKeyWebSearchEmulation].(map[string]any)
-	if !ok {
-		return false
-	}
-	enabled, ok := wse[platform].(bool)
-	return ok && enabled
-}
-
-// AccountStatsPricingRule 账号统计定价规则。
+// AccountStatsPricingRule 账号统计定价规则
+// 每条规则包含匹配条件（分组/账号）和独立的模型定价。
+// 多条规则按 SortOrder 排序，先命中为准。
 type AccountStatsPricingRule struct {
 	ID         int64
 	ChannelID  int64
@@ -78,7 +66,7 @@ type AccountStatsPricingRule struct {
 	GroupIDs   []int64
 	AccountIDs []int64
 	SortOrder  int
-	Pricing    []ChannelModelPricing
+	Pricing    []ChannelModelPricing // 规则内的模型定价（复用现有定价结构）
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -210,22 +198,24 @@ func (c *Channel) Clone() *Channel {
 		}
 	}
 	if c.FeaturesConfig != nil {
-		cp.FeaturesConfig = cloneMapAny(c.FeaturesConfig)
+		cp.FeaturesConfig = deepCopyFeaturesConfig(c.FeaturesConfig)
 	}
 	if c.AccountStatsPricingRules != nil {
 		cp.AccountStatsPricingRules = make([]AccountStatsPricingRule, len(c.AccountStatsPricingRules))
-		copy(cp.AccountStatsPricingRules, c.AccountStatsPricingRules)
-		for i := range cp.AccountStatsPricingRules {
-			if c.AccountStatsPricingRules[i].GroupIDs != nil {
-				cp.AccountStatsPricingRules[i].GroupIDs = append([]int64(nil), c.AccountStatsPricingRules[i].GroupIDs...)
+		for i, rule := range c.AccountStatsPricingRules {
+			cp.AccountStatsPricingRules[i] = rule
+			if rule.GroupIDs != nil {
+				cp.AccountStatsPricingRules[i].GroupIDs = make([]int64, len(rule.GroupIDs))
+				copy(cp.AccountStatsPricingRules[i].GroupIDs, rule.GroupIDs)
 			}
-			if c.AccountStatsPricingRules[i].AccountIDs != nil {
-				cp.AccountStatsPricingRules[i].AccountIDs = append([]int64(nil), c.AccountStatsPricingRules[i].AccountIDs...)
+			if rule.AccountIDs != nil {
+				cp.AccountStatsPricingRules[i].AccountIDs = make([]int64, len(rule.AccountIDs))
+				copy(cp.AccountStatsPricingRules[i].AccountIDs, rule.AccountIDs)
 			}
-			if c.AccountStatsPricingRules[i].Pricing != nil {
-				cp.AccountStatsPricingRules[i].Pricing = make([]ChannelModelPricing, len(c.AccountStatsPricingRules[i].Pricing))
-				for j := range c.AccountStatsPricingRules[i].Pricing {
-					cp.AccountStatsPricingRules[i].Pricing[j] = c.AccountStatsPricingRules[i].Pricing[j].Clone()
+			if rule.Pricing != nil {
+				cp.AccountStatsPricingRules[i].Pricing = make([]ChannelModelPricing, len(rule.Pricing))
+				for j := range rule.Pricing {
+					cp.AccountStatsPricingRules[i].Pricing[j] = rule.Pricing[j].Clone()
 				}
 			}
 		}
@@ -233,16 +223,30 @@ func (c *Channel) Clone() *Channel {
 	return &cp
 }
 
-func cloneMapAny(in map[string]any) map[string]any {
-	out := make(map[string]any, len(in))
-	for k, v := range in {
-		if nested, ok := v.(map[string]any); ok {
-			out[k] = cloneMapAny(nested)
-			continue
-		}
-		out[k] = v
+// IsWebSearchEmulationEnabled 返回该渠道是否为指定平台启用了 web search 模拟。
+func (c *Channel) IsWebSearchEmulationEnabled(platform string) bool {
+	if c == nil || c.FeaturesConfig == nil {
+		return false
 	}
-	return out
+	wse, ok := c.FeaturesConfig[featureKeyWebSearchEmulation].(map[string]any)
+	if !ok {
+		return false
+	}
+	enabled, ok := wse[platform].(bool)
+	return ok && enabled
+}
+
+// deepCopyFeaturesConfig creates a deep copy of FeaturesConfig to prevent cache pollution.
+func deepCopyFeaturesConfig(src map[string]any) map[string]any {
+	dst := make(map[string]any, len(src))
+	for k, v := range src {
+		if inner, ok := v.(map[string]any); ok {
+			dst[k] = deepCopyFeaturesConfig(inner)
+		} else {
+			dst[k] = v
+		}
+	}
+	return dst
 }
 
 // ValidateIntervals 校验区间列表的合法性。

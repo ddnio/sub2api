@@ -114,7 +114,7 @@ func enhanceCSPPolicy(policy string) string {
 		policy = addToDirective(policy, "script-src", CloudflareInsightsDomain)
 	}
 
-	// Add Stripe.js domain to script-src and frame-src if not present.
+	// Add Stripe.js domain to script-src and frame-src if not present
 	if !strings.Contains(policy, "stripe.com") {
 		policy = addToDirective(policy, "script-src", StripeDomain)
 		policy = addToDirective(policy, "frame-src", StripeDomain)

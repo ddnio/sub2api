@@ -11,6 +11,7 @@ import type {
   SubscriptionPlan,
   ProviderInstance
 } from '@/types/payment'
+<<<<<<< HEAD
 import type { BasePaginationResponse, FetchOptions } from '@/types'
 
 export type AdminPaymentPlan = SubscriptionPlan & {
@@ -30,6 +31,9 @@ export type AdminPaymentOrder = PaymentOrder & {
 export type StatsBreakdown = DashboardStats['daily_series'][number]
 export type PaymentConfig = AdminPaymentConfig
 export type { DashboardStats, ProviderInstance }
+=======
+import type { BasePaginationResponse } from '@/types'
+>>>>>>> v0.1.116
 
 /** Admin-facing payment config returned by GET /admin/payment/config */
 export interface AdminPaymentConfig {
@@ -103,11 +107,16 @@ export const adminPaymentAPI = {
     end_date?: string
     order_type?: string
   }) {
+<<<<<<< HEAD
     return apiClient.get<BasePaginationResponse<AdminPaymentOrder>>('/admin/payment/orders', { params }).then(normalizeOrderPage)
+=======
+    return apiClient.get<BasePaginationResponse<PaymentOrder>>('/admin/payment/orders', { params })
+>>>>>>> v0.1.116
   },
 
   /** Get a specific order by ID */
   getOrder(id: number) {
+<<<<<<< HEAD
     return apiClient.get<AdminPaymentOrder | { order?: AdminPaymentOrder; auditLogs?: unknown[]; audit_logs?: unknown[] }>(`/admin/payment/orders/${id}`).then((res) => {
       const data = res.data
       if (data && typeof data === 'object' && 'order' in data && data.order) {
@@ -115,6 +124,9 @@ export const adminPaymentAPI = {
       }
       return { ...res, data: normalizeAdminOrder(data as AdminPaymentOrder) }
     })
+=======
+    return apiClient.get<PaymentOrder>(`/admin/payment/orders/${id}`)
+>>>>>>> v0.1.116
   },
 
   /** Cancel an order (admin) */
@@ -196,6 +208,7 @@ export const adminPaymentAPI = {
   /** Delete a provider instance */
   deleteProvider(id: number) {
     return apiClient.delete(`/admin/payment/providers/${id}`)
+<<<<<<< HEAD
   },
 
   // Legacy aliases kept for existing fork views that still participate in type checking.
@@ -254,6 +267,8 @@ function normalizeAdminOrder(order: AdminPaymentOrder): AdminPaymentOrder {
     pay_amount: Number(order.pay_amount || 0),
     fee_rate: Number(order.fee_rate || 0),
     refund_amount: Number(order.refund_amount || 0)
+=======
+>>>>>>> v0.1.116
   }
 }
 

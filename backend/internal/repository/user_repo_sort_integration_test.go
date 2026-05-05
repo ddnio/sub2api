@@ -61,14 +61,14 @@ func (s *UserRepoSuite) TestCreateAndRead_PreservesSignupSourceAndActivityTimest
 
 	created := s.mustCreateUser(&service.User{
 		Email:        "identity-meta@example.com",
-		SignupSource: "github",
+		SignupSource: "linuxdo",
 		LastLoginAt:  &lastLoginAt,
 		LastActiveAt: &lastActiveAt,
 	})
 
 	got, err := s.repo.GetByID(s.ctx, created.ID)
 	s.Require().NoError(err)
-	s.Require().Equal("github", got.SignupSource)
+	s.Require().Equal("linuxdo", got.SignupSource)
 	s.Require().NotNil(got.LastLoginAt)
 	s.Require().NotNil(got.LastActiveAt)
 	s.Require().True(got.LastLoginAt.Equal(lastLoginAt))
@@ -93,27 +93,6 @@ func (s *UserRepoSuite) TestUpdate_PersistsSignupSourceAndActivityTimestamps() {
 	s.Require().NotNil(got.LastActiveAt)
 	s.Require().True(got.LastLoginAt.Equal(lastLoginAt))
 	s.Require().True(got.LastActiveAt.Equal(lastActiveAt))
-}
-
-func (s *UserRepoSuite) TestListWithFilters_SortByLastLoginAtDesc() {
-	older := time.Now().Add(-4 * time.Hour).UTC().Truncate(time.Microsecond)
-	newer := time.Now().Add(-1 * time.Hour).UTC().Truncate(time.Microsecond)
-
-	s.mustCreateUser(&service.User{Email: "nil-login@example.com"})
-	s.mustCreateUser(&service.User{Email: "older-login@example.com", LastLoginAt: &older})
-	s.mustCreateUser(&service.User{Email: "newer-login@example.com", LastLoginAt: &newer})
-
-	users, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{
-		Page:      1,
-		PageSize:  10,
-		SortBy:    "last_login_at",
-		SortOrder: "desc",
-	}, service.UserListFilters{})
-	s.Require().NoError(err)
-	s.Require().Len(users, 3)
-	s.Require().Equal("newer-login@example.com", users[0].Email)
-	s.Require().Equal("older-login@example.com", users[1].Email)
-	s.Require().Equal("nil-login@example.com", users[2].Email)
 }
 
 func (s *UserRepoSuite) TestListWithFilters_SortByLastActiveAtAsc() {

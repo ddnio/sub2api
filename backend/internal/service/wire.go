@@ -39,6 +39,11 @@ func ProvideEmailQueueService(emailService *EmailService) *EmailQueueService {
 	return NewEmailQueueService(emailService, 3)
 }
 
+// ProvideOAuthRefreshAPI creates OAuthRefreshAPI with the default lock TTL.
+func ProvideOAuthRefreshAPI(accountRepo AccountRepository, tokenCache GeminiTokenCache) *OAuthRefreshAPI {
+	return NewOAuthRefreshAPI(accountRepo, tokenCache)
+}
+
 // ProvideTokenRefreshService creates and starts TokenRefreshService
 func ProvideTokenRefreshService(
 	accountRepo AccountRepository,
@@ -210,11 +215,13 @@ func ProvideRateLimitService(
 	geminiQuotaService *GeminiQuotaService,
 	tempUnschedCache TempUnschedCache,
 	timeoutCounterCache TimeoutCounterCache,
+	openAI403CounterCache OpenAI403CounterCache,
 	settingService *SettingService,
 	tokenCacheInvalidator TokenCacheInvalidator,
 ) *RateLimitService {
 	svc := NewRateLimitService(accountRepo, usageRepo, cfg, geminiQuotaService, tempUnschedCache)
 	svc.SetTimeoutCounterCache(timeoutCounterCache)
+	svc.SetOpenAI403CounterCache(openAI403CounterCache)
 	svc.SetSettingService(settingService)
 	svc.SetTokenCacheInvalidator(tokenCacheInvalidator)
 	return svc
@@ -373,26 +380,25 @@ func ProvideBackupService(
 	return svc
 }
 
-// ProvideSettingService wires SettingService dependencies and initializes websearch config.
-func ProvideSettingService(settingRepo SettingRepository, groupRepo GroupRepository, proxyRepo ProxyRepository, cfg *config.Config, redisClient *redis.Client) *SettingService {
+// ProvideSettingService wires SettingService with group reader and proxy repo.
+func ProvideSettingService(settingRepo SettingRepository, groupRepo GroupRepository, proxyRepo ProxyRepository, cfg *config.Config) *SettingService {
 	svc := NewSettingService(settingRepo, cfg)
 	svc.SetDefaultSubscriptionGroupReader(groupRepo)
-	svc.SetWebSearchProxyRepository(proxyRepo)
-	svc.SetWebSearchQuotaStore(context.Background(), redisClient)
+	svc.SetProxyRepository(proxyRepo)
 	return svc
 }
 
-// ProvidePaymentConfigService wraps NewPaymentConfigService to accept the named
-// payment.EncryptionKey type instead of raw []byte, avoiding Wire ambiguity.
-func ProvidePaymentConfigService(entClient *dbent.Client, settingRepo SettingRepository, key payment.EncryptionKey) *PaymentConfigService {
-	return NewPaymentConfigService(entClient, settingRepo, []byte(key))
-}
-
-// ProvidePaymentOrderExpiryService creates and starts PaymentOrderExpiryService.
-func ProvidePaymentOrderExpiryService(paymentSvc *PaymentService) *PaymentOrderExpiryService {
-	svc := NewPaymentOrderExpiryService(paymentSvc, 60*time.Second)
-	svc.Start()
-	return svc
+// ProvideBillingCacheService wires BillingCacheService with its RPM dependencies.
+func ProvideBillingCacheService(
+	cache BillingCache,
+	userRepo UserRepository,
+	subRepo UserSubscriptionRepository,
+	apiKeyRepo APIKeyRepository,
+	rpmCache UserRPMCache,
+	rateRepo UserGroupRateRepository,
+	cfg *config.Config,
+) *BillingCacheService {
+	return NewBillingCacheService(cache, userRepo, subRepo, apiKeyRepo, rpmCache, rateRepo, cfg)
 }
 
 // ProviderSet is the Wire provider set for all services
@@ -411,8 +417,7 @@ var ProviderSet = wire.NewSet(
 	NewDashboardService,
 	ProvidePricingService,
 	NewBillingService,
-	NewBillingCacheService,
-	NewBalanceNotifyService,
+	ProvideBillingCacheService,
 	NewAnnouncementService,
 	NewAdminService,
 	NewGatewayService,
@@ -424,7 +429,7 @@ var ProviderSet = wire.NewSet(
 	NewCompositeTokenCacheInvalidator,
 	wire.Bind(new(TokenCacheInvalidator), new(*CompositeTokenCacheInvalidator)),
 	NewAntigravityOAuthService,
-	NewOAuthRefreshAPI,
+	ProvideOAuthRefreshAPI,
 	ProvideGeminiTokenProvider,
 	NewGeminiMessagesCompatService,
 	ProvideAntigravityTokenProvider,
@@ -476,9 +481,28 @@ var ProviderSet = wire.NewSet(
 	ProvideScheduledTestService,
 	ProvideScheduledTestRunnerService,
 	NewGroupCapacityService,
+	NewChannelService,
+	NewModelPricingResolver,
 	ProvidePaymentConfigService,
 	NewPaymentService,
 	ProvidePaymentOrderExpiryService,
-	NewChannelService,
-	NewModelPricingResolver,
+	ProvideBalanceNotifyService,
 )
+
+// ProvidePaymentConfigService wraps NewPaymentConfigService to accept the named
+// payment.EncryptionKey type instead of raw []byte, avoiding Wire ambiguity.
+func ProvidePaymentConfigService(entClient *dbent.Client, settingRepo SettingRepository, key payment.EncryptionKey) *PaymentConfigService {
+	return NewPaymentConfigService(entClient, settingRepo, []byte(key))
+}
+
+// ProvideBalanceNotifyService creates BalanceNotifyService
+func ProvideBalanceNotifyService(emailService *EmailService, settingRepo SettingRepository, accountRepo AccountRepository) *BalanceNotifyService {
+	return NewBalanceNotifyService(emailService, settingRepo, accountRepo)
+}
+
+// ProvidePaymentOrderExpiryService creates and starts PaymentOrderExpiryService.
+func ProvidePaymentOrderExpiryService(paymentSvc *PaymentService) *PaymentOrderExpiryService {
+	svc := NewPaymentOrderExpiryService(paymentSvc, 60*time.Second)
+	svc.Start()
+	return svc
+}

@@ -43,9 +43,19 @@ const props = withDefaults(defineProps<{
 
 const appStore = useAppStore()
 const route = useRoute()
+<<<<<<< HEAD
 const { locale, t } = useI18n()
 const providerName = computed(() => t('auth.wechatProviderName'))
 
+=======
+const { t, locale } = useI18n()
+const providerName = computed(() => t('auth.wechatProviderName'))
+
+function localizeWeChatHint(zh: string, en: string): string {
+  return locale.value.startsWith('zh') ? zh : en
+}
+
+>>>>>>> v0.1.116
 const resolvedStart = computed(() => resolveWeChatOAuthStart(appStore.cachedPublicSettings))
 const buttonDisabled = computed(() => props.disabled || resolvedStart.value.mode === null)
 const disabledHint = computed(() => {
@@ -69,10 +79,13 @@ const disabledHint = computed(() => {
   }
 })
 
+<<<<<<< HEAD
 function localizeWeChatHint(zh: string, en: string): string {
   return locale.value.toLowerCase().startsWith('zh') ? zh : en
 }
 
+=======
+>>>>>>> v0.1.116
 onMounted(() => {
   if (!appStore.cachedPublicSettings && !appStore.publicSettingsLoaded) {
     appStore.fetchPublicSettings()

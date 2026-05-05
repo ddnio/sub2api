@@ -20,7 +20,7 @@ func TestAdminAuthJWTValidatesTokenVersion(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	cfg := &config.Config{JWT: config.JWTConfig{Secret: "test-secret", ExpireHour: 1}}
-	authService := service.NewAuthService(nil, nil, nil, nil, cfg, nil, nil, nil, nil, nil, nil, nil)
+	authService := service.NewAuthService(nil, nil, nil, nil, cfg, nil, nil, nil, nil, nil, nil)
 
 	admin := &service.User{
 		ID:           1,
@@ -40,7 +40,7 @@ func TestAdminAuthJWTValidatesTokenVersion(t *testing.T) {
 			return &clone, nil
 		},
 	}
-	userService := service.NewUserService(userRepo, nil, nil)
+	userService := service.NewUserService(userRepo, nil, nil, nil)
 
 	router := gin.New()
 	router.Use(gin.HandlerFunc(NewAdminAuthMiddleware(authService, userService, nil)))
@@ -174,6 +174,18 @@ func (s *stubUserRepo) ListWithFilters(ctx context.Context, params pagination.Pa
 	panic("unexpected ListWithFilters call")
 }
 
+func (s *stubUserRepo) GetLatestUsedAtByUserIDs(ctx context.Context, userIDs []int64) (map[int64]*time.Time, error) {
+	panic("unexpected GetLatestUsedAtByUserIDs call")
+}
+
+func (s *stubUserRepo) GetLatestUsedAtByUserID(ctx context.Context, userID int64) (*time.Time, error) {
+	panic("unexpected GetLatestUsedAtByUserID call")
+}
+
+func (s *stubUserRepo) UpdateUserLastActiveAt(ctx context.Context, userID int64, activeAt time.Time) error {
+	panic("unexpected UpdateUserLastActiveAt call")
+}
+
 func (s *stubUserRepo) UpdateBalance(ctx context.Context, id int64, amount float64) error {
 	panic("unexpected UpdateBalance call")
 }
@@ -184,14 +196,6 @@ func (s *stubUserRepo) DeductBalance(ctx context.Context, id int64, amount float
 
 func (s *stubUserRepo) UpdateConcurrency(ctx context.Context, id int64, amount int) error {
 	panic("unexpected UpdateConcurrency call")
-}
-
-func (s *stubUserRepo) GetLatestUsedAtByUserIDs(ctx context.Context, userIDs []int64) (map[int64]*time.Time, error) {
-	panic("unexpected GetLatestUsedAtByUserIDs call")
-}
-
-func (s *stubUserRepo) GetLatestUsedAtByUserID(ctx context.Context, userID int64) (*time.Time, error) {
-	panic("unexpected GetLatestUsedAtByUserID call")
 }
 
 func (s *stubUserRepo) ExistsByEmail(ctx context.Context, email string) (bool, error) {
@@ -214,7 +218,7 @@ func (s *stubUserRepo) ListUserAuthIdentities(ctx context.Context, userID int64)
 	panic("unexpected ListUserAuthIdentities call")
 }
 
-func (s *stubUserRepo) UnbindUserAuthProvider(ctx context.Context, userID int64, provider string) error {
+func (s *stubUserRepo) UnbindUserAuthProvider(context.Context, int64, string) error {
 	panic("unexpected UnbindUserAuthProvider call")
 }
 

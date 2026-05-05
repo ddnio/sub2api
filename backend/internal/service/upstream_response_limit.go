@@ -12,6 +12,8 @@ import (
 
 var ErrUpstreamResponseBodyTooLarge = errors.New("upstream response body too large")
 
+// defaultUpstreamResponseReadMaxBytes 源自 config.DefaultUpstreamResponseReadMaxBytes，
+// 仅在 cfg 为 nil 时作为兜底（测试或极端场景）。
 const defaultUpstreamResponseReadMaxBytes = config.DefaultUpstreamResponseReadMaxBytes
 
 func resolveUpstreamResponseReadLimit(cfg *config.Config) int64 {

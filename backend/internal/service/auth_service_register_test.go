@@ -10,7 +10,6 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
-	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/stretchr/testify/require"
 )
 
@@ -65,73 +64,6 @@ func (s *settingRepoStub) Delete(ctx context.Context, key string) error {
 type emailCacheStub struct {
 	data *VerificationCodeData
 	err  error
-}
-
-type oauthEmailRedeemRepoStub struct {
-	code     *RedeemCode
-	getErr   error
-	useErr   error
-	usedID   int64
-	usedUser int64
-}
-
-func (s *oauthEmailRedeemRepoStub) Create(ctx context.Context, code *RedeemCode) error {
-	panic("unexpected Create call")
-}
-
-func (s *oauthEmailRedeemRepoStub) CreateBatch(ctx context.Context, codes []RedeemCode) error {
-	panic("unexpected CreateBatch call")
-}
-
-func (s *oauthEmailRedeemRepoStub) GetByID(ctx context.Context, id int64) (*RedeemCode, error) {
-	panic("unexpected GetByID call")
-}
-
-func (s *oauthEmailRedeemRepoStub) GetByCode(ctx context.Context, code string) (*RedeemCode, error) {
-	if s.getErr != nil {
-		return nil, s.getErr
-	}
-	if s.code == nil {
-		return nil, ErrRedeemCodeNotFound
-	}
-	return s.code, nil
-}
-
-func (s *oauthEmailRedeemRepoStub) Update(ctx context.Context, code *RedeemCode) error {
-	panic("unexpected Update call")
-}
-
-func (s *oauthEmailRedeemRepoStub) Delete(ctx context.Context, id int64) error {
-	panic("unexpected Delete call")
-}
-
-func (s *oauthEmailRedeemRepoStub) Use(ctx context.Context, id, userID int64) error {
-	if s.useErr != nil {
-		return s.useErr
-	}
-	s.usedID = id
-	s.usedUser = userID
-	return nil
-}
-
-func (s *oauthEmailRedeemRepoStub) List(ctx context.Context, params pagination.PaginationParams) ([]RedeemCode, *pagination.PaginationResult, error) {
-	panic("unexpected List call")
-}
-
-func (s *oauthEmailRedeemRepoStub) ListWithFilters(ctx context.Context, params pagination.PaginationParams, codeType, status, search string) ([]RedeemCode, *pagination.PaginationResult, error) {
-	panic("unexpected ListWithFilters call")
-}
-
-func (s *oauthEmailRedeemRepoStub) ListByUser(ctx context.Context, userID int64, limit int) ([]RedeemCode, error) {
-	panic("unexpected ListByUser call")
-}
-
-func (s *oauthEmailRedeemRepoStub) ListByUserPaginated(ctx context.Context, userID int64, params pagination.PaginationParams, codeType string) ([]RedeemCode, *pagination.PaginationResult, error) {
-	panic("unexpected ListByUserPaginated call")
-}
-
-func (s *oauthEmailRedeemRepoStub) SumPositiveBalanceByUser(ctx context.Context, userID int64) (float64, error) {
-	panic("unexpected SumPositiveBalanceByUser call")
 }
 
 type defaultSubscriptionAssignerStub struct {
@@ -238,11 +170,11 @@ func (s *emailCacheStub) SetPasswordResetEmailCooldown(ctx context.Context, emai
 	return nil
 }
 
-func (s *emailCacheStub) IncrNotifyCodeUserRate(ctx context.Context, userID int64, window time.Duration) (int64, error) {
+func (s *emailCacheStub) GetNotifyCodeUserRate(ctx context.Context, userID int64) (int64, error) {
 	return 0, nil
 }
 
-func (s *emailCacheStub) GetNotifyCodeUserRate(ctx context.Context, userID int64) (int64, error) {
+func (s *emailCacheStub) IncrNotifyCodeUserRate(ctx context.Context, userID int64, window time.Duration) (int64, error) {
 	return 0, nil
 }
 
@@ -279,16 +211,8 @@ func newAuthService(repo *userRepoStub, settings map[string]string, emailCache E
 		nil,
 		nil,
 		nil, // promoService
-		nil, // referralService
 		nil, // defaultSubAssigner
 	)
-}
-
-func newOAuthEmailAuthService(repo *userRepoStub, redeemRepo RedeemCodeRepository, settings map[string]string, emailCache EmailCache) *AuthService {
-	svc := newAuthService(repo, settings, emailCache)
-	svc.redeemRepo = redeemRepo
-	svc.refreshTokenCache = &refreshTokenCacheStub{}
-	return svc
 }
 
 func TestAuthService_Register_Disabled(t *testing.T) {
@@ -462,157 +386,9 @@ func TestAuthService_Register_Success(t *testing.T) {
 	require.Equal(t, RoleUser, user.Role)
 	require.Equal(t, StatusActive, user.Status)
 	require.Equal(t, 3.5, user.Balance)
-	require.True(t, user.BalanceNotifyEnabled)
-	require.Equal(t, "fixed", user.BalanceNotifyThresholdType)
 	require.Equal(t, 2, user.Concurrency)
 	require.Len(t, repo.created, 1)
 	require.True(t, user.CheckPassword("password"))
-}
-
-func TestAuthService_LoginOrRegisterOAuth_SetsNotifyDefaults(t *testing.T) {
-	repo := &userRepoStub{nextID: 6}
-	service := newAuthService(repo, map[string]string{
-		SettingKeyRegistrationEnabled: "true",
-	}, nil)
-
-	token, user, err := service.LoginOrRegisterOAuth(context.Background(), "oauth@test.com", "oauth-user")
-	require.NoError(t, err)
-	require.NotEmpty(t, token)
-	require.NotNil(t, user)
-	require.True(t, user.BalanceNotifyEnabled)
-	require.Equal(t, "fixed", user.BalanceNotifyThresholdType)
-	require.Len(t, repo.created, 1)
-	require.True(t, repo.created[0].BalanceNotifyEnabled)
-	require.Equal(t, "fixed", repo.created[0].BalanceNotifyThresholdType)
-}
-
-func TestAuthService_LoginOrRegisterOAuthWithTokenPair_SetsNotifyDefaults(t *testing.T) {
-	repo := &userRepoStub{nextID: 7}
-	service := newAuthService(repo, map[string]string{
-		SettingKeyRegistrationEnabled: "true",
-	}, nil)
-	service.refreshTokenCache = &refreshTokenCacheStub{}
-
-	pair, user, err := service.LoginOrRegisterOAuthWithTokenPair(context.Background(), "pending-oauth@test.com", "pending-user", "")
-	require.NoError(t, err)
-	require.NotNil(t, pair)
-	require.NotNil(t, user)
-	require.True(t, user.BalanceNotifyEnabled)
-	require.Equal(t, "fixed", user.BalanceNotifyThresholdType)
-	require.Len(t, repo.created, 1)
-	require.True(t, repo.created[0].BalanceNotifyEnabled)
-	require.Equal(t, "fixed", repo.created[0].BalanceNotifyThresholdType)
-}
-
-func TestAuthService_RegisterOAuthEmailAccount_UsesForkRegistrationRules(t *testing.T) {
-	repo := &userRepoStub{nextID: 9}
-	cache := &emailCacheStub{data: &VerificationCodeData{Code: "123456"}}
-	svc := newOAuthEmailAuthService(repo, nil, map[string]string{
-		SettingKeyRegistrationEnabled: "true",
-		SettingKeyEmailVerifyEnabled:  "false",
-	}, cache)
-
-	pair, user, err := svc.RegisterOAuthEmailAccount(context.Background(), "OAUTH@Test.COM", "password", "123456", "", "linuxdo")
-	require.NoError(t, err)
-	require.NotNil(t, pair)
-	require.NotNil(t, user)
-	require.Equal(t, int64(9), user.ID)
-	require.Equal(t, "oauth@test.com", user.Email)
-	require.Equal(t, 3.5, user.Balance)
-	require.Equal(t, 2, user.Concurrency)
-	require.True(t, user.BalanceNotifyEnabled)
-	require.Equal(t, "fixed", user.BalanceNotifyThresholdType)
-	require.True(t, user.CheckPassword("password"))
-	require.Len(t, repo.created, 1)
-}
-
-func TestAuthService_RegisterOAuthEmailAccount_RequiresEmailCodeRegardlessGlobalToggle(t *testing.T) {
-	repo := &userRepoStub{}
-	svc := newOAuthEmailAuthService(repo, nil, map[string]string{
-		SettingKeyRegistrationEnabled: "true",
-		SettingKeyEmailVerifyEnabled:  "false",
-	}, &emailCacheStub{data: &VerificationCodeData{Code: "123456"}})
-
-	_, _, err := svc.RegisterOAuthEmailAccount(context.Background(), "oauth@test.com", "password", "", "", "oidc")
-	require.ErrorIs(t, err, ErrEmailVerifyRequired)
-	require.Empty(t, repo.created)
-}
-
-func TestAuthService_RegisterOAuthEmailAccount_RequiresRefreshTokenCacheBeforeCreate(t *testing.T) {
-	repo := &userRepoStub{}
-	svc := newAuthService(repo, map[string]string{
-		SettingKeyRegistrationEnabled: "true",
-	}, &emailCacheStub{data: &VerificationCodeData{Code: "123456"}})
-
-	_, _, err := svc.RegisterOAuthEmailAccount(context.Background(), "oauth@test.com", "password", "123456", "", "linuxdo")
-	require.ErrorIs(t, err, ErrServiceUnavailable)
-	require.Empty(t, repo.created)
-}
-
-func TestAuthService_RegisterOAuthEmailAccount_UsesInvitationWhenEnabled(t *testing.T) {
-	repo := &userRepoStub{nextID: 10}
-	redeemRepo := &oauthEmailRedeemRepoStub{
-		code: &RedeemCode{ID: 42, Code: "INVITE", Type: RedeemTypeInvitation, Status: StatusUnused},
-	}
-	svc := newOAuthEmailAuthService(repo, redeemRepo, map[string]string{
-		SettingKeyRegistrationEnabled:   "true",
-		SettingKeyInvitationCodeEnabled: "true",
-	}, &emailCacheStub{data: &VerificationCodeData{Code: "123456"}})
-
-	_, user, err := svc.RegisterOAuthEmailAccount(context.Background(), "oauth@test.com", "password", "123456", "INVITE", "linuxdo")
-	require.NoError(t, err)
-	require.NotNil(t, user)
-	require.Equal(t, int64(42), redeemRepo.usedID)
-	require.Equal(t, int64(10), redeemRepo.usedUser)
-}
-
-func TestAuthService_RegisterOAuthEmailAccount_InvitationUseFailureDoesNotOrphanResponse(t *testing.T) {
-	repo := &userRepoStub{nextID: 12}
-	redeemRepo := &oauthEmailRedeemRepoStub{
-		code:   &RedeemCode{ID: 43, Code: "INVITE", Type: RedeemTypeInvitation, Status: StatusUnused},
-		useErr: errors.New("redeem write failed"),
-	}
-	svc := newOAuthEmailAuthService(repo, redeemRepo, map[string]string{
-		SettingKeyRegistrationEnabled:   "true",
-		SettingKeyInvitationCodeEnabled: "true",
-	}, &emailCacheStub{data: &VerificationCodeData{Code: "123456"}})
-
-	pair, user, err := svc.RegisterOAuthEmailAccount(context.Background(), "oauth@test.com", "password", "123456", "INVITE", "linuxdo")
-	require.NoError(t, err)
-	require.NotNil(t, pair)
-	require.NotNil(t, user)
-	require.Len(t, repo.created, 1)
-}
-
-func TestAuthService_RegisterOAuthEmailAccount_ReusesEmailPolicyAndReservedEmailGuard(t *testing.T) {
-	repo := &userRepoStub{}
-	svc := newOAuthEmailAuthService(repo, nil, map[string]string{
-		SettingKeyRegistrationEnabled:              "true",
-		SettingKeyRegistrationEmailSuffixWhitelist: `["@example.com"]`,
-	}, &emailCacheStub{data: &VerificationCodeData{Code: "123456"}})
-
-	_, _, err := svc.RegisterOAuthEmailAccount(context.Background(), "oauth@other.com", "password", "123456", "", "oidc")
-	require.ErrorIs(t, err, ErrEmailSuffixNotAllowed)
-
-	_, _, err = svc.RegisterOAuthEmailAccount(context.Background(), "oidc-abc@oidc-connect.invalid", "password", "123456", "", "oidc")
-	require.ErrorIs(t, err, ErrEmailReserved)
-	require.Empty(t, repo.created)
-}
-
-func TestAuthService_ValidatePasswordCredentials(t *testing.T) {
-	svc := newAuthService(&userRepoStub{}, nil, nil)
-	hash, err := svc.HashPassword("correct")
-	require.NoError(t, err)
-
-	repo := &userRepoStub{user: &User{ID: 11, Email: "user@test.com", PasswordHash: hash, Status: StatusActive}}
-	svc = newAuthService(repo, nil, nil)
-
-	user, err := svc.ValidatePasswordCredentials(context.Background(), "USER@Test.COM", "correct")
-	require.NoError(t, err)
-	require.Equal(t, int64(11), user.ID)
-
-	_, err = svc.ValidatePasswordCredentials(context.Background(), "user@test.com", "wrong")
-	require.ErrorIs(t, err, ErrInvalidCredentials)
 }
 
 func TestAuthService_ValidateToken_ExpiredReturnsClaimsWithError(t *testing.T) {

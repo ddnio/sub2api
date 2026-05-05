@@ -360,7 +360,7 @@ func (h *AccountHandler) listAllProxies(ctx context.Context) ([]service.Proxy, e
 	pageSize := dataPageCap
 	var out []service.Proxy
 	for {
-		items, total, err := h.adminService.ListProxies(ctx, page, pageSize, "", "", "", "", "")
+		items, total, err := h.adminService.ListProxies(ctx, page, pageSize, "", "", "", "created_at", "desc")
 		if err != nil {
 			return nil, err
 		}
@@ -373,12 +373,12 @@ func (h *AccountHandler) listAllProxies(ctx context.Context) ([]service.Proxy, e
 	return out, nil
 }
 
-func (h *AccountHandler) listAccountsFiltered(ctx context.Context, platform, accountType, status, search string, groupID int64, privacyMode string) ([]service.Account, error) {
+func (h *AccountHandler) listAccountsFiltered(ctx context.Context, platform, accountType, status, search string, groupID int64, privacyMode, sortBy, sortOrder string) ([]service.Account, error) {
 	page := 1
 	pageSize := dataPageCap
 	var out []service.Account
 	for {
-		items, total, err := h.adminService.ListAccounts(ctx, page, pageSize, platform, accountType, status, search, groupID, privacyMode, "", "")
+		items, total, err := h.adminService.ListAccounts(ctx, page, pageSize, platform, accountType, status, search, groupID, privacyMode, sortBy, sortOrder)
 		if err != nil {
 			return nil, err
 		}
@@ -412,24 +412,26 @@ func (h *AccountHandler) resolveExportAccounts(ctx context.Context, ids []int64,
 	status := c.Query("status")
 	privacyMode := strings.TrimSpace(c.Query("privacy_mode"))
 	search := strings.TrimSpace(c.Query("search"))
+	sortBy := c.DefaultQuery("sort_by", "name")
+	sortOrder := c.DefaultQuery("sort_order", "asc")
 	if len(search) > 100 {
 		search = search[:100]
 	}
 
-	var groupID int64
+	groupID := int64(0)
 	if groupIDStr := c.Query("group"); groupIDStr != "" {
 		if groupIDStr == accountListGroupUngroupedQueryValue {
 			groupID = service.AccountListGroupUngrouped
 		} else {
 			parsedGroupID, parseErr := strconv.ParseInt(groupIDStr, 10, 64)
-			if parseErr != nil || parsedGroupID < 0 {
+			if parseErr != nil || parsedGroupID <= 0 {
 				return nil, infraerrors.BadRequest("INVALID_GROUP_FILTER", "invalid group filter")
 			}
 			groupID = parsedGroupID
 		}
 	}
 
-	return h.listAccountsFiltered(ctx, platform, accountType, status, search, groupID, privacyMode)
+	return h.listAccountsFiltered(ctx, platform, accountType, status, search, groupID, privacyMode, sortBy, sortOrder)
 }
 
 func (h *AccountHandler) resolveExportProxies(ctx context.Context, accounts []service.Account) ([]service.Proxy, error) {

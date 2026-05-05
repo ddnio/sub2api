@@ -70,7 +70,10 @@ const createAdminUser = (): AdminUser => ({
   created_at: '2026-04-17T00:00:00Z',
   updated_at: '2026-04-17T00:00:00Z',
   notes: '',
+<<<<<<< HEAD
   last_login_at: '2026-04-16T01:00:00Z',
+=======
+>>>>>>> v0.1.116
   last_active_at: '2026-04-16T02:00:00Z',
   last_used_at: '2026-04-17T02:00:00Z',
   current_concurrency: 0
@@ -113,7 +116,11 @@ describe('admin UsersView', () => {
     getBatchUserAttributes.mockResolvedValue({ values: {} })
   })
 
+<<<<<<< HEAD
   it('shows last_used_at column and requests last_used_at sort', async () => {
+=======
+  it('shows active, used, and created activity columns in order and requests last_used_at sort', async () => {
+>>>>>>> v0.1.116
     const wrapper = mount(UsersView, {
       global: {
         stubs: {
@@ -144,7 +151,14 @@ describe('admin UsersView', () => {
 
     await flushPromises()
 
+<<<<<<< HEAD
     expect(wrapper.get('[data-test="columns"]').text()).toContain('last_used_at')
+=======
+    const columns = wrapper.get('[data-test="columns"]').text()
+    const visibleColumns = columns.split(',')
+    expect(visibleColumns.slice(-4, -1)).toEqual(['last_active_at', 'last_used_at', 'created_at'])
+    expect(visibleColumns).not.toContain('last_login_at')
+>>>>>>> v0.1.116
 
     await wrapper.get('[data-test="sort-last-used"]').trigger('click')
     await flushPromises()

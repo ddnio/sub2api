@@ -2,8 +2,14 @@
 
 package service
 
-import "testing"
+import (
+	"testing"
+)
 
+// TestBuildUsageBillingCommand_SubscriptionAppliesRateMultiplier locks in the fix
+// that subscription-mode billing honours the group (and any user-specific) rate
+// multiplier — i.e. cmd.SubscriptionCost tracks ActualCost (= TotalCost *
+// RateMultiplier), not raw TotalCost.
 func TestBuildUsageBillingCommand_SubscriptionAppliesRateMultiplier(t *testing.T) {
 	t.Parallel()
 
@@ -24,6 +30,7 @@ func TestBuildUsageBillingCommand_SubscriptionAppliesRateMultiplier(t *testing.T
 			actualCost:     2.0,
 			isSubscription: true,
 			wantSub:        2.0,
+			wantBalance:    0,
 		},
 		{
 			name:           "subscription with 0.5x multiplier consumes 0.5x quota",
@@ -31,18 +38,22 @@ func TestBuildUsageBillingCommand_SubscriptionAppliesRateMultiplier(t *testing.T
 			actualCost:     0.5,
 			isSubscription: true,
 			wantSub:        0.5,
+			wantBalance:    0,
 		},
 		{
-			name:           "free subscription consumes no quota",
+			name:           "free subscription (multiplier 0) consumes no quota",
 			totalCost:      1.0,
 			actualCost:     0,
 			isSubscription: true,
+			wantSub:        0,
+			wantBalance:    0,
 		},
 		{
-			name:           "balance billing keeps using actual cost",
+			name:           "balance billing keeps using ActualCost (regression)",
 			totalCost:      1.0,
 			actualCost:     2.0,
 			isSubscription: false,
+			wantSub:        0,
 			wantBalance:    2.0,
 		},
 	}
@@ -64,10 +75,10 @@ func TestBuildUsageBillingCommand_SubscriptionAppliesRateMultiplier(t *testing.T
 				t.Fatal("buildUsageBillingCommand returned nil")
 			}
 			if cmd.SubscriptionCost != tt.wantSub {
-				t.Fatalf("SubscriptionCost = %v, want %v", cmd.SubscriptionCost, tt.wantSub)
+				t.Errorf("SubscriptionCost = %v, want %v", cmd.SubscriptionCost, tt.wantSub)
 			}
 			if cmd.BalanceCost != tt.wantBalance {
-				t.Fatalf("BalanceCost = %v, want %v", cmd.BalanceCost, tt.wantBalance)
+				t.Errorf("BalanceCost = %v, want %v", cmd.BalanceCost, tt.wantBalance)
 			}
 		})
 	}

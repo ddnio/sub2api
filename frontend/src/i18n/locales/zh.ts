@@ -360,6 +360,8 @@ export default {
     justNow: '刚刚',
     view: '查看',
     save: '保存',
+    saved: '保存成功',
+    deleted: '删除成功',
     cancel: '取消',
     delete: '删除',
     edit: '编辑',
@@ -420,10 +422,14 @@ export default {
     select: '选择',
     selectedCount: '（已选 {count} 个）',
     refresh: '刷新',
+    view: '查看',
     settings: '设置',
     chooseFile: '选择文件',
+    copy: '复制',
     notAvailable: '不可用',
     now: '现在',
+    today: '今天',
+    tomorrow: '明天',
     unknown: '未知',
     minutes: '分钟',
     time: {
@@ -474,10 +480,18 @@ export default {
     paymentDashboard: '支付看板',
     paymentPlans: '订阅套餐',
     docs: '文档',
+<<<<<<< HEAD
     sora: 'Sora 创作',
     payment: '充值 / 订阅',
     paymentManagement: '支付管理',
     pricing: '模型定价',
+=======
+    myOrders: '我的订单',
+    orderManagement: '订单管理',
+    paymentDashboard: '支付概览',
+    paymentConfig: '支付配置',
+    paymentPlans: '订阅套餐'
+>>>>>>> v0.1.116
   },
 
   // Auth
@@ -593,7 +607,51 @@ export default {
       useDifferentEmail: '使用其他邮箱',
       totpRequired: '请输入 {email} 的 6 位双因素验证码，以完成此 {providerName} 登录方式绑定。'
     },
+    oauthFlow: {
+      profileDetailsTitle: '使用 {providerName} 资料',
+      profileDetailsDescription: '选择是否将 {providerName} 的昵称或头像应用到当前账户。',
+      useDisplayName: '使用昵称',
+      useAvatar: '使用头像',
+      avatarAlt: '{providerName} 头像',
+      reviewProfileBeforeContinue: '请先确认 {providerName} 资料后再继续。',
+      chooseHowToContinue: '选择后续操作',
+      chooseAccountActionHint: '请选择绑定已有账户，或创建一个新账户。',
+      suggestedEmail: '建议邮箱：{email}',
+      bindExistingAccount: '绑定已有账户',
+      createNewAccount: '创建新账户',
+      createAccountHint: '请输入邮箱地址以创建账户并继续。',
+      bindLoginHint: '登录一个已有账户以绑定此次 {providerName} 登录。',
+      signInThenBindDescription: '请先登录已有账户，再将此次 {providerName} 登录绑定到该账户。',
+      bindSignInToExistingAccount: '将此次 {providerName} 登录绑定到已有账户。',
+      bindCurrentAccountTitle: '绑定当前账户',
+      bindCurrentAccountDescription: '将此次 {providerName} 登录绑定到当前浏览器已登录的账户。',
+      bindCurrentAccount: '绑定当前账户',
+      logInAndBind: '登录并绑定',
+      useDifferentEmail: '使用其他邮箱',
+      backToOptions: '返回选项',
+      yourAccount: '当前账户',
+      totpHint: '请输入 {account} 的 6 位验证码，以完成此次 {providerName} 登录绑定。',
+      verifyAndContinue: '验证并继续',
+      wechatAvailabilityUnknown: '暂时无法确认微信登录可用性，请刷新后重试。',
+      wechatSystemBrowserOnly: '当前微信登录流程仅支持在系统浏览器中继续。',
+      wechatBrowserOnly: '当前微信登录流程仅支持在微信内置浏览器中继续。',
+      wechatNotConfigured: '微信登录尚未配置。'
+    },
+    linuxdoCallbackPageTitle: 'LinuxDo 登录回调',
+    oidcCallbackPageTitle: 'OIDC 登录回调',
+    oauthCallbackPageTitle: 'OAuth 回调',
+    wechatProviderName: '微信',
+    wechatCallbackPageTitle: '微信登录回调',
+    wechatPaymentCallbackPageTitle: '微信支付回调',
+    wechatPayment: {
+      callbackTitle: '正在恢复微信支付',
+      callbackProcessing: '正在恢复微信支付...',
+      backToPayment: '返回支付页',
+      callbackMissingResumeToken: '微信支付回调缺少恢复令牌。'
+    },
     oauth: {
+      callbackTitle: 'OAuth 回调',
+      callbackHint: '按需将授权码和状态值复制回后台授权流程。',
       code: '授权码',
       state: '状态',
       fullUrl: '完整URL'
@@ -867,6 +925,7 @@ export default {
     totalCost: '总消费',
     standardCost: '标准',
     actualCost: '实际',
+    accountCost: '成本',
     userBilled: '用户扣费',
     accountBilled: '账号计费',
     accountMultiplier: '账号倍率',
@@ -912,6 +971,8 @@ export default {
     inputTokenPrice: '输入单价',
     outputTokenPrice: '输出单价',
     perMillionTokens: '/ 1M Token',
+    unitPrice: '单次价格',
+    imageUnitPrice: '单张价格',
     cacheRead: '读取',
     cacheWrite: '写入',
     serviceTier: '服务档位',
@@ -1005,10 +1066,23 @@ export default {
     description: '管理您的账户信息和设置',
     accountBalance: '账户余额',
     concurrencyLimit: '并发限制',
+    rpmLimit: 'RPM 限制',
+    rpmUnlimited: '不限制',
     memberSince: '注册时间',
+    overviewTitle: '账户总览',
+    overviewDescription: '快速查看账号状态、资料来源与常用设置。',
+    basicsTitle: '资料与头像',
+    basicsDescription: '维护公开展示信息，并保持头像与昵称风格一致。',
+    linkedProfileSources: '资料来源',
+    linkedProfileSourcesDescription: '部分头像和昵称可能同步自第三方登录方式。',
+    securityTitle: '安全设置',
+    securityDescription: '密码、双因素认证和通知提醒集中放在右侧。',
     administrator: '管理员',
     user: '用户',
     username: '用户名',
+    email: '邮箱',
+    status: '状态',
+    role: '角色',
     enterUsername: '输入用户名',
     editProfile: '编辑个人资料',
     updateProfile: '更新资料',
@@ -1097,6 +1171,7 @@ export default {
       emailDuplicate: '该邮箱已存在',
       maxEmailsReached: '已达到通知邮箱数量上限',
       unverified: '未验证',
+<<<<<<< HEAD
       verified: '已验证'
     },
     avatar: {
@@ -1110,15 +1185,32 @@ export default {
       deleteSuccess: '头像已删除',
       invalidType: '请选择图片文件',
       fileTooLarge: '头像图片必须不超过 100KB',
+=======
+      verified: '已验证',
+    },
+    avatar: {
+      title: '资料头像',
+      description: '仅支持上传头像图片；静态图片会自动压缩到 20KB 以内后再保存。',
+      uploadAction: '上传图片',
+      uploadHint: '上传图片时会自动压缩静态图片到 20KB 以内，GIF 需自行控制在 20KB 以内',
+      uploadRequired: '请先上传头像图片',
+      saveSuccess: '头像已更新',
+      deleteSuccess: '头像已删除',
+      invalidType: '请选择图片文件',
+>>>>>>> v0.1.116
       gifTooLarge: 'GIF 头像必须在 20KB 以内',
       compressTooLarge: '无法将图片压缩到 20KB 以内，请换一张更小的图片',
       compressFailed: '压缩所选图片失败',
       readFailed: '读取所选图片失败',
+<<<<<<< HEAD
       invalidValue: '请输入有效的头像 URL 或图片 data URL',
+=======
+>>>>>>> v0.1.116
       emptyDeleteHint: '当前没有可删除的头像',
     },
     authBindings: {
       title: '登录方式绑定',
+<<<<<<< HEAD
       description: '将第三方登录方式绑定到当前账号。',
       providers: {
         email: '邮箱',
@@ -1132,6 +1224,44 @@ export default {
       bindAction: '绑定',
       unbindAction: '解绑',
       bindSuccess: '登录方式绑定成功'
+=======
+      description: '查看当前绑定状态，并将更多第三方登录方式关联到这个账号。',
+      bindAction: '绑定 {providerName}',
+      bindSuccess: '账号绑定成功',
+      emailPlaceholder: '输入邮箱地址',
+      codePlaceholder: '输入验证码',
+      passwordPlaceholder: '设置登录密码',
+      replaceEmailPasswordPlaceholder: '输入当前密码',
+      sendCodeAction: '发送验证码',
+      manageEmailAction: '管理邮箱',
+      hideEmailFormAction: '收起邮箱表单',
+      confirmEmailBindAction: '绑定邮箱',
+      confirmEmailReplaceAction: '更换主邮箱',
+      codeSentTo: '验证码已发送到 {email}',
+      replaceSuccess: '主邮箱已更新',
+      unbindAction: '解绑',
+      unbindSuccess: '{providerName} 已解绑',
+      boundCount: '已关联 {count} 条记录',
+      status: {
+        bound: '已绑定',
+        notBound: '未绑定',
+      },
+      providers: {
+        email: '邮箱',
+        linuxdo: 'LinuxDo',
+        oidc: '{providerName}',
+        wechat: '微信',
+      },
+      notes: {
+        emailManagedFromProfile: '主邮箱在资料表单中管理',
+        canUnbind: '你可以解绑这个登录方式。',
+        bindAnotherBeforeUnbind: '请先绑定其他登录方式，再解除当前绑定。',
+      },
+      source: {
+        avatar: '头像当前来自 {providerName}',
+        username: '昵称当前来自 {providerName}',
+      },
+>>>>>>> v0.1.116
     }
   },
 
@@ -1215,6 +1345,7 @@ export default {
       totalCost: '总消费',
       actual: '实际',
       standard: '标准',
+      accountCost: '成本',
       todayTokens: '今日 Token',
       totalTokens: '总 Token',
       input: '输入',
@@ -1594,6 +1725,7 @@ export default {
       updating: '更新中...',
       columns: {
         user: '用户',
+        id: 'ID',
         email: '邮箱',
         username: '用户名',
         notes: '备注',
@@ -1605,6 +1737,8 @@ export default {
         concurrency: '并发数',
         referralCode: '推荐码',
         status: '状态',
+        lastActive: '最后活跃时间',
+        lastUsed: '最后使用时间',
         created: '创建时间',
         actions: '操作'
       },
@@ -1663,7 +1797,10 @@ export default {
         balanceLabel: '余额',
         concurrencyLabel: '并发数',
         statusLabel: '状态',
-        selectStatus: '选择状态'
+        selectStatus: '选择状态',
+        rpmLimit: '每分钟请求数 (RPM)',
+        rpmLimitPlaceholder: '0 表示不限制',
+        rpmLimitHint: '该用户每分钟最大请求数，0 = 不限制；仅在所用分组未设置 rpm_limit 时作为兜底生效'
       },
       adjustBalance: '调整余额',
       adjustConcurrency: '调整并发数',
@@ -1836,6 +1973,10 @@ export default {
         name: '名称',
         platform: '平台',
         rateMultiplier: '费率倍数',
+        rpmOverride: 'RPM 覆盖',
+        rpmOverrideHint: '该用户在此分组的 RPM 上限；留空 = 使用分组默认；0 = 不限制',
+        rateDefault: '默认',
+        rpmDefault: '默认',
         exclusive: '独占',
         type: '类型',
         priority: '优先级',
@@ -1870,6 +2011,9 @@ export default {
         descriptionPlaceholder: '请输入描述（可选）',
         rateMultiplierLabel: '费率倍数',
         rateMultiplierHint: '1.0 = 标准费率，0.5 = 半价，2.0 = 双倍',
+        rpmLimit: '每分钟请求数 (RPM)',
+        rpmLimitPlaceholder: '0 表示不限制',
+        rpmLimitHint: '每用户在本分组每分钟最大请求数，0 = 不限制；一旦设置即接管该用户的限流（覆盖用户级 rpm_limit）',
         exclusiveLabel: '专属分组',
         exclusiveHint: '专属分组，可以手动指定给用户',
         platformLabel: '平台限制',
@@ -1939,6 +2083,12 @@ export default {
       rateMultipliers: '专属倍率',
       rateMultipliersTitle: '分组专属倍率管理',
       addUserRate: '添加用户专属倍率',
+      rpmOverrides: '专属 RPM',
+      rpmOverridesTitle: '分组专属 RPM 管理',
+      addUserRpm: '添加用户专属 RPM',
+      noRpmOverrides: '暂无用户设置了专属 RPM',
+      rpmSaved: '专属 RPM 已保存',
+      groupRpmDefault: '分组默认 RPM',
       searchUserPlaceholder: '搜索用户邮箱...',
       noRateMultipliers: '暂无用户设置了专属倍率',
       rateUpdated: '专属倍率已更新',
@@ -2163,7 +2313,20 @@ export default {
         noPlatforms: '点击"添加平台"开始配置渠道',
         mappingCount: '条映射',
         pricingEntry: '定价配置',
-        noModels: '未添加模型'
+        noModels: '未添加模型',
+        applyPricingToAccountStats: '应用模型定价到账号统计',
+        applyPricingToAccountStatsDesc: '启用后，未被自定义规则匹配的请求将使用模型定价文件中的标准价格计算账号统计费用',
+        accountStatsPricingRules: '自定义账号统计定价规则',
+        addRule: '添加规则',
+        noRulesConfigured: '未配置自定义规则，将使用上方的模型定价。',
+        ruleName: '规则名称（可选）',
+        ruleGroups: '分组',
+        ruleAccounts: '账号',
+        searchAccountPlaceholder: '搜索账号...',
+        ruleAccountsHint: '留空表示匹配所有账号',
+        ruleModelPricing: '模型定价',
+        noGroupsInChannel: '上方平台标签页中未选择分组',
+        unnamed: '未命名'
       }
     },
 
@@ -2455,6 +2618,12 @@ export default {
       },
       quotaLimitAmount: '总限额',
       quotaLimitAmountHint: '累计消费上限，不会自动重置。',
+      quotaNotify: {
+        alert: '提醒阈值',
+        enabled: '启用告警',
+        threshold: '告警金额',
+        thresholdPlaceholder: '输入百分比',
+      },
       testConnection: '测试连接',
       reAuthorize: '重新授权',
       refreshToken: '刷新令牌',
@@ -2979,6 +3148,13 @@ export default {
           authCodePlaceholder:
             '方式1：复制完整的链接\n(http://localhost:xxx/auth/callback?code=...)\n方式2：仅复制 code 参数的值',
           authCodeHint: '您可以直接复制整个链接或仅复制 code 参数值，系统会自动识别',
+          failedToGenerateUrl: '生成 OpenAI 授权链接失败',
+          failedToExchangeCode: 'OpenAI 授权码兑换失败',
+          failedToValidateRT: '验证 Refresh Token 失败',
+          errors: {
+            OPENAI_OAUTH_PROXY_REQUIRED:
+              '未设置代理，当前服务器无法直连 OpenAI，导致 OpenAI OAuth 请求失败。请先选择可访问 OpenAI 的代理后重试；如果授权码已失效，请重新生成授权链接。'
+          },
           // Refresh Token auth
           refreshTokenAuth: '手动输入 RT',
           refreshTokenDesc: '输入您已有的 OpenAI Refresh Token，支持批量输入（每行一个），系统将自动验证并创建账号。',
@@ -4617,9 +4793,13 @@ export default {
         gateway: '网关服务',
         email: '邮件设置',
         backup: '数据备份',
+<<<<<<< HEAD
         data: 'Sora 存储',
         contact: '联系方式',
         payment: '支付管理',
+=======
+        payment: '支付设置',
+>>>>>>> v0.1.116
       },
       emailTabDisabledTitle: '邮箱验证未启用',
       emailTabDisabledHint: '请在「安全与认证」选项卡中启用邮箱验证后，再配置 SMTP 设置。',
@@ -4743,6 +4923,8 @@ export default {
         defaultBalanceHint: '新用户的初始余额',
         defaultConcurrency: '默认并发数',
         defaultConcurrencyHint: '新用户的最大并发请求数',
+        defaultUserRpmLimit: '默认用户 RPM 限制',
+        defaultUserRpmLimitHint: '新用户默认每分钟最大请求数，0 = 不限制；仅作用于新用户创建时初始化',
         defaultSubscriptions: '默认订阅列表',
         defaultSubscriptionsHint: '新用户创建或注册时自动分配这些订阅',
         addDefaultSubscription: '添加默认订阅',
@@ -4788,9 +4970,15 @@ export default {
         apiKey: 'API Key',
         apiKeyPlaceholder: '输入 API Key',
         apiKeyConfigured: '已配置',
+<<<<<<< HEAD
         showApiKey: '显示 API Key',
         hideApiKey: '隐藏 API Key',
         copyApiKey: '复制 API Key',
+=======
+        showApiKey: '显示',
+        hideApiKey: '隐藏',
+        copyApiKey: '复制',
+>>>>>>> v0.1.116
         copied: '已复制',
         quotaLimit: '配额上限',
         quotaLimitHint: '留空表示无限制；填写时必须大于 0',
@@ -4802,13 +4990,20 @@ export default {
         resetUsageConfirm: '确定要重置此服务商的用量计数吗？',
         resetUsageSuccess: '用量已重置',
         proxy: '代理',
+<<<<<<< HEAD
         expiresAt: '过期时间',
+=======
+>>>>>>> v0.1.116
         removeProvider: '删除',
         noProviders: '未配置搜索服务商',
         test: '测试',
         testDefaultQuery: '搜索今年世界大事件',
         testing: '搜索中...',
+<<<<<<< HEAD
         testResultTitle: 'Web Search 测试',
+=======
+        testResultTitle: '搜索结果',
+>>>>>>> v0.1.116
         testResultProvider: '服务商',
         testNoResults: '无搜索结果',
       },
@@ -4827,6 +5022,7 @@ export default {
         apiBaseUrl: 'API 端点地址',
         apiBaseUrlHint: '用于"使用密钥"和"导入到 CC Switch"功能，留空则使用当前站点地址',
         apiBaseUrlPlaceholder: 'https://api.example.com',
+<<<<<<< HEAD
         tablePreferencesTitle: '表格分页设置',
         tablePreferencesDescription: '配置管理后台表格的默认分页大小和可选项',
         tableDefaultPageSize: '默认分页大小',
@@ -4836,6 +5032,17 @@ export default {
         tablePageSizeOptionsHint: '用逗号分隔多个选项，必须在 {min}-{max} 范围内；默认分页大小会自动加入选项',
         tableDefaultPageSizeRangeError: '默认分页大小必须在 {min}-{max} 之间',
         tablePageSizeOptionsFormatError: '分页大小选项必须是 {min}-{max} 之间的整数，并用逗号分隔',
+=======
+        tablePreferencesTitle: '通用表格设置',
+        tablePreferencesDescription: '设置后台与用户侧表格组件的默认分页行为',
+        tableDefaultPageSize: '默认每页条数',
+        tableDefaultPageSizeHint: '必须为 5-1000 之间的整数',
+        tablePageSizeOptions: '可选每页条数列表',
+        tablePageSizeOptionsPlaceholder: '10, 20, 50, 100',
+        tablePageSizeOptionsHint: '使用英文逗号分隔，取值范围 5-1000，保存时会自动去重并排序',
+        tableDefaultPageSizeRangeError: '默认每页条数必须在 {min}-{max} 之间',
+        tablePageSizeOptionsFormatError: '可选每页条数格式无效，请输入 {min}-{max} 之间的整数并用英文逗号分隔',
+>>>>>>> v0.1.116
         customEndpoints: {
           title: '自定义端点',
           description: '添加额外的 API 端点地址，用户可在「API Keys」页面快速复制',
@@ -4911,6 +5118,149 @@ export default {
         moveUp: '上移',
         moveDown: '下移',
       },
+<<<<<<< HEAD
+=======
+      payment: {
+        title: '支付设置',
+        description: '配置支付系统选项',
+        configGuide: '支付配置指南',
+        enabled: '启用支付',
+        enabledHint: '启用或禁用支付系统',
+        enabledPaymentTypes: '启用的服务商',
+        enabledPaymentTypesHint: '禁用服务商将同时禁用对应的实例。',
+        findProvider: '正在寻找合适的易支付服务商？',
+        minAmount: '最低金额',
+        maxAmount: '最高金额',
+        dailyLimit: '每日限额',
+        balanceRechargeMultiplier: '余额充值倍率',
+        balanceRechargeMultiplierHint: '用户每支付 1 CNY 可获得多少 USD 余额',
+        balanceRechargePreview: '预览：1 CNY = {usd} USD',
+        rechargeFeeRate: '充值手续费率',
+        rechargeFeeRateHint: '用户充值时额外收取的手续费百分比，0 表示不收取手续费',
+        rechargeFeePreview: '预览：充值 100 元，手续费 {fee} 元',
+        orderTimeout: '订单超时时间',
+        orderTimeoutHint: '单位：分钟，至少 1 分钟',
+        maxPendingOrders: '最大待支付订单数',
+        cancelRateLimit: '限制取消频率',
+        cancelRateLimitHint: '启用后，用户在时间窗口内取消订单次数超限将无法创建新订单',
+        cancelRateLimitEvery: '每',
+        cancelRateLimitAllowMax: '最多',
+        cancelRateLimitTimes: '次',
+        cancelRateLimitWindow: '时间窗口',
+        cancelRateLimitUnit: '周期',
+        cancelRateLimitMax: '最大取消次数',
+        cancelRateLimitUnitMinute: '分钟',
+        cancelRateLimitUnitHour: '小时',
+        cancelRateLimitUnitDay: '天',
+        cancelRateLimitWindowMode: '窗口模式',
+        cancelRateLimitWindowModeRolling: '滚动',
+        cancelRateLimitWindowModeFixed: '固定',
+        helpText: '帮助文本',
+        helpImageUrl: '帮助图片链接',
+        manageProviders: '管理服务商',
+        balancePaymentDisabled: '禁用余额充值',
+        noLimit: '留空表示不限制',
+        helpImage: '帮助图片',
+        helpImagePlaceholder: '上传或输入图片链接',
+        helpTextPlaceholder: '输入帮助说明文本...',
+        providerEasypay: '易支付',
+        providerAlipay: '支付宝官方',
+        providerWxpay: '微信官方',
+        providerStripe: 'Stripe',
+        typeDisabled: '类型已禁用',
+        enableTypesFirst: '请先在上方启用至少一种服务商',
+        easypayRedirect: '跳转',
+        paymentMode: '支付模式',
+        modeRedirect: '跳转',
+        modeQRCode: '二维码',
+        modePopup: '弹窗',
+        validationNameRequired: '服务商名称不能为空',
+        validationTypesRequired: '请至少选择一种支持的支付方式',
+        validationFieldRequired: '{field} 不能为空',
+        field_apiBase: 'API 基础地址',
+        field_notifyUrl: '异步通知地址',
+        field_returnUrl: '同步跳转地址',
+        callbackBaseUrl: '回调基础地址',
+        field_privateKey: '私钥',
+        field_publicKey: '公钥',
+        field_mpAppId: '公众号 App ID',
+        field_mchId: '商户号',
+        field_apiV3Key: 'API v3 密钥',
+        field_publicKeyId: '公钥 ID',
+        field_certSerial: '证书序列号',
+        field_h5AppName: 'H5 应用名称',
+        field_h5AppUrl: 'H5 应用地址',
+        wxpayConfigHint: '微信支付通常只需要填写 App ID。公众号 App ID、H5 应用名称、H5 应用地址仅在公众号支付或 H5 场景有特殊要求时再填写。',
+        wxpayAdvancedOptions: '微信支付高级可选项',
+        field_secretKey: '密钥',
+        field_publishableKey: '公开密钥',
+        field_webhookSecret: 'Webhook 密钥',
+        field_cid: '支付渠道 ID',
+        field_cidAlipay: '支付宝渠道 ID',
+        field_cidWxpay: '微信渠道 ID',
+        stripeWebhookHint: '请在 Stripe Dashboard 中将以下地址配置为 Webhook 端点：',
+        limitsTitle: '限额配置',
+        limitSingleMin: '单笔最低',
+        limitSingleMax: '单笔最高',
+        limitDaily: '每日限额',
+        limitsHint: '全部留空使用全局配置，部分填写时留空项表示不限制',
+        limitsUseGlobal: '使用全局配置',
+        limitsNoLimit: '不限制',
+        productNamePrefix: '商品名前缀',
+        productNameSuffix: '商品名后缀',
+        preview: '预览',
+        loadBalanceStrategy: '负载均衡策略',
+        strategyRoundRobin: '轮询',
+        strategyLeastAmount: '最少金额',
+        providerManagement: '服务商管理',
+        providerManagementDesc: '管理支付服务商实例',
+        createProvider: '添加服务商',
+        editProvider: '编辑服务商',
+        deleteProvider: '删除服务商',
+        deleteProviderConfirm: '确定要删除此服务商吗？',
+        providerName: '服务商名称',
+        providerKey: '服务商类型',
+        selectProviderKey: '选择服务商类型',
+        providerConfig: '凭证配置',
+        paymentGuideTrigger: '查看支付方式说明',
+        guideOpenLabel: '开通：',
+        guideCallLabel: '调用：',
+        guideFallbackLabel: '降级：',
+        alipayGuideSummary: '桌面优先扫码单，失败再走收银台；移动优先手机网站支付。',
+        alipayGuideFaceToFaceTitle: '当面付 / 扫码支付',
+        alipayGuideFaceToFaceOpen: '需开通当面付或扫码支付能力。',
+        alipayGuideFaceToFaceCall: '桌面端下单时优先调用 alipay.trade.precreate，前台直接渲染二维码。',
+        alipayGuideFaceToFaceFallback: '接口不可用或返回失败时，自动降级到电脑网站支付。',
+        alipayGuidePagePayTitle: '电脑网站支付',
+        alipayGuidePagePayOpen: '需开通电脑网站支付。',
+        alipayGuidePagePayCall: '桌面端当面付不可用时调用 alipay.trade.page.pay，并继续把返回链接渲染成二维码。',
+        alipayGuidePagePayFallback: '同时保留打开收银台入口，用户可手动重新拉起支付页。',
+        alipayGuideWapTitle: '手机网站支付',
+        alipayGuideWapOpen: '需开通手机网站支付。',
+        alipayGuideWapCall: '移动端优先调用 alipay.trade.wap.pay，跳转支付宝收银台。',
+        alipayGuideWapFallback: '未开通或返回异常时，前端自动改走扫码支付并提示未开通移动支付。',
+        wxpayGuideSummary: '桌面优先 Native 扫码，移动端按浏览器环境走 JSAPI 或 H5。',
+        wxpayGuideNote: '当前表单默认共用一个 App ID，适合同主体下统一配置网页、移动和公众号场景。',
+        wxpayGuideNativeTitle: 'Native / 扫码支付',
+        wxpayGuideNativeOpen: '需开通 Native 或扫码支付能力。',
+        wxpayGuideNativeCall: '桌面端默认调用 Native，下发二维码内容给前台渲染。',
+        wxpayGuideNativeFallback: '移动端无法走 JSAPI 或 H5 时，也会自动回退到这里。',
+        wxpayGuideJsapiTitle: 'JSAPI / 公众号支付',
+        wxpayGuideJsapiOpen: '需开通公众号支付，并保证当前浏览器在微信内且能拿到 OpenID。',
+        wxpayGuideJsapiCall: '微信内浏览器完成授权后调用 JSAPI，直接拉起微信支付。',
+        wxpayGuideJsapiFallback: '未配置、Bridge 不可用或拉起失败时，自动改走扫码支付。',
+        wxpayGuideH5Title: 'H5 支付',
+        wxpayGuideH5Open: '需开通 H5 支付。',
+        wxpayGuideH5Call: '移动端非微信浏览器且有客户端 IP 时调用 H5 支付，跳转微信收银台。',
+        wxpayGuideH5Fallback: '未开通 H5 或下单失败时，自动改走扫码支付。',
+        noProviders: '暂无服务商实例',
+        supportedTypes: '支持的支付方式',
+        supportedTypesHint: '逗号分隔，如 alipay,wxpay',
+        refundEnabled: '允许退款',
+        allowUserRefund: '允许用户退款',
+        enableConflict: '{method} 已有启用中的服务商实例：{provider}。请先停用现有实例后再启用或切换。',
+      },
+>>>>>>> v0.1.116
       balanceNotify: {
         title: '余额不足提醒',
         description: '当用户余额低于阈值时发送邮件提醒',
@@ -5174,6 +5524,7 @@ export default {
         presetOpusOnlyDesc: 'Opus 透传，其他模型过滤',
         commonPatterns: '常用模式'
       },
+<<<<<<< HEAD
 
       // 悬浮联系按钮（admin 配置）
       contact: {
@@ -5198,6 +5549,64 @@ export default {
       paymentVisibleMethods: {
         title: '结算页可见支付方式',
         description: '选择前台结算页展示哪些支付方式，以及每种方式使用的支付来源键。',
+=======
+      wechatConnect: {
+        title: '微信登录',
+        description: '用于微信开放平台或公众号/小程序的第三方登录配置。',
+        enabledLabel: '启用微信登录',
+        enabledHint: '开启后可使用微信第三方登录回调与授权配置。',
+        appIdLabel: 'AppID',
+        appIdPlaceholder: '微信开放平台 AppID',
+        appSecretLabel: 'AppSecret',
+        appSecretConfiguredPlaceholder: '密钥已配置，留空以保留当前值。',
+        appSecretPlaceholder: '微信开放平台 AppSecret',
+        appSecretConfiguredHint: '密钥已配置，留空以保留当前值。',
+        appSecretHint: '填写后会覆盖当前微信密钥。',
+        modeLabel: '模式',
+        openModeLabel: '非微信环境使用开放平台',
+        openModeHint: '浏览器不在微信内时，自动走开放平台扫码授权。',
+        mpModeLabel: '微信环境使用公众号',
+        mpModeHint: '浏览器在微信内时，自动走公众号授权。',
+        redirectUrlLabel: '回调地址',
+        redirectUrlPlaceholder: 'https://your-site.com/api/v1/auth/oauth/wechat/callback',
+        generateAndCopy: '使用当前站点生成并复制',
+        redirectUrlSetAndCopied: '已使用当前站点生成回调地址并复制到剪贴板',
+        frontendRedirectUrlLabel: '前端回调地址',
+        frontendRedirectUrlPlaceholder: '/auth/wechat/callback',
+        frontendRedirectUrlHint: '通常用于前端路由回调地址，需与后端配置保持一致。'
+      },
+      authSourceDefaults: {
+        title: '认证来源默认值',
+        description: '按注册来源配置新用户默认余额、并发、订阅与授权策略。',
+        requireEmailLabel: '第三方注册强制补充邮箱',
+        requireEmailHint: '启用后，Linux DO、OIDC、微信注册缺少邮箱时必须先补充邮箱地址。',
+        enabledHint: '以下默认值会在该来源注册新用户时发放；首次绑定时授权仅作用于已有账号绑定该来源。',
+        sources: {
+          email: {
+            title: '邮箱注册',
+            description: '适用于邮箱密码注册的新用户默认配额。'
+          },
+          linuxdo: {
+            title: 'Linux DO 登录',
+            description: '适用于 Linux DO 第三方注册的新用户默认配额。'
+          },
+          oidc: {
+            title: 'OIDC 登录',
+            description: '适用于 OIDC 第三方注册的新用户默认配额。'
+          },
+          wechat: {
+            title: '微信登录',
+            description: '适用于微信第三方注册的新用户默认配额。'
+          }
+        },
+        grantOnFirstBindLabel: '首次绑定时授权',
+        grantOnFirstBindHint: '已有账号首次绑定该来源时发放默认权益。',
+        defaultSubscriptionsLabel: '默认订阅',
+        defaultSubscriptionsHint: '仅对当前认证来源生效，未配置时不追加来源专属订阅。',
+        noSourceSubscriptions: '当前来源未配置专属默认订阅。'
+      },
+      paymentVisibleMethods: {
+>>>>>>> v0.1.116
         methodLabel: '{title} 可见方式',
         methodHint: '控制前台结算页是否展示该方式，以及展示时使用的来源键。',
         sourceLabel: '支付来源',
@@ -5208,7 +5617,10 @@ export default {
         title: 'OpenAI 实验调度策略',
         description: '默认关闭。开启后仅影响本网关在 OpenAI 账号间的实验性调度选择逻辑，不代表上游 OpenAI 官方能力。'
       },
+<<<<<<< HEAD
 
+=======
+>>>>>>> v0.1.116
       saveSettings: '保存设置',
       saving: '保存中...',
       settingsSaved: '设置保存成功',
@@ -5652,12 +6064,18 @@ export default {
     }
   },
 
+<<<<<<< HEAD
   // Sora 已移除
 
   // Payment System
   payment: {
     title: '充值/订阅',
     description: '购买订阅套餐或充值余额',
+=======
+  // Payment System
+  payment: {
+    title: '充值/订阅',
+>>>>>>> v0.1.116
     amountLabel: '充值金额',
     paymentAmount: '支付金额',
     creditedBalance: '到账余额',
@@ -5849,11 +6267,16 @@ export default {
       colUser: '用户',
       topUsers: '消费排行',
       noData: '暂无数据',
+<<<<<<< HEAD
       day: '天',
       days: '天',
       week: '周',
       weeks: '周',
       month: '月',
+=======
+      days: '天',
+      weeks: '周',
+>>>>>>> v0.1.116
       months: '月',
       searchOrders: '搜索订单...',
       allStatuses: '全部状态',
@@ -5878,7 +6301,10 @@ export default {
       refundSuccess: '退款成功',
       refundInfo: '退款信息',
       refundEnabled: '允许退款',
+<<<<<<< HEAD
       allowUserRefund: '允许用户申请退款',
+=======
+>>>>>>> v0.1.116
       alreadyRefunded: '已退款',
       deductBalance: '扣除余额',
       deductBalanceHint: '从用户余额中扣回充值金额',
@@ -5937,6 +6363,7 @@ export default {
       noProvidersHint: '创建一个服务商实例以开始接受支付',
       supportedTypes: '支持的支付方式',
       supportedTypesHint: '选择此服务商支持的支付方式',
+<<<<<<< HEAD
       easypayRedirect: '跳转支付',
       enableConflict: '{method} 当前绑定到 {current}，请先关闭冲突服务商后再启用 {next}',
       providerEasypay: '易支付',
@@ -6008,6 +6435,8 @@ export default {
       wxpayGuideH5Open: '在微信商户平台开通 H5 支付并配置域名。',
       wxpayGuideH5Call: '移动浏览器跳转微信 H5 支付链接。',
       wxpayGuideH5Fallback: '不可用时回退到 Native 二维码。',
+=======
+>>>>>>> v0.1.116
       rateMultiplier: '费率倍数',
       dashboardTitle: '支付概览',
       dashboardDesc: '充值订单统计与分析',
@@ -6042,6 +6471,7 @@ export default {
     },
   },
 
+<<<<<<< HEAD
   // Pricing
   pricing: {
     title: '模型定价',
@@ -6123,4 +6553,6 @@ export default {
     providerConfig: 'Config（JSON）',
     provider: '支付渠道'
   }
+=======
+>>>>>>> v0.1.116
 }
