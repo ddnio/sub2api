@@ -181,10 +181,6 @@ type UpsertUserAvatarInput struct {
 	SHA256          string
 }
 
-type userAuthIdentityReader interface {
-	ListUserAuthIdentities(ctx context.Context, userID int64) ([]UserAuthIdentityRecord, error)
-}
-
 type emailAuthIdentitySynchronizer interface {
 	EnsureEmailAuthIdentity(ctx context.Context, userID int64, email string) error
 	ReplaceEmailAuthIdentity(ctx context.Context, userID int64, oldEmail, newEmail string) error

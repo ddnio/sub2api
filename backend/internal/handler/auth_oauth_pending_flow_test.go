@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,9 +16,11 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
 	"github.com/Wei-Shaw/sub2api/ent/enttest"
 	"github.com/Wei-Shaw/sub2api/ent/pendingauthsession"
+	dbsetting "github.com/Wei-Shaw/sub2api/ent/setting"
+	dbuser "github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
-	"github.com/Wei-Shaw/sub2api/internal/repository"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/totp"
@@ -63,6 +66,376 @@ CREATE TABLE IF NOT EXISTS user_provider_default_grants (
 	client := enttest.NewClient(t, enttest.WithOptions(dbent.Driver(drv)))
 	t.Cleanup(func() { _ = client.Close() })
 	return client
+}
+
+type oauthPendingSettingRepoStub struct {
+	client *dbent.Client
+}
+
+func (r *oauthPendingSettingRepoStub) Get(ctx context.Context, key string) (*service.Setting, error) {
+	row, err := r.client.Setting.Query().Where(dbsetting.KeyEQ(key)).Only(ctx)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			return nil, service.ErrSettingNotFound
+		}
+		return nil, err
+	}
+	return &service.Setting{ID: row.ID, Key: row.Key, Value: row.Value, UpdatedAt: row.UpdatedAt}, nil
+}
+
+func (r *oauthPendingSettingRepoStub) GetValue(ctx context.Context, key string) (string, error) {
+	row, err := r.client.Setting.Query().Where(dbsetting.KeyEQ(key)).Only(ctx)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			return "", service.ErrSettingNotFound
+		}
+		return "", err
+	}
+	return row.Value, nil
+}
+
+func (r *oauthPendingSettingRepoStub) Set(ctx context.Context, key, value string) error {
+	row, err := r.client.Setting.Query().Where(dbsetting.KeyEQ(key)).Only(ctx)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			_, createErr := r.client.Setting.Create().SetKey(key).SetValue(value).Save(ctx)
+			return createErr
+		}
+		return err
+	}
+	return r.client.Setting.UpdateOneID(row.ID).SetValue(value).Exec(ctx)
+}
+
+func (r *oauthPendingSettingRepoStub) GetMultiple(ctx context.Context, keys []string) (map[string]string, error) {
+	result := make(map[string]string, len(keys))
+	for _, key := range keys {
+		value, err := r.GetValue(ctx, key)
+		if err == nil {
+			result[key] = value
+			continue
+		}
+		if !errors.Is(err, service.ErrSettingNotFound) {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+func (r *oauthPendingSettingRepoStub) SetMultiple(ctx context.Context, settings map[string]string) error {
+	for key, value := range settings {
+		if err := r.Set(ctx, key, value); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *oauthPendingSettingRepoStub) GetAll(ctx context.Context) (map[string]string, error) {
+	rows, err := r.client.Setting.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]string, len(rows))
+	for _, row := range rows {
+		result[row.Key] = row.Value
+	}
+	return result, nil
+}
+
+func (r *oauthPendingSettingRepoStub) Delete(ctx context.Context, key string) error {
+	_, err := r.client.Setting.Delete().Where(dbsetting.KeyEQ(key)).Exec(ctx)
+	return err
+}
+
+type oauthPendingUserRepoStub struct {
+	client *dbent.Client
+}
+
+func (r *oauthPendingUserRepoStub) Create(ctx context.Context, user *service.User) error {
+	create := r.client.User.Create().
+		SetEmail(user.Email).
+		SetUsername(user.Username).
+		SetNotes(user.Notes).
+		SetPasswordHash(user.PasswordHash).
+		SetRole(user.Role).
+		SetBalance(user.Balance).
+		SetBalanceNotifyEnabled(user.BalanceNotifyEnabled).
+		SetBalanceNotifyExtraEmails(service.MarshalNotifyEmails(user.BalanceNotifyExtraEmails)).
+		SetBalanceNotifyThresholdType(user.BalanceNotifyThresholdType).
+		SetTotalRecharged(user.TotalRecharged).
+		SetConcurrency(user.Concurrency).
+		SetStatus(user.Status)
+	if user.BalanceNotifyThreshold != nil {
+		create.SetBalanceNotifyThreshold(*user.BalanceNotifyThreshold)
+	}
+	created, err := create.Save(ctx)
+	if err != nil {
+		return service.ErrEmailExists.WithCause(err)
+	}
+	applyEntUserToServiceUser(user, created)
+	return r.ensureEmailAuthIdentity(ctx, created.ID, created.Email)
+}
+
+func (r *oauthPendingUserRepoStub) GetByID(ctx context.Context, id int64) (*service.User, error) {
+	row, err := oauthPendingClientFromContext(ctx, r.client).User.Query().Where(dbuser.IDEQ(id)).Only(ctx)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			return nil, service.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return entUserToServiceUser(row), nil
+}
+
+func (r *oauthPendingUserRepoStub) GetByEmail(ctx context.Context, email string) (*service.User, error) {
+	row, err := r.client.User.Query().Where(func(s *entsql.Selector) {
+		s.Where(entsql.ExprP("LOWER(TRIM(email)) = LOWER(TRIM(?))", email))
+	}).Only(ctx)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			return nil, service.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return entUserToServiceUser(row), nil
+}
+
+func (r *oauthPendingUserRepoStub) GetFirstAdmin(ctx context.Context) (*service.User, error) {
+	panic("unexpected GetFirstAdmin call")
+}
+
+func (r *oauthPendingUserRepoStub) Update(ctx context.Context, user *service.User) error {
+	_, err := r.client.User.UpdateOneID(user.ID).
+		SetEmail(user.Email).
+		SetUsername(user.Username).
+		SetNotes(user.Notes).
+		SetPasswordHash(user.PasswordHash).
+		SetRole(user.Role).
+		SetBalance(user.Balance).
+		SetBalanceNotifyEnabled(user.BalanceNotifyEnabled).
+		SetBalanceNotifyExtraEmails(service.MarshalNotifyEmails(user.BalanceNotifyExtraEmails)).
+		SetBalanceNotifyThresholdType(user.BalanceNotifyThresholdType).
+		SetTotalRecharged(user.TotalRecharged).
+		SetConcurrency(user.Concurrency).
+		SetStatus(user.Status).
+		Save(ctx)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			return service.ErrUserNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+func (r *oauthPendingUserRepoStub) Delete(ctx context.Context, id int64) error {
+	return r.client.User.DeleteOneID(id).Exec(ctx)
+}
+
+func (r *oauthPendingUserRepoStub) GetUserAvatar(ctx context.Context, userID int64) (*service.UserAvatar, error) {
+	return nil, nil
+}
+
+func (r *oauthPendingUserRepoStub) UpsertUserAvatar(ctx context.Context, userID int64, input service.UpsertUserAvatarInput) (*service.UserAvatar, error) {
+	return nil, nil
+}
+
+func (r *oauthPendingUserRepoStub) DeleteUserAvatar(ctx context.Context, userID int64) error {
+	return nil
+}
+
+func (r *oauthPendingUserRepoStub) List(ctx context.Context, params pagination.PaginationParams) ([]service.User, *pagination.PaginationResult, error) {
+	panic("unexpected List call")
+}
+
+func (r *oauthPendingUserRepoStub) ListWithFilters(ctx context.Context, params pagination.PaginationParams, filters service.UserListFilters) ([]service.User, *pagination.PaginationResult, error) {
+	panic("unexpected ListWithFilters call")
+}
+
+func (r *oauthPendingUserRepoStub) GetLatestUsedAtByUserIDs(ctx context.Context, userIDs []int64) (map[int64]*time.Time, error) {
+	return map[int64]*time.Time{}, nil
+}
+
+func (r *oauthPendingUserRepoStub) GetLatestUsedAtByUserID(ctx context.Context, userID int64) (*time.Time, error) {
+	return nil, nil
+}
+
+func (r *oauthPendingUserRepoStub) UpdateBalance(ctx context.Context, id int64, amount float64) error {
+	return oauthPendingClientFromContext(ctx, r.client).User.UpdateOneID(id).AddBalance(amount).Exec(ctx)
+}
+
+func (r *oauthPendingUserRepoStub) DeductBalance(ctx context.Context, id int64, amount float64) error {
+	return oauthPendingClientFromContext(ctx, r.client).User.UpdateOneID(id).AddBalance(-amount).Exec(ctx)
+}
+
+func (r *oauthPendingUserRepoStub) UpdateConcurrency(ctx context.Context, id int64, amount int) error {
+	return oauthPendingClientFromContext(ctx, r.client).User.UpdateOneID(id).AddConcurrency(amount).Exec(ctx)
+}
+
+func (r *oauthPendingUserRepoStub) ExistsByEmail(ctx context.Context, email string) (bool, error) {
+	return r.client.User.Query().Where(func(s *entsql.Selector) {
+		s.Where(entsql.ExprP("LOWER(TRIM(email)) = LOWER(TRIM(?))", email))
+	}).Exist(ctx)
+}
+
+func (r *oauthPendingUserRepoStub) RemoveGroupFromAllowedGroups(ctx context.Context, groupID int64) (int64, error) {
+	return 0, nil
+}
+
+func (r *oauthPendingUserRepoStub) RemoveGroupFromUserAllowedGroups(ctx context.Context, userID int64, groupID int64) error {
+	return nil
+}
+
+func (r *oauthPendingUserRepoStub) AddGroupToAllowedGroups(ctx context.Context, userID int64, groupID int64) error {
+	return nil
+}
+
+func (r *oauthPendingUserRepoStub) ListUserAuthIdentities(ctx context.Context, userID int64) ([]service.UserAuthIdentityRecord, error) {
+	rows, err := r.client.AuthIdentity.Query().Where(authidentity.UserIDEQ(userID)).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	records := make([]service.UserAuthIdentityRecord, 0, len(rows))
+	for _, row := range rows {
+		records = append(records, service.UserAuthIdentityRecord{
+			ProviderType:    row.ProviderType,
+			ProviderKey:     row.ProviderKey,
+			ProviderSubject: row.ProviderSubject,
+			VerifiedAt:      row.VerifiedAt,
+			Issuer:          row.Issuer,
+			Metadata:        row.Metadata,
+			CreatedAt:       row.CreatedAt,
+			UpdatedAt:       row.UpdatedAt,
+		})
+	}
+	return records, nil
+}
+
+func (r *oauthPendingUserRepoStub) UnbindUserAuthProvider(ctx context.Context, userID int64, provider string) error {
+	_, err := r.client.AuthIdentity.Delete().
+		Where(authidentity.UserIDEQ(userID), authidentity.ProviderTypeEQ(provider)).
+		Exec(ctx)
+	return err
+}
+
+func (r *oauthPendingUserRepoStub) UpdateTotpSecret(ctx context.Context, userID int64, encryptedSecret *string) error {
+	update := r.client.User.UpdateOneID(userID)
+	if encryptedSecret == nil {
+		update.ClearTotpSecretEncrypted()
+	} else {
+		update.SetTotpSecretEncrypted(*encryptedSecret)
+	}
+	return update.Exec(ctx)
+}
+
+func (r *oauthPendingUserRepoStub) EnableTotp(ctx context.Context, userID int64) error {
+	return r.client.User.UpdateOneID(userID).SetTotpEnabled(true).SetTotpEnabledAt(time.Now()).Exec(ctx)
+}
+
+func (r *oauthPendingUserRepoStub) DisableTotp(ctx context.Context, userID int64) error {
+	return r.client.User.UpdateOneID(userID).SetTotpEnabled(false).ClearTotpEnabledAt().ClearTotpSecretEncrypted().Exec(ctx)
+}
+
+func (r *oauthPendingUserRepoStub) EnsureEmailAuthIdentity(ctx context.Context, userID int64, email string) error {
+	return r.ensureEmailAuthIdentity(ctx, userID, email)
+}
+
+func (r *oauthPendingUserRepoStub) ReplaceEmailAuthIdentity(ctx context.Context, userID int64, oldEmail, newEmail string) error {
+	_, _ = r.client.AuthIdentity.Delete().
+		Where(authidentity.ProviderTypeEQ("email"), authidentity.ProviderKeyEQ("email"), authidentity.ProviderSubjectEQ(strings.TrimSpace(strings.ToLower(oldEmail)))).
+		Exec(ctx)
+	return r.ensureEmailAuthIdentity(ctx, userID, newEmail)
+}
+
+func (r *oauthPendingUserRepoStub) ensureEmailAuthIdentity(ctx context.Context, userID int64, email string) error {
+	email = strings.TrimSpace(strings.ToLower(email))
+	if email == "" {
+		return nil
+	}
+	return oauthPendingClientFromContext(ctx, r.client).AuthIdentity.Create().
+		SetUserID(userID).
+		SetProviderType("email").
+		SetProviderKey("email").
+		SetProviderSubject(email).
+		SetVerifiedAt(time.Now().UTC()).
+		SetMetadata(map[string]any{"source": "handler_test"}).
+		OnConflictColumns(
+			authidentity.FieldProviderType,
+			authidentity.FieldProviderKey,
+			authidentity.FieldProviderSubject,
+		).
+		DoNothing().
+		Exec(ctx)
+}
+
+func oauthPendingClientFromContext(ctx context.Context, fallback *dbent.Client) *dbent.Client {
+	if tx := dbent.TxFromContext(ctx); tx != nil {
+		return tx.Client()
+	}
+	return fallback
+}
+
+func entUserToServiceUser(row *dbent.User) *service.User {
+	if row == nil {
+		return nil
+	}
+	out := &service.User{}
+	applyEntUserToServiceUser(out, row)
+	return out
+}
+
+func applyEntUserToServiceUser(out *service.User, row *dbent.User) {
+	out.ID = row.ID
+	out.Email = row.Email
+	out.Username = row.Username
+	out.Notes = row.Notes
+	out.PasswordHash = row.PasswordHash
+	out.Role = row.Role
+	out.Balance = row.Balance
+	out.BalanceNotifyEnabled = row.BalanceNotifyEnabled
+	out.BalanceNotifyThreshold = row.BalanceNotifyThreshold
+	out.BalanceNotifyThresholdType = row.BalanceNotifyThresholdType
+	out.BalanceNotifyExtraEmails = service.ParseNotifyEmails(row.BalanceNotifyExtraEmails)
+	out.TotalRecharged = row.TotalRecharged
+	out.Concurrency = row.Concurrency
+	out.Status = row.Status
+	out.ReferralCode = row.ReferralCode
+	out.TotpSecretEncrypted = row.TotpSecretEncrypted
+	out.TotpEnabled = row.TotpEnabled
+	out.TotpEnabledAt = row.TotpEnabledAt
+	out.CreatedAt = row.CreatedAt
+	out.UpdatedAt = row.UpdatedAt
+}
+
+func newOAuthPendingSettingService(client *dbent.Client, cfg *config.Config) *service.SettingService {
+	return service.NewSettingService(&oauthPendingSettingRepoStub{client: client}, cfg)
+}
+
+func newOAuthPendingUserRepo(client *dbent.Client) service.UserRepository {
+	return &oauthPendingUserRepoStub{client: client}
+}
+
+func newOAuthPendingAuthService(
+	client *dbent.Client,
+	userRepo service.UserRepository,
+	settingSvc *service.SettingService,
+	assigner service.DefaultSubscriptionAssigner,
+) *service.AuthService {
+	cfg := &config.Config{JWT: config.JWTConfig{Secret: "test-secret", ExpireHour: 1, RefreshTokenExpireDays: 30}}
+	return service.NewAuthService(
+		client,
+		userRepo,
+		nil,
+		&oauthPendingRefreshTokenCacheStub{},
+		cfg,
+		settingSvc,
+		service.NewEmailService(&oauthPendingSettingRepoStub{client: client}, &oauthPendingEmailCacheStub{}),
+		nil,
+		nil,
+		nil,
+		nil,
+		assigner,
+	)
 }
 
 type oauthPendingTestEncryptor struct {
@@ -112,6 +485,60 @@ func (s *oauthPendingRefreshTokenCacheStub) GetFamilyTokenHashes(context.Context
 
 func (s *oauthPendingRefreshTokenCacheStub) IsTokenInFamily(context.Context, string, string) (bool, error) {
 	return false, nil
+}
+
+type oauthPendingEmailCacheStub struct{}
+
+func (s *oauthPendingEmailCacheStub) GetVerificationCode(context.Context, string) (*service.VerificationCodeData, error) {
+	return &service.VerificationCodeData{Code: "123456"}, nil
+}
+
+func (s *oauthPendingEmailCacheStub) SetVerificationCode(context.Context, string, *service.VerificationCodeData, time.Duration) error {
+	return nil
+}
+
+func (s *oauthPendingEmailCacheStub) DeleteVerificationCode(context.Context, string) error {
+	return nil
+}
+
+func (s *oauthPendingEmailCacheStub) GetNotifyVerifyCode(context.Context, string) (*service.VerificationCodeData, error) {
+	return nil, service.ErrInvalidVerifyCode
+}
+
+func (s *oauthPendingEmailCacheStub) SetNotifyVerifyCode(context.Context, string, *service.VerificationCodeData, time.Duration) error {
+	return nil
+}
+
+func (s *oauthPendingEmailCacheStub) DeleteNotifyVerifyCode(context.Context, string) error {
+	return nil
+}
+
+func (s *oauthPendingEmailCacheStub) GetPasswordResetToken(context.Context, string) (*service.PasswordResetTokenData, error) {
+	return nil, service.ErrInvalidResetToken
+}
+
+func (s *oauthPendingEmailCacheStub) SetPasswordResetToken(context.Context, string, *service.PasswordResetTokenData, time.Duration) error {
+	return nil
+}
+
+func (s *oauthPendingEmailCacheStub) DeletePasswordResetToken(context.Context, string) error {
+	return nil
+}
+
+func (s *oauthPendingEmailCacheStub) IsPasswordResetEmailInCooldown(context.Context, string) bool {
+	return false
+}
+
+func (s *oauthPendingEmailCacheStub) SetPasswordResetEmailCooldown(context.Context, string, time.Duration) error {
+	return nil
+}
+
+func (s *oauthPendingEmailCacheStub) IncrNotifyCodeUserRate(context.Context, int64, time.Duration) (int64, error) {
+	return 0, nil
+}
+
+func (s *oauthPendingEmailCacheStub) GetNotifyCodeUserRate(context.Context, int64) (int64, error) {
+	return 0, nil
 }
 
 type oauthPendingTotpLoginSessionCacheStub struct {
@@ -374,10 +801,9 @@ func TestCreatePendingOAuthAccountPreservesNormalizedDuplicateConflict(t *testin
 	})
 	require.NoError(t, err)
 
-	authSvc := service.NewAuthService(client, repository.NewUserRepository(client, nil), nil, &oauthPendingRefreshTokenCacheStub{}, &config.Config{
-		JWT: config.JWTConfig{Secret: "test-secret", ExpireHour: 1, RefreshTokenExpireDays: 30},
-	}, nil, nil, nil, nil, nil, nil, nil)
-	handler := NewAuthHandler(&config.Config{}, authSvc, service.NewUserService(repository.NewUserRepository(client, nil), nil, nil), nil, nil, nil, nil)
+	userRepo := newOAuthPendingUserRepo(client)
+	authSvc := newOAuthPendingAuthService(client, userRepo, nil, nil)
+	handler := NewAuthHandler(&config.Config{}, authSvc, service.NewUserService(userRepo, nil, nil), nil, nil, nil, nil)
 
 	body, err := json.Marshal(createPendingOAuthAccountRequest{
 		Email:      "owner@example.com",
@@ -404,14 +830,12 @@ func TestBindPendingOAuthLoginRequires2FAWithoutBindingOrConsumingSession(t *tes
 	ctx := context.Background()
 	gin.SetMode(gin.TestMode)
 
-	settingRepo := repository.NewSettingRepository(client)
+	settingRepo := &oauthPendingSettingRepoStub{client: client}
 	require.NoError(t, settingRepo.Set(ctx, service.SettingKeyTotpEnabled, "true"))
 
-	userRepo := repository.NewUserRepository(client, nil)
-	settingSvc := service.NewSettingService(settingRepo, &config.Config{})
-	authSvc := service.NewAuthService(client, userRepo, nil, &oauthPendingRefreshTokenCacheStub{}, &config.Config{
-		JWT: config.JWTConfig{Secret: "test-secret", ExpireHour: 1, RefreshTokenExpireDays: 30},
-	}, settingSvc, nil, nil, nil, nil, nil, nil)
+	userRepo := newOAuthPendingUserRepo(client)
+	settingSvc := newOAuthPendingSettingService(client, &config.Config{})
+	authSvc := newOAuthPendingAuthService(client, userRepo, settingSvc, nil)
 	hash, err := authSvc.HashPassword("password")
 	require.NoError(t, err)
 	user, err := client.User.Create().
@@ -499,9 +923,7 @@ func TestCompletePendingOAuthBindSessionCreatesIdentity(t *testing.T) {
 		},
 	}
 
-	authSvc := service.NewAuthService(client, repository.NewUserRepository(client, nil), nil, &oauthPendingRefreshTokenCacheStub{}, &config.Config{
-		JWT: config.JWTConfig{Secret: "test-secret", ExpireHour: 1, RefreshTokenExpireDays: 30},
-	}, service.NewSettingService(repository.NewSettingRepository(client), &config.Config{}), nil, nil, nil, nil, nil, nil)
+	authSvc := newOAuthPendingAuthService(client, newOAuthPendingUserRepo(client), newOAuthPendingSettingService(client, &config.Config{}), nil)
 
 	err = completePendingOAuthBindSession(ctx, client, authSvc, session)
 	require.NoError(t, err)
@@ -518,17 +940,15 @@ func TestBindPendingOAuthLoginAppliesFirstBindGrantOnce(t *testing.T) {
 	ctx := context.Background()
 	gin.SetMode(gin.TestMode)
 
-	settingRepo := repository.NewSettingRepository(client)
+	settingRepo := &oauthPendingSettingRepoStub{client: client}
 	require.NoError(t, settingRepo.Set(ctx, service.SettingKeyAuthSourceDefaultLinuxDoBalance, "21.75"))
 	require.NoError(t, settingRepo.Set(ctx, service.SettingKeyAuthSourceDefaultLinuxDoConcurrency, "9"))
 	require.NoError(t, settingRepo.Set(ctx, service.SettingKeyAuthSourceDefaultLinuxDoSubscriptions, `[{"group_id":22,"validity_days":14}]`))
 	require.NoError(t, settingRepo.Set(ctx, service.SettingKeyAuthSourceDefaultLinuxDoGrantOnFirstBind, "true"))
-	settingSvc := service.NewSettingService(settingRepo, &config.Config{})
-	userRepo := repository.NewUserRepository(client, nil)
+	settingSvc := newOAuthPendingSettingService(client, &config.Config{})
+	userRepo := newOAuthPendingUserRepo(client)
 	assigner := &oauthPendingDefaultSubscriptionAssignerStub{}
-	authSvc := service.NewAuthService(client, userRepo, nil, &oauthPendingRefreshTokenCacheStub{}, &config.Config{
-		JWT: config.JWTConfig{Secret: "test-secret", ExpireHour: 1, RefreshTokenExpireDays: 30},
-	}, settingSvc, nil, nil, nil, nil, nil, assigner)
+	authSvc := newOAuthPendingAuthService(client, userRepo, settingSvc, assigner)
 	hash, err := authSvc.HashPassword("password")
 	require.NoError(t, err)
 	user, err := client.User.Create().
@@ -610,14 +1030,12 @@ func TestLogin2FACompletesPendingOAuthBindSession(t *testing.T) {
 	ctx := context.Background()
 	gin.SetMode(gin.TestMode)
 
-	settingRepo := repository.NewSettingRepository(client)
+	settingRepo := &oauthPendingSettingRepoStub{client: client}
 	require.NoError(t, settingRepo.Set(ctx, service.SettingKeyTotpEnabled, "true"))
 
-	userRepo := repository.NewUserRepository(client, nil)
-	settingSvc := service.NewSettingService(settingRepo, &config.Config{})
-	authSvc := service.NewAuthService(client, userRepo, nil, &oauthPendingRefreshTokenCacheStub{}, &config.Config{
-		JWT: config.JWTConfig{Secret: "test-secret", ExpireHour: 1, RefreshTokenExpireDays: 30},
-	}, settingSvc, nil, nil, nil, nil, nil, nil)
+	userRepo := newOAuthPendingUserRepo(client)
+	settingSvc := newOAuthPendingSettingService(client, &config.Config{})
+	authSvc := newOAuthPendingAuthService(client, userRepo, settingSvc, nil)
 	hash, err := authSvc.HashPassword("password")
 	require.NoError(t, err)
 	totpSecret := "JBSWY3DPEHPK3PXP"

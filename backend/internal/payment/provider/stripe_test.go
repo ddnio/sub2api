@@ -129,6 +129,7 @@ func TestStripeVerifyNotification(t *testing.T) {
 			}
 			if notification == nil {
 				t.Fatal("notification is nil")
+				return
 			}
 			if notification.TradeNo != "pi_test_123" {
 				t.Fatalf("TradeNo = %q, want pi_test_123", notification.TradeNo)

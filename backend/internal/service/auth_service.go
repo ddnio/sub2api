@@ -774,13 +774,6 @@ func (s *AuthService) VerifyPendingOAuthToken(tokenStr string) (email, username 
 	return claims.Email, claims.Username, nil
 }
 
-func (s *AuthService) assignDefaultSubscriptions(ctx context.Context, userID int64) {
-	if s.settingService == nil {
-		return
-	}
-	s.assignSubscriptions(ctx, userID, s.settingService.GetDefaultSubscriptions(ctx), "auto assigned by default user subscriptions setting")
-}
-
 func (s *AuthService) assignSubscriptions(ctx context.Context, userID int64, items []DefaultSubscriptionSetting, notes string) {
 	if s.settingService == nil || s.defaultSubAssigner == nil || userID <= 0 {
 		return
