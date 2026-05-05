@@ -23,7 +23,7 @@ describe('user oauth binding api', () => {
     })
   })
 
-  it('routes WeChat binding through the frontend callback bootstrap', async () => {
+  it('routes WeChat binding through the configured backend OAuth start endpoint', async () => {
     const { startOAuthBinding } = await import('@/api/user')
 
     await startOAuthBinding('wechat', '/profile?tab=security')
@@ -31,7 +31,7 @@ describe('user oauth binding api', () => {
     expect(prepareOAuthBindAccessTokenCookie).toHaveBeenCalled()
     expect(post).not.toHaveBeenCalled()
     expect(window.location.href).toBe(
-      '/auth/wechat/callback?wechat_bind_existing=1&redirect=%2Fprofile%3Ftab%3Dsecurity'
+      '/api/v1/auth/oauth/wechat/start?redirect=%2Fprofile%3Ftab%3Dsecurity&intent=bind_current_user&mode=open'
     )
   })
 })
