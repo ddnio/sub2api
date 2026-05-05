@@ -37,6 +37,16 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/docs',
+    name: 'Docs',
+    component: () => import('@/views/DocsView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'Documentation',
+      titleKey: 'docs.title'
+    }
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/auth/LoginView.vue'),
@@ -71,8 +81,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/auth/OAuthCallbackView.vue'),
     meta: {
       requiresAuth: false,
-      title: 'OAuth Callback',
-      titleKey: 'auth.oauthCallbackPageTitle'
+      title: 'OAuth Callback'
     }
   },
   {
@@ -81,8 +90,16 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/auth/LinuxDoCallbackView.vue'),
     meta: {
       requiresAuth: false,
-      title: 'LinuxDo OAuth Callback',
-      titleKey: 'auth.linuxdoCallbackPageTitle'
+      title: 'LinuxDo OAuth Callback'
+    }
+  },
+  {
+    path: '/auth/oidc/callback',
+    name: 'OIDCOAuthCallback',
+    component: () => import('@/views/auth/OidcCallbackView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'OIDC OAuth Callback'
     }
   },
   {
@@ -103,16 +120,6 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: false,
       title: 'WeChat Payment Callback',
       titleKey: 'auth.wechatPaymentCallbackPageTitle'
-    }
-  },
-  {
-    path: '/auth/oidc/callback',
-    name: 'OIDCOAuthCallback',
-    component: () => import('@/views/auth/OidcCallbackView.vue'),
-    meta: {
-      requiresAuth: false,
-      title: 'OIDC OAuth Callback',
-      titleKey: 'auth.oidcCallbackPageTitle'
     }
   },
   {
@@ -174,6 +181,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/pricing',
+    name: 'Pricing',
+    component: () => import('@/views/user/PricingView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Model Pricing',
+      titleKey: 'pricing.title',
+      descriptionKey: 'pricing.description'
+    }
+  },
+  {
     path: '/usage',
     name: 'Usage',
     component: () => import('@/views/user/UsageView.vue'),
@@ -183,6 +202,30 @@ const routes: RouteRecordRaw[] = [
       title: 'Usage Records',
       titleKey: 'usage.title',
       descriptionKey: 'usage.description'
+    }
+  },
+  {
+    path: '/payment',
+    name: 'Payment',
+    component: () => import('@/views/user/PaymentView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Recharge / Plans',
+      titleKey: 'payment.title',
+      descriptionKey: 'payment.description'
+    }
+  },
+  {
+    path: '/referral',
+    name: 'Referral',
+    component: () => import('@/views/user/ReferralView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Referral',
+      titleKey: 'referral.title',
+      descriptionKey: 'referral.description'
     }
   },
   {
@@ -230,8 +273,7 @@ const routes: RouteRecordRaw[] = [
       requiresAdmin: false,
       title: 'Purchase Subscription',
       titleKey: 'nav.buySubscription',
-      descriptionKey: 'purchase.description',
-      requiresPayment: true
+      descriptionKey: 'purchase.description'
     }
   },
   {
@@ -242,8 +284,7 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       requiresAdmin: false,
       title: 'My Orders',
-      titleKey: 'nav.myOrders',
-      requiresPayment: true
+      titleKey: 'nav.myOrders'
     }
   },
   {
@@ -254,8 +295,7 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       requiresAdmin: false,
       title: 'Payment',
-      titleKey: 'payment.qr.scanToPay',
-      requiresPayment: true
+      titleKey: 'payment.qr.scanToPay'
     }
   },
   {
@@ -266,8 +306,7 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: false,
       requiresAdmin: false,
       title: 'Payment Result',
-      titleKey: 'payment.result.success',
-      requiresPayment: false
+      titleKey: 'payment.result.success'
     }
   },
   {
@@ -275,11 +314,11 @@ const routes: RouteRecordRaw[] = [
     name: 'StripePayment',
     component: () => import('@/views/user/StripePaymentView.vue'),
     meta: {
-      requiresAuth: true,
+      requiresAuth: false,
       requiresAdmin: false,
       title: 'Stripe Payment',
       titleKey: 'payment.stripePay',
-      requiresPayment: true
+      requiresPayment: false
     }
   },
   {
@@ -287,10 +326,10 @@ const routes: RouteRecordRaw[] = [
     name: 'StripePopup',
     component: () => import('@/views/user/StripePopupView.vue'),
     meta: {
-      requiresAuth: true,
+      requiresAuth: false,
       requiresAdmin: false,
       title: 'Payment',
-      requiresPayment: true
+      requiresPayment: false
     }
   },
   {
@@ -419,6 +458,39 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/admin/payment/plans',
+    name: 'AdminPaymentPlans',
+    component: () => import('@/views/admin/orders/AdminPaymentPlansView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Payment Plans',
+      titleKey: 'adminPayment.plansTitle'
+    }
+  },
+  {
+    path: '/admin/payment/orders',
+    name: 'AdminPaymentOrders',
+    component: () => import('@/views/admin/orders/AdminOrdersView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Payment Orders',
+      titleKey: 'adminPayment.ordersTitle'
+    }
+  },
+  {
+    path: '/admin/payment/dashboard',
+    name: 'AdminPaymentDashboard',
+    component: () => import('@/views/admin/orders/AdminPaymentDashboardView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Payment Dashboard',
+      titleKey: 'nav.paymentDashboard'
+    }
+  },
+  {
     path: '/admin/redeem',
     name: 'AdminRedeem',
     component: () => import('@/views/admin/RedeemView.vue'),
@@ -467,45 +539,6 @@ const routes: RouteRecordRaw[] = [
     }
   },
 
-
-  // ==================== Payment Admin Routes ====================
-  {
-    path: '/admin/orders/dashboard',
-    name: 'AdminPaymentDashboard',
-    component: () => import('@/views/admin/orders/AdminPaymentDashboardView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
-      title: 'Payment Dashboard',
-      titleKey: 'nav.paymentDashboard',
-      requiresPayment: true
-    }
-  },
-  {
-    path: '/admin/orders',
-    name: 'AdminOrders',
-    component: () => import('@/views/admin/orders/AdminOrdersView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
-      title: 'Order Management',
-      titleKey: 'nav.orderManagement',
-      requiresPayment: true
-    }
-  },
-  {
-    path: '/admin/orders/plans',
-    name: 'AdminPaymentPlans',
-    component: () => import('@/views/admin/orders/AdminPaymentPlansView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
-      title: 'Subscription Plans',
-      titleKey: 'nav.paymentPlans',
-      requiresPayment: true
-    }
-  },
-
   // ==================== 404 Not Found ====================
   {
     path: '/:pathMatch(.*)*',
@@ -542,31 +575,7 @@ let authInitialized = false
 const navigationLoading = useNavigationLoadingState()
 // 延迟初始化预加载，传入 router 实例
 let routePrefetch: ReturnType<typeof useRoutePrefetch> | null = null
-const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result']
-const BACKEND_MODE_CALLBACK_PATHS = [
-  '/auth/callback',
-  '/auth/linuxdo/callback',
-  '/auth/oidc/callback',
-  '/auth/wechat/callback',
-  '/auth/wechat/payment/callback',
-]
-const BACKEND_MODE_PENDING_AUTH_PATHS = ['/register', '/email-verify']
-
-function isBackendModePublicRouteAllowed(path: string, hasPendingAuthSession: boolean): boolean {
-  if (BACKEND_MODE_ALLOWED_PATHS.some((allowedPath) => path === allowedPath || path.startsWith(allowedPath))) {
-    return true
-  }
-
-  if (BACKEND_MODE_CALLBACK_PATHS.some((callbackPath) => path === callbackPath)) {
-    return true
-  }
-
-  if (hasPendingAuthSession && BACKEND_MODE_PENDING_AUTH_PATHS.some((allowedPath) => path === allowedPath)) {
-    return true
-  }
-
-  return false
-}
+const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result', '/payment/stripe', '/payment/stripe-popup', '/auth/wechat/callback', '/auth/wechat/payment/callback']
 
 router.beforeEach((to, _from, next) => {
   // 开始导航加载状态
@@ -619,7 +628,7 @@ router.beforeEach((to, _from, next) => {
     }
     // Backend mode: block public pages for unauthenticated users (except login, key-usage, setup)
     if (appStore.backendModeEnabled && !authStore.isAuthenticated) {
-      const isAllowed = isBackendModePublicRouteAllowed(to.path, authStore.hasPendingAuthSession)
+      const isAllowed = BACKEND_MODE_ALLOWED_PATHS.some((p) => to.path === p || to.path.startsWith(p))
       if (!isAllowed) {
         next('/login')
         return
@@ -646,16 +655,6 @@ router.beforeEach((to, _from, next) => {
     return
   }
 
-
-  // Check payment requirement (internal payment system only)
-  if (to.meta.requiresPayment) {
-    const paymentEnabled = appStore.cachedPublicSettings?.payment_enabled
-    if (!paymentEnabled) {
-      next(authStore.isAdmin ? '/admin/dashboard' : '/dashboard')
-      return
-    }
-  }
-
   // 简易模式下限制访问某些页面
   if (authStore.isSimpleMode) {
     const restrictedPaths = [
@@ -679,7 +678,7 @@ router.beforeEach((to, _from, next) => {
       next()
       return
     }
-    const isAllowed = isBackendModePublicRouteAllowed(to.path, authStore.hasPendingAuthSession)
+    const isAllowed = BACKEND_MODE_ALLOWED_PATHS.some((p) => to.path === p || to.path.startsWith(p))
     if (!isAllowed) {
       next('/login')
       return

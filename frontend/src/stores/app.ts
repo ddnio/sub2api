@@ -6,7 +6,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Toast, ToastType, PublicSettings } from '@/types'
-import { i18n } from '@/i18n'
 import {
   checkUpdates as checkUpdatesAPI,
   type VersionInfo,
@@ -25,7 +24,7 @@ export const useAppStore = defineStore('app', () => {
   // Public settings cache state
   const publicSettingsLoaded = ref<boolean>(false)
   const publicSettingsLoading = ref<boolean>(false)
-  const siteName = ref<string>('Sub2API')
+  const siteName = ref<string>('NanaFox API')
   const siteLogo = ref<string>('')
   const siteVersion = ref<string>('')
   const contactInfo = ref<string>('')
@@ -210,10 +209,7 @@ export const useAppStore = defineStore('app', () => {
     try {
       return await operation()
     } catch (error) {
-      const message =
-        errorMessage ||
-        (error as { message?: string }).message ||
-        i18n.global.t('common.unknownError')
+      const message = errorMessage || (error as { message?: string }).message || 'An error occurred'
       showError(message)
       return null
     } finally {
@@ -292,7 +288,7 @@ export const useAppStore = defineStore('app', () => {
       window.__APP_CONFIG__ = { ...config }
     }
     cachedPublicSettings.value = config
-    siteName.value = config.site_name || 'Sub2API'
+    siteName.value = config.site_name || 'NanaFox API'
     siteLogo.value = config.site_logo || ''
     siteVersion.value = config.version || ''
     contactInfo.value = config.contact_info || ''
@@ -325,6 +321,7 @@ export const useAppStore = defineStore('app', () => {
         promo_code_enabled: true,
         password_reset_enabled: false,
         invitation_code_enabled: false,
+        referral_enabled: false,
         turnstile_enabled: false,
         turnstile_site_key: '',
         site_name: siteName.value,
@@ -335,7 +332,8 @@ export const useAppStore = defineStore('app', () => {
         doc_url: docUrl.value,
         home_content: '',
         hide_ccs_import_button: false,
-        payment_enabled: false,
+        purchase_subscription_enabled: false,
+        purchase_subscription_url: '',
         table_default_page_size: 20,
         table_page_size_options: [10, 20, 50, 100],
         custom_menu_items: [],
@@ -347,11 +345,14 @@ export const useAppStore = defineStore('app', () => {
         wechat_oauth_mobile_enabled: false,
         oidc_oauth_enabled: false,
         oidc_oauth_provider_name: 'OIDC',
+        sora_client_enabled: false,
         backend_mode_enabled: false,
+        payment_enabled: false,
+        contact_channels: [],
         version: siteVersion.value,
         balance_low_notify_enabled: false,
         account_quota_notify_enabled: false,
-        balance_low_notify_threshold: 0,
+        balance_low_notify_threshold: 0
       }
     }
 

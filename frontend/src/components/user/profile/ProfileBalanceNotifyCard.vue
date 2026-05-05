@@ -210,7 +210,7 @@ const canAddMore = computed(() => {
 
 watch(() => props.enabled, (val) => { notifyEnabled.value = val })
 watch(() => props.threshold, (val) => { customThreshold.value = val })
-watch(() => props.extraEmails, (val) => { emailEntries.value = [...val] })
+watch(() => props.extraEmails, (val) => { emailEntries.value = [...(val || [])] })
 
 // When list is empty on mount, pre-fill the add input with user's email
 onMounted(() => {
@@ -255,7 +255,7 @@ async function handleEmailToggle(entry: NotifyEmailEntry) {
   try {
     const updated = await userAPI.toggleNotifyEmail(entry.email, newDisabled)
     authStore.user = updated
-    emailEntries.value = [...updated.balance_notify_extra_emails]
+    emailEntries.value = [...(updated.balance_notify_extra_emails || [])]
   } catch (err: unknown) {
     appStore.showError(extractApiErrorMessage(err, t('common.error')))
   }
@@ -309,7 +309,7 @@ async function verifyPending(idx: number) {
     appStore.showSuccess(t('profile.balanceNotify.verifySuccess'))
     const updated = await userAPI.getProfile()
     authStore.user = updated
-    emailEntries.value = [...updated.balance_notify_extra_emails]
+    emailEntries.value = [...(updated.balance_notify_extra_emails || [])]
   } catch (err: unknown) {
     appStore.showError(extractApiErrorMessage(err, t('common.error')))
   } finally {
@@ -323,7 +323,7 @@ const handleRemoveEmail = async (email: string) => {
     appStore.showSuccess(t('profile.balanceNotify.removeSuccess'))
     const updated = await userAPI.getProfile()
     authStore.user = updated
-    emailEntries.value = [...updated.balance_notify_extra_emails]
+    emailEntries.value = [...(updated.balance_notify_extra_emails || [])]
   } catch (err: unknown) {
     appStore.showError(extractApiErrorMessage(err, t('common.error')))
   }
@@ -364,7 +364,7 @@ async function verifySavedEmail(email: string) {
     appStore.showSuccess(t('profile.balanceNotify.verifySuccess'))
     const updated = await userAPI.getProfile()
     authStore.user = updated
-    emailEntries.value = [...updated.balance_notify_extra_emails]
+    emailEntries.value = [...(updated.balance_notify_extra_emails || [])]
   } catch (err: unknown) {
     appStore.showError(extractApiErrorMessage(err, t('common.error')))
   } finally {
