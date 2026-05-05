@@ -274,10 +274,6 @@ apiClient.interceptors.response.use(
         reason: apiData.reason,
         error: apiData.error,
         message: apiData.message || apiData.detail || error.message,
-<<<<<<< HEAD
-        reason: apiData.reason,
-=======
->>>>>>> v0.1.116
         metadata: apiData.metadata,
       })
     }

@@ -2,223 +2,111 @@ export default {
   // Home Page
   home: {
     viewOnGithub: 'View on GitHub',
-    viewDocs: 'View Docs',
+    viewDocs: 'View Documentation',
     docs: 'Docs',
-    badge: 'Low latency · High availability · Full models · Direct access',
     switchToLight: 'Switch to Light Mode',
     switchToDark: 'Switch to Dark Mode',
     dashboard: 'Dashboard',
     login: 'Login',
     getStarted: 'Get Started',
     goToDashboard: 'Go to Dashboard',
-    heroSubtitle: 'An API relay designed for developers',
-    heroDescription: 'A Codex-compatible API relay for developers. Replace the base URL and API key, then connect immediately.',
-    nav: {
-      home: 'Home',
-      docs: 'Docs',
-      keyUsage: 'Usage',
-      support: 'Contact'
+    // User-focused value proposition
+    heroSubtitle: 'One Key, All AI Models',
+    heroDescription: 'No need to manage multiple subscriptions. Access Claude, GPT, Gemini and more with a single API key',
+    tags: {
+      subscriptionToApi: 'Subscription to API',
+      stickySession: 'Session Persistence',
+      realtimeBilling: 'Pay As You Go'
     },
-    hero: {
-      viewDocs: 'View Docs',
-      viewPricing: 'View Pricing',
-      headingLine1: 'One line of code',
-      headingLine2Prefix: 'Connect to',
-      headingApi: 'API',
-      headingCodex: 'CodeX',
-      baseUrlHint: 'Replace the base URL and connect',
-      snippetTitle: 'Configure Codex API in one second',
-      sdkLabel: 'Generic API / SDK',
-      codexLabel: 'Codex CLI',
-      runLabel: 'Start coding at once',
-      baseUrlLabel: 'Base URL',
-      copyBaseUrl: 'Copy URL',
-      copiedBaseUrl: 'Copied'
+    // Pain points section
+    painPoints: {
+      title: 'Sound Familiar?',
+      items: {
+        expensive: {
+          title: 'High Subscription Costs',
+          desc: 'Paying for multiple AI subscriptions that add up every month'
+        },
+        complex: {
+          title: 'Account Chaos',
+          desc: 'Managing scattered accounts and API keys across different platforms'
+        },
+        unstable: {
+          title: 'Service Interruptions',
+          desc: 'Single accounts hitting rate limits and disrupting your workflow'
+        },
+        noControl: {
+          title: 'No Usage Control',
+          desc: "Can't track where your money goes or limit team member usage"
+        }
+      }
     },
-    metrics: {
-      compatibilityTitle: 'High Availability',
-      compatibilityValue: 'A stable Codex request path',
-      routingTitle: 'Low Latency',
-      routingValue: 'Direct network access after swapping the URL',
-      billingTitle: 'Full Codex Models',
-      billingValue: 'gpt-5.4 / gpt-5.3-codex / responses'
+    // Solutions section
+    solutions: {
+      title: 'We Solve These Problems',
+      subtitle: 'Three simple steps to stress-free AI access'
+    },
+    features: {
+      unifiedGateway: 'One-Click Access',
+      unifiedGatewayDesc: 'Get a single API key to call all connected AI models. No separate applications needed.',
+      multiAccount: 'Always Reliable',
+      multiAccountDesc: 'Smart routing across multiple upstream accounts with automatic failover. Say goodbye to errors.',
+      balanceQuota: 'Pay What You Use',
+      balanceQuotaDesc: 'Usage-based billing with quota limits. Full visibility into team consumption.'
+    },
+    // Comparison section
+    comparison: {
+      title: 'Why Choose Us?',
+      headers: {
+        feature: 'Comparison',
+        official: 'Official Subscriptions',
+        us: 'Our Platform'
+      },
+      items: {
+        pricing: {
+          feature: 'Pricing',
+          official: 'Fixed monthly fee, pay even if unused',
+          us: 'Pay only for what you use'
+        },
+        models: {
+          feature: 'Model Selection',
+          official: 'Single provider only',
+          us: 'Switch between models freely'
+        },
+        management: {
+          feature: 'Account Management',
+          official: 'Manage each service separately',
+          us: 'Unified key, one dashboard'
+        },
+        stability: {
+          feature: 'Stability',
+          official: 'Single account rate limits',
+          us: 'Multi-account pool, auto-failover'
+        },
+        control: {
+          feature: 'Usage Control',
+          official: 'Not available',
+          us: 'Quotas & detailed analytics'
+        }
+      }
+    },
+    providers: {
+      title: 'Supported AI Models',
+      description: 'One API, Multiple Choices',
+      supported: 'Supported',
+      soon: 'Soon',
+      claude: 'Claude',
+      gemini: 'Gemini',
+      antigravity: 'Antigravity',
+      more: 'More'
+    },
+    // CTA section
+    cta: {
+      title: 'Ready to Get Started?',
+      description: 'Sign up now and get free trial credits to experience seamless AI access',
+      button: 'Sign Up Free'
     },
     footer: {
       allRightsReserved: 'All rights reserved.'
-    }
-  },
-
-  // Documentation Page
-  docs: {
-    title: 'Documentation',
-    backToHome: 'Back to Home',
-    copy: 'Copy',
-    copied: 'Copied',
-    nav: {
-      quickStart: 'Quick Start',
-      claudeCode: 'Claude Code',
-      codexCli: 'Codex CLI',
-      opencode: 'OpenCode',
-      apiUsage: 'API Usage',
-      faq: 'FAQ'
-    },
-    shared: {
-      copy: 'Copy',
-      copied: 'Copied',
-      optional: 'Optional',
-      verify: 'Verify',
-      viewFullGuide: 'View full guide',
-      replaceKeyHint: 'Replace your-api-key-here with the API key from your dashboard.',
-      baseUrlHint: 'Replace the base URL below with your actual site address.'
-    },
-    claudeCode: {
-      title: 'Claude Code Setup',
-      subtitle: 'Install Claude Code and configure it to connect to this platform. Supports both CLI and VSCode extension.',
-      installTitle: 'Install Claude Code',
-      installDescription: 'Choose the installation method for your system. Once installed, Claude Code is available directly in your terminal.',
-      vscodeExtNote: 'For VSCode users, you can also search for "Claude Code" in the Extensions marketplace for an integrated IDE experience.',
-      envTitle: 'Set Environment Variables',
-      envDescription: 'Set the following environment variables in your terminal to point Claude Code at this platform. Add them to your shell profile (~/.zshrc or ~/.bashrc) for persistence.',
-      envNote: 'Important: Do not include /v1/messages in the base URL — Claude Code appends the API path automatically.',
-      settingsTitle: 'Configure settings.json (Optional)',
-      settingsDescription: 'If you use the Claude Code extension in VSCode, you can also configure via ~/.claude/settings.json. Environment variables take precedence over settings.json.',
-      verifyTitle: 'Verify Connection',
-      verifyDescription: 'Run the following commands to check that Claude Code is connected to this platform. The /status command shows current auth status and API endpoint info.',
-      troubleshootTitle: 'Troubleshooting',
-      troubleshoot: {
-        baseUrlQ: 'Wrong Base URL format?',
-        baseUrlA: 'Make sure the URL does not include /v1/messages. Claude Code appends the API path automatically. Correct format example: https://api.example.com',
-        restartQ: 'Config changes not taking effect?',
-        restartA: 'Reopen your terminal after changing environment variables. Restart VSCode after editing settings.json. Environment variables take precedence over settings.json.',
-        priorityQ: 'Both env vars and settings.json configured?',
-        priorityA: 'Environment variables win. If both are set, env var values override settings.json. We recommend picking one method to avoid confusion.'
-      }
-    },
-    opencode: {
-      title: 'OpenCode Setup',
-      subtitle: 'Install OpenCode and connect to this platform via an opencode.json config file.',
-      installTitle: 'Install OpenCode',
-      installDescription: 'Install the OpenCode CLI via npm, Homebrew, or curl.',
-      configTitle: 'Create Config File',
-      configDescription: 'Create opencode.json in your project root. The config includes provider info, model list, and API connection parameters.',
-      configNote: 'Change the model field to the model you want to use (format: provider_id/model_id). List available model names in the models object.',
-      verifyTitle: 'Verify & Start',
-      verifyDescription: 'Check that the installation succeeded, then start OpenCode in your project directory.',
-      tipsTitle: 'Configuration Tips',
-      tips: {
-        envVar: "API keys support env var references: set apiKey to \"{'{'}env:YOUR_API_KEY{'}'}\" to read from environment variables instead of hardcoding secrets in config.",
-        hierarchy: 'Config precedence: project opencode.json > OPENCODE_CONFIG env var > global ~/.config/opencode/opencode.json.',
-        models: 'Run opencode /models to see the list of currently available models.'
-      }
-    },
-    quickStart: {
-      title: 'Quick Start',
-      subtitle: 'Choose your tool below and follow the setup guide to connect.',
-      baseUrlLabel: 'Platform Base URL',
-      getKeyStep: 'Create an API Key',
-      getKeyDesc: 'Sign up, log in, and create a new API key in the dashboard.',
-      chooseToolStep: 'Choose Your Tool',
-      chooseToolDesc: 'Select the tool you use below to see the setup instructions.',
-      toolCards: {
-        claudeCode: 'Quick setup via environment variables for Claude Code users.',
-        codexCli: 'Full Codex CLI installation and configuration guide.',
-        opencode: 'Connect with a single JSON config file.',
-        apiUsage: 'Call the API directly with Python, cURL, or Node.js.'
-      }
-    },
-    faq: {
-      title: 'FAQ',
-      generalTitle: 'General',
-      items: {
-        compatibilityQ: 'Do I need to change the SDK or request format?',
-        compatibilityA: 'Usually no. This platform is OpenAI-compatible — just swap base_url and api_key.',
-        multiToolQ: 'Can I use multiple tools at the same time?',
-        multiToolA: 'Yes. Each tool is configured independently and shares the same API key.',
-        modelsQ: 'Which models are supported?',
-        modelsA: 'GPT and Claude full model lineup. Check the dashboard for currently available models.'
-      }
-    },
-    mode: {
-      api: 'Generic API Access',
-      codex: 'Codex Access'
-    },
-    api: {
-      title: 'Generic API Access',
-      subtitle: 'Keep the same OpenAI SDK request shape. Replace the base URL with this site’s `/v1` endpoint and use your generated API key.',
-      baseUrlLabel: 'Recommended base URL',
-      examplesTitle: 'Request Examples',
-      authTitle: 'Authentication',
-      authDescription: 'All requests use standard Bearer token auth. Put the API key from your dashboard into the `Authorization` header.',
-      endpointsTitle: 'Supported Endpoints',
-      endpoints: {
-        chat: 'OpenAI-compatible Chat Completions endpoint for direct drop-in replacement.',
-        models: 'Lists currently available models so SDKs and frontends can render them dynamically.'
-      },
-      sdkTitle: 'Install SDK',
-      sdkDescription: 'The OpenAI official SDK is the easiest way to call the API. Install the package for your language.',
-      streamingTitle: 'Streaming Responses',
-      streamingDescription: 'Enable stream mode to receive model output in real time — ideal for chat UIs and other scenarios that benefit from instant feedback.',
-      faqTitle: 'FAQ',
-      quickStart: {
-        registerTitle: 'Create an Account',
-        registerDesc: 'Sign up and log in first. The public page stays minimal; actual key management happens in the dashboard.',
-        keyTitle: 'Create an API Key',
-        keyDesc: 'Create a new API key in the dashboard. That key is then reused across SDKs, scripts, and local tools.',
-        baseUrlTitle: 'Replace the Base URL',
-        baseUrlDesc: 'Point your existing OpenAI client at this site’s `/v1` endpoint. In most cases the rest of the request body stays the same.'
-      },
-      faq: {
-        items: {
-          compatibilityQ: 'Do I need to change the SDK or payload format?',
-          compatibilityA: 'Usually no. If your client already speaks the OpenAI protocol, swapping `base_url` and `api_key` is enough.',
-          sdkQ: 'Which languages and frameworks are supported?',
-          sdkA: 'Python, Node.js, Go, Java, and any OpenAI-compatible SDK can connect directly.',
-          dataQ: 'Does the platform store my conversation content?',
-          dataA: 'The public docs focus on routing and metering behavior. If your deployment enables extra audit or logging policy, follow your actual site settings.'
-        }
-      }
-    },
-    codex: {
-      title: 'Codex CLI Access',
-      label: 'Codex Access',
-      subtitle: 'Follow the standard setup flow for Node.js, Codex CLI, API key, and config files, then start coding immediately.',
-      os: {
-        mac: 'macOS',
-        windows: 'Windows',
-        linux: 'Linux'
-      },
-      nodeTitle: 'Install Node.js',
-      nodeDescription: 'Codex CLI requires Node.js. Install the current LTS release before installing the CLI itself.',
-      nodeGuideMac: 'Install the current Node.js LTS release with Homebrew before moving on to Codex CLI.',
-      nodeGuideWindows: 'Install Node.js with Chocolatey or Scoop, then reopen your terminal before continuing.',
-      nodeGuideLinux: 'Install the current Node.js LTS release from NodeSource before moving on to Codex CLI.',
-      nodeVerifyTitle: 'Verify versions',
-      installTitle: 'Install Codex CLI',
-      installDescription: 'Install the Codex CLI package globally. If npm is slow in your region, you can keep the mirror registry flag.',
-      installVerifyTitle: 'Verify CLI',
-      keyTitle: 'Prepare an API Key',
-      keyDescription: 'Create an API key in the dashboard first. Codex CLI will read that key through environment-based auth.',
-      keyHint: 'Replace the placeholder value here with your own API key. The in-product usage modal will inject the real value automatically.',
-      configureTitle: 'Write the config files',
-      configureDescription: 'Place the two files below inside your local `.codex` directory. Standard mode is the default path and should be used first.',
-      startTitle: 'Start Codex',
-      startDescription: 'Enter your project directory and run `codex`. The CLI will load the config files and route requests through this site’s OpenAI-compatible endpoint.',
-      vscodeTitle: 'Use it inside your editor',
-      vscodeDescription: 'If you run Codex CLI from VS Code or other editors, reuse the same `.codex` files instead of maintaining a second config.',
-      advancedTitle: 'Optional WebSocket Mode',
-      advancedDescription: 'Only add the snippet below when you explicitly need a WebSocket response path on top of the standard setup.',
-      advancedSnippetTitle: 'Append to config.toml',
-      troubleshootTitle: 'Troubleshooting',
-      troubleshoot: {
-        items: {
-          commandTitle: 'Verify the CLI is installed',
-          commandDesc: 'Run `node --version`, `npm --version`, and `codex --version` first to confirm the environment and CLI are actually available.',
-          connectionTitle: 'Verify the base URL',
-          connectionDesc: 'If the CLI cannot connect, first confirm the base URL is correct, includes `/v1`, and the API key is still valid.',
-          updateTitle: 'Upgrade the CLI and retry',
-          updateDesc: 'If the command runs but behaves incorrectly, upgrade the Codex CLI package first and reload the config before testing again.'
-        }
-      }
     }
   },
 
@@ -358,7 +246,6 @@ export default {
   common: {
     loading: 'Loading...',
     justNow: 'just now',
-    view: 'View',
     save: 'Save',
     saved: 'Saved successfully',
     deleted: 'Deleted successfully',
@@ -417,9 +304,6 @@ export default {
     noGroupsAvailable: 'No groups available',
     unknownError: 'Unknown error occurred',
     saving: 'Saving...',
-    saved: 'Saved successfully',
-    deleted: 'Deleted successfully',
-    select: 'Select',
     selectedCount: '({count} selected)',
     refresh: 'Refresh',
     view: 'View',
@@ -454,7 +338,6 @@ export default {
     apiKeys: 'API Keys',
     usage: 'Usage',
     redeem: 'Redeem',
-    referral: 'Referral',
     profile: 'Profile',
     users: 'Users',
     groups: 'Groups',
@@ -474,24 +357,13 @@ export default {
     logout: 'Logout',
     github: 'GitHub',
     mySubscriptions: 'My Subscriptions',
-    myOrders: 'My Orders',
     buySubscription: 'Recharge / Subscription',
-    orderManagement: 'Order Management',
-    paymentDashboard: 'Payment Dashboard',
-    paymentPlans: 'Subscription Plans',
     docs: 'Docs',
-<<<<<<< HEAD
-    sora: 'Sora Studio',
-    payment: 'Recharge / Plans',
-    paymentManagement: 'Payment Management',
-    pricing: 'Model Pricing',
-=======
     myOrders: 'My Orders',
     orderManagement: 'Orders',
     paymentDashboard: 'Payment Dashboard',
     paymentConfig: 'Payment Config',
     paymentPlans: 'Plans'
->>>>>>> v0.1.116
   },
 
   // Auth
@@ -505,8 +377,6 @@ export default {
     signUp: 'Sign up',
     processing: 'Processing...',
     continue: 'Continue',
-    wechatCallbackPageTitle: 'WeChat OAuth Callback',
-    wechatPaymentCallbackPageTitle: 'WeChat Payment Callback',
     rememberMe: 'Remember me',
     dontHaveAccount: "Don't have an account?",
     alreadyHaveAccount: 'Already have an account?',
@@ -538,11 +408,7 @@ export default {
     verificationCode: 'Verification Code',
     verificationCodeHint: 'Enter the 6-digit code sent to your email',
     sendingCode: 'Sending...',
-<<<<<<< HEAD
-    sendCode: 'Send verification code',
-=======
     sendCode: 'Send code',
->>>>>>> v0.1.116
     clickToResend: 'Click to resend code',
     resendCode: 'Resend verification code',
     sendCodeDesc: "We'll send a verification code to",
@@ -566,9 +432,6 @@ export default {
     promoCodeAlreadyUsed: 'You have already used this promo code',
     promoCodeValidating: 'Promo code is being validated, please wait',
     promoCodeInvalidCannotRegister: 'Invalid promo code. Please check and try again or clear the promo code field',
-    referralCodeLabel: 'Referral Code',
-    referralCodePlaceholder: 'Enter your friend\'s referral code',
-    referralCodeApplied: 'Referral code {code} applied. Both of you will receive rewards after your first top-up.',
     invitationCodeLabel: 'Invitation Code',
     invitationCodePlaceholder: 'Enter invitation code',
     invitationCodeRequired: 'Invitation code is required',
@@ -589,11 +452,7 @@ export default {
       invalidPendingToken: 'The registration token has expired. Please sign in with Linux.do again.',
       completeRegistration: 'Complete Registration',
       completing: 'Completing registration…',
-      completeRegistrationFailed: 'Registration failed. Please check your invitation code and try again.',
-      bindLoginRequired: 'Log in to an existing account to bind this Linux.do sign-in.',
-      bindLoginSubmit: 'Log in and bind',
-      useDifferentEmail: 'Use a different email',
-      totpRequired: 'Enter the 6-digit verification code for {email} to finish binding this Linux.do sign-in.'
+      completeRegistrationFailed: 'Registration failed. Please check your invitation code and try again.'
     },
     oidc: {
       signIn: 'Continue with {providerName}',
@@ -607,11 +466,7 @@ export default {
       invalidPendingToken: 'The registration token has expired. Please sign in again.',
       completeRegistration: 'Complete Registration',
       completing: 'Completing registration…',
-      completeRegistrationFailed: 'Registration failed. Please check your invitation code and try again.',
-      bindLoginRequired: 'Log in to an existing account to bind this {providerName} sign-in.',
-      bindLoginSubmit: 'Log in and bind',
-      useDifferentEmail: 'Use a different email',
-      totpRequired: 'Enter the 6-digit verification code for {email} to finish binding this {providerName} sign-in.'
+      completeRegistrationFailed: 'Registration failed. Please check your invitation code and try again.'
     },
     oauthFlow: {
       profileDetailsTitle: 'Use {providerName} profile details',
@@ -736,9 +591,7 @@ export default {
     viewUsage: 'View Usage',
     checkDetailedLogs: 'Check detailed usage logs',
     redeemCode: 'Redeem Code',
-    addBalanceWithCode: 'Add balance with a code',
-    failedToLoad: 'Failed to load dashboard data',
-    retry: 'Retry'
+    addBalanceWithCode: 'Add balance with a code'
   },
 
   // Groups (shared)
@@ -994,29 +847,6 @@ export default {
   },
 
   // Redeem
-  referral: {
-    title: 'Referral',
-    description: 'Friends who register and complete their first top-up activate rewards for both of you',
-    myCode: 'My Referral Code',
-    copyLink: 'Copy Link',
-    linkCopied: 'Referral link copied',
-    totalInvited: 'Total Invited',
-    totalRewarded: 'Total Rewards',
-    rewardPerInvite: 'Reward After Activation',
-    inviterGets: 'Inviter',
-    inviteeGets: 'Invitee',
-    noRewardConfigured: 'No reward configured',
-    inviteeList: 'Invitation Records',
-    noInvitees: 'No invitations yet',
-    email: 'Email',
-    date: 'Date',
-    status: 'Status',
-    reward: 'Reward',
-    pendingCount: 'Awaiting First Top-up',
-    statusGranted: 'Rewarded',
-    statusPending: 'Awaiting First Top-up',
-    pendingTooltip: 'Friend has registered but reward is pending their first top-up',
-  },
   redeem: {
     title: 'Redeem Code',
     description: 'Enter your redeem code to add balance or increase concurrency',
@@ -1055,8 +885,6 @@ export default {
     codeRedeemSuccess: 'Code redeemed successfully!',
     failedToRedeem: 'Failed to redeem code. Please check the code and try again.',
     subscriptionRefreshFailed: 'Redeemed successfully, but failed to refresh subscription status.',
-    referralInviterReward: 'Referral Reward',
-    referralInviteeReward: 'Registration Reward (Referred)',
     pleaseEnterCode: 'Please enter a redeem code'
   },
 
@@ -1131,7 +959,6 @@ export default {
       loginTitle: 'Two-Factor Authentication',
       loginHint: 'Enter the 6-digit code from your authenticator app',
       loginFailed: 'Verification failed, please try again',
-      yourAccount: 'your account',
       // New translations for email verification
       verifyEmailFirst: 'Please verify your email first',
       verifyPasswordFirst: 'Please verify your identity first',
@@ -1171,21 +998,6 @@ export default {
       emailDuplicate: 'This email already exists',
       maxEmailsReached: 'Maximum number of notification emails reached',
       unverified: 'Unverified',
-<<<<<<< HEAD
-      verified: 'Verified'
-    },
-    avatar: {
-      title: 'Profile Avatar',
-      description: 'Set your avatar with a remote image URL or upload an image under 100KB. Uploaded images are compressed to 20KB.',
-      inputLabel: 'Avatar URL or data URL',
-      inputPlaceholder: 'https://cdn.example.com/avatar.png',
-      uploadAction: 'Upload image',
-      uploadHint: 'Uploaded images must be 100KB or smaller. Static images are compressed to 20KB.',
-      saveSuccess: 'Avatar updated',
-      deleteSuccess: 'Avatar removed',
-      invalidType: 'Please choose an image file',
-      fileTooLarge: 'Avatar image must be 100KB or smaller',
-=======
       verified: 'Verified',
     },
     avatar: {
@@ -1197,34 +1009,14 @@ export default {
       saveSuccess: 'Avatar updated',
       deleteSuccess: 'Avatar removed',
       invalidType: 'Please choose an image file',
->>>>>>> v0.1.116
       gifTooLarge: 'GIF avatars must already be 20KB or smaller',
       compressTooLarge: 'Unable to compress this image below 20KB. Try a smaller image.',
       compressFailed: 'Failed to compress the selected image.',
       readFailed: 'Failed to read the selected image.',
-<<<<<<< HEAD
-      invalidValue: 'Enter a valid avatar URL or image data URL',
-=======
->>>>>>> v0.1.116
       emptyDeleteHint: 'Avatar is already empty',
     },
     authBindings: {
       title: 'Connected Sign-In Methods',
-<<<<<<< HEAD
-      description: 'Bind third-party sign-in methods to this account.',
-      providers: {
-        email: 'Email',
-        linuxdo: 'LinuxDo',
-        oidc: '{providerName}'
-      },
-      status: {
-        bound: 'Bound',
-        notBound: 'Not bound'
-      },
-      bindAction: 'Bind',
-      unbindAction: 'Unbind',
-      bindSuccess: 'Sign-in method bound successfully'
-=======
       description: 'View current bindings and connect another provider to this account.',
       bindAction: 'Bind {providerName}',
       bindSuccess: 'Account linked successfully',
@@ -1261,7 +1053,6 @@ export default {
         avatar: 'Avatar is currently synced from {providerName}',
         username: 'Nickname is currently synced from {providerName}',
       },
->>>>>>> v0.1.116
     }
   },
 
@@ -1718,7 +1509,6 @@ export default {
         balance: 'Balance',
         usage: 'Usage',
         concurrency: 'Concurrency',
-        referralCode: 'Referral Code',
         status: 'Status',
         lastActive: 'Last Active',
         lastUsed: 'Last Used',
@@ -1762,12 +1552,6 @@ export default {
       failedToLoadApiKeys: 'Failed to load user API keys',
       emailRequired: 'Please enter email',
       concurrencyMin: 'Concurrency must be at least 1',
-      referralInfo: 'Referral Info',
-      referralInfoTitle: 'User Referral Info',
-      referralInfoBtn: 'Referral Info',
-      referralInviteCount: 'Invite Count',
-      referralInvitedBy: 'Invited By',
-      referralCode: 'Referral Code',
       soraStorageQuota: 'Sora Storage Quota',
       soraStorageQuotaHint: 'In GB, 0 means use group or system default quota',
       amountRequired: 'Please enter a valid amount',
@@ -2217,13 +2001,6 @@ export default {
         billingModelSourceRequested: 'Bill by requested model',
         billingModelSourceUpstream: 'Bill by final upstream model',
         billingModelSourceHint: 'Controls which model name is used for pricing lookup',
-        applyPricingToAccountStats: 'Apply pricing to account stats',
-        applyPricingToAccountStatsHint: 'When enabled, account cost stats use the request customer charge before account multiplier unless a custom rule matches.',
-        accountStatsPricingRules: 'Account stats pricing rules',
-        noAccountStatsPricingRules: 'No custom account stats pricing rules',
-        ruleName: 'Rule name',
-        ruleGroupIds: 'Group IDs, comma separated',
-        ruleAccountIds: 'Account IDs, comma separated',
         selectedCount: '{count} selected',
         searchGroups: 'Search groups...',
         noGroupsMatch: 'No groups match your search',
@@ -4517,7 +4294,7 @@ export default {
         errorLogRetentionDays: 'Error Log Retention Days',
         minuteMetricsRetentionDays: 'Minute Metrics Retention Days',
         hourlyMetricsRetentionDays: 'Hourly Metrics Retention Days',
-        retentionDaysHint: 'Recommended 7-90 days; longer periods consume more storage. Set to 0 to wipe all history on every scheduled cleanup',
+        retentionDaysHint: 'Recommended 7-90 days, longer periods will consume more storage',
         aggregation: 'Pre-aggregation Tasks',
         enableAggregation: 'Enable Pre-aggregation',
         aggregationHint: 'Pre-aggregation improves query performance for long time windows',
@@ -4547,7 +4324,7 @@ export default {
         autoRefreshCountdown: 'Auto refresh: {seconds}s',
         validation: {
           title: 'Please fix the following issues',
-          retentionDaysRange: 'Retention days must be between 0 and 365 (0 = wipe all on every cleanup)',
+          retentionDaysRange: 'Retention days must be between 1-365 days',
           slaMinPercentRange: 'SLA minimum percentage must be between 0 and 100',
           ttftP99MaxRange: 'TTFT P99 maximum must be a number ≥ 0',
           requestErrorRateMaxRange: 'Request error rate maximum must be between 0 and 100',
@@ -4634,11 +4411,6 @@ export default {
         gateway: 'Gateway',
         email: 'Email',
         backup: 'Backup',
-<<<<<<< HEAD
-        data: 'Sora Storage',
-        contact: 'Contact',
-=======
->>>>>>> v0.1.116
         payment: 'Payment',
       },
       emailTabDisabledTitle: 'Email Verification Not Enabled',
@@ -4659,11 +4431,6 @@ export default {
         promoCodeHint: 'Allow users to use promo codes during registration',
         invitationCode: 'Invitation Code Registration',
         invitationCodeHint: 'When enabled, users must enter a valid invitation code to register',
-        referralEnabled: 'Referral System',
-        referralEnabledHint: 'When enabled, users can invite friends via referral code and earn rewards',
-        referralInvitationConflict: 'Referral and invitation code registration are mutually exclusive. Enabling referral will disable invitation code.',
-        referralInviterAmount: 'Inviter Reward ($)',
-        referralInviteeAmount: 'Invitee Reward ($)',
         passwordReset: 'Password Reset',
         passwordResetHint: 'Allow users to reset their password via email',
         frontendUrl: 'Frontend URL',
@@ -4813,15 +4580,9 @@ export default {
         apiKey: 'API Key',
         apiKeyPlaceholder: 'Enter API Key',
         apiKeyConfigured: 'Configured',
-<<<<<<< HEAD
-        showApiKey: 'Show API key',
-        hideApiKey: 'Hide API key',
-        copyApiKey: 'Copy API key',
-=======
         showApiKey: 'Show',
         hideApiKey: 'Hide',
         copyApiKey: 'Copy',
->>>>>>> v0.1.116
         copied: 'Copied',
         quotaLimit: 'Quota Limit',
         quotaLimitHint: 'Leave empty for unlimited; must be > 0 if set',
@@ -4833,20 +4594,12 @@ export default {
         resetUsageConfirm: 'Reset usage counter for this provider?',
         resetUsageSuccess: 'Usage counter reset',
         proxy: 'Proxy',
-<<<<<<< HEAD
-        expiresAt: 'Expires At',
-=======
->>>>>>> v0.1.116
         removeProvider: 'Remove',
         noProviders: 'No search providers configured',
         test: 'Test',
         testDefaultQuery: 'Major world events this year',
         testing: 'Searching...',
-<<<<<<< HEAD
-        testResultTitle: 'Web Search Test',
-=======
         testResultTitle: 'Search Results',
->>>>>>> v0.1.116
         testResultProvider: 'Provider',
         testNoResults: 'No results found',
       },
@@ -4866,17 +4619,6 @@ export default {
         apiBaseUrlPlaceholder: 'https://api.example.com',
         apiBaseUrlHint:
           'Used for "Use Key" and "Import to CC Switch" features. Leave empty to use current site URL.',
-<<<<<<< HEAD
-        tablePreferencesTitle: 'Table Pagination Settings',
-        tablePreferencesDescription: 'Configure default page size and selectable page-size options for admin tables',
-        tableDefaultPageSize: 'Default Page Size',
-        tableDefaultPageSizeHint: 'Default number of rows per page for newly opened tables, from {min} to {max}',
-        tablePageSizeOptions: 'Page Size Options',
-        tablePageSizeOptionsPlaceholder: '10, 20, 50, 100',
-        tablePageSizeOptionsHint: 'Separate options with commas. Values must be between {min} and {max}; the default page size is added automatically.',
-        tableDefaultPageSizeRangeError: 'Default page size must be between {min} and {max}',
-        tablePageSizeOptionsFormatError: 'Page size options must be comma-separated integers between {min} and {max}',
-=======
         tablePreferencesTitle: 'Global Table Preferences',
         tablePreferencesDescription: 'Configure default pagination behavior for shared table components',
         tableDefaultPageSize: 'Default Rows Per Page',
@@ -4886,7 +4628,6 @@ export default {
         tablePageSizeOptionsHint: 'Use commas to separate integers between 5 and 1000; values are deduplicated and sorted on save',
         tableDefaultPageSizeRangeError: 'Default rows per page must be between {min} and {max}',
         tablePageSizeOptionsFormatError: 'Invalid options format. Enter comma-separated integers between {min} and {max}',
->>>>>>> v0.1.116
         customEndpoints: {
           title: 'Custom Endpoints',
           description: 'Add additional API endpoint URLs for users to quickly copy on the API Keys page',
@@ -4959,8 +4700,6 @@ export default {
         moveUp: 'Move Up',
         moveDown: 'Move Down',
       },
-<<<<<<< HEAD
-=======
       payment: {
         title: 'Payment Settings',
         description: 'Configure payment system options',
@@ -5101,7 +4840,6 @@ export default {
         allowUserRefund: 'Allow User Refund',
         enableConflict: '{method} already has an enabled provider instance: {provider}. Disable the existing instance before switching.',
       },
->>>>>>> v0.1.116
       balanceNotify: {
         title: 'Balance Low Notification',
         description: 'Send email notification when user balance falls below threshold',
@@ -5366,32 +5104,6 @@ export default {
         presetOpusOnlyDesc: 'Pass for Opus, filter others',
         commonPatterns: 'Common patterns'
       },
-<<<<<<< HEAD
-
-      // Floating contact button (admin config)
-      contact: {
-        title: 'Floating Contact Button',
-        description: 'Configure contact channels (WeChat group / customer service / official account) shown in the floating button on every page',
-        statusEnabled: 'Enabled',
-        statusDisabled: 'Disabled',
-        moveUp: 'Move up',
-        moveDown: 'Move down',
-        label: 'Display label',
-        extraInfo: 'Extra info',
-        extraInfoPlaceholder: 'e.g. WeChat ID or group number (optional)',
-        qrImage: 'QR Code Image',
-        uploadQR: 'Upload QR',
-        qrImageHint: 'PNG/JPEG only, recommended under 30KB. Enabled channels must include a QR image.',
-        descriptionField: 'Description',
-        descriptionPlaceholder: 'Caption shown below the QR (max 500 chars)',
-        loadFailed: 'Failed to load contact channels',
-        saveFailed: 'Failed to save contact channels',
-      },
-
-      paymentVisibleMethods: {
-        title: 'Checkout visible methods',
-        description: 'Choose which payment methods appear on checkout and which source key each method uses.',
-=======
       wechatConnect: {
         title: 'WeChat Connect',
         description: 'Third-party login configuration for WeChat Open Platform or Official Account / Mini Program.',
@@ -5448,7 +5160,6 @@ export default {
         noSourceSubscriptions: 'No source-specific default subscriptions configured.'
       },
       paymentVisibleMethods: {
->>>>>>> v0.1.116
         methodLabel: '{title} visible method',
         methodHint: 'Controls whether checkout shows this method and which source key it exposes.',
         sourceLabel: 'Payment source',
@@ -5459,10 +5170,6 @@ export default {
         title: 'OpenAI experimental scheduler policy',
         description: "Disabled by default. When enabled, this only changes the gateway's experimental account-selection policy for OpenAI traffic; it does not indicate an upstream OpenAI capability."
       },
-<<<<<<< HEAD
-
-=======
->>>>>>> v0.1.116
       saveSettings: 'Save Settings',
       saving: 'Saving...',
       settingsSaved: 'Settings saved successfully',
@@ -5652,7 +5359,7 @@ export default {
   // Recharge / Subscription Page
   purchase: {
     title: 'Recharge / Subscription',
-    description: 'Purchase a plan or top up your balance',
+    description: 'Recharge balance or purchase subscription via the embedded page',
     openInNewTab: 'Open in new tab',
     notEnabledTitle: 'Feature not enabled',
     notEnabledDesc: 'The administrator has not enabled the recharge/subscription entry. Please contact admin.',
@@ -5693,19 +5400,6 @@ export default {
     emptyDescription: 'There are no system announcements at this time',
     readStatus: 'You have read this announcement',
     markReadHint: 'Click "Mark as read" to mark this announcement'
-  },
-
-  // Floating contact button (user-facing)
-  contact: {
-    label: 'Contact Us',
-    openTooltip: 'WeChat Group · Support · Official Account',
-    firstHint: '👋 Join our group for updates & pre-sales help',
-    close: 'Close',
-    channelTypes: {
-      wechat_group: 'User Group',
-      customer_service: 'Customer Service',
-      official_account: 'Official Account',
-    },
   },
 
   // User Subscriptions Page
@@ -5752,13 +5446,13 @@ export default {
     admin: {
       welcome: {
         title: '👋 Welcome to Sub2API',
-        description: '<div style="line-height: 1.8;"><p style="margin-bottom: 16px;">Sub2API is a flexible AI service gateway platform that helps you manage and distribute AI access more easily.</p><p style="margin-bottom: 12px;"><b>🎯 Core Features:</b></p><ul style="margin-left: 20px; margin-bottom: 16px;"><li>📦 <b>Group Management</b> - Create service tiers (VIP, Free Trial, etc.)</li><li>🔗 <b>Account Pool</b> - Connect multiple upstream AI service accounts</li><li>🔑 <b>Key Distribution</b> - Generate independent API Keys for users</li><li>💰 <b>Billing Control</b> - Flexible rate and quota management</li></ul><p style="color: #10b981; font-weight: 600;">Let\'s complete the initial setup in 3 minutes →</p></div>',
+        description: '<div style="line-height: 1.8;"><p style="margin-bottom: 16px;">Sub2API is a powerful AI service gateway platform that helps you easily manage and distribute AI services.</p><p style="margin-bottom: 12px;"><b>🎯 Core Features:</b></p><ul style="margin-left: 20px; margin-bottom: 16px;"><li>📦 <b>Group Management</b> - Create service tiers (VIP, Free Trial, etc.)</li><li>🔗 <b>Account Pool</b> - Connect multiple upstream AI service accounts</li><li>🔑 <b>Key Distribution</b> - Generate independent API Keys for users</li><li>💰 <b>Billing Control</b> - Flexible rate and quota management</li></ul><p style="color: #10b981; font-weight: 600;">Let\'s complete the initial setup in 3 minutes →</p></div>',
         nextBtn: 'Start Setup 🚀',
         prevBtn: 'Skip'
       },
       groupManage: {
         title: '📦 Step 1: Group Management',
-        description: '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;"><b>What is a Group?</b></p><p style="margin-bottom: 12px;">Groups are the core concept of this platform, like a "service package":</p><ul style="margin-left: 20px; margin-bottom: 12px; font-size: 13px;"><li>🎯 Each group can contain multiple upstream accounts</li><li>💰 Each group has independent billing multiplier</li><li>👥 Can be set as public or exclusive</li></ul><p style="margin-top: 12px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #10b981; border-radius: 4px; font-size: 13px;"><b>💡 Example:</b> You can create "VIP Premium" (high rate) and "Free Trial" (low rate) groups</p><p style="margin-top: 16px; color: #10b981; font-weight: 600;">👉 Click "Group Management" on the left sidebar</p></div>'
+        description: '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;"><b>What is a Group?</b></p><p style="margin-bottom: 12px;">Groups are the core concept of Sub2API, like a "service package":</p><ul style="margin-left: 20px; margin-bottom: 12px; font-size: 13px;"><li>🎯 Each group can contain multiple upstream accounts</li><li>💰 Each group has independent billing multiplier</li><li>👥 Can be set as public or exclusive</li></ul><p style="margin-top: 12px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #10b981; border-radius: 4px; font-size: 13px;"><b>💡 Example:</b> You can create "VIP Premium" (high rate) and "Free Trial" (low rate) groups</p><p style="margin-top: 16px; color: #10b981; font-weight: 600;">👉 Click "Group Management" on the left sidebar</p></div>'
       },
       createGroup: {
         title: '➕ Create New Group',
@@ -5852,7 +5546,7 @@ export default {
     user: {
       welcome: {
         title: '👋 Welcome to Sub2API',
-        description: '<div style="line-height: 1.8;"><p style="margin-bottom: 16px;">Hello! Welcome to the Sub2API AI service platform.</p><p style="margin-bottom: 12px;"><b>🎯 Quick Start:</b></p><ul style="margin-left: 20px; margin-bottom: 16px;"><li>🔑 Create API Key</li><li>📋 Copy the key into your application</li><li>🚀 Start using AI services</li></ul><p style="color: #10b981; font-weight: 600;">Just 1 minute, let\'s get started →</p></div>',
+        description: '<div style="line-height: 1.8;"><p style="margin-bottom: 16px;">Hello! Welcome to the Sub2API AI service platform.</p><p style="margin-bottom: 12px;"><b>🎯 Quick Start:</b></p><ul style="margin-left: 20px; margin-bottom: 16px;"><li>🔑 Create API Key</li><li>📋 Copy key to your application</li><li>🚀 Start using AI services</li></ul><p style="color: #10b981; font-weight: 600;">Just 1 minute, let\'s get started →</p></div>',
         nextBtn: 'Start 🚀',
         prevBtn: 'Skip'
       },
@@ -5884,10 +5578,6 @@ export default {
   // Payment System
   payment: {
     title: 'Recharge / Subscription',
-<<<<<<< HEAD
-    description: 'Purchase a plan or top up your balance',
-=======
->>>>>>> v0.1.116
     amountLabel: 'Amount',
     paymentAmount: 'Payment Amount',
     creditedBalance: 'Credited Balance',
@@ -6079,16 +5769,8 @@ export default {
       colUser: 'User',
       topUsers: 'Top Users',
       noData: 'No data',
-<<<<<<< HEAD
-      day: 'day',
-      days: 'days',
-      week: 'week',
-      weeks: 'weeks',
-      month: 'month',
-=======
       days: 'days',
       weeks: 'weeks',
->>>>>>> v0.1.116
       months: 'months',
       searchOrders: 'Search orders...',
       allStatuses: 'All Statuses',
@@ -6172,80 +5854,6 @@ export default {
       noProvidersHint: 'Create a provider instance to start accepting payments',
       supportedTypes: 'Supported Payment Types',
       supportedTypesHint: 'Select the payment types this provider supports',
-<<<<<<< HEAD
-      easypayRedirect: 'Redirect Payment',
-      enableConflict: '{method} is currently bound to {current}. Disable the conflicting provider before enabling {next}.',
-      providerEasypay: 'EasyPay',
-      providerAlipay: 'Alipay',
-      providerWxpay: 'WeChat Pay',
-      providerStripe: 'Stripe',
-      enabledPaymentTypes: 'Enabled Payment Types',
-      enabledPaymentTypesHint: 'Only enabled methods are shown to users and can be bound to provider instances.',
-      enableTypesFirst: 'Enable at least one payment type first',
-      typeDisabled: 'Payment type is disabled',
-      paymentMode: 'Payment Mode',
-      modeQRCode: 'QR Code',
-      modePopup: 'Popup',
-      limitsTitle: 'Limits',
-      limitSingleMin: 'Single Min',
-      limitSingleMax: 'Single Max',
-      limitDaily: 'Daily Limit',
-      limitsHint: 'Leave empty to use the global payment config. Multiple providers for one method are aggregated by available limits.',
-      limitsNoLimit: 'No limit',
-      limitsUseGlobal: 'Use global config',
-      paymentGuideTrigger: 'View setup guide',
-      guideOpenLabel: 'Enable: ',
-      guideCallLabel: 'Use: ',
-      guideFallbackLabel: 'Fallback: ',
-      validationNameRequired: 'Enter a provider name',
-      validationFieldRequired: 'Fill in {field}',
-      field_apiBase: 'API Base URL',
-      field_cidAlipay: 'Alipay Channel ID',
-      field_cidWxpay: 'WeChat Channel ID',
-      field_privateKey: 'Private Key',
-      field_publicKey: 'Public Key',
-      field_mpAppId: 'MP App ID',
-      field_mchId: 'Merchant ID',
-      field_apiV3Key: 'API v3 Key',
-      field_certSerial: 'Certificate Serial',
-      field_publicKeyId: 'Public Key ID',
-      field_h5AppName: 'H5 App Name',
-      field_h5AppUrl: 'H5 App URL',
-      field_secretKey: 'Secret Key',
-      field_publishableKey: 'Publishable Key',
-      field_webhookSecret: 'Webhook Secret',
-      field_notifyUrl: 'Notify URL',
-      field_returnUrl: 'Return URL',
-      stripeWebhookHint: 'Configure this webhook URL in your Stripe dashboard.',
-      alipayGuideSummary: 'Use Alipay Face-to-Face, Page Pay, or WAP Pay depending on the client scenario.',
-      alipayGuideFaceToFaceTitle: 'Face-to-Face Pay',
-      alipayGuideFaceToFaceOpen: 'Enable Face-to-Face Pay in Alipay Open Platform.',
-      alipayGuideFaceToFaceCall: 'Use precreate QR payments for desktop scan-to-pay.',
-      alipayGuideFaceToFaceFallback: 'Use website pay on mobile when scanning is not suitable.',
-      alipayGuidePagePayTitle: 'Page Pay',
-      alipayGuidePagePayOpen: 'Enable Page Pay in Alipay Open Platform.',
-      alipayGuidePagePayCall: 'Open the cashier by redirect or popup on desktop.',
-      alipayGuidePagePayFallback: 'Fallback to cashier redirect when QR is unavailable.',
-      alipayGuideWapTitle: 'WAP Pay',
-      alipayGuideWapOpen: 'Enable WAP Pay in Alipay Open Platform.',
-      alipayGuideWapCall: 'Redirect mobile browsers to the Alipay cashier.',
-      alipayGuideWapFallback: 'Prefer QR or Page Pay on desktop.',
-      wxpayGuideSummary: 'WeChat Pay supports Native, JSAPI, and H5. Native QR is the recommended baseline.',
-      wxpayGuideNote: 'JSAPI/H5 require merchant platform and official account domain authorization to be configured correctly.',
-      wxpayGuideNativeTitle: 'Native Pay',
-      wxpayGuideNativeOpen: 'Enable Native Pay in WeChat Merchant Platform.',
-      wxpayGuideNativeCall: 'Generate a QR code for desktop scan-to-pay.',
-      wxpayGuideNativeFallback: 'Fallback to displaying a QR code on mobile.',
-      wxpayGuideJsapiTitle: 'JSAPI Pay',
-      wxpayGuideJsapiOpen: 'Bind an official account and configure OAuth domains.',
-      wxpayGuideJsapiCall: 'Invoke WeChat payment inside the WeChat browser.',
-      wxpayGuideJsapiFallback: 'Fallback to Native QR when authorization fails.',
-      wxpayGuideH5Title: 'H5 Pay',
-      wxpayGuideH5Open: 'Enable H5 Pay and configure payment domains.',
-      wxpayGuideH5Call: 'Redirect mobile browsers to the WeChat H5 payment URL.',
-      wxpayGuideH5Fallback: 'Fallback to Native QR when unavailable.',
-=======
->>>>>>> v0.1.116
       rateMultiplier: 'Rate Multiplier',
       dashboardTitle: 'Payment Dashboard',
       dashboardDesc: 'Recharge order analytics and insights',
@@ -6280,88 +5888,4 @@ export default {
     },
   },
 
-<<<<<<< HEAD
-  // Pricing
-  pricing: {
-    title: 'Model Pricing',
-    description: 'View input/output prices for available AI models',
-    searchPlaceholder: 'Search models...',
-    groupFilter: 'Group',
-    groupAll: 'All (Base Price)',
-    currentRate: 'Current rate',
-    unitPerMillion: '$/M tokens',
-    unitPerThousand: '$/1K tokens',
-    modelName: 'Model',
-    input: 'Input',
-    output: 'Output',
-    cacheRead: 'Cache Read',
-    cacheCreation: 'Cache Write',
-    effectivePrice: 'Effective',
-    basePrice: 'Base',
-    details: 'Details',
-    provider: 'Provider',
-    noModels: 'No models available',
-    noPricing: 'Pricing not available',
-    loadError: 'Failed to load pricing data',
-    notice: 'Prices are standard-tier estimates. Actual costs may vary with service tier and context length.',
-    expand: 'Show details',
-    collapse: 'Hide details',
-  },
-
-  // Admin Payment
-  adminPayment: {
-    plansTitle: 'Plan Management',
-    ordersTitle: 'Order Management',
-    createPlan: 'Create Plan',
-    editPlan: 'Edit Plan',
-    deletePlan: 'Delete Plan',
-    confirmDelete: 'Delete plan "{name}"? This cannot be undone.',
-    planName: 'Plan Name',
-    planDescription: 'Description',
-    planGroup: 'Group',
-    planDuration: 'Duration (days)',
-    planPrice: 'Price (CNY)',
-    planOriginalPrice: 'Original Price (optional)',
-    planSortOrder: 'Sort Order',
-    planIsActive: 'Active',
-    planCreatedAt: 'Created',
-    completeOrder: 'Complete',
-    retryOrder: 'Retry Fulfillment',
-    refundOrder: 'Refund',
-    confirmComplete: 'Manually complete this order and grant benefits?',
-    confirmRetry: 'Retry fulfillment for this order?',
-    confirmRefund: 'Refund this order?',
-    adminNote: 'Admin Note (optional)',
-    refundReason: 'Refund Reason (optional)',
-    orderUser: 'User',
-    orderPlan: 'Plan',
-    orderAmount: 'Amount',
-    orderStatus: 'Status',
-    orderType: 'Type',
-    orderProvider: 'Provider',
-    orderCreatedAt: 'Created',
-    statsTitle: 'Revenue Stats',
-    totalOrders: 'Total Orders',
-    totalAmount: 'Total Amount',
-    paidOrders: 'Paid Orders',
-    paidAmount: 'Paid Amount',
-    completedOrders: 'Completed',
-    completedAmount: 'Completed Amount',
-    todayOrders: 'Today Orders',
-    todayAmount: 'Today Amount',
-    pendingOrders: 'Pending Orders',
-    avgAmount: 'Average Amount',
-    providers: 'Payment Providers',
-    noProviders: 'No payment providers. Click + to add one.',
-    config: 'Payment Config',
-    enabled: 'Enable Payments',
-    minAmount: 'Min Amount',
-    maxAmount: 'Max Amount',
-    balanceDisabled: 'Disable Balance Top-up',
-    providerKey: 'Provider Key',
-    providerConfig: 'Config (JSON)',
-    provider: 'Provider'
-  }
-=======
->>>>>>> v0.1.116
 }

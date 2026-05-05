@@ -37,31 +37,14 @@ export interface NotifyEmailEntry {
 export type UserAuthProvider = 'email' | 'linuxdo' | 'oidc' | 'wechat'
 
 export interface UserAuthBindingStatus {
-<<<<<<< HEAD
-  provider: UserAuthProvider
-  bound: boolean
-  bound_count?: number
-  display_name?: string
-  subject_hint?: string
-  provider_key?: string
-=======
   bound?: boolean
   bound_count?: number
   provider?: UserAuthProvider | string
   provider_key?: string | null
->>>>>>> v0.1.116
   provider_subject?: string | null
   issuer?: string | null
   label?: string | null
   provider_label?: string | null
-<<<<<<< HEAD
-  metadata?: Record<string, unknown>
-  verified_at?: string
-  bind_start_path?: string
-  can_bind?: boolean
-  can_unbind?: boolean
-  note?: string
-=======
   display_name?: string | null
   subject_hint?: string | null
   verified_at?: string | null
@@ -71,7 +54,6 @@ export interface UserAuthBindingStatus {
   note_key?: string | null
   note?: string | null
   metadata?: Record<string, unknown>
->>>>>>> v0.1.116
 }
 
 export interface UserProfileSourceContext {
@@ -98,10 +80,6 @@ export interface User {
   }
   auth_bindings?: Partial<Record<UserAuthProvider, boolean | UserAuthBindingStatus>>
   identity_bindings?: Partial<Record<UserAuthProvider, boolean | UserAuthBindingStatus>>
-<<<<<<< HEAD
-  identities?: UserAuthIdentitySet
-=======
->>>>>>> v0.1.116
   email_bound?: boolean
   linuxdo_bound?: boolean
   oidc_bound?: boolean
@@ -116,29 +94,9 @@ export interface User {
   balance_notify_threshold: number | null
   balance_notify_extra_emails: NotifyEmailEntry[]
   subscriptions?: UserSubscription[] // User's active subscriptions
-<<<<<<< HEAD
-  referral_code?: string // 推荐码
-=======
   last_active_at?: string | null
->>>>>>> v0.1.116
   created_at: string
   updated_at: string
-}
-
-export type UserAuthIdentitySet = Partial<Record<UserAuthProvider, UserAuthBindingStatus>>
-
-/** Notification email entry with enable/disable and verification state. */
-export interface NotifyEmailEntry {
-  email: string
-  disabled: boolean
-  verified: boolean
-}
-
-export interface UserProfile extends User {
-  balance_notify_enabled: boolean
-  balance_notify_threshold: number | null
-  balance_notify_threshold_type: 'fixed' | 'percentage' | string
-  balance_notify_extra_emails: NotifyEmailEntry[]
 }
 
 export interface AdminUser extends User {
@@ -164,7 +122,6 @@ export interface RegisterRequest {
   turnstile_token?: string
   promo_code?: string
   invitation_code?: string
-  referral_code?: string
 }
 
 export interface SendVerifyCodeRequest {
@@ -194,18 +151,6 @@ export interface CustomEndpoint {
   description: string
 }
 
-export type ContactChannelType = 'wechat_group' | 'customer_service' | 'official_account'
-
-export interface ContactChannel {
-  type: ContactChannelType
-  label: string
-  qr_image: string
-  description: string
-  extra_info: string
-  enabled: boolean
-  priority: number
-}
-
 export interface PublicSettings {
   registration_enabled: boolean
   email_verify_enabled: boolean
@@ -214,7 +159,6 @@ export interface PublicSettings {
   promo_code_enabled: boolean
   password_reset_enabled: boolean
   invitation_code_enabled: boolean
-  referral_enabled: boolean
   turnstile_enabled: boolean
   turnstile_site_key: string
   site_name: string
@@ -225,30 +169,19 @@ export interface PublicSettings {
   doc_url: string
   home_content: string
   hide_ccs_import_button: boolean
-<<<<<<< HEAD
-  purchase_subscription_enabled: boolean
-  purchase_subscription_url: string
-=======
   payment_enabled: boolean
->>>>>>> v0.1.116
   table_default_page_size: number
   table_page_size_options: number[]
   custom_menu_items: CustomMenuItem[]
   custom_endpoints: CustomEndpoint[]
   linuxdo_oauth_enabled: boolean
   wechat_oauth_enabled: boolean
-<<<<<<< HEAD
-  wechat_oauth_open_enabled: boolean
-  wechat_oauth_mp_enabled: boolean
-=======
   wechat_oauth_open_enabled?: boolean
   wechat_oauth_mp_enabled?: boolean
->>>>>>> v0.1.116
   wechat_oauth_mobile_enabled?: boolean
   oidc_oauth_enabled: boolean
   oidc_oauth_provider_name: string
   backend_mode_enabled: boolean
-  contact_channels: ContactChannel[]
   version: string
   balance_low_notify_enabled: boolean
   account_quota_notify_enabled: boolean
@@ -1181,17 +1114,12 @@ export interface AdminUsageLog extends UsageLog {
 
   // 账号计费倍率（仅管理员可见）
   account_rate_multiplier?: number | null
-<<<<<<< HEAD
-  account_stats_cost?: number | null
-  account_cost: number
-=======
   // 自定义定价规则计算的账号统计费用（nil 时使用 total_cost * multiplier）
   account_stats_cost?: number | null
 
   // 渠道 ID 和计费等级（仅管理员可见）
   channel_id?: number | null
   billing_tier?: string | null
->>>>>>> v0.1.116
 
   // 用户请求 IP（仅管理员可见）
   ip_address?: string | null
@@ -1779,41 +1707,5 @@ export interface UpdateScheduledTestPlanRequest {
   auto_recover?: boolean
 }
 
-<<<<<<< HEAD
-// ==================== Model Pricing Types ====================
-
-export interface PriceSet {
-  input_per_million: number | null
-  output_per_million: number | null
-  cache_read_per_million: number | null
-  cache_creation_per_million: number | null
-}
-
-export interface EffectivePriceSet extends PriceSet {
-  rate_multiplier: number
-}
-
-export interface ModelPricingItem {
-  id: string
-  display_name: string
-  owned_by: string
-  category: string
-  pricing: PriceSet
-  effective_pricing: EffectivePriceSet | null
-}
-
-export interface PricingGroupInfo {
-  id: number
-  name: string
-  rate_multiplier: number
-}
-
-export interface ModelPricingResponse {
-  models: ModelPricingItem[]
-  group: PricingGroupInfo | null
-  notice?: string
-}
-=======
 // Payment types
 export type { SubscriptionPlan, PaymentOrder, CheckoutInfoResponse } from './payment'
->>>>>>> v0.1.116

@@ -33,11 +33,7 @@ function createOrderResult(overrides: Partial<CreateOrderResult> = {}): CreateOr
 }
 
 describe('getVisibleMethods', () => {
-<<<<<<< HEAD
-  it('normalizes provider aliases and keeps stripe as a top-level method', () => {
-=======
   it('filters hidden provider methods and normalizes aliases', () => {
->>>>>>> v0.1.116
     const visible = getVisibleMethods({
       alipay_direct: methodLimit({ single_min: 5 }),
       wxpay: methodLimit({ single_max: 100 }),
@@ -47,10 +43,6 @@ describe('getVisibleMethods', () => {
     expect(visible).toEqual({
       alipay: methodLimit({ single_min: 5 }),
       wxpay: methodLimit({ single_max: 100 }),
-<<<<<<< HEAD
-      stripe: methodLimit({ fee_rate: 3 }),
-=======
->>>>>>> v0.1.116
     })
   })
 
@@ -84,22 +76,6 @@ describe('decidePaymentLaunch', () => {
     expect(decision.recovery.outTradeNo).toBe('')
   })
 
-<<<<<<< HEAD
-  it('routes Stripe button click to the full Payment Element without a preselected sub-method', () => {
-    const decision = decidePaymentLaunch(createOrderResult({
-      client_secret: 'cs_test',
-    }), {
-      visibleMethod: 'stripe',
-      orderType: 'balance',
-      isMobile: false,
-    })
-
-    expect(decision.kind).toBe('stripe_route')
-    expect(decision.stripeMethod).toBeUndefined()
-  })
-
-=======
->>>>>>> v0.1.116
   it('uses Stripe route flow for mobile WeChat client secret', () => {
     const decision = decidePaymentLaunch(createOrderResult({
       client_secret: 'cs_test',

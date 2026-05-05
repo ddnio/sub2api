@@ -154,13 +154,8 @@
                 </div>
               </div>
             </div>
-<<<<<<< HEAD
-            <div v-if="row.account_rate_multiplier != null || row.account_stats_cost != null" class="mt-0.5 text-[11px] text-gray-400">
-              A ${{ formatAccountCost(row) }}
-=======
             <div v-if="row.account_rate_multiplier != null" class="mt-0.5 text-[11px] text-orange-500 dark:text-orange-400">
               A ${{ accountBilled(row).toFixed(6) }}
->>>>>>> v0.1.116
             </div>
           </div>
         </template>
@@ -334,15 +329,11 @@
           <div class="flex items-center justify-between gap-6">
             <span class="text-gray-400">{{ t('usage.accountBilled') }}</span>
             <span class="font-semibold text-green-400">
-<<<<<<< HEAD
-              ${{ tooltipData ? formatAccountCost(tooltipData) : '0.000000' }}
-=======
               ${{ accountBilled({
                 total_cost: tooltipData?.total_cost,
                 account_stats_cost: tooltipData?.account_stats_cost,
                 account_rate_multiplier: tooltipData?.account_rate_multiplier,
               }).toFixed(6) }}
->>>>>>> v0.1.116
             </span>
           </div>
         </div>
@@ -432,10 +423,6 @@ const formatDuration = (ms: number | null | undefined): string => {
   if (ms == null) return '-'
   if (ms < 1000) return `${ms}ms`
   return `${(ms / 1000).toFixed(2)}s`
-}
-
-const formatAccountCost = (row: AdminUsageLog): string => {
-  return (row.account_cost ?? ((row.account_stats_cost ?? row.total_cost) * (row.account_rate_multiplier ?? 1))).toFixed(6)
 }
 
 // Cost tooltip functions

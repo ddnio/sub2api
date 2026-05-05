@@ -159,30 +159,8 @@
           </transition>
         </div>
 
-        <!-- Referral Code Input (当有 ?ref= 时替代优惠码输入框) -->
-        <div v-if="formData.referral_code">
-          <label for="referral_code" class="input-label">
-            {{ t('auth.referralCodeLabel') }}
-          </label>
-          <div class="relative">
-            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-              <Icon name="checkCircle" size="md" class="text-green-500" />
-            </div>
-            <input
-              id="referral_code"
-              v-model="formData.referral_code"
-              type="text"
-              readonly
-              class="input pl-11 border-green-500 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
-            />
-          </div>
-          <p class="mt-1 text-sm text-green-600 dark:text-green-400">
-            {{ t('auth.referralCodeApplied', { code: formData.referral_code }) }}
-          </p>
-        </div>
-
-        <!-- Promo Code Input (Optional, 有推荐码时隐藏) -->
-        <div v-else-if="promoCodeEnabled">
+        <!-- Promo Code Input (Optional) -->
+        <div v-if="promoCodeEnabled">
           <label for="promo_code" class="input-label">
             {{ t('auth.promoCodeLabel') }}
             <span class="ml-1 text-xs font-normal text-gray-400 dark:text-dark-500">({{ t('common.optional') }})</span>
@@ -294,11 +272,7 @@
 </template>
 
 <script setup lang="ts">
-<<<<<<< HEAD
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
-=======
 import { computed, ref, reactive, onMounted, onUnmounted, watch } from 'vue'
->>>>>>> v0.1.116
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { AuthLayout } from '@/components/layout'
@@ -308,16 +282,12 @@ import WechatOAuthSection from '@/components/auth/WechatOAuthSection.vue'
 import Icon from '@/components/icons/Icon.vue'
 import TurnstileWidget from '@/components/TurnstileWidget.vue'
 import { useAuthStore, useAppStore } from '@/stores'
-<<<<<<< HEAD
-import { validatePromoCode, validateInvitationCode } from '@/api/auth'
-=======
 import {
   getPublicSettings,
   isWeChatWebOAuthEnabled,
   validatePromoCode,
   validateInvitationCode
 } from '@/api/auth'
->>>>>>> v0.1.116
 import { buildAuthErrorMessage } from '@/utils/authError'
 import {
   isRegistrationEmailSuffixAllowed,
@@ -345,10 +315,9 @@ const registrationEnabled = ref<boolean>(true)
 const emailVerifyEnabled = ref<boolean>(false)
 const promoCodeEnabled = ref<boolean>(true)
 const invitationCodeEnabled = ref<boolean>(false)
-const referralEnabled = ref<boolean>(false)
 const turnstileEnabled = ref<boolean>(false)
 const turnstileSiteKey = ref<string>('')
-const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'NanaFox API')
+const siteName = ref<string>('Sub2API')
 const linuxdoOAuthEnabled = ref<boolean>(false)
 const wechatOAuthEnabled = ref<boolean>(false)
 const oidcOAuthEnabled = ref<boolean>(false)
@@ -382,8 +351,7 @@ const formData = reactive({
   email: '',
   password: '',
   promo_code: '',
-  invitation_code: '',
-  referral_code: ''
+  invitation_code: ''
 })
 
 const errors = reactive({
@@ -413,17 +381,14 @@ watch(validationToastMessage, (value, previousValue) => {
 
 onMounted(async () => {
   try {
-    await appStore.fetchPublicSettings()
-    const settings = appStore.cachedPublicSettings
-    if (!settings) return
+    const settings = await getPublicSettings()
     registrationEnabled.value = settings.registration_enabled
     emailVerifyEnabled.value = settings.email_verify_enabled
     promoCodeEnabled.value = settings.promo_code_enabled
     invitationCodeEnabled.value = settings.invitation_code_enabled
-    referralEnabled.value = settings.referral_enabled
     turnstileEnabled.value = settings.turnstile_enabled
     turnstileSiteKey.value = settings.turnstile_site_key || ''
-
+    siteName.value = settings.site_name || 'Sub2API'
     linuxdoOAuthEnabled.value = settings.linuxdo_oauth_enabled
     wechatOAuthEnabled.value = isWeChatWebOAuthEnabled(settings)
     oidcOAuthEnabled.value = settings.oidc_oauth_enabled
@@ -431,14 +396,6 @@ onMounted(async () => {
     registrationEmailSuffixWhitelist.value = normalizeRegistrationEmailSuffixWhitelist(
       settings.registration_email_suffix_whitelist || []
     )
-
-    // Read referral code from URL parameter
-    if (referralEnabled.value && !invitationCodeEnabled.value) {
-      const refParam = route.query.ref as string
-      if (refParam) {
-        formData.referral_code = refParam
-      }
-    }
 
     // Read promo code from URL parameter only if promo code is enabled
     if (promoCodeEnabled.value) {
@@ -750,8 +707,7 @@ async function handleRegister(): Promise<void> {
           password: formData.password,
           turnstile_token: turnstileToken.value,
           promo_code: formData.promo_code || undefined,
-          invitation_code: formData.invitation_code || undefined,
-          referral_code: formData.referral_code || undefined
+          invitation_code: formData.invitation_code || undefined
         })
       )
 
@@ -766,8 +722,7 @@ async function handleRegister(): Promise<void> {
       password: formData.password,
       turnstile_token: turnstileEnabled.value ? turnstileToken.value : undefined,
       promo_code: formData.promo_code || undefined,
-      invitation_code: formData.invitation_code || undefined,
-      referral_code: formData.referral_code || undefined
+      invitation_code: formData.invitation_code || undefined
     })
 
     // Show success toast

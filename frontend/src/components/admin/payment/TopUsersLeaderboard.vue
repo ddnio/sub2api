@@ -27,11 +27,7 @@
           <span class="text-sm text-gray-700 dark:text-gray-300">{{ user.email }}</span>
         </div>
         <span class="text-sm font-medium text-gray-900 dark:text-white">
-<<<<<<< HEAD
-          ¥{{ user.amount.toFixed(2) }}
-=======
           ${{ user.amount.toFixed(2) }}
->>>>>>> v0.1.116
         </span>
       </div>
     </div>

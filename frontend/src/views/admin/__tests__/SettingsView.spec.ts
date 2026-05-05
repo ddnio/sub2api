@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-<<<<<<< HEAD
-import { defineComponent, h, ref } from "vue";
-=======
 import { defineComponent, h } from "vue";
->>>>>>> v0.1.116
 import { flushPromises, mount } from "@vue/test-utils";
 
 import SettingsView from "../SettingsView.vue";
@@ -20,18 +16,10 @@ const {
   getBetaPolicySettings,
   getGroups,
   listProxies,
-<<<<<<< HEAD
-  getAllProxies,
-  getProviders,
-  listProviders,
-  getPaymentConfig,
-  updatePaymentConfig,
-=======
   getProviders,
   updateProvider,
   createProvider,
   deleteProvider,
->>>>>>> v0.1.116
   fetchPublicSettings,
   adminSettingsFetch,
   showError,
@@ -48,29 +36,18 @@ const {
   getBetaPolicySettings: vi.fn(),
   getGroups: vi.fn(),
   listProxies: vi.fn(),
-<<<<<<< HEAD
-  getAllProxies: vi.fn(),
-  getProviders: vi.fn(),
-  listProviders: vi.fn(),
-  getPaymentConfig: vi.fn(),
-  updatePaymentConfig: vi.fn(),
-=======
   getProviders: vi.fn(),
   updateProvider: vi.fn(),
   createProvider: vi.fn(),
   deleteProvider: vi.fn(),
->>>>>>> v0.1.116
   fetchPublicSettings: vi.fn(),
   adminSettingsFetch: vi.fn(),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));
 
-<<<<<<< HEAD
-=======
 const localeRef = vi.hoisted(() => ({ value: "zh-CN" }));
 
->>>>>>> v0.1.116
 vi.mock("@/api", () => ({
   adminAPI: {
     settings: {
@@ -89,22 +66,12 @@ vi.mock("@/api", () => ({
     },
     proxies: {
       list: listProxies,
-<<<<<<< HEAD
-      getAll: getAllProxies,
-    },
-    payment: {
-      getProviders,
-      listProviders,
-      getPaymentConfig,
-      updatePaymentConfig,
-=======
     },
     payment: {
       getProviders,
       updateProvider,
       createProvider,
       deleteProvider,
->>>>>>> v0.1.116
     },
   },
 }));
@@ -133,21 +100,10 @@ vi.mock("@/composables/useClipboard", () => ({
 
 vi.mock("@/utils/apiError", () => ({
   extractApiErrorMessage: () => "error",
-<<<<<<< HEAD
-  extractI18nErrorMessage: () => "error",
-=======
->>>>>>> v0.1.116
 }));
 
 vi.mock("vue-i18n", async () => {
   const actual = await vi.importActual<typeof import("vue-i18n")>("vue-i18n");
-<<<<<<< HEAD
-  return {
-    ...actual,
-    useI18n: () => ({
-      t: (key: string) => key,
-      locale: ref("zh-CN"),
-=======
   const translations: Record<string, string> = {
     "admin.settings.wechatConnect.title": "微信登录",
     "admin.settings.wechatConnect.description": "用于微信开放平台或公众号/小程序的第三方登录配置。",
@@ -208,7 +164,6 @@ vi.mock("vue-i18n", async () => {
       t: (key: string, params?: Record<string, string>) =>
         (translations[key] ?? key).replace(/\{(\w+)\}/g, (_, token) => params?.[token] ?? `{${token}}`),
       locale: localeRef,
->>>>>>> v0.1.116
     }),
   };
 });
@@ -287,8 +242,6 @@ const SelectStub = defineComponent({
   },
 });
 
-<<<<<<< HEAD
-=======
 const ImageUploadStub = defineComponent({
   props: {
     modelValue: {
@@ -320,7 +273,6 @@ const ImageUploadStub = defineComponent({
   },
 });
 
->>>>>>> v0.1.116
 const baseSettingsResponse = {
   registration_enabled: true,
   email_verify_enabled: false,
@@ -442,30 +394,6 @@ const baseSettingsResponse = {
   account_quota_notify_emails: [],
 };
 
-<<<<<<< HEAD
-const basePaymentConfigResponse = {
-  enabled: true,
-  min_amount: 1,
-  max_amount: 10000,
-  daily_limit: 50000,
-  order_timeout_minutes: 30,
-  max_pending_orders: 3,
-  enabled_payment_types: [],
-  balance_disabled: false,
-  balance_recharge_multiplier: 1,
-  load_balance_strategy: "round-robin",
-  product_name_prefix: "",
-  product_name_suffix: "",
-  help_image_url: "",
-  help_text: "",
-  payment_visible_method_alipay_source: "alipay_direct",
-  payment_visible_method_wxpay_source: "invalid-source",
-  payment_visible_method_alipay_enabled: true,
-  payment_visible_method_wxpay_enabled: true,
-};
-
-=======
->>>>>>> v0.1.116
 function mountView() {
   return mount(SettingsView, {
     global: {
@@ -480,11 +408,7 @@ function mountView() {
         GroupBadge: true,
         GroupOptionItem: true,
         ProxySelector: true,
-<<<<<<< HEAD
-        ImageUpload: true,
-=======
         ImageUpload: ImageUploadStub,
->>>>>>> v0.1.116
         BackupSettings: true,
       },
     },
@@ -534,26 +458,15 @@ describe("admin SettingsView payment visible method controls", () => {
     getBetaPolicySettings.mockReset();
     getGroups.mockReset();
     listProxies.mockReset();
-<<<<<<< HEAD
-    getAllProxies.mockReset();
-    getProviders.mockReset();
-    listProviders.mockReset();
-    getPaymentConfig.mockReset();
-    updatePaymentConfig.mockReset();
-=======
     getProviders.mockReset();
     updateProvider.mockReset();
     createProvider.mockReset();
     deleteProvider.mockReset();
->>>>>>> v0.1.116
     fetchPublicSettings.mockReset();
     adminSettingsFetch.mockReset();
     showError.mockReset();
     showSuccess.mockReset();
-<<<<<<< HEAD
-=======
     localeRef.value = "zh-CN";
->>>>>>> v0.1.116
 
     getSettings.mockResolvedValue({ ...baseSettingsResponse });
     updateSettings.mockImplementation(async (payload) => ({
@@ -597,93 +510,29 @@ describe("admin SettingsView payment visible method controls", () => {
     listProxies.mockResolvedValue({
       items: [],
     });
-<<<<<<< HEAD
-    getAllProxies.mockResolvedValue([]);
     getProviders.mockResolvedValue({
       data: [],
     });
-    listProviders.mockResolvedValue([]);
-    getPaymentConfig.mockResolvedValue({ ...basePaymentConfigResponse });
-    updatePaymentConfig.mockImplementation(async (payload) => ({
-      ...basePaymentConfigResponse,
-      ...payload,
-    }));
-=======
-    getProviders.mockResolvedValue({
-      data: [],
-    });
->>>>>>> v0.1.116
     fetchPublicSettings.mockResolvedValue(undefined);
     adminSettingsFetch.mockResolvedValue(undefined);
   });
 
-<<<<<<< HEAD
-  it("loads canonical source options and normalizes existing values", async () => {
-=======
   it("does not render legacy visible payment method controls", async () => {
->>>>>>> v0.1.116
     const wrapper = mountView();
 
     await flushPromises();
     await openPaymentTab(wrapper);
 
-<<<<<<< HEAD
-    const paymentSourceSelects = wrapper
-      .findAll("select.select-stub")
-      .filter((node) =>
-        ["alipay", "wxpay"].includes(node.attributes("data-placeholder")),
-      );
-
-    expect(paymentSourceSelects).toHaveLength(2);
-
-    const alipaySelect = paymentSourceSelects.find(
-      (node) => node.attributes("data-placeholder") === "alipay",
-    );
-    const wxpaySelect = paymentSourceSelects.find(
-      (node) => node.attributes("data-placeholder") === "wxpay",
-    );
-
-    expect(alipaySelect?.element.value).toBe("official_alipay");
-    expect(
-      alipaySelect?.findAll("option").map((option) => option.element.value),
-    ).toEqual(["", "official_alipay", "easypay_alipay"]);
-
-    expect(wxpaySelect?.element.value).toBe("");
-    expect(
-      wxpaySelect?.findAll("option").map((option) => option.element.value),
-    ).toEqual(["", "official_wxpay", "easypay_wxpay"]);
-  });
-
-  it("saves canonical source keys selected from the dropdowns", async () => {
-=======
     expect(wrapper.text()).not.toContain("可见方式");
     expect(wrapper.text()).not.toContain("支付来源");
   });
 
   it("links payment guidance to README sections instead of removed payment docs", async () => {
->>>>>>> v0.1.116
     const wrapper = mountView();
 
     await flushPromises();
     await openPaymentTab(wrapper);
 
-<<<<<<< HEAD
-    const paymentSourceSelects = wrapper
-      .findAll("select.select-stub")
-      .filter((node) =>
-        ["alipay", "wxpay"].includes(node.attributes("data-placeholder")),
-      );
-
-    const alipaySelect = paymentSourceSelects.find(
-      (node) => node.attributes("data-placeholder") === "alipay",
-    );
-    const wxpaySelect = paymentSourceSelects.find(
-      (node) => node.attributes("data-placeholder") === "wxpay",
-    );
-
-    await alipaySelect?.setValue("easypay_alipay");
-    await wxpaySelect?.setValue("official_wxpay");
-=======
     const paymentLinks = wrapper
       .findAll("a")
       .filter((node) =>
@@ -707,48 +556,10 @@ describe("admin SettingsView payment visible method controls", () => {
 
     await flushPromises();
     await openPaymentTab(wrapper);
->>>>>>> v0.1.116
     await wrapper.find("form").trigger("submit.prevent");
     await flushPromises();
 
     expect(updateSettings).toHaveBeenCalledTimes(1);
-<<<<<<< HEAD
-    expect(updateSettings).toHaveBeenCalledWith(
-      expect.objectContaining({
-        payment_visible_method_alipay_source: "easypay_alipay",
-        payment_visible_method_wxpay_source: "official_wxpay",
-        payment_visible_method_alipay_enabled: true,
-        payment_visible_method_wxpay_enabled: true,
-      }),
-    );
-  });
-
-  it("blocks saving when a visible payment method is enabled without a source", async () => {
-    const wrapper = mountView();
-
-    await flushPromises();
-    await openPaymentTab(wrapper);
-
-    const paymentSourceSelects = wrapper
-      .findAll("select.select-stub")
-      .filter((node) =>
-        ["alipay", "wxpay"].includes(node.attributes("data-placeholder")),
-      );
-
-    const alipaySelect = paymentSourceSelects.find(
-      (node) => node.attributes("data-placeholder") === "alipay",
-    );
-
-    await alipaySelect?.setValue("");
-    await wrapper.find("form").trigger("submit.prevent");
-    await flushPromises();
-
-    expect(updateSettings).not.toHaveBeenCalled();
-    expect(showError).toHaveBeenCalled();
-    expect(String(showError.mock.calls.at(-1)?.[0] ?? "")).toContain(
-      "sourceRequiredError",
-    );
-=======
     const payload = updateSettings.mock.calls[0]?.[0];
     expect(payload).not.toHaveProperty("payment_visible_method_alipay_source");
     expect(payload).not.toHaveProperty("payment_visible_method_wxpay_source");
@@ -817,7 +628,6 @@ describe("admin SettingsView payment visible method controls", () => {
 
     expect(updateProvider).toHaveBeenCalledWith(7, { enabled: true });
     expect(getProviders).toHaveBeenCalledTimes(2);
->>>>>>> v0.1.116
   });
 
   it("renders advanced scheduler copy as local experimental gateway policy", async () => {
@@ -825,14 +635,6 @@ describe("admin SettingsView payment visible method controls", () => {
 
     await flushPromises();
 
-<<<<<<< HEAD
-    expect(wrapper.text()).toContain("admin.settings.openaiExperimentalScheduler.title");
-    expect(wrapper.text()).toContain(
-      "admin.settings.openaiExperimentalScheduler.description",
-    );
-    expect(wrapper.text()).not.toContain("OpenAI 高级调度器");
-  });
-=======
     expect(wrapper.text()).toContain("OpenAI 实验调度策略");
     expect(wrapper.text()).toContain(
       "默认关闭。开启后仅影响本网关在 OpenAI 账号间的实验性调度选择逻辑",
@@ -857,7 +659,6 @@ describe("admin SettingsView payment visible method controls", () => {
     expect(paymentHelpImageUpload?.attributes("data-upload-label")).toBe("上传图片");
     expect(paymentHelpImageUpload?.attributes("data-remove-label")).toBe("移除");
   });
->>>>>>> v0.1.116
 });
 
 describe("admin SettingsView wechat connect controls", () => {
@@ -874,12 +675,9 @@ describe("admin SettingsView wechat connect controls", () => {
     getGroups.mockReset();
     listProxies.mockReset();
     getProviders.mockReset();
-<<<<<<< HEAD
-=======
     updateProvider.mockReset();
     createProvider.mockReset();
     deleteProvider.mockReset();
->>>>>>> v0.1.116
     fetchPublicSettings.mockReset();
     adminSettingsFetch.mockReset();
     showError.mockReset();
@@ -1058,8 +856,6 @@ describe("admin SettingsView wechat connect controls", () => {
     ).toBe(true);
     expect(wrapper.text()).toContain("首次绑定时授权");
   });
-<<<<<<< HEAD
-=======
 
   it("preserves optional OIDC compatibility flags instead of forcing them on save", async () => {
     getSettings.mockResolvedValueOnce({
@@ -1084,5 +880,4 @@ describe("admin SettingsView wechat connect controls", () => {
       }),
     );
   });
->>>>>>> v0.1.116
 });

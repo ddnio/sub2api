@@ -1,11 +1,4 @@
 <template>
-<<<<<<< HEAD
-  <div class="card p-6">
-    <div class="mb-4">
-      <h3 class="text-base font-semibold text-gray-900 dark:text-white">
-        {{ t('profile.authBindings.title') }}
-      </h3>
-=======
   <div :class="props.embedded ? 'space-y-4' : 'card overflow-hidden'">
     <div
       v-if="!props.embedded"
@@ -14,60 +7,11 @@
       <h2 class="text-lg font-medium text-gray-900 dark:text-white">
         {{ t('profile.authBindings.title') }}
       </h2>
->>>>>>> v0.1.116
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
         {{ t('profile.authBindings.description') }}
       </p>
     </div>
 
-<<<<<<< HEAD
-    <div class="space-y-3">
-      <div
-        v-for="item in providerItems"
-        :key="item.provider"
-        class="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-4 py-3 dark:border-dark-700"
-      >
-        <div class="min-w-0">
-          <div class="text-sm font-medium text-gray-900 dark:text-white">
-            {{ item.label }}
-          </div>
-          <div v-if="item.hint" class="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">
-            {{ item.hint }}
-          </div>
-        </div>
-
-        <div class="flex shrink-0 items-center gap-2">
-          <span
-            :data-testid="`profile-binding-${item.provider}-status`"
-            :class="['badge', item.bound ? 'badge-success' : 'badge-gray']"
-          >
-            {{
-              item.bound
-                ? t('profile.authBindings.status.bound')
-                : t('profile.authBindings.status.notBound')
-            }}
-          </span>
-
-          <button
-            v-if="item.canBind"
-            :data-testid="`profile-binding-${item.provider}-action`"
-            type="button"
-            class="btn btn-secondary btn-sm"
-            @click="handleBind(item.provider)"
-          >
-            {{ t('profile.authBindings.bindAction', { providerName: item.label }) }}
-          </button>
-          <button
-            v-if="item.canUnbind"
-            :data-testid="`profile-binding-${item.provider}-unbind`"
-            type="button"
-            class="btn btn-secondary btn-sm"
-            :disabled="unbindingProvider === item.provider"
-            @click="handleUnbind(item.provider)"
-          >
-            {{ t('profile.authBindings.unbindAction', { providerName: item.label }) }}
-          </button>
-=======
     <div :class="props.embedded ? 'space-y-4' : 'divide-y divide-gray-100 dark:divide-dark-700'">
       <div v-if="props.embedded">
         <p class="text-sm font-semibold text-gray-900 dark:text-white">
@@ -242,7 +186,6 @@
               }}
             </button>
           </div>
->>>>>>> v0.1.116
         </div>
       </div>
     </div>
@@ -250,11 +193,7 @@
 </template>
 
 <script setup lang="ts">
-<<<<<<< HEAD
-import { computed, ref } from 'vue'
-=======
 import { computed, reactive, ref, watch } from 'vue'
->>>>>>> v0.1.116
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import {
@@ -262,29 +201,6 @@ import {
   resolveWeChatOAuthStartStrict,
   type WeChatOAuthPublicSettings,
 } from '@/api/auth'
-<<<<<<< HEAD
-import { startOAuthBinding, unbindAuthProvider } from '@/api/user'
-import { useAppStore } from '@/stores'
-import type { User, UserAuthBindingStatus, UserAuthProvider, UserProfile } from '@/types'
-
-const props = withDefaults(
-  defineProps<{
-    user: UserProfile | User | null
-    linuxdoEnabled?: boolean
-    wechatEnabled?: boolean
-    wechatOpenEnabled?: boolean
-    wechatMpEnabled?: boolean
-    oidcEnabled?: boolean
-    oidcProviderName?: string
-  }>(),
-  {
-    linuxdoEnabled: false,
-    wechatEnabled: false,
-    wechatOpenEnabled: undefined,
-    wechatMpEnabled: undefined,
-    oidcEnabled: false,
-    oidcProviderName: 'OIDC',
-=======
 import {
   bindEmailIdentity,
   sendEmailBindingCode,
@@ -318,31 +234,12 @@ const props = withDefaults(
     wechatMpEnabled: undefined,
     embedded: false,
     compact: false,
->>>>>>> v0.1.116
   }
 )
 
 const { t } = useI18n()
 const route = useRoute()
 const appStore = useAppStore()
-<<<<<<< HEAD
-const unbindingProvider = ref<UserAuthProvider | null>(null)
-
-const wechatOAuthSettings = computed<WeChatOAuthPublicSettings | null>(() => {
-  if (hasExplicitWeChatOAuthCapabilities(appStore.cachedPublicSettings)) {
-    return appStore.cachedPublicSettings
-  }
-
-  if (typeof props.wechatOpenEnabled === 'boolean' && typeof props.wechatMpEnabled === 'boolean') {
-    return {
-      wechat_oauth_enabled: props.wechatEnabled,
-      wechat_oauth_open_enabled: props.wechatOpenEnabled,
-      wechat_oauth_mp_enabled: props.wechatMpEnabled,
-    }
-  }
-
-  return null
-=======
 const authStore = useAuthStore()
 
 const localUser = ref<User | null>(null)
@@ -445,23 +342,10 @@ const wechatOAuthSettings = computed<WeChatOAuthPublicSettings | null>(() => {
     wechat_oauth_open_enabled: props.wechatOpenEnabled,
     wechat_oauth_mp_enabled: props.wechatMpEnabled,
   })
->>>>>>> v0.1.116
 })
 
 const resolvedWeChatBinding = computed(() => resolveWeChatOAuthStartStrict(wechatOAuthSettings.value))
 
-<<<<<<< HEAD
-const emit = defineEmits<{
-  updated: [user: UserProfile]
-}>()
-
-function getStatus(provider: UserAuthProvider): UserAuthBindingStatus | undefined {
-  return props.user?.identities?.[provider]
-}
-
-function providerHint(status: UserAuthBindingStatus | undefined): string {
-  return status?.display_name || status?.subject_hint || status?.note || ''
-=======
 function normalizeBindingStatus(binding: boolean | UserAuthBindingStatus | undefined): boolean | null {
   if (typeof binding === 'boolean') {
     return binding
@@ -526,42 +410,20 @@ function isProviderEnabledForBinding(provider: BindableProvider): boolean {
     return props.oidcEnabled
   }
   return resolvedWeChatBinding.value.mode !== null
->>>>>>> v0.1.116
 }
 
 const providerItems = computed(() => [
   {
     provider: 'email' as const,
     label: t('profile.authBindings.providers.email'),
-<<<<<<< HEAD
-    bound: Boolean(getStatus('email')?.bound || props.user?.email),
-    canBind: false,
-    canUnbind: false,
-    hint: providerHint(getStatus('email')) || props.user?.email || '',
-=======
     bound: getBindingStatus('email'),
     canBind: false,
     canUnbind: false,
     details: getBindingDetails('email'),
->>>>>>> v0.1.116
   },
   {
     provider: 'linuxdo' as const,
     label: t('profile.authBindings.providers.linuxdo'),
-<<<<<<< HEAD
-    bound: Boolean(getStatus('linuxdo')?.bound),
-    canBind: props.linuxdoEnabled && Boolean(getStatus('linuxdo')?.can_bind),
-    canUnbind: Boolean(getStatus('linuxdo')?.can_unbind),
-    hint: providerHint(getStatus('linuxdo')),
-  },
-  {
-    provider: 'wechat' as const,
-    label: t('profile.authBindings.providers.wechat'),
-    bound: Boolean(getStatus('wechat')?.bound),
-    canBind: resolvedWeChatBinding.value.mode !== null && Boolean(getStatus('wechat')?.can_bind),
-    canUnbind: Boolean(getStatus('wechat')?.can_unbind),
-    hint: providerHint(getStatus('wechat')),
-=======
     bound: getBindingStatus('linuxdo'),
     canBind:
       !getBindingStatus('linuxdo') &&
@@ -569,25 +431,10 @@ const providerItems = computed(() => [
       (getBindingDetails('linuxdo')?.can_bind ?? true),
     canUnbind: Boolean(getBindingStatus('linuxdo') && getBindingDetails('linuxdo')?.can_unbind),
     details: getBindingDetails('linuxdo'),
->>>>>>> v0.1.116
   },
   {
     provider: 'oidc' as const,
     label: t('profile.authBindings.providers.oidc', { providerName: props.oidcProviderName }),
-<<<<<<< HEAD
-    bound: Boolean(getStatus('oidc')?.bound),
-    canBind: props.oidcEnabled && Boolean(getStatus('oidc')?.can_bind),
-    canUnbind: Boolean(getStatus('oidc')?.can_unbind),
-    hint: providerHint(getStatus('oidc')),
-  },
-])
-
-function handleBind(provider: UserAuthProvider): void {
-  if (provider === 'email') {
-    return
-  }
-  void startOAuthBinding(provider, {
-=======
     bound: getBindingStatus('oidc'),
     canBind:
       !getBindingStatus('oidc') &&
@@ -688,22 +535,11 @@ function startBinding(provider: UserAuthProvider): void {
     return
   }
   startOAuthBinding(provider, {
->>>>>>> v0.1.116
     redirectTo: route.fullPath || '/profile',
     wechatOAuthSettings: provider === 'wechat' ? wechatOAuthSettings.value : null,
   })
 }
 
-<<<<<<< HEAD
-async function handleUnbind(provider: UserAuthProvider): Promise<void> {
-  if (provider === 'email') {
-    return
-  }
-  unbindingProvider.value = provider
-  try {
-    const updated = await unbindAuthProvider(provider)
-    emit('updated', updated)
-=======
 function applyUpdatedUser(user: User): void {
   localUser.value = user
   authStore.user = user
@@ -717,13 +553,10 @@ async function handleUnbind(provider: BindableProvider, providerLabel: string): 
     appStore.showSuccess(t('profile.authBindings.unbindSuccess', { providerName: providerLabel }))
   } catch (error) {
     appStore.showError((error as { message?: string }).message || t('common.tryAgain'))
->>>>>>> v0.1.116
   } finally {
     unbindingProvider.value = null
   }
 }
-<<<<<<< HEAD
-=======
 
 function handleUnbindForItem(provider: UserAuthProvider, providerLabel: string): void {
   if (provider === 'email') {
@@ -802,5 +635,4 @@ async function bindEmail(): Promise<void> {
     isBindingEmail.value = false
   }
 }
->>>>>>> v0.1.116
 </script>

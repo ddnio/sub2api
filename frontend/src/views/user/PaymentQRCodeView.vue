@@ -13,11 +13,7 @@
       </p>
       <div v-if="expired" class="text-center">
         <p class="text-lg font-medium text-red-500">{{ t('payment.qr.expired') }}</p>
-<<<<<<< HEAD
-        <button type="button" class="btn btn-primary mt-4" @click="router.push('/purchase')">{{ t('payment.result.backToRecharge') }}</button>
-=======
         <button class="btn btn-primary mt-4" @click="router.push('/purchase')">{{ t('payment.result.backToRecharge') }}</button>
->>>>>>> v0.1.116
       </div>
       <div v-else class="text-center">
         <p class="text-sm text-gray-500 dark:text-gray-400">{{ qrUrl ? t('payment.qr.expiresIn') : t('payment.qr.payInNewWindowHint') }}</p>
@@ -29,11 +25,7 @@
         {{ t('payment.qr.openPayWindow') }}
       </a>
       <!-- Cancel button -->
-<<<<<<< HEAD
-      <button v-if="!expired && orderId" type="button" class="btn btn-secondary w-full" :disabled="cancelling" @click="handleCancel">
-=======
       <button v-if="!expired && orderId" class="btn btn-secondary w-full" :disabled="cancelling" @click="handleCancel">
->>>>>>> v0.1.116
         {{ cancelling ? t('common.processing') : t('payment.qr.cancelOrder') }}
       </button>
     </div>

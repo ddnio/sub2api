@@ -370,8 +370,8 @@ export async function batchUpdateCredentials(request: {
  * @returns Success confirmation
  */
 export async function bulkUpdate(
-  accountIdsOrPayload: number[] | Record<string, unknown>,
-  updates?: Record<string, unknown>
+  accountIds: number[],
+  updates: Record<string, unknown>
 ): Promise<{
   success: number
   failed: number
@@ -379,19 +379,16 @@ export async function bulkUpdate(
   failed_ids?: number[]
   results: Array<{ account_id: number; success: boolean; error?: string }>
   }> {
-  const payload = Array.isArray(accountIdsOrPayload)
-    ? {
-        account_ids: accountIdsOrPayload,
-        ...(updates ?? {})
-      }
-    : accountIdsOrPayload
   const { data } = await apiClient.post<{
     success: number
     failed: number
     success_ids?: number[]
     failed_ids?: number[]
     results: Array<{ account_id: number; success: boolean; error?: string }>
-  }>('/admin/accounts/bulk-update', payload)
+  }>('/admin/accounts/bulk-update', {
+    account_ids: accountIds,
+    ...updates
+  })
   return data
 }
 
@@ -503,34 +500,6 @@ export async function syncFromCrs(params: {
 
 export async function exportData(options?: {
   ids?: number[]
-<<<<<<< HEAD
-	  filters?: {
-	    platform?: string
-	    type?: string
-	    status?: string
-	    group?: string
-	    search?: string
-	    privacy_mode?: string
-	    sort_by?: string
-	    sort_order?: 'asc' | 'desc'
-	  }
-  includeProxies?: boolean
-}): Promise<AdminDataPayload> {
-  const params: Record<string, string> = {}
-	  if (options?.ids && options.ids.length > 0) {
-	    params.ids = options.ids.join(',')
-	  } else if (options?.filters) {
-	    const { platform, type, status, group, privacy_mode, search, sort_by, sort_order } = options.filters
-	    if (platform) params.platform = platform
-	    if (type) params.type = type
-	    if (status) params.status = status
-	    if (group) params.group = group
-	    if (search) params.search = search
-	    if (privacy_mode) params.privacy_mode = privacy_mode
-	    if (sort_by) params.sort_by = sort_by
-	    if (sort_order) params.sort_order = sort_order
-	  }
-=======
   filters?: {
     platform?: string
     type?: string
@@ -557,7 +526,6 @@ export async function exportData(options?: {
     if (sort_by) params.sort_by = sort_by
     if (sort_order) params.sort_order = sort_order
   }
->>>>>>> v0.1.116
   if (options?.includeProxies === false) {
     params.include_proxies = 'false'
   }

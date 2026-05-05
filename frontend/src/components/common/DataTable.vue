@@ -157,7 +157,7 @@
             </td>
           </tr>
           <tr
-            v-for="virtualRow in renderedRows"
+            v-for="virtualRow in virtualItems"
             :key="resolveRowKey(sortedData[virtualRow.index], virtualRow.index)"
             :data-row-id="resolveRowKey(sortedData[virtualRow.index], virtualRow.index)"
             :data-index="virtualRow.index"
@@ -582,18 +582,6 @@ const rowVirtualizer = useVirtualizer(computed(() => ({
 
 const virtualItems = computed(() => rowVirtualizer.value.getVirtualItems())
 
-const renderedRows = computed(() => {
-  const items = virtualItems.value
-  if (items.length > 0 || (sortedData.value?.length ?? 0) === 0) return items
-
-  // The table is often used in page-level layouts where the wrapper is not a
-  // fixed-height scroll container. In that case TanStack's virtualizer can
-  // report no visible items in jsdom and some browsers, even though data exists.
-  // Fall back to rendering the current page so pagination never shows records
-  // while the table body is blank.
-  return (sortedData.value || []).map((_, index) => ({ index }))
-})
-
 const virtualPaddingTop = computed(() => {
   const items = virtualItems.value
   return items.length > 0 ? items[0].start : 0
@@ -859,14 +847,6 @@ tbody tr:hover .sticky-col {
 </style>
 
 <style>
-<<<<<<< HEAD
-/* Keep table scrollbars visible on WebKit browsers even when global scrollbar
-   styles are hidden until hover. */
-.table-wrapper {
-  scrollbar-width: auto !important;
-}
-
-=======
 /* ==========================================================================
    终极悬浮滚动条防丢器 (Sledgehammer Override)
    绕过 style.css 中 `* { scrollbar-color: transparent }` 的全局悬停隐身诅咒！
@@ -878,7 +858,6 @@ tbody tr:hover .sticky-col {
 }
 
 /* 2. 重写 Webkit 滚动层，全部加上 !important 强制覆盖透明悬停陷阱 */
->>>>>>> v0.1.116
 .table-wrapper::-webkit-scrollbar {
   height: 12px !important;
   width: 12px !important;
@@ -895,14 +874,9 @@ tbody tr:hover .sticky-col {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
-<<<<<<< HEAD
-.table-wrapper::-webkit-scrollbar-thumb {
-  background-color: rgba(107, 114, 128, 0.75) !important;
-=======
 /* 常驻、不透明的滑块，无视鼠标是否 hover 都在那！ */
 .table-wrapper::-webkit-scrollbar-thumb {
   background-color: rgba(107, 114, 128, 0.75) !important; 
->>>>>>> v0.1.116
   border-radius: 6px !important;
   border: 2px solid transparent !important;
   background-clip: padding-box !important;
@@ -919,10 +893,7 @@ tbody tr:hover .sticky-col {
   background-color: rgba(209, 213, 219, 0.9) !important;
 }
 
-<<<<<<< HEAD
-=======
 /* 3. 仅给真正的 Firefox 留的后路 */
->>>>>>> v0.1.116
 @supports (-moz-appearance:none) {
   .table-wrapper {
     scrollbar-width: thin !important;

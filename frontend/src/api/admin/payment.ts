@@ -11,29 +11,7 @@ import type {
   SubscriptionPlan,
   ProviderInstance
 } from '@/types/payment'
-<<<<<<< HEAD
-import type { BasePaginationResponse, FetchOptions } from '@/types'
-
-export type AdminPaymentPlan = SubscriptionPlan & {
-  group_name?: string
-  deleted_at?: string | null
-}
-
-export type AdminPaymentOrder = PaymentOrder & {
-  user_email?: string
-  user_name?: string
-  user_notes?: string
-  email?: string
-  admin_note?: string | null
-  callback_raw?: string | null
-}
-
-export type StatsBreakdown = DashboardStats['daily_series'][number]
-export type PaymentConfig = AdminPaymentConfig
-export type { DashboardStats, ProviderInstance }
-=======
 import type { BasePaginationResponse } from '@/types'
->>>>>>> v0.1.116
 
 /** Admin-facing payment config returned by GET /admin/payment/config */
 export interface AdminPaymentConfig {
@@ -107,26 +85,12 @@ export const adminPaymentAPI = {
     end_date?: string
     order_type?: string
   }) {
-<<<<<<< HEAD
-    return apiClient.get<BasePaginationResponse<AdminPaymentOrder>>('/admin/payment/orders', { params }).then(normalizeOrderPage)
-=======
     return apiClient.get<BasePaginationResponse<PaymentOrder>>('/admin/payment/orders', { params })
->>>>>>> v0.1.116
   },
 
   /** Get a specific order by ID */
   getOrder(id: number) {
-<<<<<<< HEAD
-    return apiClient.get<AdminPaymentOrder | { order?: AdminPaymentOrder; auditLogs?: unknown[]; audit_logs?: unknown[] }>(`/admin/payment/orders/${id}`).then((res) => {
-      const data = res.data
-      if (data && typeof data === 'object' && 'order' in data && data.order) {
-        return { ...res, data: { ...data, order: normalizeAdminOrder(data.order as AdminPaymentOrder) } }
-      }
-      return { ...res, data: normalizeAdminOrder(data as AdminPaymentOrder) }
-    })
-=======
     return apiClient.get<PaymentOrder>(`/admin/payment/orders/${id}`)
->>>>>>> v0.1.116
   },
 
   /** Cancel an order (admin) */
@@ -208,67 +172,6 @@ export const adminPaymentAPI = {
   /** Delete a provider instance */
   deleteProvider(id: number) {
     return apiClient.delete(`/admin/payment/providers/${id}`)
-<<<<<<< HEAD
-  },
-
-  // Legacy aliases kept for existing fork views that still participate in type checking.
-  async listPlans(options?: FetchOptions): Promise<AdminPaymentPlan[]> {
-    const res = await apiClient.get<AdminPaymentPlan[]>('/admin/payment/plans', { signal: options?.signal })
-    return res.data
-  },
-
-  async listOrders(
-    page: number,
-    pageSize: number,
-    params: { status?: string; order_type?: string },
-    options?: FetchOptions
-  ): Promise<BasePaginationResponse<AdminPaymentOrder>> {
-    const res = await apiClient.get<BasePaginationResponse<AdminPaymentOrder>>('/admin/payment/orders', {
-      params: { page, page_size: pageSize, ...params },
-      signal: options?.signal
-    })
-    return normalizeOrderPage(res).data
-  },
-
-  retryOrder(id: number) {
-    return apiClient.post(`/admin/payment/orders/${id}/retry`)
-  },
-
-  async listProviders(): Promise<ProviderInstance[]> {
-    const res = await apiClient.get<ProviderInstance[]>('/admin/payment/providers')
-    return res.data
-  },
-
-  async getPaymentConfig(): Promise<AdminPaymentConfig> {
-    const res = await apiClient.get<AdminPaymentConfig>('/admin/payment/config')
-    return res.data
-  },
-
-  updatePaymentConfig(data: UpdatePaymentConfigRequest) {
-    return apiClient.put('/admin/payment/config', data)
-  }
-}
-
-function normalizeOrderPage<T extends { data: BasePaginationResponse<AdminPaymentOrder> }>(res: T): T {
-  return {
-    ...res,
-    data: {
-      ...res.data,
-      items: (res.data.items || []).map(normalizeAdminOrder)
-    }
-  }
-}
-
-function normalizeAdminOrder(order: AdminPaymentOrder): AdminPaymentOrder {
-  return {
-    ...order,
-    email: order.email || order.user_email || order.user_name || '',
-    amount: Number(order.amount || 0),
-    pay_amount: Number(order.pay_amount || 0),
-    fee_rate: Number(order.fee_rate || 0),
-    refund_amount: Number(order.refund_amount || 0)
-=======
->>>>>>> v0.1.116
   }
 }
 

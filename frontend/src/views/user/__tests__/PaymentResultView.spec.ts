@@ -126,11 +126,7 @@ describe('PaymentResultView', () => {
     await flushPromises()
 
     expect(resolveOrderPublicByResumeToken).toHaveBeenCalledWith('resume-42')
-<<<<<<< HEAD
-    expect(pollOrderStatus).toHaveBeenCalledWith(999)
-=======
     expect(pollOrderStatus).not.toHaveBeenCalled()
->>>>>>> v0.1.116
     expect(wrapper.text()).toContain('payment.result.processing')
     expect(wrapper.text()).not.toContain('payment.result.success')
     expect(wrapper.text()).not.toContain('payment.result.failed')
@@ -157,15 +153,6 @@ describe('PaymentResultView', () => {
       resumeToken: 'resume-authoritative',
       createdAt: Date.UTC(2099, 0, 1, 0, 0, 0),
     }))
-<<<<<<< HEAD
-    pollOrderStatus.mockResolvedValue({
-      ...orderFactory('PENDING'),
-      amount: 88,
-      pay_amount: 88,
-      fee_rate: 0,
-    })
-=======
->>>>>>> v0.1.116
     resolveOrderPublicByResumeToken.mockResolvedValue({
       data: {
         ...orderFactory('PAID'),
@@ -185,11 +172,7 @@ describe('PaymentResultView', () => {
 
     await flushPromises()
 
-<<<<<<< HEAD
-    expect(pollOrderStatus).toHaveBeenCalledWith(42)
-=======
     expect(pollOrderStatus).not.toHaveBeenCalled()
->>>>>>> v0.1.116
     expect(resolveOrderPublicByResumeToken).toHaveBeenCalledWith('resume-authoritative')
     expect(wrapper.text()).toContain('payment.result.success')
     expect(wrapper.text()).toContain('103.00')
@@ -272,21 +255,13 @@ describe('PaymentResultView', () => {
     expect(window.localStorage.getItem(PAYMENT_RECOVERY_STORAGE_KEY)).toBeNull()
   })
 
-<<<<<<< HEAD
-  it('does not fall back to public out_trade_no verification when resume_token recovery fails', async () => {
-=======
   it('falls back to public out_trade_no verification when resume_token recovery fails in legacy return flows', async () => {
->>>>>>> v0.1.116
     routeState.query = {
       resume_token: 'resume-fail',
       out_trade_no: 'legacy-should-not-run',
       trade_status: 'TRADE_SUCCESS',
     }
     resolveOrderPublicByResumeToken.mockRejectedValueOnce(new Error('resume failed'))
-<<<<<<< HEAD
-
-    mount(PaymentResultView, {
-=======
     verifyOrderPublic.mockResolvedValueOnce({
       data: {
         ...orderFactory('PAID'),
@@ -295,7 +270,6 @@ describe('PaymentResultView', () => {
     })
 
     const wrapper = mount(PaymentResultView, {
->>>>>>> v0.1.116
       global: {
         stubs: {
           OrderStatusBadge: true,
@@ -306,14 +280,9 @@ describe('PaymentResultView', () => {
     await flushPromises()
 
     expect(resolveOrderPublicByResumeToken).toHaveBeenCalledWith('resume-fail')
-<<<<<<< HEAD
-    expect(verifyOrderPublic).not.toHaveBeenCalled()
-    expect(pollOrderStatus).not.toHaveBeenCalled()
-=======
     expect(verifyOrderPublic).toHaveBeenCalledWith('legacy-should-not-run')
     expect(pollOrderStatus).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('payment.result.success')
->>>>>>> v0.1.116
   })
 
   it('ignores a stale global recovery snapshot when legacy return markers do not identify the order', async () => {
@@ -342,25 +311,16 @@ describe('PaymentResultView', () => {
     expect(wrapper.text()).not.toContain('sub2_20260420abcd1234')
   })
 
-<<<<<<< HEAD
-  it('does not use anonymous out_trade_no verification when no signed resume context is available', async () => {
-=======
   it('uses public out_trade_no verification when no signed resume context is available', async () => {
->>>>>>> v0.1.116
     routeState.query = {
       out_trade_no: 'legacy-123',
       trade_status: 'TRADE_SUCCESS',
     }
-<<<<<<< HEAD
-
-    mount(PaymentResultView, {
-=======
     verifyOrderPublic.mockResolvedValue({
       data: orderFactory('PAID'),
     })
 
     const wrapper = mount(PaymentResultView, {
->>>>>>> v0.1.116
       global: {
         stubs: {
           OrderStatusBadge: true,
@@ -370,14 +330,9 @@ describe('PaymentResultView', () => {
 
     await flushPromises()
 
-<<<<<<< HEAD
-    expect(verifyOrderPublic).not.toHaveBeenCalled()
-    expect(pollOrderStatus).not.toHaveBeenCalled()
-=======
     expect(verifyOrderPublic).toHaveBeenCalledWith('legacy-123')
     expect(pollOrderStatus).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('payment.result.success')
->>>>>>> v0.1.116
   })
 
   it('does not use public out_trade_no verification for bare order numbers without legacy return markers', async () => {

@@ -439,11 +439,7 @@
 </template>
 
 <script setup lang="ts">
-<<<<<<< HEAD
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-=======
 import { ref, computed, onMounted, onBeforeUnmount, onUnmounted, watch } from 'vue'
->>>>>>> v0.1.116
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import type { Account, AccountUsageInfo, GeminiCredentials, WindowStats } from '@/types'
@@ -473,12 +469,9 @@ const props = withDefaults(
 
 const { t } = useI18n()
 const desktopViewportQuery = '(min-width: 768px)'
-<<<<<<< HEAD
-=======
 
 const unmounted = ref(false)
 onBeforeUnmount(() => { unmounted.value = true })
->>>>>>> v0.1.116
 
 const loading = ref(false)
 const activeQueryLoading = ref(false)
@@ -973,19 +966,12 @@ const loadUsage = async (options?: { source?: 'passive' | 'active'; bypassCache?
   error.value = null
 
   try {
-<<<<<<< HEAD
-    usageInfo.value = await enqueueUsageRequest(
-      props.account,
-      () => adminAPI.accounts.getUsage(props.account.id, source)
-    )
-=======
     const fetchFn = () => adminAPI.accounts.getUsage(props.account.id, options?.source)
     const result = await enqueueUsageRequest(props.account, fetchFn)
     if (!unmounted.value) {
       usageInfo.value = result
       _usageCache.set(props.account.id, { data: result, ts: Date.now() })
     }
->>>>>>> v0.1.116
   } catch (e: any) {
     if (!unmounted.value) {
       error.value = t('common.error')
@@ -1001,11 +987,7 @@ const flushPendingAutoLoad = () => {
   const source = pendingAutoLoadSource.value
   pendingAutoLoad.value = false
   pendingAutoLoadSource.value = undefined
-<<<<<<< HEAD
-  loadUsage(source).catch((e) => {
-=======
   loadUsage({ source }).catch((e) => {
->>>>>>> v0.1.116
     console.error('Failed to load deferred usage:', e)
   })
 }
@@ -1017,11 +999,7 @@ const requestAutoLoad = (source?: 'passive' | 'active') => {
     pendingAutoLoadSource.value = source
     return
   }
-<<<<<<< HEAD
-  loadUsage(source).catch((e) => {
-=======
   loadUsage({ source }).catch((e) => {
->>>>>>> v0.1.116
     console.error('Failed to auto load usage:', e)
   })
 }
@@ -1185,14 +1163,10 @@ watch(
     if (!shouldFetchUsage.value) return
 
     const source = isAnthropicOAuthOrSetupToken.value ? 'passive' : undefined
-<<<<<<< HEAD
-    requestAutoLoad(source)
-=======
     _usageCache.delete(props.account.id)
     loadUsage({ source, bypassCache: true }).catch((e) => {
       console.error('Failed to refresh usage after manual refresh:', e)
     })
->>>>>>> v0.1.116
   }
 )
 

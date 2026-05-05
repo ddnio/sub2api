@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { enqueueUsageRequest } from '../usageLoadQueue'
 import type { Account } from '@/types'
 
-<<<<<<< HEAD
-=======
 /** Helper to create a minimal Account with proxy info */
->>>>>>> v0.1.116
 function makeAccount(
   platform: string,
   type: string = 'oauth',
@@ -28,27 +25,6 @@ function makeAccount(
 }
 
 describe('usageLoadQueue', () => {
-<<<<<<< HEAD
-  it('serializes Anthropic accounts sharing the same proxy exit', async () => {
-    const order: number[] = []
-    const acc1 = makeAccount('anthropic', 'oauth', { host: '10.0.0.1', port: 3128, username: 'admin' })
-    const acc2 = makeAccount('anthropic', 'setup-token', { host: '10.0.0.1', port: 3128, username: 'admin' })
-
-    const p1 = enqueueUsageRequest(acc1, async () => {
-      order.push(1)
-      return 1
-    })
-    const p2 = enqueueUsageRequest(acc2, async () => {
-      order.push(2)
-      return 2
-    })
-
-    await Promise.all([p1, p2])
-    expect(order).toEqual([1, 2])
-  })
-
-  it('keeps running queued tasks after one Anthropic task rejects', async () => {
-=======
   // ─── Anthropic 账号：按代理出口排队 ───
 
   it('Anthropic 同代理出口串行执行，间隔 >= 1s', async () => {
@@ -130,7 +106,6 @@ describe('usageLoadQueue', () => {
   })
 
   it('Anthropic 请求失败时 reject，后续任务继续执行', async () => {
->>>>>>> v0.1.116
     const results: string[] = []
     const acc = makeAccount('anthropic', 'oauth', { host: '99.99.99.99', port: 1234 })
 
@@ -147,28 +122,15 @@ describe('usageLoadQueue', () => {
     expect(results).toEqual(['second'])
   })
 
-<<<<<<< HEAD
-  it('does not queue non-Anthropic platforms', async () => {
-=======
   // ─── 非 Anthropic 平台：直接执行，不排队 ───
 
   it('非 Anthropic 平台直接执行，不排队', async () => {
->>>>>>> v0.1.116
     const timestamps: number[] = []
     const makeFn = () => async () => {
       timestamps.push(Date.now())
       return 'ok'
     }
 
-<<<<<<< HEAD
-    const acc1 = makeAccount('gemini', 'oauth', { host: '1.2.3.4', port: 8080 })
-    const acc2 = makeAccount('gemini', 'oauth', { host: '1.2.3.4', port: 8080 })
-
-    await Promise.all([
-      enqueueUsageRequest(acc1, makeFn()),
-      enqueueUsageRequest(acc2, makeFn())
-    ])
-=======
     // 同一代理的 Gemini 账号 — 应当并行，不排队
     const acc1 = makeAccount('gemini', 'oauth', { host: '1.2.3.4', port: 8080 })
     const acc2 = makeAccount('gemini', 'oauth', { host: '1.2.3.4', port: 8080 })
@@ -197,19 +159,14 @@ describe('usageLoadQueue', () => {
     const p2 = enqueueUsageRequest(acc2, makeFn())
 
     await Promise.all([p1, p2])
->>>>>>> v0.1.116
 
     expect(timestamps).toHaveLength(2)
     expect(Math.abs(timestamps[1] - timestamps[0])).toBeLessThan(50)
   })
 
-<<<<<<< HEAD
-  it('does not queue Anthropic API key accounts', async () => {
-=======
   // ─── Anthropic apikey 类型不排队 ───
 
   it('Anthropic apikey 类型直接执行，不排队', async () => {
->>>>>>> v0.1.116
     const timestamps: number[] = []
     const makeFn = () => async () => {
       timestamps.push(Date.now())
@@ -219,23 +176,14 @@ describe('usageLoadQueue', () => {
     const acc1 = makeAccount('anthropic', 'apikey', { host: '1.2.3.4', port: 8080 })
     const acc2 = makeAccount('anthropic', 'apikey', { host: '1.2.3.4', port: 8080 })
 
-<<<<<<< HEAD
-    await Promise.all([
-      enqueueUsageRequest(acc1, makeFn()),
-      enqueueUsageRequest(acc2, makeFn())
-    ])
-=======
     const p1 = enqueueUsageRequest(acc1, makeFn())
     const p2 = enqueueUsageRequest(acc2, makeFn())
 
     await Promise.all([p1, p2])
->>>>>>> v0.1.116
 
     expect(timestamps).toHaveLength(2)
     expect(Math.abs(timestamps[1] - timestamps[0])).toBeLessThan(50)
   })
-<<<<<<< HEAD
-=======
 
   // ─── 返回值透传 ───
 
@@ -254,5 +202,4 @@ describe('usageLoadQueue', () => {
     })
     expect(result).toEqual({ quota: 100 })
   })
->>>>>>> v0.1.116
 })

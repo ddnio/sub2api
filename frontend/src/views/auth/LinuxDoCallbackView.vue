@@ -11,197 +11,6 @@
       </div>
 
       <transition name="fade">
-<<<<<<< HEAD
-        <div
-          v-if="needsInvitation || needsAdoptionConfirmation || needsCreateAccount || needsBindLogin || needsTotpChallenge"
-          class="space-y-4"
-        >
-          <div
-            v-if="adoptionRequired && (suggestedDisplayName || suggestedAvatarUrl)"
-            class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-dark-600 dark:bg-dark-800/60"
-          >
-            <div class="space-y-3">
-              <div class="space-y-1">
-                <p class="text-sm font-medium text-gray-900 dark:text-white">
-                  Use LinuxDo profile details
-                </p>
-                <p class="text-xs text-gray-500 dark:text-dark-400">
-                  Choose whether to apply the nickname or avatar from LinuxDo to this account.
-                </p>
-              </div>
-
-              <label
-                v-if="suggestedDisplayName"
-                class="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm dark:border-dark-600 dark:bg-dark-900/50"
-              >
-                <input v-model="adoptDisplayName" type="checkbox" class="mt-1 h-4 w-4" />
-                <span class="space-y-1">
-                  <span class="block font-medium text-gray-900 dark:text-white">
-                    Use display name
-                  </span>
-                  <span class="block text-gray-500 dark:text-dark-400">
-                    {{ suggestedDisplayName }}
-                  </span>
-                </span>
-              </label>
-
-              <label
-                v-if="suggestedAvatarUrl"
-                class="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm dark:border-dark-600 dark:bg-dark-900/50"
-              >
-                <input v-model="adoptAvatar" type="checkbox" class="mt-1 h-4 w-4" />
-                <img
-                  :src="suggestedAvatarUrl"
-                  alt="LinuxDo avatar"
-                  class="h-10 w-10 rounded-full border border-gray-200 object-cover dark:border-dark-600"
-                />
-                <span class="space-y-1">
-                  <span class="block font-medium text-gray-900 dark:text-white">
-                    Use avatar
-                  </span>
-                  <span class="block break-all text-gray-500 dark:text-dark-400">
-                    {{ suggestedAvatarUrl }}
-                  </span>
-                </span>
-              </label>
-            </div>
-          </div>
-
-          <template v-if="needsInvitation">
-            <p class="text-sm text-gray-700 dark:text-gray-300">
-              {{ t('auth.linuxdo.invitationRequired') }}
-            </p>
-            <div>
-              <input
-                v-model="invitationCode"
-                type="text"
-                class="input w-full"
-                :placeholder="t('auth.invitationCodePlaceholder')"
-                :disabled="isSubmitting"
-                @keyup.enter="handleSubmitInvitation"
-              />
-            </div>
-            <transition name="fade">
-              <p v-if="invitationError" class="text-sm text-red-600 dark:text-red-400">
-                {{ invitationError }}
-              </p>
-            </transition>
-            <button
-              class="btn btn-primary w-full"
-              :disabled="isSubmitting || !invitationCode.trim()"
-              @click="handleSubmitInvitation"
-            >
-              {{ isSubmitting ? t('auth.linuxdo.completing') : t('auth.linuxdo.completeRegistration') }}
-            </button>
-          </template>
-
-          <template v-else-if="needsAdoptionConfirmation">
-            <p class="text-sm text-gray-700 dark:text-gray-300">
-              Review the LinuxDo profile details before continuing.
-            </p>
-            <button class="btn btn-primary w-full" :disabled="isSubmitting" @click="handleContinueLogin">
-              {{ isSubmitting ? t('common.processing') : 'Continue' }}
-            </button>
-          </template>
-
-          <template v-else-if="needsCreateAccount">
-            <p v-if="pendingAccountRequiresInvitation" class="text-sm text-gray-700 dark:text-gray-300">
-              {{ t('auth.linuxdo.invitationRequired') }}
-            </p>
-            <PendingOAuthCreateAccountForm
-              test-id-prefix="linuxdo"
-              :initial-email="pendingAccountEmail"
-              :is-submitting="isSubmitting"
-              :error-message="accountActionError"
-              :show-invitation-code="pendingAccountRequiresInvitation"
-              @submit="handleCreateAccount"
-              @switch-to-bind="switchToBindLoginMode"
-            />
-          </template>
-
-          <template v-else-if="needsBindLogin">
-            <p class="text-sm text-gray-700 dark:text-gray-300">
-              {{ t('auth.linuxdo.bindLoginRequired') }}
-            </p>
-            <div class="space-y-3">
-              <input
-                v-model="bindLoginEmail"
-                data-testid="linuxdo-bind-login-email"
-                type="email"
-                class="input w-full"
-                placeholder="you@example.com"
-                :disabled="isSubmitting"
-                @keyup.enter="handleBindLogin"
-              />
-              <input
-                v-model="bindLoginPassword"
-                data-testid="linuxdo-bind-login-password"
-                type="password"
-                class="input w-full"
-                placeholder="Password"
-                :disabled="isSubmitting"
-                @keyup.enter="handleBindLogin"
-              />
-              <button
-                data-testid="linuxdo-bind-login-submit"
-                class="btn btn-primary w-full"
-                :disabled="isSubmitting || !bindLoginEmail.trim() || !bindLoginPassword"
-                @click="handleBindLogin"
-              >
-                {{ isSubmitting ? t('common.processing') : t('auth.linuxdo.bindLoginSubmit') }}
-              </button>
-              <button
-                class="btn btn-secondary w-full"
-                :disabled="isSubmitting"
-                @click="switchToCreateAccountMode"
-              >
-                {{ t('auth.linuxdo.useDifferentEmail') }}
-              </button>
-            </div>
-            <transition name="fade">
-              <p v-if="accountActionError" class="text-sm text-red-600 dark:text-red-400">
-                {{ accountActionError }}
-              </p>
-            </transition>
-          </template>
-
-          <template v-else-if="needsTotpChallenge">
-            <p class="text-sm text-gray-700 dark:text-gray-300">
-              {{ t('auth.linuxdo.totpRequired', { email: totpUserEmailMasked || t('profile.totp.yourAccount') }) }}
-            </p>
-            <div class="space-y-3">
-              <input
-                v-model="totpCode"
-                data-testid="linuxdo-bind-login-totp"
-                type="text"
-                inputmode="numeric"
-                maxlength="6"
-                class="input w-full"
-                :placeholder="t('profile.totp.enterCode')"
-                :disabled="isSubmitting"
-                @keyup.enter="handleSubmitTotpChallenge"
-              />
-              <button
-                data-testid="linuxdo-bind-login-totp-submit"
-                class="btn btn-primary w-full"
-                :disabled="isSubmitting || totpCode.trim().length !== 6"
-                @click="handleSubmitTotpChallenge"
-              >
-                {{ isSubmitting ? t('common.processing') : t('profile.totp.verify') }}
-              </button>
-            </div>
-            <transition name="fade">
-              <p v-if="totpError" class="text-sm text-red-600 dark:text-red-400">
-                {{ totpError }}
-              </p>
-            </transition>
-          </template>
-        </div>
-      </transition>
-
-      <transition name="fade">
-=======
->>>>>>> v0.1.116
         <div
           v-if="
             needsInvitation ||
@@ -426,40 +235,13 @@
 </template>
 
 <script setup lang="ts">
-<<<<<<< HEAD
-import { computed, onMounted, ref } from 'vue'
-=======
 import { computed, onMounted, ref, watch } from 'vue'
->>>>>>> v0.1.116
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { AuthLayout } from '@/components/layout'
 import PendingOAuthCreateAccountForm, {
   type PendingOAuthCreateAccountPayload
 } from '@/components/auth/PendingOAuthCreateAccountForm.vue'
-<<<<<<< HEAD
-import Icon from '@/components/icons/Icon.vue'
-import { useAuthStore, useAppStore } from '@/stores'
-import {
-  bindPendingOAuthLogin,
-  completeLinuxDoOAuthRegistration,
-  createPendingOAuthAccount,
-  exchangePendingOAuthCompletion,
-  login2FA,
-  type PendingOAuthAdoptionDecision,
-  type PendingOAuthExchangeResponse,
-  type PendingOAuthTokenPairResponse,
-} from '@/api/auth'
-import {
-  hasAuthTokenPayload,
-  isOAuthBindCompletion,
-  isInvitationRequired,
-  legacyPendingOAuthTokenFromFragment,
-  parseFragmentParams,
-  resolvePendingOAuthPayload,
-  sanitizeRedirectPath,
-} from './oauthPendingCallback'
-=======
 import { apiClient } from '@/api/client'
 import { useAuthStore, useAppStore } from '@/stores'
 import {
@@ -473,7 +255,6 @@ import {
   type OAuthTokenResponse,
   type PendingOAuthExchangeResponse
 } from '@/api/auth'
->>>>>>> v0.1.116
 
 const route = useRoute()
 const router = useRouter()
@@ -491,28 +272,12 @@ const invitationCode = ref('')
 const isSubmitting = ref(false)
 const invitationError = ref('')
 const redirectTo = ref('/dashboard')
-<<<<<<< HEAD
-const pendingAccountAction = ref<'none' | 'create_account' | 'bind_login'>('none')
-const pendingAccountEmail = ref('')
-const pendingAccountRequiresInvitation = ref(false)
-const bindLoginEmail = ref('')
-const bindLoginPassword = ref('')
-const accountActionError = ref('')
-const needsTotpChallenge = ref(false)
-const totpTempToken = ref('')
-const totpCode = ref('')
-const totpError = ref('')
-const totpUserEmailMasked = ref('')
-=======
->>>>>>> v0.1.116
 const adoptionRequired = ref(false)
 const suggestedDisplayName = ref('')
 const suggestedAvatarUrl = ref('')
 const adoptDisplayName = ref(true)
 const adoptAvatar = ref(true)
 const needsAdoptionConfirmation = ref(false)
-<<<<<<< HEAD
-=======
 const pendingAccountAction = ref<'none' | 'choose_account_action' | 'create_account' | 'bind_login'>('none')
 const pendingAccountEmail = ref('')
 const bindLoginEmail = ref('')
@@ -578,151 +343,13 @@ function persistPendingAuthSession(redirect?: string) {
 function clearPendingAuthSession() {
   authStore.clearPendingAuthSession()
 }
->>>>>>> v0.1.116
 
-const needsCreateAccount = computed(() => pendingAccountAction.value === 'create_account')
-const needsBindLogin = computed(() => pendingAccountAction.value === 'bind_login')
-
-type PendingAccountResponse = PendingOAuthExchangeResponse | PendingOAuthTokenPairResponse
-
-function getPendingAccountEmail(payload: PendingOAuthExchangeResponse): string {
-  return (payload.email || '').trim()
+function parseFragmentParams(): URLSearchParams {
+  const raw = typeof window !== 'undefined' ? window.location.hash : ''
+  const hash = raw.startsWith('#') ? raw.slice(1) : raw
+  return new URLSearchParams(hash)
 }
 
-<<<<<<< HEAD
-function resolvePendingAccountAction(payload: PendingOAuthExchangeResponse): 'none' | 'create_account' | 'bind_login' {
-  const raw = (payload.step || payload.error || '').trim().toLowerCase()
-  if (raw === 'invitation_required' || raw === 'email_required' || raw === 'create_account_required' || raw === 'create_account') {
-    return 'create_account'
-  }
-  if (raw === 'bind_login_required' || raw === 'bind_login') {
-    return 'bind_login'
-  }
-  return 'none'
-}
-
-function applyPendingAccountAction(payload: PendingOAuthExchangeResponse) {
-  const action = resolvePendingAccountAction(payload)
-  pendingAccountAction.value = action
-  pendingAccountRequiresInvitation.value = payload.error === 'invitation_required'
-  accountActionError.value = ''
-  needsTotpChallenge.value = false
-  totpTempToken.value = ''
-  totpCode.value = ''
-  totpError.value = ''
-  totpUserEmailMasked.value = ''
-
-  const email = getPendingAccountEmail(payload)
-  if (action === 'create_account') {
-    pendingAccountEmail.value = email
-    bindLoginEmail.value = email
-    return
-  }
-  if (action === 'bind_login') {
-    bindLoginEmail.value = email
-    bindLoginPassword.value = ''
-  }
-}
-
-function applyTotpChallenge(payload: PendingOAuthExchangeResponse): boolean {
-  if (payload.requires_2fa !== true || !payload.temp_token) {
-    return false
-  }
-
-  pendingAccountAction.value = 'none'
-  needsInvitation.value = false
-  needsTotpChallenge.value = true
-  totpTempToken.value = payload.temp_token
-  totpCode.value = ''
-  totpError.value = ''
-  totpUserEmailMasked.value = payload.user_email_masked || ''
-  isProcessing.value = false
-  return true
-}
-
-function getRequestErrorMessage(error: unknown, fallback: string): string {
-  const err = error as { message?: string; response?: { data?: { detail?: string; message?: string } } }
-  return err.response?.data?.detail || err.response?.data?.message || err.message || fallback
-}
-
-function currentAdoptionDecision(): PendingOAuthAdoptionDecision {
-  return {
-    adopt_display_name: adoptDisplayName.value,
-    adopt_avatar: adoptAvatar.value,
-  }
-}
-
-function applyAdoptionSuggestionState(payload: PendingOAuthExchangeResponse) {
-  adoptionRequired.value = payload.adoption_required === true
-  suggestedDisplayName.value = payload.suggested_display_name || ''
-  suggestedAvatarUrl.value = payload.suggested_avatar_url || ''
-
-  if (!suggestedDisplayName.value) {
-    adoptDisplayName.value = false
-  }
-  if (!suggestedAvatarUrl.value) {
-    adoptAvatar.value = false
-  }
-}
-
-function hasSuggestedProfile(payload: PendingOAuthExchangeResponse): boolean {
-  return Boolean(payload.suggested_display_name || payload.suggested_avatar_url)
-}
-
-function persistTokenContext(tokenData: PendingOAuthTokenPairResponse) {
-  if (tokenData.refresh_token) {
-    localStorage.setItem('refresh_token', tokenData.refresh_token)
-  }
-  if (tokenData.expires_in) {
-    localStorage.setItem('token_expires_at', String(Date.now() + tokenData.expires_in * 1000))
-  }
-}
-
-function isTokenPair(payload: PendingAccountResponse): payload is PendingOAuthTokenPairResponse {
-  return typeof payload.access_token === 'string' && payload.access_token.trim().length > 0
-}
-
-function getCompletionRedirect(payload: PendingAccountResponse): string {
-  return 'redirect' in payload && typeof payload.redirect === 'string' ? payload.redirect : ''
-}
-
-async function finalizePendingAccountResponse(payload: PendingAccountResponse) {
-  if (applyTotpChallenge(payload)) {
-    return
-  }
-
-  if (isTokenPair(payload)) {
-    persistTokenContext(payload)
-    await authStore.setToken(payload.access_token)
-    appStore.showSuccess(t('auth.loginSuccess'))
-    await router.replace(sanitizeRedirectPath(getCompletionRedirect(payload) || redirectTo.value))
-    return
-  }
-
-  applyPendingAccountAction(payload)
-}
-
-async function finalizeAdoptionCompletion(payload: PendingAccountResponse) {
-  if (applyTotpChallenge(payload)) {
-    return
-  }
-
-  if (isTokenPair(payload)) {
-    persistTokenContext(payload)
-    await authStore.setToken(payload.access_token)
-    appStore.showSuccess(t('auth.loginSuccess'))
-    await router.replace(sanitizeRedirectPath(getCompletionRedirect(payload) || redirectTo.value))
-    return
-  }
-
-  if (isOAuthBindCompletion(payload) || payload.redirect) {
-    appStore.showSuccess(t('profile.authBindings.bindSuccess'))
-    await router.replace(sanitizeRedirectPath(payload.redirect || '/profile'))
-    return
-  }
-
-  applyPendingAccountAction(payload)
-=======
 function readLegacyFragmentLogin(params: URLSearchParams): OAuthTokenResponse | null {
   const accessToken = params.get('access_token')?.trim() || ''
   if (!accessToken) {
@@ -754,7 +381,6 @@ function sanitizeRedirectPath(path: string | null | undefined): string {
   if (path.includes('://')) return '/dashboard'
   if (path.includes('\n') || path.includes('\r')) return '/dashboard'
   return path
->>>>>>> v0.1.116
 }
 
 function currentAdoptionDecision(): OAuthAdoptionDecision {
@@ -1023,22 +649,6 @@ async function handleSubmitInvitation() {
   }
 }
 
-<<<<<<< HEAD
-async function handleCreateAccount(payload: PendingOAuthCreateAccountPayload) {
-  accountActionError.value = ''
-  isSubmitting.value = true
-  try {
-    const completion = await createPendingOAuthAccount({
-      email: payload.email,
-      password: payload.password,
-      verify_code: payload.verifyCode || undefined,
-      invitation_code: payload.invitationCode || undefined,
-      ...currentAdoptionDecision(),
-    })
-    await finalizePendingAccountResponse(completion)
-  } catch (e: unknown) {
-    accountActionError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
-=======
 async function handleContinueLogin() {
   isSubmitting.value = true
   try {
@@ -1047,27 +657,11 @@ async function handleContinueLogin() {
   } catch (e: unknown) {
     errorMessage.value = getRequestErrorMessage(e, t('auth.loginFailed'))
     needsAdoptionConfirmation.value = false
->>>>>>> v0.1.116
   } finally {
     isSubmitting.value = false
   }
 }
 
-<<<<<<< HEAD
-async function handleContinueLogin() {
-  isSubmitting.value = true
-  try {
-    const completion = await exchangePendingOAuthCompletion({
-      adoptDisplayName: adoptDisplayName.value,
-      adoptAvatar: adoptAvatar.value,
-    })
-    needsAdoptionConfirmation.value = false
-    await finalizeAdoptionCompletion(completion)
-  } catch (e: unknown) {
-    errorMessage.value = getRequestErrorMessage(e, t('auth.loginFailed'))
-    appStore.showError(errorMessage.value)
-    needsAdoptionConfirmation.value = false
-=======
 async function handleCreateAccount(payload: PendingOAuthCreateAccountPayload) {
   accountActionError.value = ''
   if (!payload.email || !payload.password) return
@@ -1088,7 +682,6 @@ async function handleCreateAccount(payload: PendingOAuthCreateAccountPayload) {
       return
     }
     accountActionError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
->>>>>>> v0.1.116
   } finally {
     isSubmitting.value = false
   }
@@ -1102,17 +695,12 @@ async function handleBindLogin() {
 
   isSubmitting.value = true
   try {
-<<<<<<< HEAD
-    const completion = await bindPendingOAuthLogin({ email, password, ...currentAdoptionDecision() })
-    await finalizePendingAccountResponse(completion)
-=======
     const { data } = await apiClient.post<LinuxDoPendingActionResponse>('/auth/oauth/pending/bind-login', {
       email,
       password,
       ...serializeAdoptionDecision(currentAdoptionDecision())
     })
     await finalizePendingAccountResponse(data)
->>>>>>> v0.1.116
   } catch (e: unknown) {
     accountActionError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
   } finally {
@@ -1127,17 +715,6 @@ async function handleSubmitTotpChallenge() {
 
   isSubmitting.value = true
   try {
-<<<<<<< HEAD
-    const tokenData = await login2FA({
-      temp_token: totpTempToken.value,
-      totp_code: code,
-    })
-    await authStore.setToken(tokenData.access_token)
-    appStore.showSuccess(t('auth.loginSuccess'))
-    await router.replace(redirectTo.value)
-  } catch (e: unknown) {
-    totpError.value = getRequestErrorMessage(e, t('profile.totp.loginFailed'))
-=======
     const completion = await login2FA({
       temp_token: totpTempToken.value,
       totp_code: code
@@ -1147,60 +724,20 @@ async function handleSubmitTotpChallenge() {
     await router.replace(redirectTo.value)
   } catch (e: unknown) {
     totpError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
->>>>>>> v0.1.116
   } finally {
     isSubmitting.value = false
   }
 }
 
-<<<<<<< HEAD
-function switchToBindLoginMode(nextEmail?: string) {
-  pendingAccountAction.value = 'bind_login'
-  bindLoginEmail.value = nextEmail?.trim() || pendingAccountEmail.value.trim()
-  bindLoginPassword.value = ''
-  accountActionError.value = ''
-}
-
-function switchToCreateAccountMode() {
-  pendingAccountAction.value = 'create_account'
-  pendingAccountEmail.value = pendingAccountEmail.value.trim() || bindLoginEmail.value.trim()
-  accountActionError.value = ''
-}
-
-onMounted(async () => {
-  const rawHash = typeof window !== 'undefined' ? window.location.hash : ''
-  const params = parseFragmentParams(rawHash)
-  const pendingPayload = await resolvePendingOAuthPayload(params)
-  applyAdoptionSuggestionState(pendingPayload)
-
-  const token = pendingPayload.access_token || ''
-  const refreshToken = pendingPayload.refresh_token || ''
-  const expiresIn = pendingPayload.expires_in
-=======
 onMounted(async () => {
   const params = parseFragmentParams()
   const legacyLogin = readLegacyFragmentLogin(params)
   const legacyPendingToken = params.get('pending_oauth_token')?.trim() || ''
   const error = params.get('error')
   const errorDesc = params.get('error_description') || params.get('error_message') || ''
->>>>>>> v0.1.116
   const redirect = sanitizeRedirectPath(
-    pendingPayload.redirect || params.get('redirect') || (route.query.redirect as string | undefined) || '/dashboard'
+    params.get('redirect') || (route.query.redirect as string | undefined) || '/dashboard'
   )
-<<<<<<< HEAD
-  const error = pendingPayload.error
-  const errorDesc = params.get('error_description') || params.get('error_message') || ''
-
-  if (error) {
-    if (isInvitationRequired(pendingPayload)) {
-      pendingOAuthToken.value = legacyPendingOAuthTokenFromFragment(params)
-      redirectTo.value = redirect
-      if (!pendingOAuthToken.value) {
-        applyPendingAccountAction(pendingPayload)
-        isProcessing.value = false
-        return
-      }
-=======
 
   try {
     if (legacyLogin) {
@@ -1214,46 +751,16 @@ onMounted(async () => {
     if (error === 'invitation_required' && legacyPendingToken) {
       legacyPendingOAuthToken.value = legacyPendingToken
       redirectTo.value = redirect
->>>>>>> v0.1.116
       needsInvitation.value = true
       isProcessing.value = false
       return
     }
 
-<<<<<<< HEAD
-  if (!hasAuthTokenPayload(pendingPayload)) {
-    if (isOAuthBindCompletion(pendingPayload)) {
-      appStore.showSuccess(t('profile.authBindings.bindSuccess'))
-      await router.replace(redirect)
-      return
-    }
-    if (adoptionRequired.value && hasSuggestedProfile(pendingPayload)) {
-      redirectTo.value = redirect
-      needsAdoptionConfirmation.value = true
-      isProcessing.value = false
-      return
-    }
-    errorMessage.value = t('auth.linuxdo.callbackMissingToken')
-    appStore.showError(errorMessage.value)
-    isProcessing.value = false
-    return
-  }
-
-  try {
-    // Store refresh token and expires_at (convert to timestamp) if provided
-    persistTokenContext({
-      access_token: token,
-      refresh_token: refreshToken,
-      expires_in: expiresIn || 0,
-      token_type: pendingPayload.token_type || 'Bearer',
-    })
-=======
     if (error) {
       errorMessage.value = errorDesc || error
       isProcessing.value = false
       return
     }
->>>>>>> v0.1.116
 
     const completion = await exchangePendingOAuthCompletion()
     const completionRedirect = sanitizeRedirectPath(

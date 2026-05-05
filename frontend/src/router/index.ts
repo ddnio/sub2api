@@ -37,16 +37,6 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/docs',
-    name: 'Docs',
-    component: () => import('@/views/DocsView.vue'),
-    meta: {
-      requiresAuth: false,
-      title: 'Documentation',
-      titleKey: 'docs.title'
-    }
-  },
-  {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/auth/LoginView.vue'),
@@ -126,26 +116,6 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/auth/wechat/callback',
-    name: 'WeChatOAuthCallback',
-    component: () => import('@/views/auth/WechatCallbackView.vue'),
-    meta: {
-      requiresAuth: false,
-      title: 'WeChat OAuth Callback',
-      titleKey: 'auth.wechatCallbackPageTitle'
-    }
-  },
-  {
-    path: '/auth/wechat/payment/callback',
-    name: 'WeChatPaymentOAuthCallback',
-    component: () => import('@/views/auth/WechatPaymentCallbackView.vue'),
-    meta: {
-      requiresAuth: false,
-      title: 'WeChat Payment Callback',
-      titleKey: 'auth.wechatPaymentCallbackPageTitle'
-    }
-  },
-  {
     path: '/forgot-password',
     name: 'ForgotPassword',
     component: () => import('@/views/auth/ForgotPasswordView.vue'),
@@ -204,18 +174,6 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/pricing',
-    name: 'Pricing',
-    component: () => import('@/views/user/PricingView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: false,
-      title: 'Model Pricing',
-      titleKey: 'pricing.title',
-      descriptionKey: 'pricing.description'
-    }
-  },
-  {
     path: '/usage',
     name: 'Usage',
     component: () => import('@/views/user/UsageView.vue'),
@@ -225,30 +183,6 @@ const routes: RouteRecordRaw[] = [
       title: 'Usage Records',
       titleKey: 'usage.title',
       descriptionKey: 'usage.description'
-    }
-  },
-  {
-    path: '/payment',
-    name: 'Payment',
-    component: () => import('@/views/user/PaymentView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: false,
-      title: 'Recharge / Plans',
-      titleKey: 'payment.title',
-      descriptionKey: 'payment.description'
-    }
-  },
-  {
-    path: '/referral',
-    name: 'Referral',
-    component: () => import('@/views/user/ReferralView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: false,
-      title: 'Referral',
-      titleKey: 'referral.title',
-      descriptionKey: 'referral.description'
     }
   },
   {
@@ -296,9 +230,6 @@ const routes: RouteRecordRaw[] = [
       requiresAdmin: false,
       title: 'Purchase Subscription',
       titleKey: 'nav.buySubscription',
-<<<<<<< HEAD
-      descriptionKey: 'purchase.description'
-=======
       descriptionKey: 'purchase.description',
       requiresPayment: true
     }
@@ -360,63 +291,6 @@ const routes: RouteRecordRaw[] = [
       requiresAdmin: false,
       title: 'Payment',
       requiresPayment: true
->>>>>>> v0.1.116
-    }
-  },
-  {
-    path: '/orders',
-    name: 'OrderList',
-    component: () => import('@/views/user/UserOrdersView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: false,
-      title: 'My Orders',
-      titleKey: 'nav.myOrders'
-    }
-  },
-  {
-    path: '/payment/qrcode',
-    name: 'PaymentQRCode',
-    component: () => import('@/views/user/PaymentQRCodeView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: false,
-      title: 'Payment',
-      titleKey: 'payment.qr.scanToPay'
-    }
-  },
-  {
-    path: '/payment/result',
-    name: 'PaymentResult',
-    component: () => import('@/views/user/PaymentResultView.vue'),
-    meta: {
-      requiresAuth: false,
-      requiresAdmin: false,
-      title: 'Payment Result',
-      titleKey: 'payment.result.success'
-    }
-  },
-  {
-    path: '/payment/stripe',
-    name: 'StripePayment',
-    component: () => import('@/views/user/StripePaymentView.vue'),
-    meta: {
-      requiresAuth: false,
-      requiresAdmin: false,
-      title: 'Stripe Payment',
-      titleKey: 'payment.stripePay',
-      requiresPayment: false
-    }
-  },
-  {
-    path: '/payment/stripe-popup',
-    name: 'StripePopup',
-    component: () => import('@/views/user/StripePopupView.vue'),
-    meta: {
-      requiresAuth: false,
-      requiresAdmin: false,
-      title: 'Payment',
-      requiresPayment: false
     }
   },
   {
@@ -545,39 +419,6 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/admin/payment/plans',
-    name: 'AdminPaymentPlans',
-    component: () => import('@/views/admin/orders/AdminPaymentPlansView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
-      title: 'Payment Plans',
-      titleKey: 'adminPayment.plansTitle'
-    }
-  },
-  {
-    path: '/admin/payment/orders',
-    name: 'AdminPaymentOrders',
-    component: () => import('@/views/admin/orders/AdminOrdersView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
-      title: 'Payment Orders',
-      titleKey: 'adminPayment.ordersTitle'
-    }
-  },
-  {
-    path: '/admin/payment/dashboard',
-    name: 'AdminPaymentDashboard',
-    component: () => import('@/views/admin/orders/AdminPaymentDashboardView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
-      title: 'Payment Dashboard',
-      titleKey: 'nav.paymentDashboard'
-    }
-  },
-  {
     path: '/admin/redeem',
     name: 'AdminRedeem',
     component: () => import('@/views/admin/RedeemView.vue'),
@@ -701,9 +542,6 @@ let authInitialized = false
 const navigationLoading = useNavigationLoadingState()
 // 延迟初始化预加载，传入 router 实例
 let routePrefetch: ReturnType<typeof useRoutePrefetch> | null = null
-<<<<<<< HEAD
-const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result', '/payment/stripe', '/payment/stripe-popup', '/auth/wechat/callback', '/auth/wechat/payment/callback']
-=======
 const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result']
 const BACKEND_MODE_CALLBACK_PATHS = [
   '/auth/callback',
@@ -729,7 +567,6 @@ function isBackendModePublicRouteAllowed(path: string, hasPendingAuthSession: bo
 
   return false
 }
->>>>>>> v0.1.116
 
 router.beforeEach((to, _from, next) => {
   // 开始导航加载状态

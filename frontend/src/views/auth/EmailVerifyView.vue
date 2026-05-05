@@ -209,9 +209,6 @@ const password = ref<string>('')
 const initialTurnstileToken = ref<string>('')
 const promoCode = ref<string>('')
 const invitationCode = ref<string>('')
-<<<<<<< HEAD
-const referralCode = ref<string>('')
-=======
 const pendingAuthToken = ref<string>('')
 const pendingAuthTokenField = ref<PendingAuthTokenField>('pending_auth_token')
 const pendingProvider = ref<string>('')
@@ -220,7 +217,6 @@ const pendingAdoptionDecision = ref<{
   adoptDisplayName?: boolean
   adoptAvatar?: boolean
 } | null>(null)
->>>>>>> v0.1.116
 const hasRegisterData = ref<boolean>(false)
 
 // Public settings
@@ -264,9 +260,6 @@ onMounted(async () => {
       initialTurnstileToken.value = registerData.turnstile_token || ''
       promoCode.value = registerData.promo_code || ''
       invitationCode.value = registerData.invitation_code || ''
-<<<<<<< HEAD
-      referralCode.value = registerData.referral_code || ''
-=======
       pendingAuthToken.value = registerData.pending_auth_token || activePendingSession?.token || ''
       pendingAuthTokenField.value = registerData.pending_auth_token_field || activePendingSession?.token_field || 'pending_auth_token'
       pendingProvider.value = registerData.pending_provider || activePendingSession?.provider || ''
@@ -277,7 +270,6 @@ onMounted(async () => {
             adoptAvatar: registerData.pending_adoption_decision.adopt_avatar === true
           }
         : null
->>>>>>> v0.1.116
       hasRegisterData.value = !!(email.value && password.value)
     } catch {
       hasRegisterData.value = false
@@ -499,18 +491,6 @@ async function handleVerify(): Promise<void> {
       return
     }
 
-<<<<<<< HEAD
-    // Register with verification code
-    await authStore.register({
-      email: email.value,
-      password: password.value,
-      verify_code: verifyCode.value.trim(),
-      turnstile_token: initialTurnstileToken.value || undefined,
-      promo_code: promoCode.value || undefined,
-      invitation_code: invitationCode.value || undefined,
-      referral_code: referralCode.value || undefined
-    })
-=======
     if (isPendingOAuthFlow()) {
       const { data } = await apiClient.post<PendingOAuthCreateAccountResponse>(
         '/auth/oauth/pending/create-account',
@@ -547,7 +527,6 @@ async function handleVerify(): Promise<void> {
         invitation_code: invitationCode.value || undefined
       })
     }
->>>>>>> v0.1.116
 
     // Clear session data
     sessionStorage.removeItem('register_data')

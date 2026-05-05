@@ -3458,19 +3458,11 @@ const handlePageSizeChange = (pageSize: number) => {
 };
 
 const handleSort = (key: string, order: 'asc' | 'desc') => {
-<<<<<<< HEAD
-  sortState.sort_by = key
-  sortState.sort_order = order
-  pagination.page = 1
-  loadGroups()
-}
-=======
   sortState.sort_by = key;
   sortState.sort_order = order;
   pagination.page = 1;
   loadGroups();
 };
->>>>>>> v0.1.116
 
 const closeCreateModal = () => {
   showCreateModal.value = false;

@@ -1,8 +1,4 @@
 /**
-<<<<<<< HEAD
- * Usage request scheduler. Anthropic OAuth/setup-token accounts sharing the
- * same proxy exit are placed into a short serial queue to reduce upstream 429s.
-=======
  * Usage request scheduler — throttles Anthropic API calls by proxy exit.
  *
  * Anthropic OAuth/setup-token accounts sharing the same proxy exit are placed
@@ -14,7 +10,6 @@
  * "direct" queue.
  *
  * All other platforms bypass the queue and execute immediately.
->>>>>>> v0.1.116
  */
 
 import type { Account } from '@/types'
@@ -31,10 +26,7 @@ type Task<T> = {
 const queues = new Map<string, Task<unknown>[]>()
 const running = new Set<string>()
 
-<<<<<<< HEAD
-=======
 /** Whether this account needs throttled queuing. */
->>>>>>> v0.1.116
 function needsThrottle(account: Account): boolean {
   return (
     account.platform === 'anthropic' &&
@@ -42,10 +34,7 @@ function needsThrottle(account: Account): boolean {
   )
 }
 
-<<<<<<< HEAD
-=======
 /** Build a queue key from proxy connection details. */
->>>>>>> v0.1.116
 function buildGroupKey(account: Account): string {
   const proxy = account.proxy
   const proxyIdentity = proxy
@@ -69,11 +58,7 @@ async function drain(groupKey: string) {
     }
     if (queue.length > 0) {
       const jitter = GROUP_DELAY_MIN_MS + Math.random() * (GROUP_DELAY_MAX_MS - GROUP_DELAY_MIN_MS)
-<<<<<<< HEAD
-      await new Promise((resolve) => setTimeout(resolve, jitter))
-=======
       await new Promise((r) => setTimeout(r, jitter))
->>>>>>> v0.1.116
     }
   }
 
@@ -81,30 +66,21 @@ async function drain(groupKey: string) {
   queues.delete(groupKey)
 }
 
-<<<<<<< HEAD
-=======
 /**
  * Schedule a usage fetch. Anthropic accounts are queued by proxy exit;
  * all other platforms execute immediately.
  */
->>>>>>> v0.1.116
 export function enqueueUsageRequest<T>(
   account: Account,
   fn: () => Promise<T>
 ): Promise<T> {
-<<<<<<< HEAD
-=======
   // Non-Anthropic → fire immediately, no queuing
->>>>>>> v0.1.116
   if (!needsThrottle(account)) {
     return fn()
   }
 
   const key = buildGroupKey(account)
-<<<<<<< HEAD
-=======
 
->>>>>>> v0.1.116
   return new Promise<T>((resolve, reject) => {
     let queue = queues.get(key)
     if (!queue) {

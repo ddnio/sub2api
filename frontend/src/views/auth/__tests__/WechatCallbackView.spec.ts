@@ -5,23 +5,17 @@ import WechatCallbackView from '@/views/auth/WechatCallbackView.vue'
 const {
   exchangePendingOAuthCompletionMock,
   completeWeChatOAuthRegistrationMock,
-<<<<<<< HEAD
-=======
   login2FAMock,
   apiClientPostMock,
   sendVerifyCodeMock,
   sendPendingOAuthVerifyCodeMock,
   getPublicSettingsMock,
->>>>>>> v0.1.116
   prepareOAuthBindAccessTokenCookieMock,
   getAuthTokenMock,
   replaceMock,
   setTokenMock,
-<<<<<<< HEAD
-=======
   setPendingAuthSessionMock,
   clearPendingAuthSessionMock,
->>>>>>> v0.1.116
   showSuccessMock,
   showErrorMock,
   fetchPublicSettingsMock,
@@ -31,23 +25,17 @@ const {
 } = vi.hoisted(() => ({
   exchangePendingOAuthCompletionMock: vi.fn(),
   completeWeChatOAuthRegistrationMock: vi.fn(),
-<<<<<<< HEAD
-=======
   login2FAMock: vi.fn(),
   apiClientPostMock: vi.fn(),
   sendVerifyCodeMock: vi.fn(),
   sendPendingOAuthVerifyCodeMock: vi.fn(),
   getPublicSettingsMock: vi.fn(),
->>>>>>> v0.1.116
   prepareOAuthBindAccessTokenCookieMock: vi.fn(),
   getAuthTokenMock: vi.fn(),
   replaceMock: vi.fn(),
   setTokenMock: vi.fn(),
-<<<<<<< HEAD
-=======
   setPendingAuthSessionMock: vi.fn(),
   clearPendingAuthSessionMock: vi.fn(),
->>>>>>> v0.1.116
   showSuccessMock: vi.fn(),
   showErrorMock: vi.fn(),
   fetchPublicSettingsMock: vi.fn(),
@@ -83,12 +71,9 @@ vi.mock('vue-i18n', () => ({
   }),
   useI18n: () => ({
     t: (key: string, params?: Record<string, string>) => {
-<<<<<<< HEAD
-=======
       if (key === 'auth.oauthFlow.totpHint') {
         return `verify ${params?.account ?? ''}`.trim()
       }
->>>>>>> v0.1.116
       if (key === 'auth.oidc.callbackTitle') {
         return `Signing you in with ${params?.providerName ?? ''}`.trim()
       }
@@ -133,11 +118,8 @@ vi.mock('vue-i18n', () => ({
 vi.mock('@/stores', () => ({
   useAuthStore: () => ({
     setToken: setTokenMock,
-<<<<<<< HEAD
-=======
     setPendingAuthSession: setPendingAuthSessionMock,
     clearPendingAuthSession: clearPendingAuthSessionMock,
->>>>>>> v0.1.116
   }),
   useAppStore: () => ({
     ...appStoreState,
@@ -147,28 +129,22 @@ vi.mock('@/stores', () => ({
   }),
 }))
 
-<<<<<<< HEAD
-=======
 vi.mock('@/api/client', () => ({
   apiClient: {
     post: (...args: any[]) => apiClientPostMock(...args),
   },
 }))
 
->>>>>>> v0.1.116
 vi.mock('@/api/auth', async () => {
   const actual = await vi.importActual<typeof import('@/api/auth')>('@/api/auth')
   return {
     ...actual,
     exchangePendingOAuthCompletion: (...args: any[]) => exchangePendingOAuthCompletionMock(...args),
     completeWeChatOAuthRegistration: (...args: any[]) => completeWeChatOAuthRegistrationMock(...args),
-<<<<<<< HEAD
-=======
     login2FA: (...args: any[]) => login2FAMock(...args),
     sendVerifyCode: (...args: any[]) => sendVerifyCodeMock(...args),
     sendPendingOAuthVerifyCode: (...args: any[]) => sendPendingOAuthVerifyCodeMock(...args),
     getPublicSettings: (...args: any[]) => getPublicSettingsMock(...args),
->>>>>>> v0.1.116
     prepareOAuthBindAccessTokenCookie: (...args: any[]) => prepareOAuthBindAccessTokenCookieMock(...args),
     getAuthToken: (...args: any[]) => getAuthTokenMock(...args),
   }
@@ -178,10 +154,6 @@ describe('WechatCallbackView', () => {
   beforeEach(() => {
     exchangePendingOAuthCompletionMock.mockReset()
     completeWeChatOAuthRegistrationMock.mockReset()
-<<<<<<< HEAD
-    replaceMock.mockReset()
-    setTokenMock.mockReset()
-=======
     login2FAMock.mockReset()
     apiClientPostMock.mockReset()
     sendVerifyCodeMock.mockReset()
@@ -191,7 +163,6 @@ describe('WechatCallbackView', () => {
     setTokenMock.mockReset()
     setPendingAuthSessionMock.mockReset()
     clearPendingAuthSessionMock.mockReset()
->>>>>>> v0.1.116
     showSuccessMock.mockReset()
     showErrorMock.mockReset()
     prepareOAuthBindAccessTokenCookieMock.mockReset()
@@ -215,14 +186,11 @@ describe('WechatCallbackView', () => {
       configurable: true,
       value: 'Mozilla/5.0',
     })
-<<<<<<< HEAD
-=======
     getPublicSettingsMock.mockResolvedValue({
       invitation_code_enabled: false,
       turnstile_enabled: false,
       turnstile_site_key: '',
     })
->>>>>>> v0.1.116
   })
 
   it('overrides an incompatible query mode with the configured open capability during bind recovery', async () => {
@@ -312,8 +280,6 @@ describe('WechatCallbackView', () => {
     expect(locationState.current.href).toContain('mode=open')
   })
 
-<<<<<<< HEAD
-=======
   it('accepts the legacy fragment token success callback without pending-session exchange', async () => {
     locationState.current.hash =
       '#access_token=legacy-access-token&refresh_token=legacy-refresh-token&expires_in=3600&token_type=Bearer&redirect=%2Flegacy-dashboard'
@@ -389,7 +355,6 @@ describe('WechatCallbackView', () => {
     expect(replaceMock).toHaveBeenCalledWith('/legacy-invite')
   })
 
->>>>>>> v0.1.116
   it('does not send adoption decisions during the initial exchange', async () => {
     exchangePendingOAuthCompletionMock.mockResolvedValue({
       access_token: 'access-token',
@@ -503,10 +468,7 @@ describe('WechatCallbackView', () => {
       adoptAvatar: true,
     })
     expect(setTokenMock).not.toHaveBeenCalled()
-<<<<<<< HEAD
-=======
     expect(clearPendingAuthSessionMock).toHaveBeenCalledTimes(1)
->>>>>>> v0.1.116
     expect(showSuccessMock).toHaveBeenCalledWith('profile.authBindings.bindSuccess')
     expect(replaceMock).toHaveBeenCalledWith('/profile/connections')
   })
@@ -555,8 +517,6 @@ describe('WechatCallbackView', () => {
     expect(replaceMock).toHaveBeenCalledWith('/subscriptions')
   })
 
-<<<<<<< HEAD
-=======
   it('keeps the oauth flow active when complete-registration returns another pending step', async () => {
     exchangePendingOAuthCompletionMock.mockResolvedValue({
       error: 'invitation_required',
@@ -601,7 +561,6 @@ describe('WechatCallbackView', () => {
     expect(wrapper.get('[data-testid="wechat-choice-create-account"]').exists()).toBe(true)
   })
 
->>>>>>> v0.1.116
   it('offers existing-account email collection during invitation flow', async () => {
     exchangePendingOAuthCompletionMock.mockResolvedValue({
       error: 'invitation_required',
@@ -630,8 +589,6 @@ describe('WechatCallbackView', () => {
     expect(replaceMock.mock.calls[0]?.[0]).toContain('/login?')
     expect(replaceMock.mock.calls[0]?.[0]).toContain('wechat_bind_existing%3D1')
     expect(replaceMock.mock.calls[0]?.[0]).toContain('email=user%40example.com')
-<<<<<<< HEAD
-=======
     expect(replaceMock.mock.calls[0]?.[0]).toContain('mode%3Dopen')
   })
 
@@ -1069,18 +1026,13 @@ describe('WechatCallbackView', () => {
     expect(setTokenMock).toHaveBeenCalledWith('2fa-access-token')
     expect(replaceMock).toHaveBeenCalledWith('/profile')
     expect(localStorage.getItem('refresh_token')).toBe('2fa-refresh-token')
->>>>>>> v0.1.116
   })
 
   it('restarts the current-user bind flow after returning from login', async () => {
     routeState.query = {
       wechat_bind_existing: '1',
-<<<<<<< HEAD
-      redirect: '/profile'
-=======
       redirect: '/profile',
       mode: 'mp',
->>>>>>> v0.1.116
     }
     getAuthTokenMock.mockReturnValue('existing-auth-token')
 
@@ -1100,11 +1052,6 @@ describe('WechatCallbackView', () => {
     expect(exchangePendingOAuthCompletionMock).not.toHaveBeenCalled()
     expect(prepareOAuthBindAccessTokenCookieMock).toHaveBeenCalledTimes(1)
     expect(locationState.current.href).toContain('/api/v1/auth/oauth/wechat/start?')
-<<<<<<< HEAD
-    expect(locationState.current.href).toContain('intent=bind_current_user')
-    expect(locationState.current.href).toContain('redirect=%2Fprofile')
-  })
-=======
     expect(locationState.current.href).toContain('mode=mp')
     expect(locationState.current.href).toContain('intent=bind_current_user')
     expect(locationState.current.href).toContain('redirect=%2Fprofile')
@@ -1139,5 +1086,4 @@ describe('WechatCallbackView', () => {
     expect(replaceMock.mock.calls[0]?.[0]).toContain('mode%3Dmp')
     expect(replaceMock.mock.calls[0]?.[0]).toContain('email=resume%40example.com')
   })
->>>>>>> v0.1.116
 })

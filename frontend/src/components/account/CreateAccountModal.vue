@@ -1508,16 +1508,6 @@
           :weeklyResetDay="editWeeklyResetDay"
           :weeklyResetHour="editWeeklyResetHour"
           :resetTimezone="editResetTimezone"
-          :quotaNotifyGlobalEnabled="quotaNotify.globalEnabled.value"
-          :quotaNotifyDailyEnabled="quotaNotify.state.daily.enabled"
-          :quotaNotifyDailyThreshold="quotaNotify.state.daily.threshold"
-          :quotaNotifyDailyThresholdType="quotaNotify.state.daily.thresholdType"
-          :quotaNotifyWeeklyEnabled="quotaNotify.state.weekly.enabled"
-          :quotaNotifyWeeklyThreshold="quotaNotify.state.weekly.threshold"
-          :quotaNotifyWeeklyThresholdType="quotaNotify.state.weekly.thresholdType"
-          :quotaNotifyTotalEnabled="quotaNotify.state.total.enabled"
-          :quotaNotifyTotalThreshold="quotaNotify.state.total.threshold"
-          :quotaNotifyTotalThresholdType="quotaNotify.state.total.thresholdType"
           @update:totalLimit="editQuotaLimit = $event"
           @update:dailyLimit="editQuotaDailyLimit = $event"
           @update:weeklyLimit="editQuotaWeeklyLimit = $event"
@@ -1588,15 +1578,6 @@
           @update:weeklyResetDay="editWeeklyResetDay = $event"
           @update:weeklyResetHour="editWeeklyResetHour = $event"
           @update:resetTimezone="editResetTimezone = $event"
-          @update:quotaNotifyDailyEnabled="quotaNotify.state.daily.enabled = $event"
-          @update:quotaNotifyDailyThreshold="quotaNotify.state.daily.threshold = $event"
-          @update:quotaNotifyDailyThresholdType="quotaNotify.state.daily.thresholdType = $event"
-          @update:quotaNotifyWeeklyEnabled="quotaNotify.state.weekly.enabled = $event"
-          @update:quotaNotifyWeeklyThreshold="quotaNotify.state.weekly.threshold = $event"
-          @update:quotaNotifyWeeklyThresholdType="quotaNotify.state.weekly.thresholdType = $event"
-          @update:quotaNotifyTotalEnabled="quotaNotify.state.total.enabled = $event"
-          @update:quotaNotifyTotalThreshold="quotaNotify.state.total.threshold = $event"
-          @update:quotaNotifyTotalThresholdType="quotaNotify.state.total.thresholdType = $event"
         />
       </div>
 
@@ -2947,7 +2928,6 @@ import ProxySelector from '@/components/common/ProxySelector.vue'
 import GroupSelector from '@/components/common/GroupSelector.vue'
 import ModelWhitelistSelector from '@/components/account/ModelWhitelistSelector.vue'
 import QuotaLimitCard from '@/components/account/QuotaLimitCard.vue'
-import { useQuotaNotifyState } from '@/composables/useQuotaNotifyState'
 import { applyInterceptWarmup } from '@/components/account/credentialsBuilder'
 import { formatDateTimeLocalInput, parseDateTimeLocalInput } from '@/utils/format'
 import { createStableObjectKeyResolver } from '@/utils/stableObjectKey'
@@ -3078,7 +3058,6 @@ const editWeeklyResetMode = ref<'rolling' | 'fixed' | null>(null)
 const editWeeklyResetDay = ref<number | null>(null)
 const editWeeklyResetHour = ref<number | null>(null)
 const editResetTimezone = ref<string | null>(null)
-const quotaNotify = useQuotaNotifyState()
 const modelMappings = ref<ModelMapping[]>([])
 const modelRestrictionMode = ref<'whitelist' | 'mapping'>('whitelist')
 const allowedModels = ref<string[]>([])
@@ -3096,10 +3075,6 @@ const openaiOAuthResponsesWebSocketV2Mode = ref<OpenAIWSMode>(OPENAI_WS_MODE_OFF
 const openaiAPIKeyResponsesWebSocketV2Mode = ref<OpenAIWSMode>(OPENAI_WS_MODE_OFF)
 const codexCLIOnlyEnabled = ref(false)
 const anthropicPassthroughEnabled = ref(false)
-<<<<<<< HEAD
-const webSearchEmulationMode = ref<'default' | 'enabled' | 'disabled'>('default')
-const webSearchGlobalEnabled = ref(false)
-=======
 const webSearchEmulationMode = ref('default')
 const webSearchGlobalEnabled = ref(false)
 const {
@@ -3115,7 +3090,6 @@ adminAPI.settings.getWebSearchEmulationConfig().then(cfg => {
 }).catch(() => { webSearchGlobalEnabled.value = false })
 
 loadQuotaNotifyGlobal()
->>>>>>> v0.1.116
 const mixedScheduling = ref(false) // For antigravity accounts: enable mixed scheduling
 const allowOverages = ref(false) // For antigravity accounts: enable AI Credits overages
 const antigravityAccountType = ref<'oauth' | 'upstream'>('oauth') // For antigravity: oauth or upstream
@@ -3126,15 +3100,6 @@ const antigravityWhitelistModels = ref<string[]>([])
 const antigravityModelMappings = ref<ModelMapping[]>([])
 const antigravityPresetMappings = computed(() => getPresetMappingsByPlatform('antigravity'))
 const bedrockPresets = computed(() => getPresetMappingsByPlatform('bedrock'))
-
-adminAPI.settings.getWebSearchEmulationConfig()
-  .then((cfg) => {
-    webSearchGlobalEnabled.value = cfg?.enabled === true && (cfg?.providers?.length ?? 0) > 0
-  })
-  .catch(() => {
-    webSearchGlobalEnabled.value = false
-  })
-quotaNotify.loadGlobalState()
 
 // Bedrock credentials
 const bedrockAuthMode = ref<'sigv4' | 'apikey'>('sigv4')
@@ -3815,7 +3780,6 @@ const resetForm = () => {
   editWeeklyResetDay.value = null
   editWeeklyResetHour.value = null
   editResetTimezone.value = null
-  quotaNotify.reset()
   modelMappings.value = []
   modelRestrictionMode.value = 'whitelist'
   allowedModels.value = [...claudeModels] // Default fill related models
@@ -4228,12 +4192,8 @@ const createAccountAndFinish = async (
     if (editDailyResetMode.value === 'fixed' || editWeeklyResetMode.value === 'fixed') {
       quotaExtra.quota_reset_timezone = editResetTimezone.value || 'UTC'
     }
-<<<<<<< HEAD
-    quotaNotify.writeToExtra(quotaExtra, 'create')
-=======
     // Quota notify config
     writeQuotaNotifyToExtra(quotaExtra, 'create')
->>>>>>> v0.1.116
     if (Object.keys(quotaExtra).length > 0) {
       finalExtra = quotaExtra
     }
