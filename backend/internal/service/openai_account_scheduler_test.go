@@ -549,6 +549,7 @@ func TestOpenAIGatewayService_SelectAccountWithScheduler_LoadBalanceTopKFallback
 }
 
 func TestOpenAIGatewayService_OpenAIAccountSchedulerMetrics(t *testing.T) {
+	resetOpenAIAdvancedSchedulerSettingCacheForTest()
 	ctx := context.Background()
 	groupID := int64(12)
 	account := Account{
@@ -564,11 +565,17 @@ func TestOpenAIGatewayService_OpenAIAccountSchedulerMetrics(t *testing.T) {
 			"openai:session_hash_metrics": account.ID,
 		},
 	}
+	settingRepo := newMockSettingRepo()
+	require.NoError(t, settingRepo.Set(ctx, openAIAdvancedSchedulerSettingKey, "true"))
+	settingService := NewSettingService(settingRepo, &config.Config{})
+	rateLimitService := NewRateLimitService(nil, nil, &config.Config{}, nil, nil)
+	rateLimitService.SetSettingService(settingService)
 	svc := &OpenAIGatewayService{
 		accountRepo:        stubOpenAIAccountRepo{accounts: []Account{account}},
 		cache:              cache,
 		cfg:                &config.Config{},
 		concurrencyService: NewConcurrencyService(stubConcurrencyCache{}),
+		rateLimitService:   rateLimitService,
 	}
 
 	selection, _, err := svc.SelectAccountWithScheduler(ctx, &groupID, "", "session_hash_metrics", "gpt-5.1", nil, OpenAIUpstreamTransportAny)

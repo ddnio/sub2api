@@ -5032,6 +5032,20 @@ export default {
         saveFailed: 'Failed to save contact channels',
       },
 
+      paymentVisibleMethods: {
+        title: 'Checkout visible methods',
+        description: 'Choose which payment methods appear on checkout and which source key each method uses.',
+        methodLabel: '{title} visible method',
+        methodHint: 'Controls whether checkout shows this method and which source key it exposes.',
+        sourceLabel: 'Payment source',
+        sourceHint: 'Choose an explicit source before enabling the method. Not configured methods are not exposed.',
+        sourceRequiredError: 'Select a payment source before enabling {title}.'
+      },
+      openaiExperimentalScheduler: {
+        title: 'OpenAI experimental scheduler policy',
+        description: "Disabled by default. When enabled, this only changes the gateway's experimental account-selection policy for OpenAI traffic; it does not indicate an upstream OpenAI capability."
+      },
+
       saveSettings: 'Save Settings',
       saving: 'Saving...',
       settingsSaved: 'Settings saved successfully',

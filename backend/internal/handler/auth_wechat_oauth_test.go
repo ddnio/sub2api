@@ -16,11 +16,13 @@ import (
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
+	"github.com/Wei-Shaw/sub2api/ent/authidentitychannel"
 	"github.com/Wei-Shaw/sub2api/ent/enttest"
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
 	"github.com/Wei-Shaw/sub2api/ent/pendingauthsession"
 	dbuser "github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/payment"
 	"github.com/Wei-Shaw/sub2api/internal/repository"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
@@ -55,17 +57,30 @@ func decodeCookieValueForTest(t *testing.T, value string) string {
 	return decoded
 }
 
-func TestWeChatOAuthStartRedirectsAndSetsPendingCookies(t *testing.T) {
-	t.Setenv("WECHAT_OAUTH_OPEN_APP_ID", "wx-open-app")
-	t.Setenv("WECHAT_OAUTH_OPEN_APP_SECRET", "wx-open-secret")
+func buildEncodedOAuthBindUserCookie(t *testing.T, userID int64, secret string) string {
+	t.Helper()
+	value, err := buildOAuthBindUserCookieValue(userID, "state-123", "browser-123", secret)
+	require.NoError(t, err)
+	return value
+}
 
+func TestWeChatOAuthStartRedirectsAndSetsPendingCookies(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	handler, client := newWeChatOAuthTestHandlerWithSettings(t, false, map[string]string{
+		service.SettingKeyWeChatConnectEnabled:             "true",
+		service.SettingKeyWeChatConnectAppID:               "wx-open-app",
+		service.SettingKeyWeChatConnectAppSecret:           "wx-open-secret",
+		service.SettingKeyWeChatConnectMode:                "open",
+		service.SettingKeyWeChatConnectScopes:              "snsapi_login",
+		service.SettingKeyWeChatConnectRedirectURL:         "https://api.example.com/api/v1/auth/oauth/wechat/callback",
+		service.SettingKeyWeChatConnectFrontendRedirectURL: "/auth/wechat/callback",
+	})
+	defer client.Close()
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/wechat/start?mode=open&redirect=/billing", nil)
 	c.Request.Host = "api.example.com"
 
-	handler := &AuthHandler{}
 	handler.WeChatOAuthStart(c)
 
 	require.Equal(t, http.StatusFound, recorder.Code)
@@ -82,11 +97,40 @@ func TestWeChatOAuthStartRedirectsAndSetsPendingCookies(t *testing.T) {
 	require.NotEmpty(t, findCookie(cookies, oauthPendingBrowserCookieName))
 }
 
-func TestWeChatOAuthCallbackCreatesPendingSessionForUnifiedFlow(t *testing.T) {
-	t.Setenv("WECHAT_OAUTH_OPEN_APP_ID", "wx-open-app")
-	t.Setenv("WECHAT_OAUTH_OPEN_APP_SECRET", "wx-open-secret")
-	t.Setenv("WECHAT_OAUTH_FRONTEND_REDIRECT_URL", "/auth/wechat/callback")
+func TestWeChatOAuthStartAllowsOpenWhenOpenAndMPAreBothEnabled(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler, client := newWeChatOAuthTestHandlerWithSettings(t, false, map[string]string{
+		service.SettingKeyWeChatConnectEnabled:             "true",
+		service.SettingKeyWeChatConnectAppID:               "wx-legacy-app",
+		service.SettingKeyWeChatConnectAppSecret:           "wx-legacy-secret",
+		service.SettingKeyWeChatConnectOpenAppID:           "wx-open-app",
+		service.SettingKeyWeChatConnectOpenAppSecret:       "wx-open-secret",
+		service.SettingKeyWeChatConnectMPAppID:             "wx-mp-app",
+		service.SettingKeyWeChatConnectMPAppSecret:         "wx-mp-secret",
+		service.SettingKeyWeChatConnectOpenEnabled:         "true",
+		service.SettingKeyWeChatConnectMPEnabled:           "true",
+		service.SettingKeyWeChatConnectMode:                "mp",
+		service.SettingKeyWeChatConnectScopes:              "snsapi_userinfo",
+		service.SettingKeyWeChatConnectRedirectURL:         "https://api.example.com/api/v1/auth/oauth/wechat/callback",
+		service.SettingKeyWeChatConnectFrontendRedirectURL: "/auth/wechat/callback",
+	})
+	defer client.Close()
 
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/wechat/start?mode=open&redirect=/billing", nil)
+	c.Request.Host = "api.example.com"
+
+	handler.WeChatOAuthStart(c)
+
+	require.Equal(t, http.StatusFound, recorder.Code)
+	location := recorder.Header().Get("Location")
+	require.Contains(t, location, "open.weixin.qq.com")
+	require.Contains(t, location, "appid=wx-open-app")
+	require.Contains(t, location, "scope=snsapi_login")
+}
+
+func TestWeChatOAuthCallbackCreatesPendingSessionForUnifiedFlow(t *testing.T) {
 	originalAccessTokenURL := wechatOAuthAccessTokenURL
 	originalUserInfoURL := wechatOAuthUserInfoURL
 	t.Cleanup(func() {
@@ -147,10 +191,6 @@ func TestWeChatOAuthCallbackCreatesPendingSessionForUnifiedFlow(t *testing.T) {
 }
 
 func TestWeChatOAuthCallbackRejectsMissingUnionID(t *testing.T) {
-	t.Setenv("WECHAT_OAUTH_OPEN_APP_ID", "wx-open-app")
-	t.Setenv("WECHAT_OAUTH_OPEN_APP_SECRET", "wx-open-secret")
-	t.Setenv("WECHAT_OAUTH_FRONTEND_REDIRECT_URL", "https://app.example.com/auth/wechat/callback")
-
 	originalAccessTokenURL := wechatOAuthAccessTokenURL
 	originalUserInfoURL := wechatOAuthUserInfoURL
 	t.Cleanup(func() {
@@ -174,7 +214,7 @@ func TestWeChatOAuthCallbackRejectsMissingUnionID(t *testing.T) {
 	wechatOAuthAccessTokenURL = upstream.URL + "/sns/oauth2/access_token"
 	wechatOAuthUserInfoURL = upstream.URL + "/sns/userinfo"
 
-	handler, client := newWeChatOAuthTestHandler(t, false)
+	handler, client := newWeChatOAuthTestHandlerWithSettings(t, false, wechatOAuthTestSettings("open", "wx-open-app", "wx-open-secret", "https://app.example.com/auth/wechat/callback"))
 	defer client.Close()
 
 	recorder := httptest.NewRecorder()
@@ -199,11 +239,70 @@ func TestWeChatOAuthCallbackRejectsMissingUnionID(t *testing.T) {
 	require.Zero(t, count)
 }
 
+func TestWeChatPaymentOAuthCallbackRedirectsWithOpaqueResumeToken(t *testing.T) {
+	originalAccessTokenURL := wechatOAuthAccessTokenURL
+	t.Cleanup(func() {
+		wechatOAuthAccessTokenURL = originalAccessTokenURL
+	})
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/sns/oauth2/access_token") {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"access_token":"wechat-access","openid":"openid-123","scope":"snsapi_base"}`))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer upstream.Close()
+	wechatOAuthAccessTokenURL = upstream.URL + "/sns/oauth2/access_token"
+
+	handler, client := newWeChatOAuthTestHandlerWithSettings(t, false, wechatOAuthTestSettings("mp", "wx-mp-app", "wx-mp-secret", "/auth/wechat/callback"))
+	defer client.Close()
+	handler.cfg.Totp.EncryptionKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	handler.cfg.Totp.EncryptionKeyConfigured = true
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/wechat/payment/callback?code=wechat-code&state=state-123", nil)
+	req.Host = "api.example.com"
+	req.AddCookie(encodedCookie(wechatPaymentOAuthStateName, "state-123"))
+	req.AddCookie(encodedCookie(wechatPaymentOAuthRedirect, "/purchase?from=wechat"))
+	req.AddCookie(encodedCookie(wechatPaymentOAuthContextName, `{"payment_type":"wxpay","amount":"12.5","order_type":"subscription","plan_id":7}`))
+	req.AddCookie(encodedCookie(wechatPaymentOAuthScope, "snsapi_base"))
+	c.Request = req
+
+	handler.WeChatPaymentOAuthCallback(c)
+
+	require.Equal(t, http.StatusFound, recorder.Code)
+	location := recorder.Header().Get("Location")
+	parsed, err := url.Parse(location)
+	require.NoError(t, err)
+	fragment, err := url.ParseQuery(parsed.Fragment)
+	require.NoError(t, err)
+	require.Equal(t, "/purchase?from=wechat", fragment.Get("redirect"))
+	require.NotEmpty(t, fragment.Get("wechat_resume_token"))
+	require.Empty(t, fragment.Get("openid"))
+	require.Empty(t, fragment.Get("payment_type"))
+	require.Empty(t, fragment.Get("amount"))
+	require.Empty(t, fragment.Get("order_type"))
+	require.Empty(t, fragment.Get("plan_id"))
+
+	legacyKey, err := payment.ProvideEncryptionKey(handler.cfg)
+	require.NoError(t, err)
+	claims, err := service.NewLegacyAwarePaymentResumeService([]byte(legacyKey)).ParseWeChatPaymentResumeToken(fragment.Get("wechat_resume_token"))
+	require.NoError(t, err)
+	require.Equal(t, "openid-123", claims.OpenID)
+	require.Equal(t, payment.TypeWxpay, claims.PaymentType)
+	require.Equal(t, "12.5", claims.Amount)
+	require.Equal(t, payment.OrderTypeSubscription, claims.OrderType)
+	require.EqualValues(t, 7, claims.PlanID)
+	require.Equal(t, "/purchase?from=wechat", claims.RedirectTo)
+}
+
 func TestWeChatOAuthCallbackBindUsesUnionCanonicalIdentityAcrossChannels(t *testing.T) {
 	testCases := []struct {
 		name      string
 		mode      string
-		appIDEnv  string
 		appID     string
 		appSecret string
 		openID    string
@@ -211,7 +310,6 @@ func TestWeChatOAuthCallbackBindUsesUnionCanonicalIdentityAcrossChannels(t *test
 		{
 			name:      "open",
 			mode:      "open",
-			appIDEnv:  "WECHAT_OAUTH_OPEN_APP_ID",
 			appID:     "wx-open-app",
 			appSecret: "wx-open-secret",
 			openID:    "openid-open-123",
@@ -219,7 +317,6 @@ func TestWeChatOAuthCallbackBindUsesUnionCanonicalIdentityAcrossChannels(t *test
 		{
 			name:      "mp",
 			mode:      "mp",
-			appIDEnv:  "WECHAT_OAUTH_MP_APP_ID",
 			appID:     "wx-mp-app",
 			appSecret: "wx-mp-secret",
 			openID:    "openid-mp-123",
@@ -228,15 +325,6 @@ func TestWeChatOAuthCallbackBindUsesUnionCanonicalIdentityAcrossChannels(t *test
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv(tc.appIDEnv, tc.appID)
-			switch tc.mode {
-			case "open":
-				t.Setenv("WECHAT_OAUTH_OPEN_APP_SECRET", tc.appSecret)
-			case "mp":
-				t.Setenv("WECHAT_OAUTH_MP_APP_SECRET", tc.appSecret)
-			}
-			t.Setenv("WECHAT_OAUTH_FRONTEND_REDIRECT_URL", "/auth/wechat/callback")
-
 			originalAccessTokenURL := wechatOAuthAccessTokenURL
 			originalUserInfoURL := wechatOAuthUserInfoURL
 			t.Cleanup(func() {
@@ -260,7 +348,7 @@ func TestWeChatOAuthCallbackBindUsesUnionCanonicalIdentityAcrossChannels(t *test
 			wechatOAuthAccessTokenURL = upstream.URL + "/sns/oauth2/access_token"
 			wechatOAuthUserInfoURL = upstream.URL + "/sns/userinfo"
 
-			handler, client := newWeChatOAuthTestHandler(t, false)
+			handler, client := newWeChatOAuthTestHandlerWithSettings(t, false, wechatOAuthTestSettings(tc.mode, tc.appID, tc.appSecret, "/auth/wechat/callback"))
 			defer client.Close()
 
 			currentUser, err := client.User.Create().
@@ -280,7 +368,7 @@ func TestWeChatOAuthCallbackBindUsesUnionCanonicalIdentityAcrossChannels(t *test
 			req.AddCookie(encodedCookie(wechatOAuthRedirectCookieName, "/dashboard"))
 			req.AddCookie(encodedCookie(wechatOAuthIntentCookieName, wechatOAuthIntentBind))
 			req.AddCookie(encodedCookie(wechatOAuthModeCookieName, tc.mode))
-			req.AddCookie(encodedCookie(wechatOAuthBindUserCookieName, buildEncodedOAuthBindUserCookieForState(t, currentUser.ID, "state-123", "browser-123", "test-secret")))
+			req.AddCookie(encodedCookie(wechatOAuthBindUserCookieName, buildEncodedOAuthBindUserCookie(t, currentUser.ID, "test-secret")))
 			req.AddCookie(encodedCookie(oauthPendingBrowserCookieName, "browser-123"))
 			c.Request = req
 
@@ -317,10 +405,6 @@ func TestWeChatOAuthCallbackBindUsesUnionCanonicalIdentityAcrossChannels(t *test
 }
 
 func TestWeChatOAuthCallbackBindRejectsCanonicalOwnershipConflict(t *testing.T) {
-	t.Setenv("WECHAT_OAUTH_OPEN_APP_ID", "wx-open-app")
-	t.Setenv("WECHAT_OAUTH_OPEN_APP_SECRET", "wx-open-secret")
-	t.Setenv("WECHAT_OAUTH_FRONTEND_REDIRECT_URL", "/auth/wechat/callback")
-
 	originalAccessTokenURL := wechatOAuthAccessTokenURL
 	originalUserInfoURL := wechatOAuthUserInfoURL
 	t.Cleanup(func() {
@@ -383,7 +467,7 @@ func TestWeChatOAuthCallbackBindRejectsCanonicalOwnershipConflict(t *testing.T) 
 	req.AddCookie(encodedCookie(wechatOAuthRedirectCookieName, "/dashboard"))
 	req.AddCookie(encodedCookie(wechatOAuthIntentCookieName, wechatOAuthIntentBind))
 	req.AddCookie(encodedCookie(wechatOAuthModeCookieName, "open"))
-	req.AddCookie(encodedCookie(wechatOAuthBindUserCookieName, buildEncodedOAuthBindUserCookieForState(t, currentUser.ID, "state-123", "browser-123", "test-secret")))
+	req.AddCookie(encodedCookie(wechatOAuthBindUserCookieName, buildEncodedOAuthBindUserCookie(t, currentUser.ID, "test-secret")))
 	req.AddCookie(encodedCookie(oauthPendingBrowserCookieName, "browser-123"))
 	c.Request = req
 
@@ -399,10 +483,6 @@ func TestWeChatOAuthCallbackBindRejectsCanonicalOwnershipConflict(t *testing.T) 
 }
 
 func TestWeChatOAuthCallbackBindRejectsChannelOwnershipConflict(t *testing.T) {
-	t.Setenv("WECHAT_OAUTH_OPEN_APP_ID", "wx-open-app")
-	t.Setenv("WECHAT_OAUTH_OPEN_APP_SECRET", "wx-open-secret")
-	t.Setenv("WECHAT_OAUTH_FRONTEND_REDIRECT_URL", "/auth/wechat/callback")
-
 	originalAccessTokenURL := wechatOAuthAccessTokenURL
 	originalUserInfoURL := wechatOAuthUserInfoURL
 	t.Cleanup(func() {
@@ -476,7 +556,7 @@ func TestWeChatOAuthCallbackBindRejectsChannelOwnershipConflict(t *testing.T) {
 	req.AddCookie(encodedCookie(wechatOAuthRedirectCookieName, "/dashboard"))
 	req.AddCookie(encodedCookie(wechatOAuthIntentCookieName, wechatOAuthIntentBind))
 	req.AddCookie(encodedCookie(wechatOAuthModeCookieName, "open"))
-	req.AddCookie(encodedCookie(wechatOAuthBindUserCookieName, buildEncodedOAuthBindUserCookieForState(t, currentUser.ID, "state-123", "browser-123", "test-secret")))
+	req.AddCookie(encodedCookie(wechatOAuthBindUserCookieName, buildEncodedOAuthBindUserCookie(t, currentUser.ID, "test-secret")))
 	req.AddCookie(encodedCookie(oauthPendingBrowserCookieName, "browser-123"))
 	c.Request = req
 
@@ -491,11 +571,85 @@ func TestWeChatOAuthCallbackBindRejectsChannelOwnershipConflict(t *testing.T) {
 	require.Zero(t, count)
 }
 
-func TestCompleteWeChatOAuthRegistrationAfterInvitationPendingSession(t *testing.T) {
-	t.Setenv("WECHAT_OAUTH_OPEN_APP_ID", "wx-open-app")
-	t.Setenv("WECHAT_OAUTH_OPEN_APP_SECRET", "wx-open-secret")
-	t.Setenv("WECHAT_OAUTH_FRONTEND_REDIRECT_URL", "/auth/wechat/callback")
+func TestWeChatOAuthCallbackBindRejectsLegacyProviderKeyOwnershipConflict(t *testing.T) {
+	originalAccessTokenURL := wechatOAuthAccessTokenURL
+	originalUserInfoURL := wechatOAuthUserInfoURL
+	t.Cleanup(func() {
+		wechatOAuthAccessTokenURL = originalAccessTokenURL
+		wechatOAuthUserInfoURL = originalUserInfoURL
+	})
 
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/sns/oauth2/access_token"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"access_token":"wechat-access","openid":"openid-123","unionid":"union-456","scope":"snsapi_login"}`))
+		case strings.Contains(r.URL.Path, "/sns/userinfo"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"openid":"openid-123","unionid":"union-456","nickname":"Conflict Nick","headimgurl":"https://cdn.example/conflict.png"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer upstream.Close()
+	wechatOAuthAccessTokenURL = upstream.URL + "/sns/oauth2/access_token"
+	wechatOAuthUserInfoURL = upstream.URL + "/sns/userinfo"
+
+	handler, client := newWeChatOAuthTestHandler(t, false)
+	defer client.Close()
+
+	ctx := context.Background()
+	owner, err := client.User.Create().
+		SetEmail("owner@example.com").
+		SetUsername("owner").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+
+	currentUser, err := client.User.Create().
+		SetEmail("current@example.com").
+		SetUsername("current").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+
+	_, err = client.AuthIdentity.Create().
+		SetUserID(owner.ID).
+		SetProviderType("wechat").
+		SetProviderKey(wechatOAuthLegacyProviderKey).
+		SetProviderSubject("union-456").
+		SetMetadata(map[string]any{"unionid": "union-456"}).
+		Save(ctx)
+	require.NoError(t, err)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/wechat/callback?code=wechat-code&state=state-123", nil)
+	req.Host = "api.example.com"
+	req.AddCookie(encodedCookie(wechatOAuthStateCookieName, "state-123"))
+	req.AddCookie(encodedCookie(wechatOAuthRedirectCookieName, "/dashboard"))
+	req.AddCookie(encodedCookie(wechatOAuthIntentCookieName, wechatOAuthIntentBind))
+	req.AddCookie(encodedCookie(wechatOAuthModeCookieName, "open"))
+	req.AddCookie(encodedCookie(wechatOAuthBindUserCookieName, buildEncodedOAuthBindUserCookie(t, currentUser.ID, "test-secret")))
+	req.AddCookie(encodedCookie(oauthPendingBrowserCookieName, "browser-123"))
+	c.Request = req
+
+	handler.WeChatOAuthCallback(c)
+
+	require.Equal(t, http.StatusFound, recorder.Code)
+	require.Nil(t, findCookie(recorder.Result().Cookies(), oauthPendingSessionCookieName))
+	assertOAuthRedirectError(t, recorder.Header().Get("Location"), "ownership_conflict", "AUTH_IDENTITY_OWNERSHIP_CONFLICT")
+
+	count, err := client.PendingAuthSession.Query().Count(ctx)
+	require.NoError(t, err)
+	require.Zero(t, count)
+}
+
+func TestCompleteWeChatOAuthRegistrationAfterInvitationPendingSession(t *testing.T) {
 	originalAccessTokenURL := wechatOAuthAccessTokenURL
 	originalUserInfoURL := wechatOAuthUserInfoURL
 	t.Cleanup(func() {
@@ -585,8 +739,21 @@ func TestCompleteWeChatOAuthRegistrationAfterInvitationPendingSession(t *testing
 		Only(ctx)
 	require.NoError(t, err)
 	require.Equal(t, userEntity.ID, identity.UserID)
-	require.Equal(t, "WeChat Display", identity.Metadata["suggested_display_name"])
-	require.Equal(t, "https://cdn.example/wechat.png", identity.Metadata["suggested_avatar_url"])
+	require.Equal(t, "WeChat Display", identity.Metadata["display_name"])
+	require.Equal(t, "https://cdn.example/wechat.png", identity.Metadata["avatar_url"])
+
+	channel, err := client.AuthIdentityChannel.Query().
+		Where(
+			authidentitychannel.ProviderTypeEQ("wechat"),
+			authidentitychannel.ProviderKeyEQ("wechat-main"),
+			authidentitychannel.ChannelEQ("open"),
+			authidentitychannel.ChannelAppIDEQ("wx-open-app"),
+			authidentitychannel.ChannelSubjectEQ("openid-123"),
+		).
+		Only(ctx)
+	require.NoError(t, err)
+	require.Equal(t, identity.ID, channel.IdentityID)
+	require.Equal(t, "union-456", channel.Metadata["unionid"])
 
 	decision, err := client.IdentityAdoptionDecision.Query().
 		Where(identityadoptiondecision.PendingAuthSessionIDEQ(pendingSession.ID)).
@@ -604,7 +771,288 @@ func TestCompleteWeChatOAuthRegistrationAfterInvitationPendingSession(t *testing
 	require.NotNil(t, consumed.ConsumedAt)
 }
 
+func TestWeChatOAuthCallbackRepairsLegacyOpenIDOnlyIdentity(t *testing.T) {
+	originalAccessTokenURL := wechatOAuthAccessTokenURL
+	originalUserInfoURL := wechatOAuthUserInfoURL
+	t.Cleanup(func() {
+		wechatOAuthAccessTokenURL = originalAccessTokenURL
+		wechatOAuthUserInfoURL = originalUserInfoURL
+	})
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/sns/oauth2/access_token"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"access_token":"wechat-access","openid":"openid-123","unionid":"union-456","scope":"snsapi_login"}`))
+		case strings.Contains(r.URL.Path, "/sns/userinfo"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"openid":"openid-123","unionid":"union-456","nickname":"Legacy WeChat","headimgurl":"https://cdn.example/legacy.png"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer upstream.Close()
+	wechatOAuthAccessTokenURL = upstream.URL + "/sns/oauth2/access_token"
+	wechatOAuthUserInfoURL = upstream.URL + "/sns/userinfo"
+
+	handler, client := newWeChatOAuthTestHandler(t, false)
+	defer client.Close()
+
+	ctx := context.Background()
+	legacyUser, err := client.User.Create().
+		SetEmail("legacy@example.com").
+		SetUsername("legacy-user").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+
+	legacyIdentity, err := client.AuthIdentity.Create().
+		SetUserID(legacyUser.ID).
+		SetProviderType("wechat").
+		SetProviderKey(wechatOAuthProviderKey).
+		SetProviderSubject("openid-123").
+		SetMetadata(map[string]any{"openid": "openid-123"}).
+		Save(ctx)
+	require.NoError(t, err)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/wechat/callback?code=wechat-code&state=state-123", nil)
+	req.Host = "api.example.com"
+	req.AddCookie(encodedCookie(wechatOAuthStateCookieName, "state-123"))
+	req.AddCookie(encodedCookie(wechatOAuthRedirectCookieName, "/dashboard"))
+	req.AddCookie(encodedCookie(wechatOAuthModeCookieName, "open"))
+	req.AddCookie(encodedCookie(oauthPendingBrowserCookieName, "browser-123"))
+	c.Request = req
+
+	handler.WeChatOAuthCallback(c)
+
+	require.Equal(t, http.StatusFound, recorder.Code)
+	require.Equal(t, "/auth/wechat/callback", recorder.Header().Get("Location"))
+
+	sessionCookie := findCookie(recorder.Result().Cookies(), oauthPendingSessionCookieName)
+	require.NotNil(t, sessionCookie)
+
+	session, err := client.PendingAuthSession.Query().
+		Where(pendingauthsession.SessionTokenEQ(decodeCookieValueForTest(t, sessionCookie.Value))).
+		Only(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, session.TargetUserID)
+	require.Equal(t, legacyUser.ID, *session.TargetUserID)
+	require.Equal(t, legacyUser.Email, session.ResolvedEmail)
+
+	repairedIdentity, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ("wechat"),
+			authidentity.ProviderKeyEQ(wechatOAuthProviderKey),
+			authidentity.ProviderSubjectEQ("union-456"),
+		).
+		Only(ctx)
+	require.NoError(t, err)
+	require.Equal(t, legacyIdentity.ID, repairedIdentity.ID)
+	require.Equal(t, legacyUser.ID, repairedIdentity.UserID)
+
+	openIDIdentityCount, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ("wechat"),
+			authidentity.ProviderKeyEQ(wechatOAuthProviderKey),
+			authidentity.ProviderSubjectEQ("openid-123"),
+		).
+		Count(ctx)
+	require.NoError(t, err)
+	require.Zero(t, openIDIdentityCount)
+
+	channel, err := client.AuthIdentityChannel.Query().
+		Where(
+			authidentitychannel.ProviderTypeEQ("wechat"),
+			authidentitychannel.ProviderKeyEQ(wechatOAuthProviderKey),
+			authidentitychannel.ChannelEQ("open"),
+			authidentitychannel.ChannelAppIDEQ("wx-open-app"),
+			authidentitychannel.ChannelSubjectEQ("openid-123"),
+		).
+		Only(ctx)
+	require.NoError(t, err)
+	require.Equal(t, repairedIdentity.ID, channel.IdentityID)
+}
+
+func TestCompleteWeChatOAuthRegistrationRejectsAdoptExistingUserSession(t *testing.T) {
+	handler, client := newWeChatOAuthTestHandler(t, false)
+	defer client.Close()
+
+	ctx := context.Background()
+	existingUser, err := client.User.Create().
+		SetEmail("owner@example.com").
+		SetUsername("owner-user").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+
+	session, err := client.PendingAuthSession.Create().
+		SetSessionToken("wechat-complete-invalid-session").
+		SetIntent("adopt_existing_user_by_email").
+		SetProviderType("wechat").
+		SetProviderKey("wechat-main").
+		SetProviderSubject("union-invalid-1").
+		SetTargetUserID(existingUser.ID).
+		SetResolvedEmail(existingUser.Email).
+		SetBrowserSessionKey("wechat-invalid-browser").
+		SetUpstreamIdentityClaims(map[string]any{
+			"username": "wechat_user",
+		}).
+		SetLocalFlowState(map[string]any{
+			oauthCompletionResponseKey: map[string]any{
+				"step": "bind_login_required",
+			},
+		}).
+		SetExpiresAt(time.Now().UTC().Add(10 * time.Minute)).
+		Save(ctx)
+	require.NoError(t, err)
+
+	body := bytes.NewBufferString(`{"invitation_code":"invite-1"}`)
+	recorder := httptest.NewRecorder()
+	completeCtx, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/wechat/complete-registration", body)
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: oauthPendingSessionCookieName, Value: encodeCookieValue(session.SessionToken)})
+	req.AddCookie(&http.Cookie{Name: oauthPendingBrowserCookieName, Value: encodeCookieValue("wechat-invalid-browser")})
+	completeCtx.Request = req
+
+	handler.CompleteWeChatOAuthRegistration(completeCtx)
+
+	require.Equal(t, http.StatusBadRequest, recorder.Code)
+
+	storedSession, err := client.PendingAuthSession.Get(ctx, session.ID)
+	require.NoError(t, err)
+	require.Nil(t, storedSession.ConsumedAt)
+}
+
+func TestWeChatOAuthCallbackRepairsLegacyProviderKeyCanonicalIdentity(t *testing.T) {
+	originalAccessTokenURL := wechatOAuthAccessTokenURL
+	originalUserInfoURL := wechatOAuthUserInfoURL
+	t.Cleanup(func() {
+		wechatOAuthAccessTokenURL = originalAccessTokenURL
+		wechatOAuthUserInfoURL = originalUserInfoURL
+	})
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/sns/oauth2/access_token"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"access_token":"wechat-access","openid":"openid-123","unionid":"union-456","scope":"snsapi_login"}`))
+		case strings.Contains(r.URL.Path, "/sns/userinfo"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"openid":"openid-123","unionid":"union-456","nickname":"Legacy Canonical","headimgurl":"https://cdn.example/legacy-canonical.png"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer upstream.Close()
+	wechatOAuthAccessTokenURL = upstream.URL + "/sns/oauth2/access_token"
+	wechatOAuthUserInfoURL = upstream.URL + "/sns/userinfo"
+
+	handler, client := newWeChatOAuthTestHandler(t, false)
+	defer client.Close()
+
+	ctx := context.Background()
+	legacyUser, err := client.User.Create().
+		SetEmail("legacy@example.com").
+		SetUsername("legacy-user").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+
+	legacyIdentity, err := client.AuthIdentity.Create().
+		SetUserID(legacyUser.ID).
+		SetProviderType("wechat").
+		SetProviderKey(wechatOAuthLegacyProviderKey).
+		SetProviderSubject("union-456").
+		SetMetadata(map[string]any{"unionid": "union-456"}).
+		Save(ctx)
+	require.NoError(t, err)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/wechat/callback?code=wechat-code&state=state-123", nil)
+	req.Host = "api.example.com"
+	req.AddCookie(encodedCookie(wechatOAuthStateCookieName, "state-123"))
+	req.AddCookie(encodedCookie(wechatOAuthRedirectCookieName, "/dashboard"))
+	req.AddCookie(encodedCookie(wechatOAuthModeCookieName, "open"))
+	req.AddCookie(encodedCookie(oauthPendingBrowserCookieName, "browser-123"))
+	c.Request = req
+
+	handler.WeChatOAuthCallback(c)
+
+	require.Equal(t, http.StatusFound, recorder.Code)
+	require.Equal(t, "/auth/wechat/callback", recorder.Header().Get("Location"))
+
+	sessionCookie := findCookie(recorder.Result().Cookies(), oauthPendingSessionCookieName)
+	require.NotNil(t, sessionCookie)
+
+	session, err := client.PendingAuthSession.Query().
+		Where(pendingauthsession.SessionTokenEQ(decodeCookieValueForTest(t, sessionCookie.Value))).
+		Only(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, session.TargetUserID)
+	require.Equal(t, legacyUser.ID, *session.TargetUserID)
+	require.Equal(t, legacyUser.Email, session.ResolvedEmail)
+
+	repairedIdentity, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ("wechat"),
+			authidentity.ProviderKeyEQ(wechatOAuthProviderKey),
+			authidentity.ProviderSubjectEQ("union-456"),
+		).
+		Only(ctx)
+	require.NoError(t, err)
+	require.Equal(t, legacyIdentity.ID, repairedIdentity.ID)
+	require.Equal(t, legacyUser.ID, repairedIdentity.UserID)
+
+	legacyIdentityCount, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ("wechat"),
+			authidentity.ProviderKeyEQ(wechatOAuthLegacyProviderKey),
+			authidentity.ProviderSubjectEQ("union-456"),
+		).
+		Count(ctx)
+	require.NoError(t, err)
+	require.Zero(t, legacyIdentityCount)
+
+	channel, err := client.AuthIdentityChannel.Query().
+		Where(
+			authidentitychannel.ProviderTypeEQ("wechat"),
+			authidentitychannel.ProviderKeyEQ(wechatOAuthProviderKey),
+			authidentitychannel.ChannelEQ("open"),
+			authidentitychannel.ChannelAppIDEQ("wx-open-app"),
+			authidentitychannel.ChannelSubjectEQ("openid-123"),
+		).
+		Only(ctx)
+	require.NoError(t, err)
+	require.Equal(t, repairedIdentity.ID, channel.IdentityID)
+}
+
 func newWeChatOAuthTestHandler(t *testing.T, invitationEnabled bool) (*AuthHandler, *dbent.Client) {
+	return newWeChatOAuthTestHandlerWithSettings(t, invitationEnabled, nil)
+}
+
+func wechatOAuthTestSettings(mode, appID, secret, frontendRedirect string) map[string]string {
+	return map[string]string{
+		service.SettingKeyWeChatConnectEnabled:             "true",
+		service.SettingKeyWeChatConnectAppID:               appID,
+		service.SettingKeyWeChatConnectAppSecret:           secret,
+		service.SettingKeyWeChatConnectMode:                mode,
+		service.SettingKeyWeChatConnectScopes:              service.DefaultWeChatConnectScopesForMode(mode),
+		service.SettingKeyWeChatConnectRedirectURL:         "https://api.example.com/api/v1/auth/oauth/wechat/callback",
+		service.SettingKeyWeChatConnectFrontendRedirectURL: frontendRedirect,
+	}
+}
+
+func newWeChatOAuthTestHandlerWithSettings(t *testing.T, invitationEnabled bool, extraSettings map[string]string) (*AuthHandler, *dbent.Client) {
 	t.Helper()
 
 	db, err := sql.Open("sqlite", "file:auth_wechat_oauth?mode=memory&cache=shared")
@@ -631,12 +1079,17 @@ func newWeChatOAuthTestHandler(t *testing.T, invitationEnabled bool) (*AuthHandl
 			UserConcurrency: 1,
 		},
 	}
-	settingSvc := service.NewSettingService(&wechatOAuthSettingRepoStub{
-		values: map[string]string{
-			service.SettingKeyRegistrationEnabled:   "true",
-			service.SettingKeyInvitationCodeEnabled: boolSettingValue(invitationEnabled),
-		},
-	}, cfg)
+	values := map[string]string{
+		service.SettingKeyRegistrationEnabled:   "true",
+		service.SettingKeyInvitationCodeEnabled: boolSettingValue(invitationEnabled),
+	}
+	for key, value := range wechatOAuthTestSettings("open", "wx-open-app", "wx-open-secret", "/auth/wechat/callback") {
+		values[key] = value
+	}
+	for key, value := range extraSettings {
+		values[key] = value
+	}
+	settingSvc := service.NewSettingService(&wechatOAuthSettingRepoStub{values: values}, cfg)
 
 	authSvc := service.NewAuthService(
 		client,
@@ -660,6 +1113,18 @@ func newWeChatOAuthTestHandler(t *testing.T, invitationEnabled bool) (*AuthHandl
 	}, client
 }
 
+func assertOAuthRedirectError(t *testing.T, location string, errorCode string, errorMessage string) {
+	t.Helper()
+
+	parsed, err := url.Parse(location)
+	require.NoError(t, err)
+
+	fragment, err := url.ParseQuery(parsed.Fragment)
+	require.NoError(t, err)
+	require.Equal(t, errorCode, fragment.Get("error"))
+	require.Equal(t, errorMessage, fragment.Get("error_message"))
+}
+
 func boolSettingValue(value bool) string {
 	if value {
 		return "true"
@@ -672,25 +1137,6 @@ func decodeJSONBody(t *testing.T, recorder *httptest.ResponseRecorder) map[strin
 	var payload map[string]any
 	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &payload))
 	return payload
-}
-
-func buildEncodedOAuthBindUserCookieForState(t *testing.T, userID int64, state string, browserSessionKey string, secret string) string {
-	t.Helper()
-	value, err := buildOAuthBindUserCookieValue(userID, state, browserSessionKey, secret)
-	require.NoError(t, err)
-	return value
-}
-
-func assertOAuthRedirectError(t *testing.T, location string, errorCode string, errorMessage string) {
-	t.Helper()
-
-	parsed, err := url.Parse(location)
-	require.NoError(t, err)
-
-	fragment, err := url.ParseQuery(parsed.Fragment)
-	require.NoError(t, err)
-	require.Equal(t, errorCode, fragment.Get("error"))
-	require.Equal(t, errorMessage, fragment.Get("error_message"))
 }
 
 type wechatOAuthSettingRepoStub struct {

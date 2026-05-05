@@ -4,7 +4,11 @@
  */
 
 import { apiClient } from './client'
-import { prepareOAuthBindAccessTokenCookie } from './auth'
+import {
+  resolveWeChatOAuthStartStrict,
+  prepareOAuthBindAccessTokenCookie,
+  type WeChatOAuthPublicSettings
+} from './auth'
 import type { UserProfile, ChangePasswordRequest, UserAuthProvider } from '@/types'
 
 /**
@@ -77,21 +81,70 @@ export interface StartOAuthBindingResponse {
   use_browser_redirect: boolean
 }
 
+interface BuildOAuthBindingStartURLOptions {
+  redirectTo?: string
+  wechatOAuthSettings?: WeChatOAuthPublicSettings | null
+}
+
+export function resolveWeChatOAuthMode(): 'open' | 'mp' {
+  if (typeof navigator === 'undefined') {
+    return 'open'
+  }
+  return /MicroMessenger/i.test(navigator.userAgent) ? 'mp' : 'open'
+}
+
+function resolveWeChatOAuthBindingMode(
+  settings?: WeChatOAuthPublicSettings | null
+): 'open' | 'mp' | null {
+  if (settings) {
+    return resolveWeChatOAuthStartStrict(settings).mode
+  }
+  return resolveWeChatOAuthMode()
+}
+
+export function buildOAuthBindingStartURL(
+  provider: BindableOAuthProvider,
+  options: BuildOAuthBindingStartURLOptions = {}
+): string | null {
+  const redirectTo = options.redirectTo?.trim() || '/profile'
+  if (provider !== 'wechat') {
+    return null
+  }
+  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
+  const normalized = apiBase.replace(/\/$/, '')
+  const params = new URLSearchParams({
+    redirect: redirectTo,
+    intent: 'bind_current_user'
+  })
+
+  const mode = resolveWeChatOAuthBindingMode(options.wechatOAuthSettings)
+  if (!mode) {
+    return null
+  }
+  params.set('mode', mode)
+
+  return `${normalized}/auth/oauth/${provider}/start?${params.toString()}`
+}
+
 export async function startOAuthBinding(
   provider: BindableOAuthProvider,
-  redirectTo = '/profile'
+  options: BuildOAuthBindingStartURLOptions | string = {}
 ): Promise<void> {
   if (typeof window === 'undefined') {
     return
   }
 
+  const normalizedOptions =
+    typeof options === 'string' ? { redirectTo: options } : options
+  const redirectTo = normalizedOptions.redirectTo?.trim() || '/profile'
+
   prepareOAuthBindAccessTokenCookie()
   if (provider === 'wechat') {
-    const params = new URLSearchParams({
-      wechat_bind_existing: '1',
-      redirect: redirectTo,
-    })
-    window.location.href = `/auth/wechat/callback?${params.toString()}`
+    const startURL = buildOAuthBindingStartURL(provider, normalizedOptions)
+    if (!startURL) {
+      return
+    }
+    window.location.href = startURL
     return
   }
 

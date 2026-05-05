@@ -71,6 +71,23 @@ type SystemSettings struct {
 	LinuxDoConnectClientSecretConfigured bool   `json:"linuxdo_connect_client_secret_configured"`
 	LinuxDoConnectRedirectURL            string `json:"linuxdo_connect_redirect_url"`
 
+	WeChatConnectEnabled                   bool   `json:"wechat_connect_enabled"`
+	WeChatConnectAppID                     string `json:"wechat_connect_app_id"`
+	WeChatConnectAppSecretConfigured       bool   `json:"wechat_connect_app_secret_configured"`
+	WeChatConnectOpenAppID                 string `json:"wechat_connect_open_app_id"`
+	WeChatConnectOpenAppSecretConfigured   bool   `json:"wechat_connect_open_app_secret_configured"`
+	WeChatConnectMPAppID                   string `json:"wechat_connect_mp_app_id"`
+	WeChatConnectMPAppSecretConfigured     bool   `json:"wechat_connect_mp_app_secret_configured"`
+	WeChatConnectMobileAppID               string `json:"wechat_connect_mobile_app_id"`
+	WeChatConnectMobileAppSecretConfigured bool   `json:"wechat_connect_mobile_app_secret_configured"`
+	WeChatConnectOpenEnabled               bool   `json:"wechat_connect_open_enabled"`
+	WeChatConnectMPEnabled                 bool   `json:"wechat_connect_mp_enabled"`
+	WeChatConnectMobileEnabled             bool   `json:"wechat_connect_mobile_enabled"`
+	WeChatConnectMode                      string `json:"wechat_connect_mode"`
+	WeChatConnectScopes                    string `json:"wechat_connect_scopes"`
+	WeChatConnectRedirectURL               string `json:"wechat_connect_redirect_url"`
+	WeChatConnectFrontendRedirectURL       string `json:"wechat_connect_frontend_redirect_url"`
+
 	OIDCConnectEnabled                bool   `json:"oidc_connect_enabled"`
 	OIDCConnectProviderName           string `json:"oidc_connect_provider_name"`
 	OIDCConnectClientID               string `json:"oidc_connect_client_id"`
@@ -151,6 +168,32 @@ type SystemSettings struct {
 	PaymentVisibleMethodWxpaySource   string `json:"payment_visible_method_wxpay_source"`
 	PaymentVisibleMethodAlipayEnabled bool   `json:"payment_visible_method_alipay_enabled"`
 	PaymentVisibleMethodWxpayEnabled  bool   `json:"payment_visible_method_wxpay_enabled"`
+
+	// OpenAI account scheduling
+	OpenAIAdvancedSchedulerEnabled bool `json:"openai_advanced_scheduler_enabled"`
+
+	// Payment configuration
+	PaymentEnabled                   bool     `json:"payment_enabled"`
+	PaymentMinAmount                 float64  `json:"payment_min_amount"`
+	PaymentMaxAmount                 float64  `json:"payment_max_amount"`
+	PaymentDailyLimit                float64  `json:"payment_daily_limit"`
+	PaymentOrderTimeoutMin           int      `json:"payment_order_timeout_minutes"`
+	PaymentMaxPendingOrders          int      `json:"payment_max_pending_orders"`
+	PaymentEnabledTypes              []string `json:"payment_enabled_types"`
+	PaymentBalanceDisabled           bool     `json:"payment_balance_disabled"`
+	PaymentBalanceRechargeMultiplier float64  `json:"payment_balance_recharge_multiplier"`
+	PaymentRechargeFeeRate           float64  `json:"payment_recharge_fee_rate"`
+	PaymentLoadBalanceStrat          string   `json:"payment_load_balance_strategy"`
+	PaymentProductNamePrefix         string   `json:"payment_product_name_prefix"`
+	PaymentProductNameSuffix         string   `json:"payment_product_name_suffix"`
+	PaymentHelpImageURL              string   `json:"payment_help_image_url"`
+	PaymentHelpText                  string   `json:"payment_help_text"`
+
+	PaymentCancelRateLimitEnabled bool   `json:"payment_cancel_rate_limit_enabled"`
+	PaymentCancelRateLimitMax     int    `json:"payment_cancel_rate_limit_max"`
+	PaymentCancelRateLimitWindow  int    `json:"payment_cancel_rate_limit_window"`
+	PaymentCancelRateLimitUnit    string `json:"payment_cancel_rate_limit_unit"`
+	PaymentCancelRateLimitMode    string `json:"payment_cancel_rate_limit_window_mode"`
 }
 
 type DefaultSubscriptionSetting struct {
@@ -187,6 +230,7 @@ type PublicSettings struct {
 	WeChatOAuthEnabled               bool             `json:"wechat_oauth_enabled"`
 	WeChatOAuthOpenEnabled           bool             `json:"wechat_oauth_open_enabled"`
 	WeChatOAuthMPEnabled             bool             `json:"wechat_oauth_mp_enabled"`
+	WeChatOAuthMobileEnabled         bool             `json:"wechat_oauth_mobile_enabled"`
 	OIDCOAuthEnabled                 bool             `json:"oidc_oauth_enabled"`
 	OIDCOAuthProviderName            string           `json:"oidc_oauth_provider_name"`
 	SoraClientEnabled                bool             `json:"sora_client_enabled"`
