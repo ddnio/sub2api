@@ -93,6 +93,11 @@ export async function startOAuthBinding(
   window.location.href = data.authorize_url
 }
 
+export async function unbindAuthProvider(provider: Exclude<UserAuthProvider, 'email'>): Promise<UserProfile> {
+  const { data } = await apiClient.delete<UserProfile>(`/user/account-bindings/${provider}`)
+  return data
+}
+
 export const userAPI = {
   getProfile,
   updateProfile,
@@ -101,7 +106,8 @@ export const userAPI = {
   verifyNotifyEmail,
   removeNotifyEmail,
   toggleNotifyEmail,
-  startOAuthBinding
+  startOAuthBinding,
+  unbindAuthProvider
 }
 
 export default userAPI

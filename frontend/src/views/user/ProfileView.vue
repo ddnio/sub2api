@@ -27,6 +27,7 @@
         :linuxdo-enabled="publicSettings?.linuxdo_oauth_enabled || false"
         :oidc-enabled="publicSettings?.oidc_oauth_enabled || false"
         :oidc-provider-name="publicSettings?.oidc_oauth_provider_name || 'OIDC'"
+        @updated="handleProfileUpdated"
       />
       <ProfilePasswordForm />
       <ProfileTotpCard />

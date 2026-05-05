@@ -1126,6 +1126,7 @@ export default {
         notBound: '未绑定'
       },
       bindAction: '绑定',
+      unbindAction: '解绑',
       bindSuccess: '登录方式绑定成功'
     }
   },

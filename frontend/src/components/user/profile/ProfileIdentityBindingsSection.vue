@@ -45,6 +45,16 @@
           >
             {{ t('profile.authBindings.bindAction', { providerName: item.label }) }}
           </button>
+          <button
+            v-if="item.canUnbind"
+            :data-testid="`profile-binding-${item.provider}-unbind`"
+            type="button"
+            class="btn btn-secondary btn-sm"
+            :disabled="unbindingProvider === item.provider"
+            @click="handleUnbind(item.provider)"
+          >
+            {{ t('profile.authBindings.unbindAction', { providerName: item.label }) }}
+          </button>
         </div>
       </div>
     </div>
@@ -52,10 +62,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { startOAuthBinding } from '@/api/user'
+import { startOAuthBinding, unbindAuthProvider } from '@/api/user'
 import type { User, UserAuthBindingStatus, UserAuthProvider, UserProfile } from '@/types'
 
 const props = withDefaults(
@@ -74,6 +84,11 @@ const props = withDefaults(
 
 const { t } = useI18n()
 const route = useRoute()
+const unbindingProvider = ref<UserAuthProvider | null>(null)
+
+const emit = defineEmits<{
+  updated: [user: UserProfile]
+}>()
 
 function getStatus(provider: UserAuthProvider): UserAuthBindingStatus | undefined {
   return props.user?.identities?.[provider]
@@ -89,6 +104,7 @@ const providerItems = computed(() => [
     label: t('profile.authBindings.providers.email'),
     bound: Boolean(getStatus('email')?.bound || props.user?.email),
     canBind: false,
+    canUnbind: false,
     hint: providerHint(getStatus('email')) || props.user?.email || '',
   },
   {
@@ -96,6 +112,7 @@ const providerItems = computed(() => [
     label: t('profile.authBindings.providers.linuxdo'),
     bound: Boolean(getStatus('linuxdo')?.bound),
     canBind: props.linuxdoEnabled && Boolean(getStatus('linuxdo')?.can_bind),
+    canUnbind: Boolean(getStatus('linuxdo')?.can_unbind),
     hint: providerHint(getStatus('linuxdo')),
   },
   {
@@ -103,6 +120,7 @@ const providerItems = computed(() => [
     label: t('profile.authBindings.providers.oidc', { providerName: props.oidcProviderName }),
     bound: Boolean(getStatus('oidc')?.bound),
     canBind: props.oidcEnabled && Boolean(getStatus('oidc')?.can_bind),
+    canUnbind: Boolean(getStatus('oidc')?.can_unbind),
     hint: providerHint(getStatus('oidc')),
   },
 ])
@@ -112,5 +130,18 @@ function handleBind(provider: UserAuthProvider): void {
     return
   }
   void startOAuthBinding(provider, route.fullPath || '/profile')
+}
+
+async function handleUnbind(provider: UserAuthProvider): Promise<void> {
+  if (provider === 'email') {
+    return
+  }
+  unbindingProvider.value = provider
+  try {
+    const updated = await unbindAuthProvider(provider)
+    emit('updated', updated)
+  } finally {
+    unbindingProvider.value = null
+  }
 }
 </script>

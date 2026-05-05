@@ -1122,6 +1122,7 @@ export default {
         notBound: 'Not bound'
       },
       bindAction: 'Bind',
+      unbindAction: 'Unbind',
       bindSuccess: 'Sign-in method bound successfully'
     }
   },

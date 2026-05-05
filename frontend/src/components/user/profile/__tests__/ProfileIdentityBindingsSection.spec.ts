@@ -11,8 +11,17 @@ const locationState = vi.hoisted(() => ({
   current: { href: 'http://localhost/profile' } as { href: string },
 }))
 
+const apiState = vi.hoisted(() => ({
+  unbindAuthProvider: vi.fn(),
+}))
+
 vi.mock('vue-router', () => ({
   useRoute: () => routeState,
+}))
+
+vi.mock('@/api/user', () => ({
+  startOAuthBinding: vi.fn(),
+  unbindAuthProvider: apiState.unbindAuthProvider,
 }))
 
 vi.mock('vue-i18n', async (importOriginal) => {
@@ -30,6 +39,7 @@ vi.mock('vue-i18n', async (importOriginal) => {
         if (key === 'profile.authBindings.providers.wechat') return 'WeChat'
         if (key === 'profile.authBindings.providers.oidc') return params?.providerName || 'OIDC'
         if (key === 'profile.authBindings.bindAction') return `Bind ${params?.providerName || ''}`.trim()
+        if (key === 'profile.authBindings.unbindAction') return `Unbind ${params?.providerName || ''}`.trim()
         return key
       },
     }),
@@ -57,6 +67,7 @@ function createUser(overrides: Partial<User> = {}): User {
 
 describe('ProfileIdentityBindingsSection', () => {
   beforeEach(() => {
+    apiState.unbindAuthProvider.mockReset()
     routeState.fullPath = '/profile'
     locationState.current = { href: 'http://localhost/profile' }
     Object.defineProperty(window, 'location', {
@@ -108,5 +119,32 @@ describe('ProfileIdentityBindingsSection', () => {
     })
 
     expect(wrapper.find('[data-testid="profile-binding-wechat-action"]').exists()).toBe(false)
+  })
+
+  it('emits updated profile after unbinding a provider', async () => {
+    const updated = createUser({
+      identities: {
+        email: { provider: 'email', bound: true },
+        linuxdo: { provider: 'linuxdo', bound: false, can_bind: true },
+      },
+    })
+    apiState.unbindAuthProvider.mockResolvedValueOnce(updated)
+
+    const wrapper = mount(ProfileIdentityBindingsSection, {
+      props: {
+        user: createUser({
+          identities: {
+            email: { provider: 'email', bound: true },
+            linuxdo: { provider: 'linuxdo', bound: true, can_unbind: true },
+          },
+        }),
+        linuxdoEnabled: true,
+      },
+    })
+
+    await wrapper.get('[data-testid="profile-binding-linuxdo-unbind"]').trigger('click')
+
+    expect(apiState.unbindAuthProvider).toHaveBeenCalledWith('linuxdo')
+    expect(wrapper.emitted('updated')?.[0]).toEqual([updated])
   })
 })
