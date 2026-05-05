@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"os"
 	"slices"
 	"sort"
 	"strconv"
@@ -283,6 +284,8 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		balanceLowNotifyThreshold = v
 	}
 
+	weChatOAuth := weChatOAuthEnabledFromEnv()
+
 	return &PublicSettings{
 		RegistrationEnabled:              settings[SettingKeyRegistrationEnabled] == "true",
 		EmailVerifyEnabled:               emailVerifyEnabled,
@@ -310,6 +313,9 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		CustomMenuItems:                  settings[SettingKeyCustomMenuItems],
 		CustomEndpoints:                  settings[SettingKeyCustomEndpoints],
 		LinuxDoOAuthEnabled:              linuxDoEnabled,
+		WeChatOAuthEnabled:               weChatOAuth.Enabled,
+		WeChatOAuthOpenEnabled:           weChatOAuth.OpenEnabled,
+		WeChatOAuthMPEnabled:             weChatOAuth.MPEnabled,
 		BackendModeEnabled:               settings[SettingKeyBackendModeEnabled] == "true",
 		OIDCOAuthEnabled:                 oidcEnabled,
 		OIDCOAuthProviderName:            oidcProviderName,
@@ -366,6 +372,9 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		CustomMenuItems                  json.RawMessage  `json:"custom_menu_items"`
 		CustomEndpoints                  json.RawMessage  `json:"custom_endpoints"`
 		LinuxDoOAuthEnabled              bool             `json:"linuxdo_oauth_enabled"`
+		WeChatOAuthEnabled               bool             `json:"wechat_oauth_enabled"`
+		WeChatOAuthOpenEnabled           bool             `json:"wechat_oauth_open_enabled"`
+		WeChatOAuthMPEnabled             bool             `json:"wechat_oauth_mp_enabled"`
 		BackendModeEnabled               bool             `json:"backend_mode_enabled"`
 		ReferralEnabled                  bool             `json:"referral_enabled"`
 		OIDCOAuthEnabled                 bool             `json:"oidc_oauth_enabled"`
@@ -397,6 +406,9 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		CustomMenuItems:                  filterUserVisibleMenuItems(settings.CustomMenuItems),
 		CustomEndpoints:                  safeRawJSONArray(settings.CustomEndpoints),
 		LinuxDoOAuthEnabled:              settings.LinuxDoOAuthEnabled,
+		WeChatOAuthEnabled:               settings.WeChatOAuthEnabled,
+		WeChatOAuthOpenEnabled:           settings.WeChatOAuthOpenEnabled,
+		WeChatOAuthMPEnabled:             settings.WeChatOAuthMPEnabled,
 		BackendModeEnabled:               settings.BackendModeEnabled,
 		ReferralEnabled:                  settings.ReferralEnabled,
 		OIDCOAuthEnabled:                 settings.OIDCOAuthEnabled,
@@ -2550,4 +2562,23 @@ func (s *SettingService) SetStreamTimeoutSettings(ctx context.Context, settings 
 	}
 
 	return s.settingRepo.Set(ctx, SettingKeyStreamTimeoutSettings, string(data))
+}
+
+type weChatOAuthEnvStatus struct {
+	Enabled     bool
+	OpenEnabled bool
+	MPEnabled   bool
+}
+
+func weChatOAuthEnabledFromEnv() weChatOAuthEnvStatus {
+	openAppID := strings.TrimSpace(os.Getenv("WECHAT_OAUTH_OPEN_APP_ID"))
+	openSecret := strings.TrimSpace(os.Getenv("WECHAT_OAUTH_OPEN_APP_SECRET"))
+	mpAppID := strings.TrimSpace(os.Getenv("WECHAT_OAUTH_MP_APP_ID"))
+	mpSecret := strings.TrimSpace(os.Getenv("WECHAT_OAUTH_MP_APP_SECRET"))
+	status := weChatOAuthEnvStatus{
+		OpenEnabled: openAppID != "" && openSecret != "",
+		MPEnabled:   mpAppID != "" && mpSecret != "",
+	}
+	status.Enabled = status.OpenEnabled || status.MPEnabled
+	return status
 }

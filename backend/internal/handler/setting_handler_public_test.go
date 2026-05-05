@@ -81,3 +81,33 @@ func TestSettingHandler_GetPublicSettings_ExposesForceEmailOnThirdPartySignup(t 
 	require.Equal(t, 0, resp.Code)
 	require.True(t, resp.Data.ForceEmailOnThirdPartySignup)
 }
+
+func TestSettingHandler_GetPublicSettings_ExposesWeChatOAuthEnabled(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	t.Setenv("WECHAT_OAUTH_MP_APP_ID", "mp-app")
+	t.Setenv("WECHAT_OAUTH_MP_APP_SECRET", "mp-secret")
+
+	h := NewSettingHandler(service.NewSettingService(&settingHandlerPublicRepoStub{values: map[string]string{}}, &config.Config{}), "test-version")
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/settings/public", nil)
+
+	h.GetPublicSettings(c)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+
+	var resp struct {
+		Code int `json:"code"`
+		Data struct {
+			WeChatOAuthEnabled     bool `json:"wechat_oauth_enabled"`
+			WeChatOAuthOpenEnabled bool `json:"wechat_oauth_open_enabled"`
+			WeChatOAuthMPEnabled   bool `json:"wechat_oauth_mp_enabled"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &resp))
+	require.Equal(t, 0, resp.Code)
+	require.True(t, resp.Data.WeChatOAuthEnabled)
+	require.False(t, resp.Data.WeChatOAuthOpenEnabled)
+	require.True(t, resp.Data.WeChatOAuthMPEnabled)
+}

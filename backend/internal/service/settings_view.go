@@ -159,12 +159,15 @@ type PublicSettings struct {
 	CustomMenuItems             string // JSON array of custom menu items
 	CustomEndpoints             string // JSON array of custom endpoints
 
-	LinuxDoOAuthEnabled   bool
-	BackendModeEnabled    bool
-	ReferralEnabled       bool
-	OIDCOAuthEnabled      bool
-	OIDCOAuthProviderName string
-	Version               string
+	LinuxDoOAuthEnabled    bool
+	WeChatOAuthEnabled     bool
+	WeChatOAuthOpenEnabled bool
+	WeChatOAuthMPEnabled   bool
+	BackendModeEnabled     bool
+	ReferralEnabled        bool
+	OIDCOAuthEnabled       bool
+	OIDCOAuthProviderName  string
+	Version                string
 
 	// 悬浮联系按钮：仅 enabled 渠道，按 priority 升序
 	ContactChannels []ContactChannel

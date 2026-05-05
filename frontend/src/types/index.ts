@@ -190,6 +190,9 @@ export interface PublicSettings {
   custom_menu_items: CustomMenuItem[]
   custom_endpoints: CustomEndpoint[]
   linuxdo_oauth_enabled: boolean
+  wechat_oauth_enabled: boolean
+  wechat_oauth_open_enabled: boolean
+  wechat_oauth_mp_enabled: boolean
   oidc_oauth_enabled: boolean
   oidc_oauth_provider_name: string
   sora_client_enabled: boolean

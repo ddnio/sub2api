@@ -125,15 +125,6 @@
           </div>
         </div>
       </div>
-
-      <ProfileIdentityBindingsSection
-        class="mt-4"
-        :user="user"
-        :linuxdo-enabled="linuxdoEnabled"
-        :oidc-enabled="oidcEnabled"
-        :oidc-provider-name="oidcProviderName"
-        :wechat-enabled="wechatEnabled"
-      />
     </div>
   </div>
 </template>
@@ -143,7 +134,6 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { userAPI } from '@/api'
 import Icon from '@/components/icons/Icon.vue'
-import ProfileIdentityBindingsSection from '@/components/user/profile/ProfileIdentityBindingsSection.vue'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import type { User, UserAuthProvider, UserProfile, UserProfileSourceContext } from '@/types'
@@ -152,17 +142,8 @@ import { extractApiErrorMessage } from '@/utils/apiError'
 const props = withDefaults(
   defineProps<{
     user: UserProfile | User | null
-    linuxdoEnabled?: boolean
-    oidcEnabled?: boolean
-    oidcProviderName?: string
-    wechatEnabled?: boolean
   }>(),
-  {
-    linuxdoEnabled: false,
-    oidcEnabled: false,
-    oidcProviderName: 'OIDC',
-    wechatEnabled: false,
-  }
+  {}
 )
 
 const { t } = useI18n()
@@ -179,7 +160,7 @@ const avatarSaving = ref(false)
 const providerLabels = computed<Record<UserAuthProvider, string>>(() => ({
   email: t('profile.authBindings.providers.email'),
   linuxdo: t('profile.authBindings.providers.linuxdo'),
-  oidc: t('profile.authBindings.providers.oidc', { providerName: props.oidcProviderName }),
+  oidc: t('profile.authBindings.providers.oidc', { providerName: 'OIDC' }),
   wechat: t('profile.authBindings.providers.wechat'),
 }))
 

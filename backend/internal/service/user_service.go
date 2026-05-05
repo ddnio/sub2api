@@ -23,6 +23,7 @@ import (
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	xdraw "golang.org/x/image/draw"
+	_ "golang.org/x/image/webp"
 )
 
 var (
@@ -526,6 +527,10 @@ func normalizeInlineUserAvatarInput(raw string) (UpsertUserAvatarInput, error) {
 	if len(decoded) > maxInlineAvatarBytes {
 		return UpsertUserAvatarInput{}, ErrAvatarTooLarge
 	}
+	if detected := detectInlineAvatarContentType(decoded); detected != "" {
+		contentType = detected
+		raw = "data:" + contentType + ";base64," + base64.StdEncoding.EncodeToString(decoded)
+	}
 
 	if len(decoded) > targetAvatarBytes {
 		decoded, contentType, err = compressInlineAvatar(decoded)
@@ -548,6 +553,7 @@ func normalizeInlineUserAvatarInput(raw string) (UpsertUserAvatarInput, error) {
 func compressInlineAvatar(decoded []byte) ([]byte, string, error) {
 	src, _, err := image.Decode(bytes.NewReader(decoded))
 	if err != nil {
+		slog.Warn("avatar_decode_failed", "error", err)
 		return nil, "", ErrAvatarInvalid
 	}
 
@@ -575,6 +581,22 @@ func compressInlineAvatar(decoded []byte) ([]byte, string, error) {
 	}
 
 	return nil, "", ErrAvatarTooLarge
+}
+
+func detectInlineAvatarContentType(decoded []byte) string {
+	if len(decoded) >= 8 && bytes.Equal(decoded[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}) {
+		return "image/png"
+	}
+	if len(decoded) >= 3 && bytes.Equal(decoded[:3], []byte{0xff, 0xd8, 0xff}) {
+		return "image/jpeg"
+	}
+	if len(decoded) >= 6 && (bytes.Equal(decoded[:6], []byte("GIF87a")) || bytes.Equal(decoded[:6], []byte("GIF89a"))) {
+		return "image/gif"
+	}
+	if len(decoded) >= 12 && bytes.Equal(decoded[:4], []byte("RIFF")) && bytes.Equal(decoded[8:12], []byte("WEBP")) {
+		return "image/webp"
+	}
+	return ""
 }
 
 func buildEmailIdentitySummary(user *User, records ...[]UserAuthIdentityRecord) UserIdentitySummary {

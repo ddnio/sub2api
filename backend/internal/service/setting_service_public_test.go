@@ -90,3 +90,16 @@ func TestSettingService_GetPublicSettings_ExposesForceEmailOnThirdPartySignup(t 
 	require.NoError(t, err)
 	require.True(t, settings.ForceEmailOnThirdPartySignup)
 }
+
+func TestSettingService_GetPublicSettings_ExposesWeChatOAuthEnabledFromEnv(t *testing.T) {
+	t.Setenv("WECHAT_OAUTH_OPEN_APP_ID", "open-app")
+	t.Setenv("WECHAT_OAUTH_OPEN_APP_SECRET", "open-secret")
+
+	svc := NewSettingService(&settingPublicRepoStub{values: map[string]string{}}, &config.Config{})
+
+	settings, err := svc.GetPublicSettings(context.Background())
+	require.NoError(t, err)
+	require.True(t, settings.WeChatOAuthEnabled)
+	require.True(t, settings.WeChatOAuthOpenEnabled)
+	require.False(t, settings.WeChatOAuthMPEnabled)
+}

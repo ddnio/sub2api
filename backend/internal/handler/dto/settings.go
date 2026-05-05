@@ -184,6 +184,9 @@ type PublicSettings struct {
 	CustomMenuItems                  []CustomMenuItem `json:"custom_menu_items"`
 	CustomEndpoints                  []CustomEndpoint `json:"custom_endpoints"`
 	LinuxDoOAuthEnabled              bool             `json:"linuxdo_oauth_enabled"`
+	WeChatOAuthEnabled               bool             `json:"wechat_oauth_enabled"`
+	WeChatOAuthOpenEnabled           bool             `json:"wechat_oauth_open_enabled"`
+	WeChatOAuthMPEnabled             bool             `json:"wechat_oauth_mp_enabled"`
 	OIDCOAuthEnabled                 bool             `json:"oidc_oauth_enabled"`
 	OIDCOAuthProviderName            string           `json:"oidc_oauth_provider_name"`
 	SoraClientEnabled                bool             `json:"sora_client_enabled"`

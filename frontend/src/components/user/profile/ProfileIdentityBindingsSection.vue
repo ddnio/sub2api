@@ -72,11 +72,13 @@ const props = withDefaults(
   defineProps<{
     user: UserProfile | User | null
     linuxdoEnabled?: boolean
+    wechatEnabled?: boolean
     oidcEnabled?: boolean
     oidcProviderName?: string
   }>(),
   {
     linuxdoEnabled: false,
+    wechatEnabled: false,
     oidcEnabled: false,
     oidcProviderName: 'OIDC',
   }
@@ -116,6 +118,14 @@ const providerItems = computed(() => [
     hint: providerHint(getStatus('linuxdo')),
   },
   {
+    provider: 'wechat' as const,
+    label: t('profile.authBindings.providers.wechat'),
+    bound: Boolean(getStatus('wechat')?.bound),
+    canBind: props.wechatEnabled && Boolean(getStatus('wechat')?.can_bind),
+    canUnbind: Boolean(getStatus('wechat')?.can_unbind),
+    hint: providerHint(getStatus('wechat')),
+  },
+  {
     provider: 'oidc' as const,
     label: t('profile.authBindings.providers.oidc', { providerName: props.oidcProviderName }),
     bound: Boolean(getStatus('oidc')?.bound),
@@ -126,7 +136,7 @@ const providerItems = computed(() => [
 ])
 
 function handleBind(provider: UserAuthProvider): void {
-  if (provider === 'email' || provider === 'wechat') {
+  if (provider === 'email') {
     return
   }
   void startOAuthBinding(provider, route.fullPath || '/profile')

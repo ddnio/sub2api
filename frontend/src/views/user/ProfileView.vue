@@ -25,6 +25,7 @@
       <ProfileIdentityBindingsSection
         :user="profileUser"
         :linuxdo-enabled="publicSettings?.linuxdo_oauth_enabled || false"
+        :wechat-enabled="wechatOAuthEnabledForCurrentBrowser"
         :oidc-enabled="publicSettings?.oidc_oauth_enabled || false"
         :oidc-provider-name="publicSettings?.oidc_oauth_provider_name || 'OIDC'"
         @updated="handleProfileUpdated"
@@ -53,6 +54,14 @@ const { t } = useI18n(); const authStore = useAuthStore(); const user = computed
 const contactInfo = ref('')
 const publicSettings = ref<PublicSettings | null>(null)
 const profileUser = ref<UserProfile | null>(null)
+const isWeChatBrowser = computed(() => /MicroMessenger/i.test(navigator.userAgent))
+const wechatOAuthEnabledForCurrentBrowser = computed(() => {
+  const settings = publicSettings.value
+  if (!settings?.wechat_oauth_enabled) return false
+  return isWeChatBrowser.value
+    ? settings.wechat_oauth_mp_enabled
+    : settings.wechat_oauth_open_enabled
+})
 
 const WalletIcon = { render: () => h('svg', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' }, [h('path', { d: 'M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12' })]) }
 const BoltIcon = { render: () => h('svg', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' }, [h('path', { d: 'm3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z' })]) }

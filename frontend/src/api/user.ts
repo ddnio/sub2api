@@ -68,7 +68,7 @@ export async function toggleNotifyEmail(email: string, disabled: boolean): Promi
   return data
 }
 
-export type BindableOAuthProvider = Exclude<UserAuthProvider, 'email' | 'wechat'>
+export type BindableOAuthProvider = Exclude<UserAuthProvider, 'email'>
 
 export interface StartOAuthBindingResponse {
   provider: BindableOAuthProvider
@@ -86,6 +86,15 @@ export async function startOAuthBinding(
   }
 
   prepareOAuthBindAccessTokenCookie()
+  if (provider === 'wechat') {
+    const params = new URLSearchParams({
+      wechat_bind_existing: '1',
+      redirect: redirectTo,
+    })
+    window.location.href = `/auth/wechat/callback?${params.toString()}`
+    return
+  }
+
   const { data } = await apiClient.post<StartOAuthBindingResponse>('/user/auth-identities/bind/start', {
     provider,
     redirect_to: redirectTo,

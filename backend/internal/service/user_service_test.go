@@ -466,6 +466,32 @@ func TestUpdateProfile_CompressesInlineAvatarToTwentyKilobytes(t *testing.T) {
 	require.NotEmpty(t, updated.AvatarSHA256)
 }
 
+func TestUpdateProfile_NormalizesInlineAvatarMIMEFromContent(t *testing.T) {
+	var encoded bytes.Buffer
+	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
+	require.NoError(t, png.Encode(&encoded, img))
+
+	dataURL := "data:image/webp;base64," + base64.StdEncoding.EncodeToString(encoded.Bytes())
+	repo := &mockUserRepo{
+		getByIDUser: &User{
+			ID:       28,
+			Email:    "avatar-mime@example.com",
+			Username: "avatar-mime",
+		},
+	}
+	svc := NewUserService(repo, nil, nil)
+
+	updated, err := svc.UpdateProfile(context.Background(), 28, UpdateProfileRequest{
+		AvatarURL: &dataURL,
+	})
+	require.NoError(t, err)
+	require.Len(t, repo.upsertAvatarArgs, 1)
+	require.Equal(t, "image/png", repo.upsertAvatarArgs[0].ContentType)
+	require.Contains(t, repo.upsertAvatarArgs[0].URL, "data:image/png;base64,")
+	require.Equal(t, "image/png", updated.AvatarMIME)
+	require.Contains(t, updated.AvatarURL, "data:image/png;base64,")
+}
+
 func TestUpdateProfile_RejectsInlineAvatarOverLimit(t *testing.T) {
 	raw := make([]byte, maxInlineAvatarBytes+1)
 	dataURL := "data:image/png;base64," + base64.StdEncoding.EncodeToString(raw)

@@ -12,6 +12,7 @@ const locationState = vi.hoisted(() => ({
 }))
 
 const apiState = vi.hoisted(() => ({
+  startOAuthBinding: vi.fn(),
   unbindAuthProvider: vi.fn(),
 }))
 
@@ -20,7 +21,7 @@ vi.mock('vue-router', () => ({
 }))
 
 vi.mock('@/api/user', () => ({
-  startOAuthBinding: vi.fn(),
+  startOAuthBinding: apiState.startOAuthBinding,
   unbindAuthProvider: apiState.unbindAuthProvider,
 }))
 
@@ -67,6 +68,7 @@ function createUser(overrides: Partial<User> = {}): User {
 
 describe('ProfileIdentityBindingsSection', () => {
   beforeEach(() => {
+    apiState.startOAuthBinding.mockReset()
     apiState.unbindAuthProvider.mockReset()
     routeState.fullPath = '/profile'
     locationState.current = { href: 'http://localhost/profile' }
@@ -119,6 +121,24 @@ describe('ProfileIdentityBindingsSection', () => {
     })
 
     expect(wrapper.find('[data-testid="profile-binding-wechat-action"]').exists()).toBe(false)
+  })
+
+  it('exposes WeChat binding when enabled and starts the WeChat bind flow', async () => {
+    const wrapper = mount(ProfileIdentityBindingsSection, {
+      props: {
+        user: createUser({
+          identities: {
+            email: { bound: true },
+            wechat: { bound: false, can_bind: true },
+          },
+        }),
+        wechatEnabled: true,
+      },
+    })
+
+    await wrapper.get('[data-testid="profile-binding-wechat-action"]').trigger('click')
+
+    expect(apiState.startOAuthBinding).toHaveBeenCalledWith('wechat', '/profile')
   })
 
   it('emits updated profile after unbinding a provider', async () => {

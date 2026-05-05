@@ -296,4 +296,21 @@ describe('ProfileInfoCard', () => {
     expect(wrapper.text()).toContain('Avatar synced from LinuxDo')
     expect(wrapper.text()).toContain('Username synced from LinuxDo')
   })
+
+  it('does not render the auth bindings section inside the profile info card', () => {
+    authStoreState.user = createUser()
+
+    const wrapper = mount(ProfileInfoCard, {
+      props: {
+        user: authStoreState.user
+      },
+      global: {
+        stubs: {
+          Icon: true
+        }
+      }
+    })
+
+    expect(wrapper.findComponent({ name: 'ProfileIdentityBindingsSection' }).exists()).toBe(false)
+  })
 })
