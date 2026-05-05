@@ -1013,7 +1013,7 @@ func (h *AuthHandler) getWeChatOAuthConfig(ctx context.Context, rawMode string, 
 	if err != nil {
 		return wechatOAuthConfig{}, err
 	}
-	if effective.Mode != mode {
+	if !effective.SupportsMode(mode) {
 		return wechatOAuthConfig{}, infraerrors.NotFound("OAUTH_DISABLED", "wechat oauth is disabled")
 	}
 
@@ -1023,7 +1023,7 @@ func (h *AuthHandler) getWeChatOAuthConfig(ctx context.Context, rawMode string, 
 		appSecret:        strings.TrimSpace(effective.AppSecretForMode(mode)),
 		redirectURI:      firstNonEmpty(strings.TrimSpace(effective.RedirectURL), resolveWeChatOAuthAbsoluteURL(apiBaseURL, c, "/api/v1/auth/oauth/wechat/callback")),
 		frontendCallback: firstNonEmpty(strings.TrimSpace(effective.FrontendRedirectURL), wechatOAuthDefaultFrontendCB),
-		scope:            firstNonEmpty(strings.TrimSpace(effective.Scopes), service.DefaultWeChatConnectScopesForMode(mode)),
+		scope:            firstNonEmpty(strings.TrimSpace(effective.ScopeForMode(mode)), service.DefaultWeChatConnectScopesForMode(mode)),
 	}
 
 	switch mode {

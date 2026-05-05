@@ -29,8 +29,20 @@ vi.mock('vue-i18n', async () => {
         if (key === 'auth.oidc.signIn') {
           return `Continue with ${params?.providerName ?? ''}`.trim()
         }
+        if (key === 'auth.wechatProviderName') {
+          return 'WeChat'
+        }
         if (key === 'auth.oauthOrContinue') {
           return 'or continue'
+        }
+        if (key === 'auth.oauthFlow.wechatSystemBrowserOnly') {
+          return 'This site only has WeChat website login configured. Open this page in your browser to continue.'
+        }
+        if (key === 'auth.oauthFlow.wechatBrowserOnly') {
+          return 'Open this page inside WeChat to continue.'
+        }
+        if (key === 'auth.oauthFlow.wechatNotConfigured') {
+          return 'WeChat login is not configured.'
         }
         return key
       },

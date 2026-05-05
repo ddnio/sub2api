@@ -1977,6 +1977,103 @@
             </div>
           </div>
         </div>
+
+        <div class="card">
+          <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+              {{ localText('登录来源默认授权', 'Auth Source Defaults') }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {{ localText('为不同登录来源设置注册或首次绑定后的默认余额、并发和订阅授权。邀请码和推荐关系仍按当前 fork 逻辑保留。', 'Configure default grants after signup or first binding for each auth source. Invitation and referral data stay on the fork flow.') }}
+            </p>
+          </div>
+          <div class="space-y-6 p-6">
+            <div class="flex items-center justify-between rounded border border-gray-200 px-4 py-3 dark:border-dark-700">
+              <div>
+                <label class="font-medium text-gray-900 dark:text-white">
+                  {{ localText('第三方注册强制补邮箱', 'Require email for third-party signup') }}
+                </label>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  {{ localText('开启后，第三方登录注册流程需要补齐邮箱。', 'Require users signing up through third-party providers to complete an email address.') }}
+                </p>
+              </div>
+              <Toggle v-model="form.force_email_on_third_party_signup" />
+            </div>
+
+            <div class="space-y-4">
+              <div
+                v-for="authSource in authSourceDefaultsMeta"
+                :key="authSource.source"
+                class="rounded-xl border border-gray-200 p-4 dark:border-dark-700"
+              >
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <div class="font-medium text-gray-900 dark:text-white">
+                      {{ authSource.title }}
+                    </div>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      {{ authSource.description }}
+                    </p>
+                  </div>
+                  <Toggle
+                    v-model="authSourceDefaults[authSource.source].grant_on_signup"
+                    :data-testid="`auth-source-${authSource.source}-enabled`"
+                  />
+                </div>
+
+                <div
+                  v-if="authSourceDefaults[authSource.source].grant_on_signup"
+                  :data-testid="`auth-source-${authSource.source}-panel`"
+                  class="mt-4 space-y-4 border-t border-gray-100 pt-4 dark:border-dark-700"
+                >
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ localText('注册即授权。下面的余额、并发和订阅会覆盖该来源的新用户默认授权。', 'Grant on signup. Balance, concurrency, and subscriptions below override defaults for new users from this source.') }}
+                  </p>
+
+                  <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {{ t('admin.settings.defaults.defaultBalance') }}
+                      </label>
+                      <input
+                        v-model.number="authSourceDefaults[authSource.source].balance"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        class="input"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {{ t('admin.settings.defaults.defaultConcurrency') }}
+                      </label>
+                      <input
+                        v-model.number="authSourceDefaults[authSource.source].concurrency"
+                        type="number"
+                        min="1"
+                        class="input"
+                        placeholder="5"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between rounded border border-gray-200 px-4 py-3 dark:border-dark-700">
+                    <div>
+                      <label class="font-medium text-gray-900 dark:text-white">
+                        {{ localText('首次绑定时授权', 'Grant on first bind') }}
+                      </label>
+                      <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        {{ localText('已有账号首次绑定该来源时也应用同一默认授权。', 'Apply the same default grant when an existing account first binds this provider.') }}
+                      </p>
+                    </div>
+                    <Toggle v-model="authSourceDefaults[authSource.source].grant_on_first_bind" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         </div><!-- /Tab: Users -->
 
         <!-- Tab: Gateway — Claude Code, Scheduling -->
@@ -3397,15 +3494,20 @@ import { useI18n } from 'vue-i18n'
 import { useDebounceFn } from '@vueuse/core'
 import { adminAPI } from '@/api'
 import {
+  appendAuthSourceDefaultsToUpdateRequest,
+  buildAuthSourceDefaultsState,
   defaultWeChatConnectScopesForMode,
   deriveWeChatConnectStoredMode,
   getPaymentVisibleMethodSourceOptions,
+  normalizeDefaultSubscriptionSettings,
   normalizePaymentVisibleMethodSource,
   resolveWeChatConnectModeCapabilities
 } from '@/api/admin/settings'
 import type {
   SystemSettings,
   UpdateSettingsRequest,
+  AuthSourceDefaultsState,
+  AuthSourceType,
   DefaultSubscriptionSetting,
   PaymentVisibleMethod,
   WeChatConnectMode,
@@ -3582,6 +3684,7 @@ const form = reactive<SettingsForm>({
   default_balance: 0,
   default_concurrency: 1,
   default_subscriptions: [],
+  force_email_on_third_party_signup: false,
   site_name: 'Sub2API',
   site_logo: '',
   site_subtitle: 'AI API Gateway for Developers',
@@ -3716,6 +3819,33 @@ const form = reactive<SettingsForm>({
   payment_visible_method_wxpay_enabled: true,
   openai_advanced_scheduler_enabled: false
 })
+
+const authSourceDefaults = reactive<AuthSourceDefaultsState>(
+  buildAuthSourceDefaultsState({})
+)
+
+const authSourceDefaultsMeta = computed(() => [
+  {
+    source: 'email' as AuthSourceType,
+    title: localText('邮箱注册', 'Email'),
+    description: localText('控制邮箱注册用户的来源专属默认授权。', 'Provider defaults for email signups.'),
+  },
+  {
+    source: 'linuxdo' as AuthSourceType,
+    title: 'LinuxDo',
+    description: localText('控制 LinuxDo 登录或绑定后的默认授权。', 'Provider defaults for LinuxDo login or binding.'),
+  },
+  {
+    source: 'oidc' as AuthSourceType,
+    title: form.oidc_connect_provider_name || 'OIDC',
+    description: localText('控制 OIDC 登录或绑定后的默认授权。', 'Provider defaults for OIDC login or binding.'),
+  },
+  {
+    source: 'wechat' as AuthSourceType,
+    title: localText('微信', 'WeChat'),
+    description: localText('控制微信登录或绑定后的默认授权。', 'Provider defaults for WeChat login or binding.'),
+  },
+])
 
 const DEFAULT_WEB_SEARCH_QUOTA_LIMIT = 1000
 
@@ -4202,6 +4332,7 @@ async function loadSettings() {
     form.wechat_connect_open_enabled = wechatCapabilities.openEnabled
     form.wechat_connect_mp_enabled = wechatCapabilities.mpEnabled
     form.wechat_connect_mobile_enabled = wechatCapabilities.mobileEnabled
+    Object.assign(authSourceDefaults, buildAuthSourceDefaultsState(settings))
     form.wechat_connect_mode = deriveWeChatConnectStoredMode(
       wechatCapabilities.openEnabled,
       wechatCapabilities.mpEnabled,
@@ -4332,6 +4463,18 @@ async function saveSettings() {
         })
       )
       return
+    }
+
+    for (const authSource of authSourceDefaultsMeta.value) {
+      authSourceDefaults[authSource.source].subscriptions = normalizeDefaultSubscriptionSettings(
+        authSourceDefaults[authSource.source].subscriptions
+      )
+      authSourceDefaults[authSource.source].concurrency = Math.max(
+        1,
+        Math.floor(Number(authSourceDefaults[authSource.source].concurrency) || 5)
+      )
+      authSourceDefaults[authSource.source].balance =
+        Number(authSourceDefaults[authSource.source].balance) || 0
     }
 
     if (form.wechat_connect_mp_enabled && form.wechat_connect_mobile_enabled) {
@@ -4489,8 +4632,10 @@ async function saveSettings() {
       enable_metadata_passthrough: form.enable_metadata_passthrough,
       enable_cch_signing: form.enable_cch_signing
     }
+    appendAuthSourceDefaultsToUpdateRequest(payload, authSourceDefaults)
     const updated = await adminAPI.settings.updateSettings(payload)
     Object.assign(form, updated)
+    Object.assign(authSourceDefaults, buildAuthSourceDefaultsState(updated))
     registrationEmailSuffixWhitelistTags.value = normalizeRegistrationEmailSuffixDomains(
       updated.registration_email_suffix_whitelist
     )

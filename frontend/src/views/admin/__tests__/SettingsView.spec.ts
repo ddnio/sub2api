@@ -16,7 +16,11 @@ const {
   getBetaPolicySettings,
   getGroups,
   listProxies,
+  getAllProxies,
   getProviders,
+  listProviders,
+  getPaymentConfig,
+  updatePaymentConfig,
   fetchPublicSettings,
   adminSettingsFetch,
   showError,
@@ -33,7 +37,11 @@ const {
   getBetaPolicySettings: vi.fn(),
   getGroups: vi.fn(),
   listProxies: vi.fn(),
+  getAllProxies: vi.fn(),
   getProviders: vi.fn(),
+  listProviders: vi.fn(),
+  getPaymentConfig: vi.fn(),
+  updatePaymentConfig: vi.fn(),
   fetchPublicSettings: vi.fn(),
   adminSettingsFetch: vi.fn(),
   showError: vi.fn(),
@@ -58,9 +66,13 @@ vi.mock("@/api", () => ({
     },
     proxies: {
       list: listProxies,
+      getAll: getAllProxies,
     },
     payment: {
       getProviders,
+      listProviders,
+      getPaymentConfig,
+      updatePaymentConfig,
     },
   },
 }));
@@ -89,6 +101,7 @@ vi.mock("@/composables/useClipboard", () => ({
 
 vi.mock("@/utils/apiError", () => ({
   extractApiErrorMessage: () => "error",
+  extractI18nErrorMessage: () => "error",
 }));
 
 vi.mock("vue-i18n", async () => {
@@ -297,6 +310,27 @@ const baseSettingsResponse = {
   account_quota_notify_emails: [],
 };
 
+const basePaymentConfigResponse = {
+  enabled: true,
+  min_amount: 1,
+  max_amount: 10000,
+  daily_limit: 50000,
+  order_timeout_minutes: 30,
+  max_pending_orders: 3,
+  enabled_payment_types: [],
+  balance_disabled: false,
+  balance_recharge_multiplier: 1,
+  load_balance_strategy: "round-robin",
+  product_name_prefix: "",
+  product_name_suffix: "",
+  help_image_url: "",
+  help_text: "",
+  payment_visible_method_alipay_source: "alipay_direct",
+  payment_visible_method_wxpay_source: "invalid-source",
+  payment_visible_method_alipay_enabled: true,
+  payment_visible_method_wxpay_enabled: true,
+};
+
 function mountView() {
   return mount(SettingsView, {
     global: {
@@ -361,7 +395,11 @@ describe("admin SettingsView payment visible method controls", () => {
     getBetaPolicySettings.mockReset();
     getGroups.mockReset();
     listProxies.mockReset();
+    getAllProxies.mockReset();
     getProviders.mockReset();
+    listProviders.mockReset();
+    getPaymentConfig.mockReset();
+    updatePaymentConfig.mockReset();
     fetchPublicSettings.mockReset();
     adminSettingsFetch.mockReset();
     showError.mockReset();
@@ -409,9 +447,16 @@ describe("admin SettingsView payment visible method controls", () => {
     listProxies.mockResolvedValue({
       items: [],
     });
+    getAllProxies.mockResolvedValue([]);
     getProviders.mockResolvedValue({
       data: [],
     });
+    listProviders.mockResolvedValue([]);
+    getPaymentConfig.mockResolvedValue({ ...basePaymentConfigResponse });
+    updatePaymentConfig.mockImplementation(async (payload) => ({
+      ...basePaymentConfigResponse,
+      ...payload,
+    }));
     fetchPublicSettings.mockResolvedValue(undefined);
     adminSettingsFetch.mockResolvedValue(undefined);
   });
@@ -506,7 +551,7 @@ describe("admin SettingsView payment visible method controls", () => {
     expect(updateSettings).not.toHaveBeenCalled();
     expect(showError).toHaveBeenCalled();
     expect(String(showError.mock.calls.at(-1)?.[0] ?? "")).toContain(
-      "支付来源",
+      "sourceRequiredError",
     );
   });
 
@@ -515,9 +560,9 @@ describe("admin SettingsView payment visible method controls", () => {
 
     await flushPromises();
 
-    expect(wrapper.text()).toContain("OpenAI 实验调度策略");
+    expect(wrapper.text()).toContain("admin.settings.openaiExperimentalScheduler.title");
     expect(wrapper.text()).toContain(
-      "默认关闭。开启后仅影响本网关在 OpenAI 账号间的实验性调度选择逻辑",
+      "admin.settings.openaiExperimentalScheduler.description",
     );
     expect(wrapper.text()).not.toContain("OpenAI 高级调度器");
   });

@@ -1,6 +1,8 @@
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ProfileIdentityBindingsSection from '@/components/user/profile/ProfileIdentityBindingsSection.vue'
+import { useAppStore } from '@/stores'
 import type { User } from '@/types'
 
 const routeState = vi.hoisted(() => ({
@@ -15,6 +17,8 @@ const apiState = vi.hoisted(() => ({
   startOAuthBinding: vi.fn(),
   unbindAuthProvider: vi.fn(),
 }))
+
+let pinia: ReturnType<typeof createPinia>
 
 vi.mock('vue-router', () => ({
   useRoute: () => routeState,
@@ -68,6 +72,8 @@ function createUser(overrides: Partial<User> = {}): User {
 
 describe('ProfileIdentityBindingsSection', () => {
   beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
     apiState.startOAuthBinding.mockReset()
     apiState.unbindAuthProvider.mockReset()
     routeState.fullPath = '/profile'
@@ -88,6 +94,9 @@ describe('ProfileIdentityBindingsSection', () => {
 
   it('renders provider binding states and provider-specific bind actions', () => {
     const wrapper = mount(ProfileIdentityBindingsSection, {
+      global: {
+        plugins: [pinia],
+      },
       props: {
         user: createUser({
           identities: {
@@ -116,6 +125,9 @@ describe('ProfileIdentityBindingsSection', () => {
 
   it('does not expose WeChat binding while fork WeChat OAuth is disabled', () => {
     const wrapper = mount(ProfileIdentityBindingsSection, {
+      global: {
+        plugins: [pinia],
+      },
       props: {
         user: createUser(),
         linuxdoEnabled: false,
@@ -128,6 +140,9 @@ describe('ProfileIdentityBindingsSection', () => {
 
   it('exposes WeChat binding when enabled and starts the WeChat bind flow', async () => {
     const wrapper = mount(ProfileIdentityBindingsSection, {
+      global: {
+        plugins: [pinia],
+      },
       props: {
         user: createUser({
           identities: {
@@ -163,6 +178,9 @@ describe('ProfileIdentityBindingsSection', () => {
     apiState.unbindAuthProvider.mockResolvedValueOnce(updated)
 
     const wrapper = mount(ProfileIdentityBindingsSection, {
+      global: {
+        plugins: [pinia],
+      },
       props: {
         user: createUser({
           identities: {
@@ -182,6 +200,9 @@ describe('ProfileIdentityBindingsSection', () => {
 
   it('hides the WeChat bind action outside the WeChat browser when only mp mode is configured', () => {
     const wrapper = mount(ProfileIdentityBindingsSection, {
+      global: {
+        plugins: [pinia],
+      },
       props: {
         user: createUser({
           identities: {
@@ -206,7 +227,12 @@ describe('ProfileIdentityBindingsSection', () => {
         plugins: [pinia],
       },
       props: {
-        user: createUser(),
+        user: createUser({
+          identities: {
+            email: { bound: true },
+            wechat: { bound: false, can_bind: true },
+          },
+        }),
         linuxdoEnabled: false,
         oidcEnabled: false,
         wechatEnabled: true,
@@ -260,7 +286,12 @@ describe('ProfileIdentityBindingsSection', () => {
         plugins: [pinia],
       },
       props: {
-        user: createUser(),
+        user: createUser({
+          identities: {
+            email: { bound: true },
+            wechat: { bound: false, can_bind: true },
+          },
+        }),
         linuxdoEnabled: false,
         oidcEnabled: false,
         wechatEnabled: true,

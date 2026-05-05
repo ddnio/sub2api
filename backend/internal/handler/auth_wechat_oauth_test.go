@@ -97,6 +97,39 @@ func TestWeChatOAuthStartRedirectsAndSetsPendingCookies(t *testing.T) {
 	require.NotEmpty(t, findCookie(cookies, oauthPendingBrowserCookieName))
 }
 
+func TestWeChatOAuthStartAllowsOpenWhenOpenAndMPAreBothEnabled(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler, client := newWeChatOAuthTestHandlerWithSettings(t, false, map[string]string{
+		service.SettingKeyWeChatConnectEnabled:             "true",
+		service.SettingKeyWeChatConnectAppID:               "wx-legacy-app",
+		service.SettingKeyWeChatConnectAppSecret:           "wx-legacy-secret",
+		service.SettingKeyWeChatConnectOpenAppID:           "wx-open-app",
+		service.SettingKeyWeChatConnectOpenAppSecret:       "wx-open-secret",
+		service.SettingKeyWeChatConnectMPAppID:             "wx-mp-app",
+		service.SettingKeyWeChatConnectMPAppSecret:         "wx-mp-secret",
+		service.SettingKeyWeChatConnectOpenEnabled:         "true",
+		service.SettingKeyWeChatConnectMPEnabled:           "true",
+		service.SettingKeyWeChatConnectMode:                "mp",
+		service.SettingKeyWeChatConnectScopes:              "snsapi_userinfo",
+		service.SettingKeyWeChatConnectRedirectURL:         "https://api.example.com/api/v1/auth/oauth/wechat/callback",
+		service.SettingKeyWeChatConnectFrontendRedirectURL: "/auth/wechat/callback",
+	})
+	defer client.Close()
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/wechat/start?mode=open&redirect=/billing", nil)
+	c.Request.Host = "api.example.com"
+
+	handler.WeChatOAuthStart(c)
+
+	require.Equal(t, http.StatusFound, recorder.Code)
+	location := recorder.Header().Get("Location")
+	require.Contains(t, location, "open.weixin.qq.com")
+	require.Contains(t, location, "appid=wx-open-app")
+	require.Contains(t, location, "scope=snsapi_login")
+}
+
 func TestWeChatOAuthCallbackCreatesPendingSessionForUnifiedFlow(t *testing.T) {
 	originalAccessTokenURL := wechatOAuthAccessTokenURL
 	originalUserInfoURL := wechatOAuthUserInfoURL
