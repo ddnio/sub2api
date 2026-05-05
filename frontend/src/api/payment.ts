@@ -14,7 +14,14 @@ import type {
   CreateOrderResult,
   PaymentOrder
 } from '@/types/payment'
-import type { BasePaginationResponse } from '@/types'
+import type { BasePaginationResponse, FetchOptions } from '@/types'
+
+export type PaymentPlan = SubscriptionPlan
+export type { PaymentOrder }
+export type CreateOrderResponse = CreateOrderResult
+export interface OrderStatusResponse {
+  status: string
+}
 
 export const paymentAPI = {
   /** Get payment configuration (enabled types, limits, etc.) */
@@ -85,5 +92,29 @@ export const paymentAPI = {
   /** Get provider instance IDs that allow user refund */
   getRefundEligibleProviders() {
     return apiClient.get<{ provider_instance_ids: string[] }>('/payment/orders/refund-eligible-providers')
+  },
+
+  // Legacy aliases kept for existing fork tests/imports.
+  async listPlans(): Promise<PaymentPlan[]> {
+    const res = await apiClient.get<PaymentPlan[]>('/payment/plans')
+    return res.data
+  },
+
+  async listOrders(
+    page: number,
+    pageSize: number,
+    params: { status?: string; order_type?: string },
+    options?: FetchOptions
+  ): Promise<BasePaginationResponse<PaymentOrder>> {
+    const res = await apiClient.get<BasePaginationResponse<PaymentOrder>>('/payment/orders/my', {
+      params: { page, page_size: pageSize, ...params },
+      signal: options?.signal
+    })
+    return res.data
+  },
+
+  async getOrderStatus(id: number): Promise<OrderStatusResponse> {
+    const res = await apiClient.get<PaymentOrder>(`/payment/orders/${id}`)
+    return { status: res.data.status }
   }
 }

@@ -27,7 +27,6 @@ import backupAPI from './backup'
 import adminPaymentAPI from './payment'
 import tlsFingerprintProfileAPI from './tlsFingerprintProfile'
 import channelsAPI from './channels'
-import adminPaymentAPI from './payment'
 
 /**
  * Unified admin API object for convenient access
@@ -56,8 +55,7 @@ export const adminAPI = {
   backup: backupAPI,
   payment: adminPaymentAPI,
   tlsFingerprintProfiles: tlsFingerprintProfileAPI,
-  channels: channelsAPI,
-  payment: adminPaymentAPI
+  channels: channelsAPI
 }
 
 export {
@@ -84,8 +82,7 @@ export {
   backupAPI,
   adminPaymentAPI,
   tlsFingerprintProfileAPI,
-  channelsAPI,
-  adminPaymentAPI
+  channelsAPI
 }
 
 export default adminAPI

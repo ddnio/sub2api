@@ -22,38 +22,27 @@ export interface FetchOptions {
   signal?: AbortSignal
 }
 
-// ==================== Notification Types ====================
-
-/** Notification email entry with enable/disable and verification state.
- *  email="" is a placeholder for the primary email (user's registration email or admin email). */
-export interface NotifyEmailEntry {
-  email: string
-  disabled: boolean
-  verified: boolean
-}
-
 // ==================== User & Auth Types ====================
 
 export type UserAuthProvider = 'email' | 'linuxdo' | 'oidc' | 'wechat'
 
 export interface UserAuthBindingStatus {
-  bound?: boolean
+  provider: UserAuthProvider
+  bound: boolean
   bound_count?: number
-  provider?: UserAuthProvider | string
-  provider_key?: string | null
+  display_name?: string
+  subject_hint?: string
+  provider_key?: string
   provider_subject?: string | null
   issuer?: string | null
   label?: string | null
   provider_label?: string | null
-  display_name?: string | null
-  subject_hint?: string | null
-  verified_at?: string | null
-  bind_start_path?: string | null
+  metadata?: Record<string, unknown>
+  verified_at?: string
+  bind_start_path?: string
   can_bind?: boolean
   can_unbind?: boolean
-  note_key?: string | null
-  note?: string | null
-  metadata?: Record<string, unknown>
+  note?: string
 }
 
 export interface UserProfileSourceContext {
@@ -80,6 +69,7 @@ export interface User {
   }
   auth_bindings?: Partial<Record<UserAuthProvider, boolean | UserAuthBindingStatus>>
   identity_bindings?: Partial<Record<UserAuthProvider, boolean | UserAuthBindingStatus>>
+  identities?: UserAuthIdentitySet
   email_bound?: boolean
   linuxdo_bound?: boolean
   oidc_bound?: boolean
@@ -87,16 +77,28 @@ export interface User {
   role: 'admin' | 'user' // User role for authorization
   balance: number // User balance for API usage
   concurrency: number // Allowed concurrent requests
-  rpm_limit?: number // User-level RPM cap (0 = unlimited); effective as fallback when group has no rpm_limit
   status: 'active' | 'disabled' // Account status
   allowed_groups: number[] | null // Allowed group IDs (null = all non-exclusive groups)
-  balance_notify_enabled: boolean
-  balance_notify_threshold: number | null
-  balance_notify_extra_emails: NotifyEmailEntry[]
   subscriptions?: UserSubscription[] // User's active subscriptions
-  last_active_at?: string | null
+  referral_code?: string // 推荐码
   created_at: string
   updated_at: string
+}
+
+export type UserAuthIdentitySet = Partial<Record<UserAuthProvider, UserAuthBindingStatus>>
+
+/** Notification email entry with enable/disable and verification state. */
+export interface NotifyEmailEntry {
+  email: string
+  disabled: boolean
+  verified: boolean
+}
+
+export interface UserProfile extends User {
+  balance_notify_enabled: boolean
+  balance_notify_threshold: number | null
+  balance_notify_threshold_type: 'fixed' | 'percentage' | string
+  balance_notify_extra_emails: NotifyEmailEntry[]
 }
 
 export interface AdminUser extends User {
@@ -122,13 +124,12 @@ export interface RegisterRequest {
   turnstile_token?: string
   promo_code?: string
   invitation_code?: string
+  referral_code?: string
 }
 
 export interface SendVerifyCodeRequest {
   email: string
   turnstile_token?: string
-  pending_auth_token?: string
-  pending_oauth_token?: string
 }
 
 export interface SendVerifyCodeResponse {
@@ -151,6 +152,18 @@ export interface CustomEndpoint {
   description: string
 }
 
+export type ContactChannelType = 'wechat_group' | 'customer_service' | 'official_account'
+
+export interface ContactChannel {
+  type: ContactChannelType
+  label: string
+  qr_image: string
+  description: string
+  extra_info: string
+  enabled: boolean
+  priority: number
+}
+
 export interface PublicSettings {
   registration_enabled: boolean
   email_verify_enabled: boolean
@@ -159,6 +172,7 @@ export interface PublicSettings {
   promo_code_enabled: boolean
   password_reset_enabled: boolean
   invitation_code_enabled: boolean
+  referral_enabled: boolean
   turnstile_enabled: boolean
   turnstile_site_key: string
   site_name: string
@@ -169,19 +183,22 @@ export interface PublicSettings {
   doc_url: string
   home_content: string
   hide_ccs_import_button: boolean
-  payment_enabled: boolean
+  purchase_subscription_enabled: boolean
+  purchase_subscription_url: string
   table_default_page_size: number
   table_page_size_options: number[]
   custom_menu_items: CustomMenuItem[]
   custom_endpoints: CustomEndpoint[]
   linuxdo_oauth_enabled: boolean
   wechat_oauth_enabled: boolean
-  wechat_oauth_open_enabled?: boolean
-  wechat_oauth_mp_enabled?: boolean
+  wechat_oauth_open_enabled: boolean
+  wechat_oauth_mp_enabled: boolean
   wechat_oauth_mobile_enabled?: boolean
   oidc_oauth_enabled: boolean
   oidc_oauth_provider_name: string
+  sora_client_enabled: boolean
   backend_mode_enabled: boolean
+  contact_channels: ContactChannel[]
   version: string
   balance_low_notify_enabled: boolean
   account_quota_notify_enabled: boolean
@@ -454,7 +471,6 @@ export interface Group {
   description: string | null
   platform: GroupPlatform
   rate_multiplier: number
-  rpm_limit?: number // Group-level RPM cap (0 = unlimited); overrides user-level rpm_limit when set
   is_exclusive: boolean
   status: 'active' | 'inactive'
   subscription_type: SubscriptionType
@@ -486,6 +502,8 @@ export interface AdminGroup extends Group {
 
   // MCP XML 协议注入（仅 antigravity 平台使用）
   mcp_xml_inject: boolean
+  // Claude usage 模拟开关（仅 anthropic 平台使用）
+  simulate_claude_max_enabled: boolean
 
   // 支持的模型系列（仅 antigravity 平台使用）
   supported_model_scopes?: string[]
@@ -578,6 +596,7 @@ export interface CreateGroupRequest {
   fallback_group_id?: number | null
   fallback_group_id_on_invalid_request?: number | null
   mcp_xml_inject?: boolean
+  simulate_claude_max_enabled?: boolean
   supported_model_scopes?: string[]
   require_oauth_only?: boolean
   require_privacy_set?: boolean
@@ -603,6 +622,7 @@ export interface UpdateGroupRequest {
   fallback_group_id?: number | null
   fallback_group_id_on_invalid_request?: number | null
   mcp_xml_inject?: boolean
+  simulate_claude_max_enabled?: boolean
   supported_model_scopes?: string[]
   require_oauth_only?: boolean
   require_privacy_set?: boolean
@@ -744,7 +764,6 @@ export interface Account {
   // Extra fields including Codex usage and model-level rate limits (Antigravity smart retry)
   extra?: (CodexUsageSnapshot & {
     model_rate_limits?: Record<string, { rate_limited_at: string; rate_limit_reset_at: string }>
-    antigravity_credits_overages?: Record<string, { activated_at: string; active_until: string }>
   } & Record<string, unknown>)
   proxy_id: number | null
   concurrency: number
@@ -805,6 +824,12 @@ export interface Account {
   // 自定义 Base URL 中继转发（仅 Anthropic OAuth/SetupToken 账号有效）
   custom_base_url_enabled?: boolean | null
   custom_base_url?: string | null
+
+  // 客户端亲和调度（仅 Anthropic/Antigravity 平台有效）
+  // 启用后新会话会优先调度到客户端之前使用过的账号
+  client_affinity_enabled?: boolean | null
+  affinity_client_count?: number | null
+  affinity_clients?: string[] | null
 
   // API Key 账号配额限制
   quota_limit?: number | null
@@ -1114,12 +1139,8 @@ export interface AdminUsageLog extends UsageLog {
 
   // 账号计费倍率（仅管理员可见）
   account_rate_multiplier?: number | null
-  // 自定义定价规则计算的账号统计费用（nil 时使用 total_cost * multiplier）
   account_stats_cost?: number | null
-
-  // 渠道 ID 和计费等级（仅管理员可见）
-  channel_id?: number | null
-  billing_tier?: string | null
+  account_cost: number
 
   // 用户请求 IP（仅管理员可见）
   ip_address?: string | null
@@ -1707,5 +1728,36 @@ export interface UpdateScheduledTestPlanRequest {
   auto_recover?: boolean
 }
 
-// Payment types
-export type { SubscriptionPlan, PaymentOrder, CheckoutInfoResponse } from './payment'
+// ==================== Model Pricing Types ====================
+
+export interface PriceSet {
+  input_per_million: number | null
+  output_per_million: number | null
+  cache_read_per_million: number | null
+  cache_creation_per_million: number | null
+}
+
+export interface EffectivePriceSet extends PriceSet {
+  rate_multiplier: number
+}
+
+export interface ModelPricingItem {
+  id: string
+  display_name: string
+  owned_by: string
+  category: string
+  pricing: PriceSet
+  effective_pricing: EffectivePriceSet | null
+}
+
+export interface PricingGroupInfo {
+  id: number
+  name: string
+  rate_multiplier: number
+}
+
+export interface ModelPricingResponse {
+  models: ModelPricingItem[]
+  group: PricingGroupInfo | null
+  notice?: string
+}
