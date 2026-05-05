@@ -11,12 +11,16 @@ import (
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
+	"github.com/Wei-Shaw/sub2api/ent/authidentity"
 	dbgroup "github.com/Wei-Shaw/sub2api/ent/group"
+	"github.com/Wei-Shaw/sub2api/ent/predicate"
 	dbuser "github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/userallowedgroup"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/service"
+	"github.com/lib/pq"
 
 	entsql "entgo.io/ent/dialect/sql"
 )
@@ -79,6 +83,9 @@ func (r *userRepository) Create(ctx context.Context, userIn *service.User) error
 	if err := r.syncUserAllowedGroupsWithClient(ctx, txClient, created.ID, userIn.AllowedGroups); err != nil {
 		return err
 	}
+	if err := ensureEmailAuthIdentityWithClient(ctx, txClient, created.ID, created.Email, "user_repo_create"); err != nil {
+		return err
+	}
 
 	if tx != nil {
 		if err := tx.Commit(); err != nil {
@@ -108,10 +115,20 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*service.User, 
 }
 
 func (r *userRepository) GetByEmail(ctx context.Context, email string) (*service.User, error) {
-	m, err := r.client.User.Query().Where(dbuser.EmailEQ(email)).Only(ctx)
+	matches, err := r.client.User.Query().
+		Where(userEmailLookupPredicate(email)).
+		Order(dbent.Asc(dbuser.FieldID)).
+		All(ctx)
 	if err != nil {
-		return nil, translatePersistenceError(err, service.ErrUserNotFound, nil)
+		return nil, err
 	}
+	if len(matches) == 0 {
+		return nil, service.ErrUserNotFound
+	}
+	if len(matches) > 1 {
+		return nil, fmt.Errorf("normalized email lookup matched multiple users for %q", strings.TrimSpace(email))
+	}
+	m := matches[0]
 
 	out := userEntityToService(m)
 	groups, err := r.loadAllowedGroups(ctx, []int64{m.ID})
@@ -122,6 +139,34 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*service
 		out.AllowedGroups = v
 	}
 	return out, nil
+}
+
+func (r *userRepository) ListUserAuthIdentities(ctx context.Context, userID int64) ([]service.UserAuthIdentityRecord, error) {
+	identities, err := clientFromContext(ctx, r.client).AuthIdentity.Query().
+		Where(authidentity.UserIDEQ(userID)).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	records := make([]service.UserAuthIdentityRecord, 0, len(identities))
+	for _, identity := range identities {
+		if identity == nil {
+			continue
+		}
+		records = append(records, service.UserAuthIdentityRecord{
+			ProviderType:    strings.TrimSpace(identity.ProviderType),
+			ProviderKey:     strings.TrimSpace(identity.ProviderKey),
+			ProviderSubject: strings.TrimSpace(identity.ProviderSubject),
+			VerifiedAt:      identity.VerifiedAt,
+			Issuer:          identity.Issuer,
+			Metadata:        cloneUserAuthIdentityMetadata(identity.Metadata),
+			CreatedAt:       identity.CreatedAt,
+			UpdatedAt:       identity.UpdatedAt,
+		})
+	}
+
+	return records, nil
 }
 
 func (r *userRepository) Update(ctx context.Context, userIn *service.User) error {
@@ -143,6 +188,11 @@ func (r *userRepository) Update(ctx context.Context, userIn *service.User) error
 		// 已处于外部事务中（ErrTxStarted），复用当前 client 并由调用方负责提交/回滚。
 		txClient = r.client
 	}
+	existing, err := clientFromContext(ctx, txClient).User.Get(ctx, userIn.ID)
+	if err != nil {
+		return translatePersistenceError(err, service.ErrUserNotFound, nil)
+	}
+	oldEmail := existing.Email
 
 	update := txClient.User.UpdateOneID(userIn.ID).
 		SetEmail(userIn.Email).
@@ -170,6 +220,9 @@ func (r *userRepository) Update(ctx context.Context, userIn *service.User) error
 	if err := r.syncUserAllowedGroupsWithClient(ctx, txClient, updated.ID, userIn.AllowedGroups); err != nil {
 		return err
 	}
+	if err := replaceEmailAuthIdentityWithClient(ctx, txClient, updated.ID, oldEmail, updated.Email, "user_repo_update"); err != nil {
+		return err
+	}
 
 	if tx != nil {
 		if err := tx.Commit(); err != nil {
@@ -179,6 +232,96 @@ func (r *userRepository) Update(ctx context.Context, userIn *service.User) error
 
 	userIn.UpdatedAt = updated.UpdatedAt
 	return nil
+}
+
+func (r *userRepository) EnsureEmailAuthIdentity(ctx context.Context, userID int64, email string) error {
+	return ensureEmailAuthIdentityWithClient(ctx, r.client, userID, email, "service_dual_write")
+}
+
+func (r *userRepository) ReplaceEmailAuthIdentity(ctx context.Context, userID int64, oldEmail, newEmail string) error {
+	return replaceEmailAuthIdentityWithClient(ctx, r.client, userID, oldEmail, newEmail, "service_dual_write")
+}
+
+func ensureEmailAuthIdentityWithClient(ctx context.Context, client *dbent.Client, userID int64, email string, source string) error {
+	client = clientFromContext(ctx, client)
+	if client == nil || userID <= 0 {
+		return nil
+	}
+
+	subject := normalizeEmailAuthIdentitySubject(email)
+	if subject == "" {
+		return nil
+	}
+
+	if err := client.AuthIdentity.Create().
+		SetUserID(userID).
+		SetProviderType("email").
+		SetProviderKey("email").
+		SetProviderSubject(subject).
+		SetVerifiedAt(time.Now().UTC()).
+		SetMetadata(map[string]any{"source": source}).
+		OnConflictColumns(
+			authidentity.FieldProviderType,
+			authidentity.FieldProviderKey,
+			authidentity.FieldProviderSubject,
+		).
+		DoNothing().
+		Exec(ctx); err != nil {
+		return err
+	}
+
+	identity, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ("email"),
+			authidentity.ProviderKeyEQ("email"),
+			authidentity.ProviderSubjectEQ(subject),
+		).
+		Only(ctx)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	if identity.UserID != userID {
+		return infraerrors.Conflict("AUTH_IDENTITY_OWNERSHIP_CONFLICT", "auth identity already belongs to another user")
+	}
+	return nil
+}
+
+func replaceEmailAuthIdentityWithClient(ctx context.Context, client *dbent.Client, userID int64, oldEmail, newEmail string, source string) error {
+	newSubject := normalizeEmailAuthIdentitySubject(newEmail)
+	if err := ensureEmailAuthIdentityWithClient(ctx, client, userID, newEmail, source); err != nil {
+		return err
+	}
+
+	oldSubject := normalizeEmailAuthIdentitySubject(oldEmail)
+	if oldSubject == "" || oldSubject == newSubject {
+		return nil
+	}
+
+	_, err := clientFromContext(ctx, client).AuthIdentity.Delete().
+		Where(
+			authidentity.UserIDEQ(userID),
+			authidentity.ProviderTypeEQ("email"),
+			authidentity.ProviderKeyEQ("email"),
+			authidentity.ProviderSubjectEQ(oldSubject),
+		).
+		Exec(ctx)
+	return err
+}
+
+func normalizeEmailAuthIdentitySubject(email string) string {
+	normalized := strings.ToLower(strings.TrimSpace(email))
+	if normalized == "" {
+		return ""
+	}
+	if strings.HasSuffix(normalized, service.LinuxDoConnectSyntheticEmailDomain) ||
+		strings.HasSuffix(normalized, service.OIDCConnectSyntheticEmailDomain) ||
+		strings.HasSuffix(normalized, service.WeChatConnectSyntheticEmailDomain) {
+		return ""
+	}
+	return normalized
 }
 
 func (r *userRepository) Delete(ctx context.Context, id int64) error {
@@ -306,6 +449,10 @@ func userListOrder(params pagination.PaginationParams) []func(*entsql.Selector) 
 	sortBy := strings.ToLower(strings.TrimSpace(params.SortBy))
 	sortOrder := params.NormalizedSortOrder(pagination.SortOrderDesc)
 
+	if sortBy == "last_used_at" {
+		return userLastUsedAtOrder(sortOrder)
+	}
+
 	var field string
 	defaultField := true
 	switch sortBy {
@@ -344,6 +491,72 @@ func userListOrder(params pagination.PaginationParams) []func(*entsql.Selector) 
 		return []func(*entsql.Selector){dbent.Desc(dbuser.FieldID)}
 	}
 	return []func(*entsql.Selector){dbent.Desc(field), dbent.Desc(dbuser.FieldID)}
+}
+
+func (r *userRepository) GetLatestUsedAtByUserIDs(ctx context.Context, userIDs []int64) (map[int64]*time.Time, error) {
+	result := make(map[int64]*time.Time, len(userIDs))
+	if len(userIDs) == 0 {
+		return result, nil
+	}
+	if r.sql == nil {
+		return nil, fmt.Errorf("sql executor is not configured")
+	}
+
+	const query = `
+		SELECT user_id, MAX(created_at) AS last_used_at
+		FROM usage_logs
+		WHERE user_id = ANY($1)
+		GROUP BY user_id
+	`
+
+	rows, err := r.sql.QueryContext(ctx, query, pq.Array(userIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	for rows.Next() {
+		var (
+			userID     int64
+			lastUsedAt time.Time
+		)
+		if scanErr := rows.Scan(&userID, &lastUsedAt); scanErr != nil {
+			return nil, scanErr
+		}
+		ts := lastUsedAt.UTC()
+		result[userID] = &ts
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (r *userRepository) GetLatestUsedAtByUserID(ctx context.Context, userID int64) (*time.Time, error) {
+	latestByUserID, err := r.GetLatestUsedAtByUserIDs(ctx, []int64{userID})
+	if err != nil {
+		return nil, err
+	}
+	return latestByUserID[userID], nil
+}
+
+func userLastUsedAtOrder(sortOrder string) []func(*entsql.Selector) {
+	orderExpr := func(direction, nulls string, tieOrder func(string) string) func(*entsql.Selector) {
+		return func(s *entsql.Selector) {
+			subquery := fmt.Sprintf("(SELECT MAX(created_at) FROM usage_logs WHERE user_id = %s)", s.C(dbuser.FieldID))
+			s.OrderExpr(entsql.Expr(subquery + " " + direction + " NULLS " + nulls))
+			s.OrderBy(tieOrder(s.C(dbuser.FieldID)))
+		}
+	}
+
+	if sortOrder == pagination.SortOrderAsc {
+		return []func(*entsql.Selector){
+			orderExpr("ASC", "FIRST", entsql.Asc),
+		}
+	}
+	return []func(*entsql.Selector){
+		orderExpr("DESC", "LAST", entsql.Desc),
+	}
 }
 
 // filterUsersByAttributes returns user IDs that match ALL the given attribute filters
@@ -439,7 +652,20 @@ func (r *userRepository) UpdateConcurrency(ctx context.Context, id int64, amount
 }
 
 func (r *userRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
-	return r.client.User.Query().Where(dbuser.EmailEQ(email)).Exist(ctx)
+	return r.client.User.Query().Where(userEmailLookupPredicate(email)).Exist(ctx)
+}
+
+func userEmailLookupPredicate(email string) predicate.User {
+	normalized := strings.TrimSpace(email)
+	if normalized == "" {
+		return dbuser.EmailEQ(email)
+	}
+	return predicate.User(func(s *entsql.Selector) {
+		s.Where(entsql.ExprP(
+			fmt.Sprintf("LOWER(TRIM(%s)) = LOWER(TRIM(?))", s.C(dbuser.FieldEmail)),
+			normalized,
+		))
+	})
 }
 
 func (r *userRepository) AddGroupToAllowedGroups(ctx context.Context, userID int64, groupID int64) error {

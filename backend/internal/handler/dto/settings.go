@@ -146,6 +146,11 @@ type SystemSettings struct {
 
 	// Web Search Emulation
 	WebSearchEmulationEnabled bool `json:"web_search_emulation_enabled"`
+
+	PaymentVisibleMethodAlipaySource  string `json:"payment_visible_method_alipay_source"`
+	PaymentVisibleMethodWxpaySource   string `json:"payment_visible_method_wxpay_source"`
+	PaymentVisibleMethodAlipayEnabled bool   `json:"payment_visible_method_alipay_enabled"`
+	PaymentVisibleMethodWxpayEnabled  bool   `json:"payment_visible_method_wxpay_enabled"`
 }
 
 type DefaultSubscriptionSetting struct {
@@ -156,6 +161,7 @@ type DefaultSubscriptionSetting struct {
 type PublicSettings struct {
 	RegistrationEnabled              bool             `json:"registration_enabled"`
 	EmailVerifyEnabled               bool             `json:"email_verify_enabled"`
+	ForceEmailOnThirdPartySignup     bool             `json:"force_email_on_third_party_signup"`
 	RegistrationEmailSuffixWhitelist []string         `json:"registration_email_suffix_whitelist"`
 	PromoCodeEnabled                 bool             `json:"promo_code_enabled"`
 	PasswordResetEnabled             bool             `json:"password_reset_enabled"`

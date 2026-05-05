@@ -173,4 +173,16 @@ func TestAdminService_BatchSetGroupRateMultipliers(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "sync failed")
 	})
+
+	t.Run("rejects non-positive multipliers", func(t *testing.T) {
+		repo := &userGroupRateRepoStubForGroupRate{}
+		svc := &adminServiceImpl{userGroupRateRepo: repo}
+
+		err := svc.BatchSetGroupRateMultipliers(context.Background(), 10, []GroupRateMultiplierInput{
+			{UserID: 1, RateMultiplier: 0},
+		})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "rate_multiplier must be > 0")
+		require.Nil(t, repo.syncedEntries)
+	})
 }

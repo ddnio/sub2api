@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/paymentproviderinstance"
@@ -20,7 +21,20 @@ func (s *PaymentConfigService) GetAvailableMethodLimits(ctx context.Context) (*M
 		return nil, fmt.Errorf("query provider instances: %w", err)
 	}
 	typeInstances := pcGroupByPaymentType(instances)
-	typeInstances = s.pcApplyEnabledVisibleMethodInstances(ctx, typeInstances, instances)
+	var visibleMethodSettings map[string]string
+	if s.settingRepo != nil {
+		var err error
+		visibleMethodSettings, err = s.settingRepo.GetMultiple(ctx, []string{
+			SettingPaymentVisibleMethodAlipayEnabled,
+			SettingPaymentVisibleMethodAlipaySource,
+			SettingPaymentVisibleMethodWxpayEnabled,
+			SettingPaymentVisibleMethodWxpaySource,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("query visible method settings: %w", err)
+		}
+	}
+	typeInstances = s.pcApplyEnabledVisibleMethodInstances(ctx, typeInstances, instances, visibleMethodSettings)
 	resp := &MethodLimitsResponse{
 		Methods: make(map[string]MethodLimits, len(typeInstances)),
 	}
@@ -32,7 +46,7 @@ func (s *PaymentConfigService) GetAvailableMethodLimits(ctx context.Context) (*M
 	return resp, nil
 }
 
-func (s *PaymentConfigService) pcApplyEnabledVisibleMethodInstances(ctx context.Context, typeInstances map[string][]*dbent.PaymentProviderInstance, instances []*dbent.PaymentProviderInstance) map[string][]*dbent.PaymentProviderInstance {
+func (s *PaymentConfigService) pcApplyEnabledVisibleMethodInstances(ctx context.Context, typeInstances map[string][]*dbent.PaymentProviderInstance, instances []*dbent.PaymentProviderInstance, visibleMethodSettings map[string]string) map[string][]*dbent.PaymentProviderInstance {
 	if len(typeInstances) == 0 {
 		return typeInstances
 	}
@@ -44,16 +58,44 @@ func (s *PaymentConfigService) pcApplyEnabledVisibleMethodInstances(ctx context.
 
 	for _, method := range []string{payment.TypeAlipay, payment.TypeWxpay} {
 		matching := filterEnabledVisibleMethodInstances(instances, method)
+		if len(matching) == 0 {
+			delete(filtered, method)
+			continue
+		}
+
+		enabledRaw := strings.TrimSpace(visibleMethodSettings[visibleMethodEnabledSettingKey(method)])
+		if strings.EqualFold(enabledRaw, "false") {
+			delete(filtered, method)
+			continue
+		}
+
+		sourceRaw := strings.TrimSpace(visibleMethodSettings[visibleMethodSourceSettingKey(method)])
+		if sourceRaw != "" {
+			providerKey, ok := VisibleMethodProviderKeyForSource(method, sourceRaw)
+			if !ok {
+				delete(filtered, method)
+				continue
+			}
+			selectedInstances := filterVisibleMethodInstancesByProviderKey(instances, method, providerKey)
+			if len(selectedInstances) == 0 {
+				delete(filtered, method)
+				continue
+			}
+			filtered[method] = selectedInstances
+			continue
+		}
+
+		if strings.EqualFold(enabledRaw, "true") {
+			delete(filtered, method)
+			continue
+		}
+
 		providerKey, err := s.resolveVisibleMethodProviderKey(ctx, method, matching)
 		if err != nil {
 			delete(filtered, method)
 			continue
 		}
 		if providerKey == "" {
-			if len(matching) == 0 {
-				delete(filtered, method)
-				continue
-			}
 			filtered[method] = matching
 			continue
 		}

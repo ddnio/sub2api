@@ -22,7 +22,9 @@ type userRepoStub struct {
 	existsErr     error
 	nextID        int64
 	created       []*User
+	updated       []*User
 	deletedIDs    []int64
+	usersByEmail  map[string]*User
 }
 
 func (s *userRepoStub) Create(ctx context.Context, user *User) error {
@@ -33,6 +35,11 @@ func (s *userRepoStub) Create(ctx context.Context, user *User) error {
 		user.ID = s.nextID
 	}
 	s.created = append(s.created, user)
+	if s.usersByEmail == nil {
+		s.usersByEmail = make(map[string]*User)
+	}
+	s.usersByEmail[user.Email] = user
+	s.user = user
 	return nil
 }
 
@@ -50,10 +57,15 @@ func (s *userRepoStub) GetByEmail(ctx context.Context, email string) (*User, err
 	if s.getByEmailErr != nil {
 		return nil, s.getByEmailErr
 	}
-	if s.user == nil {
-		return nil, ErrUserNotFound
+	if s.usersByEmail != nil {
+		if user, ok := s.usersByEmail[email]; ok {
+			return user, nil
+		}
 	}
-	return s.user, nil
+	if s.user != nil && s.user.Email == email {
+		return s.user, nil
+	}
+	return nil, ErrUserNotFound
 }
 
 func (s *userRepoStub) GetFirstAdmin(ctx context.Context) (*User, error) {
@@ -61,12 +73,30 @@ func (s *userRepoStub) GetFirstAdmin(ctx context.Context) (*User, error) {
 }
 
 func (s *userRepoStub) Update(ctx context.Context, user *User) error {
-	panic("unexpected Update call")
+	s.updated = append(s.updated, user)
+	if s.usersByEmail == nil {
+		s.usersByEmail = make(map[string]*User)
+	}
+	s.usersByEmail[user.Email] = user
+	s.user = user
+	return nil
 }
 
 func (s *userRepoStub) Delete(ctx context.Context, id int64) error {
 	s.deletedIDs = append(s.deletedIDs, id)
 	return s.deleteErr
+}
+
+func (s *userRepoStub) GetUserAvatar(ctx context.Context, userID int64) (*UserAvatar, error) {
+	return nil, nil
+}
+
+func (s *userRepoStub) UpsertUserAvatar(ctx context.Context, userID int64, input UpsertUserAvatarInput) (*UserAvatar, error) {
+	return nil, nil
+}
+
+func (s *userRepoStub) DeleteUserAvatar(ctx context.Context, userID int64) error {
+	return nil
 }
 
 func (s *userRepoStub) List(ctx context.Context, params pagination.PaginationParams) ([]User, *pagination.PaginationResult, error) {
@@ -75,6 +105,14 @@ func (s *userRepoStub) List(ctx context.Context, params pagination.PaginationPar
 
 func (s *userRepoStub) ListWithFilters(ctx context.Context, params pagination.PaginationParams, filters UserListFilters) ([]User, *pagination.PaginationResult, error) {
 	panic("unexpected ListWithFilters call")
+}
+
+func (s *userRepoStub) GetLatestUsedAtByUserIDs(ctx context.Context, userIDs []int64) (map[int64]*time.Time, error) {
+	return map[int64]*time.Time{}, nil
+}
+
+func (s *userRepoStub) GetLatestUsedAtByUserID(ctx context.Context, userID int64) (*time.Time, error) {
+	return nil, nil
 }
 
 func (s *userRepoStub) UpdateBalance(ctx context.Context, id int64, amount float64) error {
@@ -106,6 +144,14 @@ func (s *userRepoStub) RemoveGroupFromUserAllowedGroups(ctx context.Context, use
 
 func (s *userRepoStub) AddGroupToAllowedGroups(ctx context.Context, userID int64, groupID int64) error {
 	panic("unexpected AddGroupToAllowedGroups call")
+}
+
+func (s *userRepoStub) ListUserAuthIdentities(ctx context.Context, userID int64) ([]UserAuthIdentityRecord, error) {
+	return nil, nil
+}
+
+func (s *userRepoStub) UnbindUserAuthProvider(context.Context, int64, string) error {
+	panic("unexpected UnbindUserAuthProvider call")
 }
 
 func (s *userRepoStub) UpdateTotpSecret(ctx context.Context, userID int64, encryptedSecret *string) error {

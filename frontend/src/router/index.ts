@@ -103,6 +103,16 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/auth/wechat/callback',
+    name: 'WeChatOAuthCallback',
+    component: () => import('@/views/auth/WechatCallbackView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'WeChat OAuth Callback',
+      titleKey: 'auth.wechatCallbackPageTitle'
+    }
+  },
+  {
     path: '/auth/wechat/payment/callback',
     name: 'WeChatPaymentOAuthCallback',
     component: () => import('@/views/auth/WechatPaymentCallbackView.vue'),
@@ -565,7 +575,7 @@ let authInitialized = false
 const navigationLoading = useNavigationLoadingState()
 // 延迟初始化预加载，传入 router 实例
 let routePrefetch: ReturnType<typeof useRoutePrefetch> | null = null
-const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result', '/payment/stripe', '/payment/stripe-popup', '/auth/wechat/payment/callback']
+const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result', '/payment/stripe', '/payment/stripe-popup', '/auth/wechat/callback', '/auth/wechat/payment/callback']
 
 router.beforeEach((to, _from, next) => {
   // 开始导航加载状态

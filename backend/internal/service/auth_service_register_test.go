@@ -10,6 +10,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,7 +38,16 @@ func (s *settingRepoStub) Set(ctx context.Context, key, value string) error {
 }
 
 func (s *settingRepoStub) GetMultiple(ctx context.Context, keys []string) (map[string]string, error) {
-	panic("unexpected GetMultiple call")
+	if s.err != nil {
+		return nil, s.err
+	}
+	result := make(map[string]string, len(keys))
+	for _, key := range keys {
+		if v, ok := s.values[key]; ok {
+			result[key] = v
+		}
+	}
+	return result, nil
 }
 
 func (s *settingRepoStub) SetMultiple(ctx context.Context, settings map[string]string) error {
@@ -57,52 +67,79 @@ type emailCacheStub struct {
 	err  error
 }
 
-type refreshTokenCacheStub struct{}
+type oauthEmailRedeemRepoStub struct {
+	code     *RedeemCode
+	getErr   error
+	useErr   error
+	usedID   int64
+	usedUser int64
+}
 
-func (s *refreshTokenCacheStub) StoreRefreshToken(ctx context.Context, tokenHash string, data *RefreshTokenData, ttl time.Duration) error {
+func (s *oauthEmailRedeemRepoStub) Create(ctx context.Context, code *RedeemCode) error {
+	panic("unexpected Create call")
+}
+
+func (s *oauthEmailRedeemRepoStub) CreateBatch(ctx context.Context, codes []RedeemCode) error {
+	panic("unexpected CreateBatch call")
+}
+
+func (s *oauthEmailRedeemRepoStub) GetByID(ctx context.Context, id int64) (*RedeemCode, error) {
+	panic("unexpected GetByID call")
+}
+
+func (s *oauthEmailRedeemRepoStub) GetByCode(ctx context.Context, code string) (*RedeemCode, error) {
+	if s.getErr != nil {
+		return nil, s.getErr
+	}
+	if s.code == nil {
+		return nil, ErrRedeemCodeNotFound
+	}
+	return s.code, nil
+}
+
+func (s *oauthEmailRedeemRepoStub) Update(ctx context.Context, code *RedeemCode) error {
+	panic("unexpected Update call")
+}
+
+func (s *oauthEmailRedeemRepoStub) Delete(ctx context.Context, id int64) error {
+	panic("unexpected Delete call")
+}
+
+func (s *oauthEmailRedeemRepoStub) Use(ctx context.Context, id, userID int64) error {
+	if s.useErr != nil {
+		return s.useErr
+	}
+	s.usedID = id
+	s.usedUser = userID
 	return nil
 }
 
-func (s *refreshTokenCacheStub) GetRefreshToken(ctx context.Context, tokenHash string) (*RefreshTokenData, error) {
-	return nil, ErrRefreshTokenNotFound
+func (s *oauthEmailRedeemRepoStub) List(ctx context.Context, params pagination.PaginationParams) ([]RedeemCode, *pagination.PaginationResult, error) {
+	panic("unexpected List call")
 }
 
-func (s *refreshTokenCacheStub) DeleteRefreshToken(ctx context.Context, tokenHash string) error {
-	return nil
+func (s *oauthEmailRedeemRepoStub) ListWithFilters(ctx context.Context, params pagination.PaginationParams, codeType, status, search string) ([]RedeemCode, *pagination.PaginationResult, error) {
+	panic("unexpected ListWithFilters call")
 }
 
-func (s *refreshTokenCacheStub) DeleteUserRefreshTokens(ctx context.Context, userID int64) error {
-	return nil
+func (s *oauthEmailRedeemRepoStub) ListByUser(ctx context.Context, userID int64, limit int) ([]RedeemCode, error) {
+	panic("unexpected ListByUser call")
 }
 
-func (s *refreshTokenCacheStub) DeleteTokenFamily(ctx context.Context, familyID string) error {
-	return nil
+func (s *oauthEmailRedeemRepoStub) ListByUserPaginated(ctx context.Context, userID int64, params pagination.PaginationParams, codeType string) ([]RedeemCode, *pagination.PaginationResult, error) {
+	panic("unexpected ListByUserPaginated call")
 }
 
-func (s *refreshTokenCacheStub) AddToUserTokenSet(ctx context.Context, userID int64, tokenHash string, ttl time.Duration) error {
-	return nil
-}
-
-func (s *refreshTokenCacheStub) AddToFamilyTokenSet(ctx context.Context, familyID string, tokenHash string, ttl time.Duration) error {
-	return nil
-}
-
-func (s *refreshTokenCacheStub) GetUserTokenHashes(ctx context.Context, userID int64) ([]string, error) {
-	return nil, nil
-}
-
-func (s *refreshTokenCacheStub) GetFamilyTokenHashes(ctx context.Context, familyID string) ([]string, error) {
-	return nil, nil
-}
-
-func (s *refreshTokenCacheStub) IsTokenInFamily(ctx context.Context, familyID string, tokenHash string) (bool, error) {
-	return false, nil
+func (s *oauthEmailRedeemRepoStub) SumPositiveBalanceByUser(ctx context.Context, userID int64) (float64, error) {
+	panic("unexpected SumPositiveBalanceByUser call")
 }
 
 type defaultSubscriptionAssignerStub struct {
 	calls []AssignSubscriptionInput
 	err   error
 }
+
+type refreshTokenCacheStub struct{}
 
 func (s *defaultSubscriptionAssignerStub) AssignOrExtendSubscription(_ context.Context, input *AssignSubscriptionInput) (*UserSubscription, bool, error) {
 	if input != nil {
@@ -112,6 +149,46 @@ func (s *defaultSubscriptionAssignerStub) AssignOrExtendSubscription(_ context.C
 		return nil, false, s.err
 	}
 	return &UserSubscription{UserID: input.UserID, GroupID: input.GroupID}, false, nil
+}
+
+func (s *refreshTokenCacheStub) StoreRefreshToken(context.Context, string, *RefreshTokenData, time.Duration) error {
+	return nil
+}
+
+func (s *refreshTokenCacheStub) GetRefreshToken(context.Context, string) (*RefreshTokenData, error) {
+	return nil, ErrRefreshTokenNotFound
+}
+
+func (s *refreshTokenCacheStub) DeleteRefreshToken(context.Context, string) error {
+	return nil
+}
+
+func (s *refreshTokenCacheStub) DeleteUserRefreshTokens(context.Context, int64) error {
+	return nil
+}
+
+func (s *refreshTokenCacheStub) DeleteTokenFamily(context.Context, string) error {
+	return nil
+}
+
+func (s *refreshTokenCacheStub) AddToUserTokenSet(context.Context, int64, string, time.Duration) error {
+	return nil
+}
+
+func (s *refreshTokenCacheStub) AddToFamilyTokenSet(context.Context, string, string, time.Duration) error {
+	return nil
+}
+
+func (s *refreshTokenCacheStub) GetUserTokenHashes(context.Context, int64) ([]string, error) {
+	return nil, nil
+}
+
+func (s *refreshTokenCacheStub) GetFamilyTokenHashes(context.Context, string) ([]string, error) {
+	return nil, nil
+}
+
+func (s *refreshTokenCacheStub) IsTokenInFamily(context.Context, string, string) (bool, error) {
+	return false, nil
 }
 
 func (s *emailCacheStub) GetVerificationCode(ctx context.Context, email string) (*VerificationCodeData, error) {
@@ -205,6 +282,13 @@ func newAuthService(repo *userRepoStub, settings map[string]string, emailCache E
 		nil, // referralService
 		nil, // defaultSubAssigner
 	)
+}
+
+func newOAuthEmailAuthService(repo *userRepoStub, redeemRepo RedeemCodeRepository, settings map[string]string, emailCache EmailCache) *AuthService {
+	svc := newAuthService(repo, settings, emailCache)
+	svc.redeemRepo = redeemRepo
+	svc.refreshTokenCache = &refreshTokenCacheStub{}
+	return svc
 }
 
 func TestAuthService_Register_Disabled(t *testing.T) {
@@ -365,7 +449,8 @@ func TestAuthService_Register_CreateEmailExistsRace(t *testing.T) {
 func TestAuthService_Register_Success(t *testing.T) {
 	repo := &userRepoStub{nextID: 5}
 	service := newAuthService(repo, map[string]string{
-		SettingKeyRegistrationEnabled: "true",
+		SettingKeyRegistrationEnabled:                 "true",
+		SettingKeyAuthSourceDefaultEmailGrantOnSignup: "false",
 	}, nil)
 
 	token, user, err := service.Register(context.Background(), "user@test.com", "password")
@@ -417,6 +502,117 @@ func TestAuthService_LoginOrRegisterOAuthWithTokenPair_SetsNotifyDefaults(t *tes
 	require.Len(t, repo.created, 1)
 	require.True(t, repo.created[0].BalanceNotifyEnabled)
 	require.Equal(t, "fixed", repo.created[0].BalanceNotifyThresholdType)
+}
+
+func TestAuthService_RegisterOAuthEmailAccount_UsesForkRegistrationRules(t *testing.T) {
+	repo := &userRepoStub{nextID: 9}
+	cache := &emailCacheStub{data: &VerificationCodeData{Code: "123456"}}
+	svc := newOAuthEmailAuthService(repo, nil, map[string]string{
+		SettingKeyRegistrationEnabled: "true",
+		SettingKeyEmailVerifyEnabled:  "false",
+	}, cache)
+
+	pair, user, err := svc.RegisterOAuthEmailAccount(context.Background(), "OAUTH@Test.COM", "password", "123456", "", "linuxdo")
+	require.NoError(t, err)
+	require.NotNil(t, pair)
+	require.NotNil(t, user)
+	require.Equal(t, int64(9), user.ID)
+	require.Equal(t, "oauth@test.com", user.Email)
+	require.Equal(t, 3.5, user.Balance)
+	require.Equal(t, 2, user.Concurrency)
+	require.True(t, user.BalanceNotifyEnabled)
+	require.Equal(t, "fixed", user.BalanceNotifyThresholdType)
+	require.True(t, user.CheckPassword("password"))
+	require.Len(t, repo.created, 1)
+}
+
+func TestAuthService_RegisterOAuthEmailAccount_RequiresEmailCodeRegardlessGlobalToggle(t *testing.T) {
+	repo := &userRepoStub{}
+	svc := newOAuthEmailAuthService(repo, nil, map[string]string{
+		SettingKeyRegistrationEnabled: "true",
+		SettingKeyEmailVerifyEnabled:  "false",
+	}, &emailCacheStub{data: &VerificationCodeData{Code: "123456"}})
+
+	_, _, err := svc.RegisterOAuthEmailAccount(context.Background(), "oauth@test.com", "password", "", "", "oidc")
+	require.ErrorIs(t, err, ErrEmailVerifyRequired)
+	require.Empty(t, repo.created)
+}
+
+func TestAuthService_RegisterOAuthEmailAccount_RequiresRefreshTokenCacheBeforeCreate(t *testing.T) {
+	repo := &userRepoStub{}
+	svc := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled: "true",
+	}, &emailCacheStub{data: &VerificationCodeData{Code: "123456"}})
+
+	_, _, err := svc.RegisterOAuthEmailAccount(context.Background(), "oauth@test.com", "password", "123456", "", "linuxdo")
+	require.ErrorIs(t, err, ErrServiceUnavailable)
+	require.Empty(t, repo.created)
+}
+
+func TestAuthService_RegisterOAuthEmailAccount_UsesInvitationWhenEnabled(t *testing.T) {
+	repo := &userRepoStub{nextID: 10}
+	redeemRepo := &oauthEmailRedeemRepoStub{
+		code: &RedeemCode{ID: 42, Code: "INVITE", Type: RedeemTypeInvitation, Status: StatusUnused},
+	}
+	svc := newOAuthEmailAuthService(repo, redeemRepo, map[string]string{
+		SettingKeyRegistrationEnabled:   "true",
+		SettingKeyInvitationCodeEnabled: "true",
+	}, &emailCacheStub{data: &VerificationCodeData{Code: "123456"}})
+
+	_, user, err := svc.RegisterOAuthEmailAccount(context.Background(), "oauth@test.com", "password", "123456", "INVITE", "linuxdo")
+	require.NoError(t, err)
+	require.NotNil(t, user)
+	require.Equal(t, int64(42), redeemRepo.usedID)
+	require.Equal(t, int64(10), redeemRepo.usedUser)
+}
+
+func TestAuthService_RegisterOAuthEmailAccount_InvitationUseFailureDoesNotOrphanResponse(t *testing.T) {
+	repo := &userRepoStub{nextID: 12}
+	redeemRepo := &oauthEmailRedeemRepoStub{
+		code:   &RedeemCode{ID: 43, Code: "INVITE", Type: RedeemTypeInvitation, Status: StatusUnused},
+		useErr: errors.New("redeem write failed"),
+	}
+	svc := newOAuthEmailAuthService(repo, redeemRepo, map[string]string{
+		SettingKeyRegistrationEnabled:   "true",
+		SettingKeyInvitationCodeEnabled: "true",
+	}, &emailCacheStub{data: &VerificationCodeData{Code: "123456"}})
+
+	pair, user, err := svc.RegisterOAuthEmailAccount(context.Background(), "oauth@test.com", "password", "123456", "INVITE", "linuxdo")
+	require.NoError(t, err)
+	require.NotNil(t, pair)
+	require.NotNil(t, user)
+	require.Len(t, repo.created, 1)
+}
+
+func TestAuthService_RegisterOAuthEmailAccount_ReusesEmailPolicyAndReservedEmailGuard(t *testing.T) {
+	repo := &userRepoStub{}
+	svc := newOAuthEmailAuthService(repo, nil, map[string]string{
+		SettingKeyRegistrationEnabled:              "true",
+		SettingKeyRegistrationEmailSuffixWhitelist: `["@example.com"]`,
+	}, &emailCacheStub{data: &VerificationCodeData{Code: "123456"}})
+
+	_, _, err := svc.RegisterOAuthEmailAccount(context.Background(), "oauth@other.com", "password", "123456", "", "oidc")
+	require.ErrorIs(t, err, ErrEmailSuffixNotAllowed)
+
+	_, _, err = svc.RegisterOAuthEmailAccount(context.Background(), "oidc-abc@oidc-connect.invalid", "password", "123456", "", "oidc")
+	require.ErrorIs(t, err, ErrEmailReserved)
+	require.Empty(t, repo.created)
+}
+
+func TestAuthService_ValidatePasswordCredentials(t *testing.T) {
+	svc := newAuthService(&userRepoStub{}, nil, nil)
+	hash, err := svc.HashPassword("correct")
+	require.NoError(t, err)
+
+	repo := &userRepoStub{user: &User{ID: 11, Email: "user@test.com", PasswordHash: hash, Status: StatusActive}}
+	svc = newAuthService(repo, nil, nil)
+
+	user, err := svc.ValidatePasswordCredentials(context.Background(), "USER@Test.COM", "correct")
+	require.NoError(t, err)
+	require.Equal(t, int64(11), user.ID)
+
+	_, err = svc.ValidatePasswordCredentials(context.Background(), "user@test.com", "wrong")
+	require.ErrorIs(t, err, ErrInvalidCredentials)
 }
 
 func TestAuthService_ValidateToken_ExpiredReturnsClaimsWithError(t *testing.T) {
@@ -549,8 +745,9 @@ func TestAuthService_Register_AssignsDefaultSubscriptions(t *testing.T) {
 	repo := &userRepoStub{nextID: 42}
 	assigner := &defaultSubscriptionAssignerStub{}
 	service := newAuthService(repo, map[string]string{
-		SettingKeyRegistrationEnabled:  "true",
-		SettingKeyDefaultSubscriptions: `[{"group_id":11,"validity_days":30},{"group_id":12,"validity_days":7}]`,
+		SettingKeyRegistrationEnabled:                 "true",
+		SettingKeyDefaultSubscriptions:                `[{"group_id":11,"validity_days":30},{"group_id":12,"validity_days":7}]`,
+		SettingKeyAuthSourceDefaultEmailGrantOnSignup: "false",
 	}, nil)
 	service.defaultSubAssigner = assigner
 
@@ -563,4 +760,133 @@ func TestAuthService_Register_AssignsDefaultSubscriptions(t *testing.T) {
 	require.Equal(t, 30, assigner.calls[0].ValidityDays)
 	require.Equal(t, int64(12), assigner.calls[1].GroupID)
 	require.Equal(t, 7, assigner.calls[1].ValidityDays)
+}
+
+func TestAuthService_Register_UsesEmailAuthSourceDefaultsWhenGrantEnabled(t *testing.T) {
+	repo := &userRepoStub{nextID: 52}
+	assigner := &defaultSubscriptionAssignerStub{}
+	service := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled:                 "true",
+		SettingKeyDefaultSubscriptions:                `[{"group_id":91,"validity_days":3}]`,
+		SettingKeyAuthSourceDefaultEmailBalance:       "12.5",
+		SettingKeyAuthSourceDefaultEmailConcurrency:   "7",
+		SettingKeyAuthSourceDefaultEmailSubscriptions: `[{"group_id":11,"validity_days":30}]`,
+		SettingKeyAuthSourceDefaultEmailGrantOnSignup: "true",
+	}, nil)
+	service.defaultSubAssigner = assigner
+
+	_, user, err := service.Register(context.Background(), "email-defaults@test.com", "password")
+	require.NoError(t, err)
+	require.NotNil(t, user)
+	require.Equal(t, 12.5, user.Balance)
+	require.Equal(t, 7, user.Concurrency)
+	require.Len(t, assigner.calls, 1)
+	require.Equal(t, int64(11), assigner.calls[0].GroupID)
+	require.Equal(t, 30, assigner.calls[0].ValidityDays)
+}
+
+func TestAuthService_Register_GrantOnSignupFalseFallsBackToGlobalDefaults(t *testing.T) {
+	repo := &userRepoStub{nextID: 53}
+	assigner := &defaultSubscriptionAssignerStub{}
+	service := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled:                 "true",
+		SettingKeyDefaultSubscriptions:                `[{"group_id":31,"validity_days":5}]`,
+		SettingKeyAuthSourceDefaultEmailBalance:       "99",
+		SettingKeyAuthSourceDefaultEmailConcurrency:   "88",
+		SettingKeyAuthSourceDefaultEmailSubscriptions: `[{"group_id":32,"validity_days":9}]`,
+		SettingKeyAuthSourceDefaultEmailGrantOnSignup: "false",
+	}, nil)
+	service.defaultSubAssigner = assigner
+
+	_, user, err := service.Register(context.Background(), "email-global@test.com", "password")
+	require.NoError(t, err)
+	require.NotNil(t, user)
+	require.Equal(t, 3.5, user.Balance)
+	require.Equal(t, 2, user.Concurrency)
+	require.Len(t, assigner.calls, 1)
+	require.Equal(t, int64(31), assigner.calls[0].GroupID)
+	require.Equal(t, 5, assigner.calls[0].ValidityDays)
+}
+
+func TestAuthService_Register_GrantOnSignupMergesSourceOverridesWithGlobalDefaults(t *testing.T) {
+	repo := &userRepoStub{nextID: 54}
+	assigner := &defaultSubscriptionAssignerStub{}
+	service := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled:                 "true",
+		SettingKeyDefaultSubscriptions:                `[{"group_id":31,"validity_days":5}]`,
+		SettingKeyAuthSourceDefaultEmailBalance:       "9.5",
+		SettingKeyAuthSourceDefaultEmailConcurrency:   "5",
+		SettingKeyAuthSourceDefaultEmailSubscriptions: `[]`,
+		SettingKeyAuthSourceDefaultEmailGrantOnSignup: "true",
+	}, nil)
+	service.defaultSubAssigner = assigner
+
+	_, user, err := service.Register(context.Background(), "email-merged@test.com", "password")
+	require.NoError(t, err)
+	require.NotNil(t, user)
+	require.Equal(t, 9.5, user.Balance)
+	require.Equal(t, 2, user.Concurrency)
+	require.Len(t, assigner.calls, 1)
+	require.Equal(t, int64(31), assigner.calls[0].GroupID)
+	require.Equal(t, 5, assigner.calls[0].ValidityDays)
+}
+
+func TestAuthService_LoginOrRegisterOAuthWithTokenPair_UsesLinuxDoAuthSourceDefaultsOnSignup(t *testing.T) {
+	repo := &userRepoStub{nextID: 61}
+	assigner := &defaultSubscriptionAssignerStub{}
+	service := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled:                   "true",
+		SettingKeyDefaultSubscriptions:                  `[{"group_id":81,"validity_days":1}]`,
+		SettingKeyAuthSourceDefaultLinuxDoBalance:       "21.75",
+		SettingKeyAuthSourceDefaultLinuxDoConcurrency:   "9",
+		SettingKeyAuthSourceDefaultLinuxDoSubscriptions: `[{"group_id":22,"validity_days":14}]`,
+		SettingKeyAuthSourceDefaultLinuxDoGrantOnSignup: "true",
+	}, nil)
+	service.defaultSubAssigner = assigner
+	service.refreshTokenCache = &refreshTokenCacheStub{}
+
+	tokenPair, user, err := service.LoginOrRegisterOAuthWithTokenPair(context.Background(), "linuxdo-123@linuxdo-connect.invalid", "linuxdo_user", "")
+	require.NoError(t, err)
+	require.NotNil(t, tokenPair)
+	require.NotNil(t, user)
+	require.Equal(t, int64(61), user.ID)
+	require.Equal(t, 21.75, user.Balance)
+	require.Equal(t, 9, user.Concurrency)
+	require.Len(t, repo.created, 1)
+	require.Len(t, assigner.calls, 1)
+	require.Equal(t, int64(22), assigner.calls[0].GroupID)
+	require.Equal(t, 14, assigner.calls[0].ValidityDays)
+}
+
+func TestAuthService_LoginOrRegisterOAuthWithTokenPair_ExistingUserDoesNotGrantAgain(t *testing.T) {
+	existing := &User{
+		ID:           88,
+		Email:        "linuxdo-123@linuxdo-connect.invalid",
+		Username:     "existing-linuxdo",
+		Role:         RoleUser,
+		Status:       StatusActive,
+		Balance:      4,
+		Concurrency:  1,
+		TokenVersion: 2,
+	}
+	repo := &userRepoStub{user: existing}
+	assigner := &defaultSubscriptionAssignerStub{}
+	service := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled:                   "true",
+		SettingKeyAuthSourceDefaultLinuxDoBalance:       "21.75",
+		SettingKeyAuthSourceDefaultLinuxDoConcurrency:   "9",
+		SettingKeyAuthSourceDefaultLinuxDoSubscriptions: `[{"group_id":22,"validity_days":14}]`,
+		SettingKeyAuthSourceDefaultLinuxDoGrantOnSignup: "true",
+	}, nil)
+	service.defaultSubAssigner = assigner
+	service.refreshTokenCache = &refreshTokenCacheStub{}
+
+	tokenPair, user, err := service.LoginOrRegisterOAuthWithTokenPair(context.Background(), existing.Email, "linuxdo_user", "")
+	require.NoError(t, err)
+	require.NotNil(t, tokenPair)
+	require.Equal(t, existing.ID, user.ID)
+	require.Equal(t, 4.0, user.Balance)
+	require.Equal(t, 1, user.Concurrency)
+	require.Empty(t, repo.created)
+	require.Empty(t, assigner.calls)
 }

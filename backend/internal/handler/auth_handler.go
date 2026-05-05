@@ -6,6 +6,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ip"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
@@ -275,6 +276,46 @@ func (h *AuthHandler) Login2FA(c *gin.Context) {
 		return
 	}
 
+	if session.PendingOAuthBind != nil {
+		pendingSvc, err := h.pendingIdentityService()
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+
+		pendingSession, err := pendingSvc.GetBrowserSession(c.Request.Context(), session.PendingOAuthBind.PendingSessionToken, session.PendingOAuthBind.BrowserSessionKey)
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+		if pendingSession.TargetUserID != nil && *pendingSession.TargetUserID > 0 && *pendingSession.TargetUserID != user.ID {
+			response.ErrorFrom(c, infraerrors.Conflict("PENDING_AUTH_TARGET_USER_MISMATCH", "pending oauth session must be completed by the targeted user"))
+			return
+		}
+		decision, err := h.ensurePendingOAuthAdoptionDecision(c, pendingSession.ID, oauthAdoptionDecisionRequest{})
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+		if err := applyPendingOAuthBinding(c.Request.Context(), h.entClient(), h.authService, h.userService, pendingSession, decision, &user.ID, true, true); err != nil {
+			response.ErrorFrom(c, pendingOAuthBindApplyError(err))
+			return
+		}
+		if _, err := pendingSvc.ConsumeBrowserSession(c.Request.Context(), pendingSession.SessionToken, pendingSession.BrowserSessionKey); err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+		secureCookie := isRequestHTTPS(c)
+		clearOAuthPendingSessionCookie(c, secureCookie)
+		clearOAuthPendingBrowserCookie(c, secureCookie)
+		h.authService.RecordSuccessfulLogin(c.Request.Context(), user.ID)
+		user, err = h.userService.GetByID(c.Request.Context(), session.UserID)
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+	}
+
 	// Delete the login session (only after all checks pass)
 	_ = h.totpService.DeleteLoginSession(c.Request.Context(), req.TempToken)
 
@@ -296,8 +337,14 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 		return
 	}
 
+	identities, err := h.userService.GetProfileIdentitySummaries(c.Request.Context(), subject.UserID, user)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
 	type UserResponse struct {
-		*dto.User
+		userProfileResponse
 		RunMode string `json:"run_mode"`
 	}
 
@@ -306,7 +353,10 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 		runMode = h.cfg.RunMode
 	}
 
-	response.Success(c, UserResponse{User: dto.UserFromService(user), RunMode: runMode})
+	response.Success(c, UserResponse{
+		userProfileResponse: userProfileResponseFromService(user, identities),
+		RunMode:             runMode,
+	})
 }
 
 // ValidatePromoCodeRequest 验证优惠码请求

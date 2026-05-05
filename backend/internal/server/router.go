@@ -63,18 +63,18 @@ func SetupRouter(
 
 	// Serve embedded frontend with settings injection if available
 	if web.HasEmbeddedFrontend() {
-		frontendServer, err := web.NewFrontendServer(settingService)
-		if err != nil {
-			log.Printf("Warning: Failed to create frontend server with settings injection: %v, using legacy mode", err)
-			r.Use(web.ServeEmbeddedFrontend())
-			settingService.SetOnUpdateCallback(refreshFrameOrigins)
-		} else {
+		frontendServer, err := newFrontendServer(settingService)
+		if err == nil {
 			// Register combined callback: invalidate HTML cache + refresh frame origins
 			settingService.SetOnUpdateCallback(func() {
 				frontendServer.InvalidateCache()
 				refreshFrameOrigins()
 			})
 			r.Use(frontendServer.Middleware())
+		} else {
+			log.Printf("Warning: Failed to create frontend server with settings injection: %v, using legacy mode", err)
+			r.Use(web.ServeEmbeddedFrontend())
+			settingService.SetOnUpdateCallback(refreshFrameOrigins)
 		}
 	} else {
 		settingService.SetOnUpdateCallback(refreshFrameOrigins)
@@ -85,6 +85,8 @@ func SetupRouter(
 
 	return r
 }
+
+var newFrontendServer = web.NewFrontendServer
 
 // registerRoutes 注册所有 HTTP 路由
 func registerRoutes(

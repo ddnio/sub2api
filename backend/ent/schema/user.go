@@ -87,6 +87,17 @@ func (User) Fields() []ent.Field {
 		field.Time("totp_enabled_at").
 			Optional().
 			Nillable(),
+		field.String("signup_source").
+			MaxLen(20).
+			Default("email"),
+		field.Time("last_login_at").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "timestamptz"}),
+		field.Time("last_active_at").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "timestamptz"}),
 
 		// 推荐码（邀请归因）
 		field.String("referral_code").
@@ -111,6 +122,8 @@ func (User) Edges() []ent.Edge {
 		edge.To("payment_orders", PaymentOrder.Type),
 		edge.To("referrals_as_inviter", UserReferral.Type),
 		edge.To("referrals_as_invitee", UserReferral.Type),
+		edge.To("auth_identities", AuthIdentity.Type),
+		edge.To("pending_auth_sessions", PendingAuthSession.Type),
 	}
 }
 

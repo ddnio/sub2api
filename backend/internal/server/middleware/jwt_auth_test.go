@@ -30,6 +30,10 @@ func (r *stubJWTUserRepo) GetByID(_ context.Context, id int64) (*service.User, e
 	return u, nil
 }
 
+func (r *stubJWTUserRepo) GetUserAvatar(context.Context, int64) (*service.UserAvatar, error) {
+	return nil, nil
+}
+
 // newJWTTestEnv 创建 JWT 认证中间件测试环境。
 // 返回 gin.Engine（已注册 JWT 中间件）和 AuthService（用于生成 Token）。
 func newJWTTestEnv(users map[int64]*service.User) (*gin.Engine, *service.AuthService) {

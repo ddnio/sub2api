@@ -55,6 +55,12 @@ type User struct {
 	TotpEnabled bool `json:"totp_enabled,omitempty"`
 	// TotpEnabledAt holds the value of the "totp_enabled_at" field.
 	TotpEnabledAt *time.Time `json:"totp_enabled_at,omitempty"`
+	// SignupSource holds the value of the "signup_source" field.
+	SignupSource string `json:"signup_source,omitempty"`
+	// LastLoginAt holds the value of the "last_login_at" field.
+	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
+	// LastActiveAt holds the value of the "last_active_at" field.
+	LastActiveAt *time.Time `json:"last_active_at,omitempty"`
 	// ReferralCode holds the value of the "referral_code" field.
 	ReferralCode *string `json:"referral_code,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -89,11 +95,15 @@ type UserEdges struct {
 	ReferralsAsInviter []*UserReferral `json:"referrals_as_inviter,omitempty"`
 	// ReferralsAsInvitee holds the value of the referrals_as_invitee edge.
 	ReferralsAsInvitee []*UserReferral `json:"referrals_as_invitee,omitempty"`
+	// AuthIdentities holds the value of the auth_identities edge.
+	AuthIdentities []*AuthIdentity `json:"auth_identities,omitempty"`
+	// PendingAuthSessions holds the value of the pending_auth_sessions edge.
+	PendingAuthSessions []*PendingAuthSession `json:"pending_auth_sessions,omitempty"`
 	// UserAllowedGroups holds the value of the user_allowed_groups edge.
 	UserAllowedGroups []*UserAllowedGroup `json:"user_allowed_groups,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [13]bool
+	loadedTypes [15]bool
 }
 
 // APIKeysOrErr returns the APIKeys value or an error if the edge
@@ -204,10 +214,28 @@ func (e UserEdges) ReferralsAsInviteeOrErr() ([]*UserReferral, error) {
 	return nil, &NotLoadedError{edge: "referrals_as_invitee"}
 }
 
+// AuthIdentitiesOrErr returns the AuthIdentities value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) AuthIdentitiesOrErr() ([]*AuthIdentity, error) {
+	if e.loadedTypes[12] {
+		return e.AuthIdentities, nil
+	}
+	return nil, &NotLoadedError{edge: "auth_identities"}
+}
+
+// PendingAuthSessionsOrErr returns the PendingAuthSessions value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) PendingAuthSessionsOrErr() ([]*PendingAuthSession, error) {
+	if e.loadedTypes[13] {
+		return e.PendingAuthSessions, nil
+	}
+	return nil, &NotLoadedError{edge: "pending_auth_sessions"}
+}
+
 // UserAllowedGroupsOrErr returns the UserAllowedGroups value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) UserAllowedGroupsOrErr() ([]*UserAllowedGroup, error) {
-	if e.loadedTypes[12] {
+	if e.loadedTypes[14] {
 		return e.UserAllowedGroups, nil
 	}
 	return nil, &NotLoadedError{edge: "user_allowed_groups"}
@@ -224,9 +252,9 @@ func (*User) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case user.FieldID, user.FieldConcurrency:
 			values[i] = new(sql.NullInt64)
-		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldBalanceNotifyExtraEmails, user.FieldBalanceNotifyThresholdType, user.FieldStatus, user.FieldUsername, user.FieldNotes, user.FieldTotpSecretEncrypted, user.FieldReferralCode:
+		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldBalanceNotifyExtraEmails, user.FieldBalanceNotifyThresholdType, user.FieldStatus, user.FieldUsername, user.FieldNotes, user.FieldTotpSecretEncrypted, user.FieldSignupSource, user.FieldReferralCode:
 			values[i] = new(sql.NullString)
-		case user.FieldCreatedAt, user.FieldUpdatedAt, user.FieldDeletedAt, user.FieldTotpEnabledAt:
+		case user.FieldCreatedAt, user.FieldUpdatedAt, user.FieldDeletedAt, user.FieldTotpEnabledAt, user.FieldLastLoginAt, user.FieldLastActiveAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -367,6 +395,26 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				_m.TotpEnabledAt = new(time.Time)
 				*_m.TotpEnabledAt = value.Time
 			}
+		case user.FieldSignupSource:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field signup_source", values[i])
+			} else if value.Valid {
+				_m.SignupSource = value.String
+			}
+		case user.FieldLastLoginAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field last_login_at", values[i])
+			} else if value.Valid {
+				_m.LastLoginAt = new(time.Time)
+				*_m.LastLoginAt = value.Time
+			}
+		case user.FieldLastActiveAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field last_active_at", values[i])
+			} else if value.Valid {
+				_m.LastActiveAt = new(time.Time)
+				*_m.LastActiveAt = value.Time
+			}
 		case user.FieldReferralCode:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field referral_code", values[i])
@@ -445,6 +493,16 @@ func (_m *User) QueryReferralsAsInviter() *UserReferralQuery {
 // QueryReferralsAsInvitee queries the "referrals_as_invitee" edge of the User entity.
 func (_m *User) QueryReferralsAsInvitee() *UserReferralQuery {
 	return NewUserClient(_m.config).QueryReferralsAsInvitee(_m)
+}
+
+// QueryAuthIdentities queries the "auth_identities" edge of the User entity.
+func (_m *User) QueryAuthIdentities() *AuthIdentityQuery {
+	return NewUserClient(_m.config).QueryAuthIdentities(_m)
+}
+
+// QueryPendingAuthSessions queries the "pending_auth_sessions" edge of the User entity.
+func (_m *User) QueryPendingAuthSessions() *PendingAuthSessionQuery {
+	return NewUserClient(_m.config).QueryPendingAuthSessions(_m)
 }
 
 // QueryUserAllowedGroups queries the "user_allowed_groups" edge of the User entity.
@@ -537,6 +595,19 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	if v := _m.TotpEnabledAt; v != nil {
 		builder.WriteString("totp_enabled_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("signup_source=")
+	builder.WriteString(_m.SignupSource)
+	builder.WriteString(", ")
+	if v := _m.LastLoginAt; v != nil {
+		builder.WriteString("last_login_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.LastActiveAt; v != nil {
+		builder.WriteString("last_active_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")

@@ -2,6 +2,8 @@ package handler
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -17,6 +19,7 @@ import (
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/oauth"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
+	servermiddleware "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -25,17 +28,23 @@ import (
 )
 
 const (
-	linuxDoOAuthCookiePath        = "/api/v1/auth/oauth/linuxdo"
-	linuxDoOAuthStateCookieName   = "linuxdo_oauth_state"
-	linuxDoOAuthVerifierCookie    = "linuxdo_oauth_verifier"
-	linuxDoOAuthRedirectCookie    = "linuxdo_oauth_redirect"
-	linuxDoOAuthCookieMaxAgeSec   = 10 * 60 // 10 minutes
-	linuxDoOAuthDefaultRedirectTo = "/dashboard"
-	linuxDoOAuthDefaultFrontendCB = "/auth/linuxdo/callback"
+	linuxDoOAuthCookiePath         = "/api/v1/auth/oauth/linuxdo"
+	linuxDoOAuthStateCookieName    = "linuxdo_oauth_state"
+	linuxDoOAuthVerifierCookie     = "linuxdo_oauth_verifier"
+	linuxDoOAuthRedirectCookie     = "linuxdo_oauth_redirect"
+	linuxDoOAuthIntentCookieName   = "linuxdo_oauth_intent"
+	linuxDoOAuthBindUserCookieName = "linuxdo_oauth_bind_user"
+	oauthBindAccessTokenCookiePath = "/api/v1/auth/oauth"
+	oauthBindAccessTokenCookieName = "oauth_bind_access_token"
+	linuxDoOAuthCookieMaxAgeSec    = 10 * 60 // 10 minutes
+	linuxDoOAuthDefaultRedirectTo  = "/dashboard"
+	linuxDoOAuthDefaultFrontendCB  = "/auth/linuxdo/callback"
 
 	linuxDoOAuthMaxRedirectLen      = 2048
 	linuxDoOAuthMaxFragmentValueLen = 512
 	linuxDoOAuthMaxSubjectLen       = 64 - len("linuxdo-")
+	oauthIntentLogin                = "login"
+	oauthIntentBindCurrentUser      = "bind_current_user"
 )
 
 type linuxDoTokenResponse struct {
@@ -81,6 +90,11 @@ func (h *AuthHandler) LinuxDoOAuthStart(c *gin.Context) {
 		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_STATE_GEN_FAILED", "failed to generate oauth state").WithCause(err))
 		return
 	}
+	browserSessionKey, err := generateOAuthPendingBrowserSession()
+	if err != nil {
+		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_BROWSER_SESSION_GEN_FAILED", "failed to generate oauth browser session").WithCause(err))
+		return
+	}
 
 	redirectTo := sanitizeFrontendRedirectPath(c.Query("redirect"))
 	if redirectTo == "" {
@@ -88,8 +102,25 @@ func (h *AuthHandler) LinuxDoOAuthStart(c *gin.Context) {
 	}
 
 	secureCookie := isRequestHTTPS(c)
+	intent := normalizeOAuthIntent(c.Query("intent"))
+	bindCookieValue := ""
+	if intent == oauthIntentBindCurrentUser {
+		bindCookieValue, err = h.buildOAuthBindUserCookieFromContext(c, state, browserSessionKey)
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+	}
 	setCookie(c, linuxDoOAuthStateCookieName, encodeCookieValue(state), linuxDoOAuthCookieMaxAgeSec, secureCookie)
 	setCookie(c, linuxDoOAuthRedirectCookie, encodeCookieValue(redirectTo), linuxDoOAuthCookieMaxAgeSec, secureCookie)
+	setCookie(c, linuxDoOAuthIntentCookieName, encodeCookieValue(intent), linuxDoOAuthCookieMaxAgeSec, secureCookie)
+	setOAuthPendingBrowserCookie(c, browserSessionKey, secureCookie)
+	clearOAuthPendingSessionCookie(c, secureCookie)
+	if intent == oauthIntentBindCurrentUser {
+		setCookie(c, linuxDoOAuthBindUserCookieName, encodeCookieValue(bindCookieValue), linuxDoOAuthCookieMaxAgeSec, secureCookie)
+	} else {
+		clearCookie(c, linuxDoOAuthBindUserCookieName, secureCookie)
+	}
 
 	codeChallenge := ""
 	if cfg.UsePKCE {
@@ -148,6 +179,8 @@ func (h *AuthHandler) LinuxDoOAuthCallback(c *gin.Context) {
 		clearCookie(c, linuxDoOAuthStateCookieName, secureCookie)
 		clearCookie(c, linuxDoOAuthVerifierCookie, secureCookie)
 		clearCookie(c, linuxDoOAuthRedirectCookie, secureCookie)
+		clearCookie(c, linuxDoOAuthIntentCookieName, secureCookie)
+		clearCookie(c, linuxDoOAuthBindUserCookieName, secureCookie)
 	}()
 
 	expectedState, err := readCookieDecoded(c, linuxDoOAuthStateCookieName)
@@ -161,6 +194,13 @@ func (h *AuthHandler) LinuxDoOAuthCallback(c *gin.Context) {
 	if redirectTo == "" {
 		redirectTo = linuxDoOAuthDefaultRedirectTo
 	}
+	browserSessionKey, _ := readOAuthPendingBrowserCookie(c)
+	if strings.TrimSpace(browserSessionKey) == "" {
+		redirectOAuthError(c, frontendCallback, "missing_browser_session", "missing oauth browser session", "")
+		return
+	}
+	intent, _ := readCookieDecoded(c, linuxDoOAuthIntentCookieName)
+	intent = normalizeOAuthIntent(intent)
 
 	codeVerifier := ""
 	if cfg.UsePKCE {
@@ -210,11 +250,47 @@ func (h *AuthHandler) LinuxDoOAuthCallback(c *gin.Context) {
 	if subject != "" {
 		email = linuxDoSyntheticEmail(subject)
 	}
+	if intent == oauthIntentBindCurrentUser {
+		targetUserID, err := h.readOAuthBindUserIDFromCookie(c, linuxDoOAuthBindUserCookieName, expectedState, browserSessionKey)
+		if err != nil {
+			redirectOAuthError(c, frontendCallback, "invalid_state", "invalid oauth bind target", "")
+			return
+		}
+		if err := h.createOAuthPendingSession(c, oauthPendingSessionPayload{
+			Intent: oauthIntentBindCurrentUser,
+			Identity: service.PendingAuthIdentityKey{
+				ProviderType:    "linuxdo",
+				ProviderKey:     "linuxdo",
+				ProviderSubject: subject,
+			},
+			TargetUserID:      &targetUserID,
+			ResolvedEmail:     email,
+			RedirectTo:        redirectTo,
+			BrowserSessionKey: browserSessionKey,
+			UpstreamIdentityClaims: map[string]any{
+				"email":    email,
+				"username": username,
+				"subject":  subject,
+			},
+			CompletionResponse: map[string]any{"redirect": redirectTo},
+		}); err != nil {
+			redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth bind", "")
+			return
+		}
+		redirectToFrontendCallback(c, frontendCallback)
+		return
+	}
 
 	// 传入空邀请码；如果需要邀请码，服务层返回 ErrOAuthInvitationRequired
 	tokenPair, _, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, "")
 	if err != nil {
 		if errors.Is(err, service.ErrOAuthInvitationRequired) {
+			if strings.TrimSpace(browserSessionKey) != "" && strings.TrimSpace(subject) != "" {
+				if err := h.createOAuthPendingSession(c, linuxDoInvitationPendingPayload(email, username, subject, redirectTo, browserSessionKey)); err != nil {
+					redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
+					return
+				}
+			}
 			pendingToken, tokenErr := h.authService.CreatePendingOAuthToken(email, username)
 			if tokenErr != nil {
 				redirectOAuthError(c, frontendCallback, "login_failed", "service_error", "")
@@ -668,6 +744,120 @@ func clearCookie(c *gin.Context, name string, secure bool) {
 		Secure:   secure,
 		SameSite: http.SameSiteLaxMode,
 	})
+}
+
+func clearOAuthBindAccessTokenCookie(c *gin.Context, secure bool) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     oauthBindAccessTokenCookieName,
+		Value:    "",
+		Path:     oauthBindAccessTokenCookiePath,
+		MaxAge:   -1,
+		HttpOnly: false,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func normalizeOAuthIntent(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "", oauthIntentLogin:
+		return oauthIntentLogin
+	case "bind", oauthIntentBindCurrentUser:
+		return oauthIntentBindCurrentUser
+	default:
+		return oauthIntentLogin
+	}
+}
+
+func (h *AuthHandler) buildOAuthBindUserCookieFromContext(c *gin.Context, state, browserSessionKey string) (string, error) {
+	userID, err := h.resolveOAuthBindTargetUserID(c)
+	if err != nil || userID == nil || *userID <= 0 {
+		return "", infraerrors.Unauthorized("UNAUTHORIZED", "authentication required")
+	}
+	return buildOAuthBindUserCookieValue(*userID, state, browserSessionKey, h.oauthBindCookieSecret())
+}
+
+func (h *AuthHandler) resolveOAuthBindTargetUserID(c *gin.Context) (*int64, error) {
+	if subject, ok := servermiddleware.GetAuthSubjectFromContext(c); ok && subject.UserID > 0 {
+		return &subject.UserID, nil
+	}
+	if h == nil || h.authService == nil || h.userService == nil {
+		return nil, service.ErrInvalidToken
+	}
+	ck, err := c.Request.Cookie(oauthBindAccessTokenCookieName)
+	clearOAuthBindAccessTokenCookie(c, isRequestHTTPS(c))
+	if err != nil {
+		return nil, err
+	}
+	tokenString, err := url.QueryUnescape(strings.TrimSpace(ck.Value))
+	if err != nil || tokenString == "" {
+		return nil, service.ErrInvalidToken
+	}
+	claims, err := h.authService.ValidateToken(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	user, err := h.userService.GetByID(c.Request.Context(), claims.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil || !user.IsActive() || claims.TokenVersion != user.TokenVersion {
+		return nil, service.ErrInvalidToken
+	}
+	return &user.ID, nil
+}
+
+func (h *AuthHandler) readOAuthBindUserIDFromCookie(c *gin.Context, cookieName, state, browserSessionKey string) (int64, error) {
+	value, err := readCookieDecoded(c, cookieName)
+	if err != nil {
+		return 0, err
+	}
+	return parseOAuthBindUserCookieValue(value, state, browserSessionKey, h.oauthBindCookieSecret())
+}
+
+func (h *AuthHandler) oauthBindCookieSecret() string {
+	if h == nil || h.cfg == nil {
+		return ""
+	}
+	return strings.TrimSpace(h.cfg.JWT.Secret)
+}
+
+func buildOAuthBindUserCookieValue(userID int64, state, browserSessionKey, secret string) (string, error) {
+	secret = strings.TrimSpace(secret)
+	state = strings.TrimSpace(state)
+	browserSessionKey = strings.TrimSpace(browserSessionKey)
+	if userID <= 0 || state == "" || browserSessionKey == "" || secret == "" {
+		return "", errors.New("invalid oauth bind cookie input")
+	}
+	payload := strconv.FormatInt(userID, 10)
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write([]byte(payload + "." + state + "." + browserSessionKey))
+	signature := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	return payload + "." + signature, nil
+}
+
+func parseOAuthBindUserCookieValue(value, state, browserSessionKey, secret string) (int64, error) {
+	secret = strings.TrimSpace(secret)
+	state = strings.TrimSpace(state)
+	browserSessionKey = strings.TrimSpace(browserSessionKey)
+	if secret == "" || state == "" || browserSessionKey == "" {
+		return 0, errors.New("missing oauth bind cookie secret")
+	}
+	payload, signature, ok := strings.Cut(strings.TrimSpace(value), ".")
+	if !ok || payload == "" || signature == "" {
+		return 0, errors.New("invalid oauth bind cookie")
+	}
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write([]byte(payload + "." + state + "." + browserSessionKey))
+	expectedSignature := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
+		return 0, errors.New("invalid oauth bind cookie signature")
+	}
+	userID, err := strconv.ParseInt(payload, 10, 64)
+	if err != nil || userID <= 0 {
+		return 0, errors.New("invalid oauth bind cookie user")
+	}
+	return userID, nil
 }
 
 func truncateFragmentValue(value string) string {

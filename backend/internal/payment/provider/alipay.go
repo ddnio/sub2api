@@ -107,8 +107,8 @@ func (a *Alipay) MerchantIdentityMetadata() map[string]string {
 //   - Mobile (H5): alipay.trade.wap.pay — browser redirect into Alipay.
 //   - Desktop: prefer alipay.trade.precreate to get a scan payload directly.
 //   - Desktop fallback: if precreate is unavailable for the merchant, fall back
-//     to alipay.trade.page.pay and expose both pay_url and qr_code so the
-//     frontend can render a QR while still allowing direct page open.
+//     to alipay.trade.page.pay and return only pay_url. Page-pay URLs are not
+//     QR payloads and must be opened by the browser instead of rendered as QR.
 func (a *Alipay) CreatePayment(ctx context.Context, req payment.CreatePaymentRequest) (*payment.CreatePaymentResponse, error) {
 	client, err := a.getClient()
 	if err != nil {
@@ -207,7 +207,6 @@ func (a *Alipay) createPagePayTrade(client *alipay.Client, req payment.CreatePay
 	return &payment.CreatePaymentResponse{
 		TradeNo: req.OrderID,
 		PayURL:  payURL.String(),
-		QRCode:  payURL.String(),
 	}, nil
 }
 

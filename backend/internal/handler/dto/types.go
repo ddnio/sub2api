@@ -30,6 +30,7 @@ type UserProfile struct {
 	BalanceNotifyThreshold     *float64           `json:"balance_notify_threshold"`
 	BalanceNotifyThresholdType string             `json:"balance_notify_threshold_type"`
 	BalanceNotifyExtraEmails   []NotifyEmailEntry `json:"balance_notify_extra_emails"`
+	AuthIdentities             any                `json:"identities,omitempty"`
 }
 
 // AdminUser 是管理员接口使用的 user DTO（包含敏感/内部字段）。
@@ -37,7 +38,10 @@ type UserProfile struct {
 type AdminUser struct {
 	User
 
-	Notes string `json:"notes"`
+	Notes        string     `json:"notes"`
+	LastLoginAt  *time.Time `json:"last_login_at"`
+	LastActiveAt *time.Time `json:"last_active_at"`
+	LastUsedAt   *time.Time `json:"last_used_at"`
 	// GroupRates 用户专属分组倍率配置
 	// map[groupID]rateMultiplier
 	GroupRates map[int64]float64 `json:"group_rates,omitempty"`

@@ -11,6 +11,11 @@ type User struct {
 	Email                      string
 	Username                   string
 	Notes                      string
+	AvatarURL                  string
+	AvatarSource               string
+	AvatarMIME                 string
+	AvatarByteSize             int
+	AvatarSHA256               string
 	PasswordHash               string
 	Role                       string
 	Balance                    float64
@@ -23,6 +28,10 @@ type User struct {
 	Status                     string
 	AllowedGroups              []int64
 	TokenVersion               int64 // Incremented on password change to invalidate existing tokens
+	SignupSource               string
+	LastLoginAt                *time.Time
+	LastActiveAt               *time.Time
+	LastUsedAt                 *time.Time
 	CreatedAt                  time.Time
 	UpdatedAt                  time.Time
 
@@ -37,6 +46,8 @@ type User struct {
 	TotpSecretEncrypted *string    // AES-256-GCM 加密的 TOTP 密钥
 	TotpEnabled         bool       // 是否启用 TOTP
 	TotpEnabledAt       *time.Time // TOTP 启用时间
+
+	AuthIdentities UserIdentitySummarySet
 
 	APIKeys       []APIKey
 	Subscriptions []UserSubscription

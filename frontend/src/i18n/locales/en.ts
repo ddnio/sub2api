@@ -491,6 +491,7 @@ export default {
     signUp: 'Sign up',
     processing: 'Processing...',
     continue: 'Continue',
+    wechatCallbackPageTitle: 'WeChat OAuth Callback',
     wechatPaymentCallbackPageTitle: 'WeChat Payment Callback',
     rememberMe: 'Remember me',
     dontHaveAccount: "Don't have an account?",
@@ -523,6 +524,7 @@ export default {
     verificationCode: 'Verification Code',
     verificationCodeHint: 'Enter the 6-digit code sent to your email',
     sendingCode: 'Sending...',
+    sendCode: 'Send verification code',
     clickToResend: 'Click to resend code',
     resendCode: 'Resend verification code',
     sendCodeDesc: "We'll send a verification code to",
@@ -569,7 +571,11 @@ export default {
       invalidPendingToken: 'The registration token has expired. Please sign in with Linux.do again.',
       completeRegistration: 'Complete Registration',
       completing: 'Completing registration…',
-      completeRegistrationFailed: 'Registration failed. Please check your invitation code and try again.'
+      completeRegistrationFailed: 'Registration failed. Please check your invitation code and try again.',
+      bindLoginRequired: 'Log in to an existing account to bind this Linux.do sign-in.',
+      bindLoginSubmit: 'Log in and bind',
+      useDifferentEmail: 'Use a different email',
+      totpRequired: 'Enter the 6-digit verification code for {email} to finish binding this Linux.do sign-in.'
     },
     oidc: {
       signIn: 'Continue with {providerName}',
@@ -583,7 +589,11 @@ export default {
       invalidPendingToken: 'The registration token has expired. Please sign in again.',
       completeRegistration: 'Complete Registration',
       completing: 'Completing registration…',
-      completeRegistrationFailed: 'Registration failed. Please check your invitation code and try again.'
+      completeRegistrationFailed: 'Registration failed. Please check your invitation code and try again.',
+      bindLoginRequired: 'Log in to an existing account to bind this {providerName} sign-in.',
+      bindLoginSubmit: 'Log in and bind',
+      useDifferentEmail: 'Use a different email',
+      totpRequired: 'Enter the 6-digit verification code for {email} to finish binding this {providerName} sign-in.'
     },
     oauth: {
       code: 'Code',
@@ -1043,6 +1053,7 @@ export default {
       loginTitle: 'Two-Factor Authentication',
       loginHint: 'Enter the 6-digit code from your authenticator app',
       loginFailed: 'Verification failed, please try again',
+      yourAccount: 'your account',
       // New translations for email verification
       verifyEmailFirst: 'Please verify your email first',
       verifyPasswordFirst: 'Please verify your identity first',
@@ -1083,6 +1094,40 @@ export default {
       maxEmailsReached: 'Maximum number of notification emails reached',
       unverified: 'Unverified',
       verified: 'Verified'
+    },
+    avatar: {
+      title: 'Profile Avatar',
+      description: 'Set your avatar with a remote image URL or upload an image under 100KB. Uploaded images are compressed to 20KB.',
+      inputLabel: 'Avatar URL or data URL',
+      inputPlaceholder: 'https://cdn.example.com/avatar.png',
+      uploadAction: 'Upload image',
+      uploadHint: 'Uploaded images must be 100KB or smaller. Static images are compressed to 20KB.',
+      saveSuccess: 'Avatar updated',
+      deleteSuccess: 'Avatar removed',
+      invalidType: 'Please choose an image file',
+      fileTooLarge: 'Avatar image must be 100KB or smaller',
+      gifTooLarge: 'GIF avatars must already be 20KB or smaller',
+      compressTooLarge: 'Unable to compress this image below 20KB. Try a smaller image.',
+      compressFailed: 'Failed to compress the selected image.',
+      readFailed: 'Failed to read the selected image.',
+      invalidValue: 'Enter a valid avatar URL or image data URL',
+      emptyDeleteHint: 'Avatar is already empty',
+    },
+    authBindings: {
+      title: 'Connected Sign-In Methods',
+      description: 'Bind third-party sign-in methods to this account.',
+      providers: {
+        email: 'Email',
+        linuxdo: 'LinuxDo',
+        oidc: '{providerName}'
+      },
+      status: {
+        bound: 'Bound',
+        notBound: 'Not bound'
+      },
+      bindAction: 'Bind',
+      unbindAction: 'Unbind',
+      bindSuccess: 'Sign-in method bound successfully'
     }
   },
 
@@ -2269,6 +2314,7 @@ export default {
         rateLimited: 'Rate Limited',
         overloaded: 'Overloaded',
         tempUnschedulable: 'Temp Unschedulable',
+        quotaExceeded: 'Quota Exceeded',
         unschedulable: 'Unschedulable',
         rateLimitedUntil: 'Rate limited and removed from scheduling. Auto resumes at {time}',
         rateLimitedAutoResume: 'Auto resumes in {time}',
@@ -3050,7 +3096,7 @@ export default {
       connectedToApi: 'Connected to API',
       usingModel: 'Using model: {model}',
       sendingTestMessage: 'Sending test message: "hi"',
-      sendingGeminiImageRequest: 'Sending Gemini image generation test request...',
+      sendingImageRequest: 'Sending image generation test request...',
       response: 'Response:',
       startTest: 'Start Test',
       testing: 'Testing...',
@@ -3062,13 +3108,13 @@ export default {
       selectTestModel: 'Select Test Model',
       testModel: 'Test model',
       testPrompt: 'Prompt: "hi"',
-      geminiImagePromptLabel: 'Image prompt',
-      geminiImagePromptPlaceholder: 'Example: Generate an orange cat astronaut sticker in pixel-art style on a solid background.',
-      geminiImagePromptDefault: 'Generate a cute orange cat astronaut sticker on a clean pastel background.',
-      geminiImageTestHint: 'When a Gemini image model is selected, this test sends a real image-generation request and previews the returned image below.',
-      geminiImageTestMode: 'Mode: Gemini image generation test',
-      geminiImagePreview: 'Generated images:',
-      geminiImageReceived: 'Received test image #{count}',
+      imagePromptLabel: 'Image prompt',
+      imagePromptPlaceholder: 'Example: Generate an orange cat astronaut sticker in pixel-art style on a solid background.',
+      imagePromptDefault: 'Generate a cute orange cat astronaut sticker on a clean pastel background.',
+      imageTestHint: 'When an image model is selected, this test sends a real image-generation request and previews the returned image below.',
+      imageTestMode: 'Mode: Image generation test',
+      imagePreview: 'Generated images:',
+      imageReceived: 'Received test image #{count}',
       // Stats Modal
       viewStats: 'View Stats',
       usageStatistics: 'Usage Statistics',
@@ -5718,10 +5764,13 @@ export default {
       field_cidWxpay: 'WeChat Channel ID',
       field_privateKey: 'Private Key',
       field_publicKey: 'Public Key',
+      field_mpAppId: 'MP App ID',
       field_mchId: 'Merchant ID',
       field_apiV3Key: 'API v3 Key',
       field_certSerial: 'Certificate Serial',
       field_publicKeyId: 'Public Key ID',
+      field_h5AppName: 'H5 App Name',
+      field_h5AppUrl: 'H5 App URL',
       field_secretKey: 'Secret Key',
       field_publishableKey: 'Publishable Key',
       field_webhookSecret: 'Webhook Secret',

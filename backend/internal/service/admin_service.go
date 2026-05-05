@@ -502,6 +502,20 @@ func (s *adminServiceImpl) ListUsers(ctx context.Context, page, pageSize int, fi
 	if err != nil {
 		return nil, 0, err
 	}
+	if len(users) > 0 {
+		userIDs := make([]int64, 0, len(users))
+		for i := range users {
+			userIDs = append(userIDs, users[i].ID)
+		}
+		lastUsedByUserID, latestErr := s.userRepo.GetLatestUsedAtByUserIDs(ctx, userIDs)
+		if latestErr != nil {
+			logger.LegacyPrintf("service.admin", "failed to load user last_used_at in batch: err=%v", latestErr)
+		} else {
+			for i := range users {
+				users[i].LastUsedAt = lastUsedByUserID[users[i].ID]
+			}
+		}
+	}
 	// 批量加载用户专属分组倍率
 	if s.userGroupRateRepo != nil && len(users) > 0 {
 		if batchRepo, ok := s.userGroupRateRepo.(userGroupRateBatchReader); ok {
@@ -546,6 +560,12 @@ func (s *adminServiceImpl) GetUser(ctx context.Context, id int64) (*User, error)
 	if err != nil {
 		return nil, err
 	}
+	lastUsedAt, latestErr := s.userRepo.GetLatestUsedAtByUserID(ctx, id)
+	if latestErr != nil {
+		logger.LegacyPrintf("service.admin", "failed to load user last_used_at: user_id=%d err=%v", id, latestErr)
+	} else {
+		user.LastUsedAt = lastUsedAt
+	}
 	// 加载用户专属分组倍率
 	if s.userGroupRateRepo != nil {
 		rates, err := s.userGroupRateRepo.GetByUserID(ctx, id)
@@ -576,6 +596,9 @@ func (s *adminServiceImpl) CreateUser(ctx context.Context, input *CreateUserInpu
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, err
 	}
+	if err := ensureEmailAuthIdentitySync(ctx, s.userRepo, user.ID, user.Email); err != nil {
+		return nil, fmt.Errorf("sync email auth identity: %w", err)
+	}
 	s.assignDefaultSubscriptions(ctx, user.ID)
 	return user, nil
 }
@@ -598,6 +621,14 @@ func (s *adminServiceImpl) assignDefaultSubscriptions(ctx context.Context, userI
 }
 
 func (s *adminServiceImpl) UpdateUser(ctx context.Context, id int64, input *UpdateUserInput) (*User, error) {
+	if input.GroupRates != nil {
+		for groupID, rate := range input.GroupRates {
+			if rate != nil && *rate <= 0 {
+				return nil, fmt.Errorf("rate_multiplier must be > 0 (group_id=%d)", groupID)
+			}
+		}
+	}
+
 	user, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -611,6 +642,7 @@ func (s *adminServiceImpl) UpdateUser(ctx context.Context, id int64, input *Upda
 	oldConcurrency := user.Concurrency
 	oldStatus := user.Status
 	oldRole := user.Role
+	oldEmail := user.Email
 
 	if input.Email != "" {
 		user.Email = input.Email
@@ -642,6 +674,9 @@ func (s *adminServiceImpl) UpdateUser(ctx context.Context, id int64, input *Upda
 
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		return nil, err
+	}
+	if err := replaceEmailAuthIdentitySync(ctx, s.userRepo, user.ID, oldEmail, user.Email); err != nil {
+		return nil, fmt.Errorf("sync email auth identity: %w", err)
 	}
 
 	// 同步用户专属分组倍率
@@ -823,6 +858,10 @@ func (s *adminServiceImpl) GetGroup(ctx context.Context, id int64) (*Group, erro
 }
 
 func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupInput) (*Group, error) {
+	if input.RateMultiplier <= 0 {
+		return nil, errors.New("rate_multiplier must be > 0")
+	}
+
 	platform := input.Platform
 	if platform == "" {
 		platform = PlatformAnthropic
@@ -1062,6 +1101,9 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 		group.Platform = input.Platform
 	}
 	if input.RateMultiplier != nil {
+		if *input.RateMultiplier <= 0 {
+			return nil, errors.New("rate_multiplier must be > 0")
+		}
 		group.RateMultiplier = *input.RateMultiplier
 	}
 	if input.IsExclusive != nil {
@@ -1297,6 +1339,11 @@ func (s *adminServiceImpl) ClearGroupRateMultipliers(ctx context.Context, groupI
 func (s *adminServiceImpl) BatchSetGroupRateMultipliers(ctx context.Context, groupID int64, entries []GroupRateMultiplierInput) error {
 	if s.userGroupRateRepo == nil {
 		return nil
+	}
+	for _, entry := range entries {
+		if entry.RateMultiplier <= 0 {
+			return fmt.Errorf("rate_multiplier must be > 0 (user_id=%d)", entry.UserID)
+		}
 	}
 	return s.userGroupRateRepo.SyncGroupRateMultipliers(ctx, groupID, entries)
 }

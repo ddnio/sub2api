@@ -32,14 +32,16 @@ import (
 )
 
 const (
-	oidcOAuthCookiePath        = "/api/v1/auth/oauth/oidc"
-	oidcOAuthStateCookieName   = "oidc_oauth_state"
-	oidcOAuthVerifierCookie    = "oidc_oauth_verifier"
-	oidcOAuthRedirectCookie    = "oidc_oauth_redirect"
-	oidcOAuthNonceCookie       = "oidc_oauth_nonce"
-	oidcOAuthCookieMaxAgeSec   = 10 * 60 // 10 minutes
-	oidcOAuthDefaultRedirectTo = "/dashboard"
-	oidcOAuthDefaultFrontendCB = "/auth/oidc/callback"
+	oidcOAuthCookiePath         = "/api/v1/auth/oauth/oidc"
+	oidcOAuthStateCookieName    = "oidc_oauth_state"
+	oidcOAuthVerifierCookie     = "oidc_oauth_verifier"
+	oidcOAuthRedirectCookie     = "oidc_oauth_redirect"
+	oidcOAuthNonceCookie        = "oidc_oauth_nonce"
+	oidcOAuthIntentCookieName   = "oidc_oauth_intent"
+	oidcOAuthBindUserCookieName = "oidc_oauth_bind_user"
+	oidcOAuthCookieMaxAgeSec    = 10 * 60 // 10 minutes
+	oidcOAuthDefaultRedirectTo  = "/dashboard"
+	oidcOAuthDefaultFrontendCB  = "/auth/oidc/callback"
 )
 
 type oidcTokenResponse struct {
@@ -121,6 +123,11 @@ func (h *AuthHandler) OIDCOAuthStart(c *gin.Context) {
 		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_STATE_GEN_FAILED", "failed to generate oauth state").WithCause(err))
 		return
 	}
+	browserSessionKey, err := generateOAuthPendingBrowserSession()
+	if err != nil {
+		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_BROWSER_SESSION_GEN_FAILED", "failed to generate oauth browser session").WithCause(err))
+		return
+	}
 
 	redirectTo := sanitizeFrontendRedirectPath(c.Query("redirect"))
 	if redirectTo == "" {
@@ -128,8 +135,25 @@ func (h *AuthHandler) OIDCOAuthStart(c *gin.Context) {
 	}
 
 	secureCookie := isRequestHTTPS(c)
+	intent := normalizeOAuthIntent(c.Query("intent"))
+	bindCookieValue := ""
+	if intent == oauthIntentBindCurrentUser {
+		bindCookieValue, err = h.buildOAuthBindUserCookieFromContext(c, state, browserSessionKey)
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+	}
 	oidcSetCookie(c, oidcOAuthStateCookieName, encodeCookieValue(state), oidcOAuthCookieMaxAgeSec, secureCookie)
 	oidcSetCookie(c, oidcOAuthRedirectCookie, encodeCookieValue(redirectTo), oidcOAuthCookieMaxAgeSec, secureCookie)
+	oidcSetCookie(c, oidcOAuthIntentCookieName, encodeCookieValue(intent), oidcOAuthCookieMaxAgeSec, secureCookie)
+	setOAuthPendingBrowserCookie(c, browserSessionKey, secureCookie)
+	clearOAuthPendingSessionCookie(c, secureCookie)
+	if intent == oauthIntentBindCurrentUser {
+		oidcSetCookie(c, oidcOAuthBindUserCookieName, encodeCookieValue(bindCookieValue), oidcOAuthCookieMaxAgeSec, secureCookie)
+	} else {
+		oidcClearCookie(c, oidcOAuthBindUserCookieName, secureCookie)
+	}
 
 	codeChallenge := ""
 	if cfg.UsePKCE {
@@ -199,6 +223,8 @@ func (h *AuthHandler) OIDCOAuthCallback(c *gin.Context) {
 		oidcClearCookie(c, oidcOAuthVerifierCookie, secureCookie)
 		oidcClearCookie(c, oidcOAuthRedirectCookie, secureCookie)
 		oidcClearCookie(c, oidcOAuthNonceCookie, secureCookie)
+		oidcClearCookie(c, oidcOAuthIntentCookieName, secureCookie)
+		oidcClearCookie(c, oidcOAuthBindUserCookieName, secureCookie)
 	}()
 
 	expectedState, err := readCookieDecoded(c, oidcOAuthStateCookieName)
@@ -212,6 +238,13 @@ func (h *AuthHandler) OIDCOAuthCallback(c *gin.Context) {
 	if redirectTo == "" {
 		redirectTo = oidcOAuthDefaultRedirectTo
 	}
+	browserSessionKey, _ := readOAuthPendingBrowserCookie(c)
+	if strings.TrimSpace(browserSessionKey) == "" {
+		redirectOAuthError(c, frontendCallback, "missing_browser_session", "missing oauth browser session", "")
+		return
+	}
+	intent, _ := readCookieDecoded(c, oidcOAuthIntentCookieName)
+	intent = normalizeOAuthIntent(intent)
 
 	codeVerifier := ""
 	if cfg.UsePKCE {
@@ -304,6 +337,10 @@ func (h *AuthHandler) OIDCOAuthCallback(c *gin.Context) {
 			return
 		}
 	}
+	if !oidcSubjectsConsistent(idClaims.Subject, userInfoClaims.Subject) {
+		redirectOAuthError(c, frontendCallback, "subject_mismatch", "userinfo subject does not match id_token", "")
+		return
+	}
 
 	identityKey := oidcIdentityKey(issuer, subject)
 	email := oidcSelectLoginEmail(userInfoClaims.Email, idClaims.Email, identityKey)
@@ -313,11 +350,49 @@ func (h *AuthHandler) OIDCOAuthCallback(c *gin.Context) {
 		idClaims.Name,
 		oidcFallbackUsername(subject),
 	)
+	if intent == oauthIntentBindCurrentUser {
+		targetUserID, err := h.readOAuthBindUserIDFromCookie(c, oidcOAuthBindUserCookieName, expectedState, browserSessionKey)
+		if err != nil {
+			redirectOAuthError(c, frontendCallback, "invalid_state", "invalid oauth bind target", "")
+			return
+		}
+		if err := h.createOAuthPendingSession(c, oauthPendingSessionPayload{
+			Intent: oauthIntentBindCurrentUser,
+			Identity: service.PendingAuthIdentityKey{
+				ProviderType:    "oidc",
+				ProviderKey:     issuer,
+				ProviderSubject: subject,
+			},
+			TargetUserID:      &targetUserID,
+			ResolvedEmail:     email,
+			RedirectTo:        redirectTo,
+			BrowserSessionKey: browserSessionKey,
+			UpstreamIdentityClaims: map[string]any{
+				"email":          email,
+				"username":       username,
+				"subject":        subject,
+				"issuer":         issuer,
+				"email_verified": emailVerified != nil && *emailVerified,
+			},
+			CompletionResponse: map[string]any{"redirect": redirectTo},
+		}); err != nil {
+			redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth bind", "")
+			return
+		}
+		redirectToFrontendCallback(c, frontendCallback)
+		return
+	}
 
 	// 传入空邀请码；如果需要邀请码，服务层返回 ErrOAuthInvitationRequired
 	tokenPair, _, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, "")
 	if err != nil {
 		if errors.Is(err, service.ErrOAuthInvitationRequired) {
+			if strings.TrimSpace(browserSessionKey) != "" {
+				if err := h.createOAuthPendingSession(c, oidcInvitationPendingPayload(email, username, issuer, subject, emailVerified != nil && *emailVerified, redirectTo, browserSessionKey)); err != nil {
+					redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
+					return
+				}
+			}
 			pendingToken, tokenErr := h.authService.CreatePendingOAuthToken(email, username)
 			if tokenErr != nil {
 				redirectOAuthError(c, frontendCallback, "login_failed", "service_error", "")
@@ -820,6 +895,12 @@ func oidcIdentityKey(issuer, subject string) string {
 	issuer = strings.TrimSpace(strings.ToLower(issuer))
 	subject = strings.TrimSpace(subject)
 	return issuer + "\x1f" + subject
+}
+
+func oidcSubjectsConsistent(idTokenSubject, userInfoSubject string) bool {
+	idTokenSubject = strings.TrimSpace(idTokenSubject)
+	userInfoSubject = strings.TrimSpace(userInfoSubject)
+	return idTokenSubject == "" || userInfoSubject == "" || idTokenSubject == userInfoSubject
 }
 
 func oidcSyntheticEmailFromIdentityKey(identityKey string) string {

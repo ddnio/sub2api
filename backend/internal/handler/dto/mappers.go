@@ -63,6 +63,7 @@ func UserProfileFromService(u *service.User) *UserProfile {
 		BalanceNotifyThreshold:     u.BalanceNotifyThreshold,
 		BalanceNotifyThresholdType: u.BalanceNotifyThresholdType,
 		BalanceNotifyExtraEmails:   NotifyEmailEntriesFromService(u.BalanceNotifyExtraEmails),
+		AuthIdentities:             u.AuthIdentities,
 	}
 }
 
@@ -77,9 +78,12 @@ func UserFromServiceAdmin(u *service.User) *AdminUser {
 		return nil
 	}
 	return &AdminUser{
-		User:       *base,
-		Notes:      u.Notes,
-		GroupRates: u.GroupRates,
+		User:         *base,
+		Notes:        u.Notes,
+		LastLoginAt:  u.LastLoginAt,
+		LastActiveAt: u.LastActiveAt,
+		LastUsedAt:   u.LastUsedAt,
+		GroupRates:   u.GroupRates,
 	}
 }
 

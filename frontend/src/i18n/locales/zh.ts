@@ -491,6 +491,7 @@ export default {
     signUp: '注册',
     processing: '处理中...',
     continue: '继续',
+    wechatCallbackPageTitle: '微信 OAuth 回调',
     wechatPaymentCallbackPageTitle: '微信支付回调',
     rememberMe: '记住我',
     dontHaveAccount: '还没有账户？',
@@ -522,6 +523,7 @@ export default {
     verificationCode: '验证码',
     verificationCodeHint: '请输入发送到您邮箱的6位验证码',
     sendingCode: '发送中...',
+    sendCode: '发送验证码',
     clickToResend: '点击重新发送验证码',
     resendCode: '重新发送验证码',
     sendCodeDesc: '我们将发送验证码到',
@@ -568,7 +570,11 @@ export default {
       invalidPendingToken: '注册凭证已失效，请重新使用 Linux.do 登录。',
       completeRegistration: '完成注册',
       completing: '正在完成注册...',
-      completeRegistrationFailed: '注册失败，请检查邀请码后重试。'
+      completeRegistrationFailed: '注册失败，请检查邀请码后重试。',
+      bindLoginRequired: '登录已有账户以绑定此 Linux.do 登录方式。',
+      bindLoginSubmit: '登录并绑定',
+      useDifferentEmail: '使用其他邮箱',
+      totpRequired: '请输入 {email} 的 6 位双因素验证码，以完成此 Linux.do 登录方式绑定。'
     },
     oidc: {
       signIn: '使用 {providerName} 登录',
@@ -581,7 +587,11 @@ export default {
       invalidPendingToken: '注册凭证已失效，请重新登录。',
       completeRegistration: '完成注册',
       completing: '正在完成注册...',
-      completeRegistrationFailed: '注册失败，请检查邀请码后重试。'
+      completeRegistrationFailed: '注册失败，请检查邀请码后重试。',
+      bindLoginRequired: '登录已有账户以绑定此 {providerName} 登录方式。',
+      bindLoginSubmit: '登录并绑定',
+      useDifferentEmail: '使用其他邮箱',
+      totpRequired: '请输入 {email} 的 6 位双因素验证码，以完成此 {providerName} 登录方式绑定。'
     },
     oauth: {
       code: '授权码',
@@ -1047,6 +1057,7 @@ export default {
       loginTitle: '双因素认证',
       loginHint: '请输入您认证器应用显示的 6 位验证码',
       loginFailed: '验证失败，请重试',
+      yourAccount: '您的账户',
       // New translations for email verification
       verifyEmailFirst: '请先验证您的邮箱',
       verifyPasswordFirst: '请先验证您的身份',
@@ -1087,6 +1098,40 @@ export default {
       maxEmailsReached: '已达到通知邮箱数量上限',
       unverified: '未验证',
       verified: '已验证'
+    },
+    avatar: {
+      title: '资料头像',
+      description: '支持填写远程图片 URL，或上传不超过 100KB 的头像图片；上传图片会自动压缩到 20KB 以内。',
+      inputLabel: '头像 URL 或 data URL',
+      inputPlaceholder: 'https://cdn.example.com/avatar.png',
+      uploadAction: '上传图片',
+      uploadHint: '上传图片需不超过 100KB，静态图片会自动压缩到 20KB 以内',
+      saveSuccess: '头像已更新',
+      deleteSuccess: '头像已删除',
+      invalidType: '请选择图片文件',
+      fileTooLarge: '头像图片必须不超过 100KB',
+      gifTooLarge: 'GIF 头像必须在 20KB 以内',
+      compressTooLarge: '无法将图片压缩到 20KB 以内，请换一张更小的图片',
+      compressFailed: '压缩所选图片失败',
+      readFailed: '读取所选图片失败',
+      invalidValue: '请输入有效的头像 URL 或图片 data URL',
+      emptyDeleteHint: '当前没有可删除的头像',
+    },
+    authBindings: {
+      title: '登录方式绑定',
+      description: '将第三方登录方式绑定到当前账号。',
+      providers: {
+        email: '邮箱',
+        linuxdo: 'LinuxDo',
+        oidc: '{providerName}'
+      },
+      status: {
+        bound: '已绑定',
+        notBound: '未绑定'
+      },
+      bindAction: '绑定',
+      unbindAction: '解绑',
+      bindSuccess: '登录方式绑定成功'
     }
   },
 
@@ -2452,6 +2497,7 @@ export default {
         rateLimited: '限流中',
         overloaded: '过载中',
         tempUnschedulable: '临时不可调度',
+        quotaExceeded: '配额超限',
         unschedulable: '不可调度',
         rateLimitedUntil: '限流中，当前不参与调度，预计 {time} 自动恢复',
         rateLimitedAutoResume: '{time} 自动恢复',
@@ -3181,7 +3227,7 @@ export default {
       connectedToApi: '已连接到 API',
       usingModel: '使用模型：{model}',
       sendingTestMessage: '发送测试消息："hi"',
-      sendingGeminiImageRequest: '发送 Gemini 生图测试请求...',
+      sendingImageRequest: '发送生图测试请求...',
       response: '响应：',
       startTest: '开始测试',
       retry: '重试',
@@ -3192,13 +3238,13 @@ export default {
       selectTestModel: '选择测试模型',
       testModel: '测试模型',
       testPrompt: '提示词："hi"',
-      geminiImagePromptLabel: '生图提示词',
-      geminiImagePromptPlaceholder: '例如：生成一只戴宇航员头盔的橘猫，像素插画风格，纯色背景。',
-      geminiImagePromptDefault: 'Generate a cute orange cat astronaut sticker on a clean pastel background.',
-      geminiImageTestHint: '选择 Gemini 图片模型后，这里会直接发起生图测试，并在下方展示返回图片。',
-      geminiImageTestMode: '模式：Gemini 生图测试',
-      geminiImagePreview: '生成结果：',
-      geminiImageReceived: '已收到第 {count} 张测试图片',
+      imagePromptLabel: '生图提示词',
+      imagePromptPlaceholder: '例如：生成一只戴宇航员头盔的橘猫，像素插画风格，纯色背景。',
+      imagePromptDefault: 'Generate a cute orange cat astronaut sticker on a clean pastel background.',
+      imageTestHint: '选择图片模型后，这里会直接发起生图测试，并在下方展示返回图片。',
+      imageTestMode: '模式：生图测试',
+      imagePreview: '生成结果：',
+      imageReceived: '已收到第 {count} 张测试图片',
       // Stats Modal
       viewStats: '查看统计',
       usageStatistics: '使用统计',
@@ -5908,10 +5954,13 @@ export default {
       field_cidWxpay: '微信渠道 ID',
       field_privateKey: '私钥',
       field_publicKey: '公钥',
+      field_mpAppId: '公众号 App ID',
       field_mchId: '商户号',
       field_apiV3Key: 'API v3 密钥',
       field_certSerial: '证书序列号',
       field_publicKeyId: '公钥 ID',
+      field_h5AppName: 'H5 应用名称',
+      field_h5AppUrl: 'H5 应用地址',
       field_secretKey: 'Secret Key',
       field_publishableKey: 'Publishable Key',
       field_webhookSecret: 'Webhook Secret',

@@ -186,6 +186,149 @@ export interface RefreshTokenResponse {
   token_type: string
 }
 
+export interface PendingOAuthExchangeResponse {
+  access_token?: string
+  refresh_token?: string
+  expires_in?: number
+  token_type?: string
+  auth_result?: string
+  provider?: string
+  intent?: string
+  step?: string
+  email?: string
+  redirect?: string
+  error?: string
+  adoption_required?: boolean
+  suggested_display_name?: string
+  suggested_avatar_url?: string
+  requires_2fa?: boolean
+  temp_token?: string
+  user_email_masked?: string
+}
+
+export interface OAuthTokenResponse {
+  access_token: string
+  refresh_token?: string
+  expires_in?: number
+  token_type?: string
+}
+
+export interface OAuthAdoptionDecision {
+  adoptDisplayName?: boolean
+  adoptAvatar?: boolean
+}
+
+export interface PendingOAuthAdoptionDecision {
+  adopt_display_name?: boolean
+  adopt_avatar?: boolean
+}
+
+export type OAuthCompletionKind = 'login' | 'bind'
+
+export type PendingOAuthBindLoginResponse = PendingOAuthExchangeResponse
+
+export interface PendingOAuthCreateAccountRequest extends PendingOAuthAdoptionDecision {
+  email: string
+  verify_code?: string
+  password: string
+  invitation_code?: string
+}
+
+export interface PendingOAuthBindLoginRequest extends PendingOAuthAdoptionDecision {
+  email: string
+  password: string
+}
+
+export interface PendingOAuthTokenPairResponse {
+  access_token: string
+  refresh_token: string
+  expires_in: number
+  token_type: string
+}
+
+function serializeOAuthAdoptionDecision(
+  decision?: OAuthAdoptionDecision
+): PendingOAuthAdoptionDecision {
+  const payload: PendingOAuthAdoptionDecision = {}
+
+  if (typeof decision?.adoptDisplayName === 'boolean') {
+    payload.adopt_display_name = decision.adoptDisplayName
+  }
+  if (typeof decision?.adoptAvatar === 'boolean') {
+    payload.adopt_avatar = decision.adoptAvatar
+  }
+
+  return payload
+}
+
+export function isOAuthLoginCompletion(
+  completion: Partial<OAuthTokenResponse>
+): completion is OAuthTokenResponse & { access_token: string } {
+  return typeof completion.access_token === 'string' && completion.access_token.trim().length > 0
+}
+
+export function getOAuthCompletionKind(
+  completion: Partial<OAuthTokenResponse>
+): OAuthCompletionKind {
+  return isOAuthLoginCompletion(completion) ? 'login' : 'bind'
+}
+
+export function getPendingOAuthBindLoginKind(
+  completion: PendingOAuthBindLoginResponse
+): OAuthCompletionKind {
+  return getOAuthCompletionKind(completion)
+}
+
+export function isPendingOAuthCreateAccountRequired(
+  completion: Pick<PendingOAuthBindLoginResponse, 'error'>
+): boolean {
+  return completion.error === 'invitation_required'
+}
+
+export function hasPendingOAuthSuggestedProfile(
+  completion: Pick<
+    PendingOAuthBindLoginResponse,
+    'suggested_display_name' | 'suggested_avatar_url'
+  >
+): boolean {
+  return Boolean(completion.suggested_display_name || completion.suggested_avatar_url)
+}
+
+export function persistOAuthTokenContext(tokens: Partial<OAuthTokenResponse>): void {
+  if (tokens.refresh_token) {
+    setRefreshToken(tokens.refresh_token)
+  }
+  if (tokens.expires_in) {
+    setTokenExpiresAt(tokens.expires_in)
+  }
+}
+
+export function prepareOAuthBindAccessTokenCookie(): void {
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    return
+  }
+
+  const token = getAuthToken()
+  if (!token) {
+    return
+  }
+
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  const path = resolveOAuthBindCookiePath()
+  document.cookie =
+    `oauth_bind_access_token=${encodeURIComponent(token)}; Path=${path}/auth/oauth; Max-Age=600; SameSite=Lax${secure}`
+}
+
+function resolveOAuthBindCookiePath(): string {
+  const apiBase = ((import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1').replace(/\/$/, '')
+
+  try {
+    return new URL(apiBase, window.location.origin).pathname.replace(/\/$/, '') || '/api/v1'
+  } catch {
+    return apiBase.startsWith('/') ? apiBase : '/api/v1'
+  }
+}
+
 /**
  * Refresh the access token using the refresh token
  * @returns New token pair
@@ -379,6 +522,72 @@ export async function completeOIDCOAuthRegistration(
   return data
 }
 
+export async function completeWeChatOAuthRegistration(
+  invitationCode: string,
+  decision?: OAuthAdoptionDecision
+): Promise<OAuthTokenResponse> {
+  const { data } = await apiClient.post<OAuthTokenResponse>(
+    '/auth/oauth/wechat/complete-registration',
+    {
+      invitation_code: invitationCode,
+      ...serializeOAuthAdoptionDecision(decision)
+    }
+  )
+  return data
+}
+
+/**
+ * Exchange a browser-bound pending OAuth session for frontend-safe callback payload.
+ */
+export async function exchangePendingOAuthCompletion(
+  decision?: OAuthAdoptionDecision
+): Promise<PendingOAuthExchangeResponse> {
+  const { data } = await apiClient.post<PendingOAuthExchangeResponse>(
+    '/auth/oauth/pending/exchange',
+    serializeOAuthAdoptionDecision(decision)
+  )
+  return data
+}
+
+export async function completePendingOAuthBindLogin(
+  decision?: OAuthAdoptionDecision
+): Promise<PendingOAuthBindLoginResponse> {
+  return exchangePendingOAuthCompletion(decision)
+}
+
+/**
+ * Complete a browser-bound pending OAuth session by creating a local email account.
+ */
+export async function createPendingOAuthAccount(
+  request: PendingOAuthCreateAccountRequest
+): Promise<PendingOAuthExchangeResponse | PendingOAuthTokenPairResponse> {
+  const { data } = await apiClient.post<PendingOAuthExchangeResponse | PendingOAuthTokenPairResponse>(
+    '/auth/oauth/pending/create-account',
+    request
+  )
+  return data
+}
+
+/**
+ * Complete a browser-bound pending OAuth session by binding an existing local account.
+ */
+export async function bindPendingOAuthLogin(
+  request: PendingOAuthBindLoginRequest
+): Promise<PendingOAuthTokenPairResponse> {
+  const { data } = await apiClient.post<PendingOAuthTokenPairResponse>(
+    '/auth/oauth/pending/bind-login',
+    request
+  )
+  return data
+}
+
+export async function createPendingWeChatOAuthAccount(
+  invitationCode: string,
+  decision?: OAuthAdoptionDecision
+): Promise<OAuthTokenResponse> {
+  return completeWeChatOAuthRegistration(invitationCode, decision)
+}
+
 export const authAPI = {
   login,
   login2FA,
@@ -402,8 +611,18 @@ export const authAPI = {
   resetPassword,
   refreshToken,
   revokeAllSessions,
+  prepareOAuthBindAccessTokenCookie,
+  getPendingOAuthBindLoginKind,
+  isPendingOAuthCreateAccountRequired,
+  hasPendingOAuthSuggestedProfile,
+  completePendingOAuthBindLogin,
   completeLinuxDoOAuthRegistration,
-  completeOIDCOAuthRegistration
+  completeOIDCOAuthRegistration,
+  completeWeChatOAuthRegistration,
+  exchangePendingOAuthCompletion,
+  createPendingOAuthAccount,
+  createPendingWeChatOAuthAccount,
+  bindPendingOAuthLogin
 }
 
 export default authAPI

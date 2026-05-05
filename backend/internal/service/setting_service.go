@@ -112,6 +112,66 @@ type SettingService struct {
 	webSearchProxyRepo    ProxyRepository
 }
 
+type ProviderDefaultGrantSettings struct {
+	Balance          float64
+	Concurrency      int
+	Subscriptions    []DefaultSubscriptionSetting
+	GrantOnSignup    bool
+	GrantOnFirstBind bool
+}
+
+type AuthSourceDefaultSettings struct {
+	Email                        ProviderDefaultGrantSettings
+	LinuxDo                      ProviderDefaultGrantSettings
+	OIDC                         ProviderDefaultGrantSettings
+	WeChat                       ProviderDefaultGrantSettings
+	ForceEmailOnThirdPartySignup bool
+}
+
+type authSourceDefaultKeySet struct {
+	balance          string
+	concurrency      string
+	subscriptions    string
+	grantOnSignup    string
+	grantOnFirstBind string
+}
+
+var (
+	emailAuthSourceDefaultKeys = authSourceDefaultKeySet{
+		balance:          SettingKeyAuthSourceDefaultEmailBalance,
+		concurrency:      SettingKeyAuthSourceDefaultEmailConcurrency,
+		subscriptions:    SettingKeyAuthSourceDefaultEmailSubscriptions,
+		grantOnSignup:    SettingKeyAuthSourceDefaultEmailGrantOnSignup,
+		grantOnFirstBind: SettingKeyAuthSourceDefaultEmailGrantOnFirstBind,
+	}
+	linuxDoAuthSourceDefaultKeys = authSourceDefaultKeySet{
+		balance:          SettingKeyAuthSourceDefaultLinuxDoBalance,
+		concurrency:      SettingKeyAuthSourceDefaultLinuxDoConcurrency,
+		subscriptions:    SettingKeyAuthSourceDefaultLinuxDoSubscriptions,
+		grantOnSignup:    SettingKeyAuthSourceDefaultLinuxDoGrantOnSignup,
+		grantOnFirstBind: SettingKeyAuthSourceDefaultLinuxDoGrantOnFirstBind,
+	}
+	oidcAuthSourceDefaultKeys = authSourceDefaultKeySet{
+		balance:          SettingKeyAuthSourceDefaultOIDCBalance,
+		concurrency:      SettingKeyAuthSourceDefaultOIDCConcurrency,
+		subscriptions:    SettingKeyAuthSourceDefaultOIDCSubscriptions,
+		grantOnSignup:    SettingKeyAuthSourceDefaultOIDCGrantOnSignup,
+		grantOnFirstBind: SettingKeyAuthSourceDefaultOIDCGrantOnFirstBind,
+	}
+	weChatAuthSourceDefaultKeys = authSourceDefaultKeySet{
+		balance:          SettingKeyAuthSourceDefaultWeChatBalance,
+		concurrency:      SettingKeyAuthSourceDefaultWeChatConcurrency,
+		subscriptions:    SettingKeyAuthSourceDefaultWeChatSubscriptions,
+		grantOnSignup:    SettingKeyAuthSourceDefaultWeChatGrantOnSignup,
+		grantOnFirstBind: SettingKeyAuthSourceDefaultWeChatGrantOnFirstBind,
+	}
+)
+
+const (
+	defaultAuthSourceBalance     = 0
+	defaultAuthSourceConcurrency = 5
+)
+
 // NewSettingService 创建系统设置服务实例
 func NewSettingService(settingRepo SettingRepository, cfg *config.Config) *SettingService {
 	return &SettingService{
@@ -149,6 +209,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 	keys := []string{
 		SettingKeyRegistrationEnabled,
 		SettingKeyEmailVerifyEnabled,
+		SettingKeyForceEmailOnThirdPartySignup,
 		SettingKeyRegistrationEmailSuffixWhitelist,
 		SettingKeyPromoCodeEnabled,
 		SettingKeyPasswordResetEnabled,
@@ -225,6 +286,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 	return &PublicSettings{
 		RegistrationEnabled:              settings[SettingKeyRegistrationEnabled] == "true",
 		EmailVerifyEnabled:               emailVerifyEnabled,
+		ForceEmailOnThirdPartySignup:     settings[SettingKeyForceEmailOnThirdPartySignup] == "true",
 		RegistrationEmailSuffixWhitelist: registrationEmailSuffixWhitelist,
 		PromoCodeEnabled:                 settings[SettingKeyPromoCodeEnabled] != "false", // 默认启用
 		PasswordResetEnabled:             passwordResetEnabled,
@@ -476,18 +538,52 @@ func parseCustomMenuItemURLs(raw string) []string {
 
 // UpdateSettings 更新系统设置
 func (s *SettingService) UpdateSettings(ctx context.Context, settings *SystemSettings) error {
-	if err := s.validateDefaultSubscriptionGroups(ctx, settings.DefaultSubscriptions); err != nil {
+	updates, err := s.buildSystemSettingsUpdates(ctx, settings)
+	if err != nil {
 		return err
+	}
+
+	err = s.settingRepo.SetMultiple(ctx, updates)
+	if err == nil {
+		s.refreshCachedSettings(settings)
+	}
+	return err
+}
+
+// UpdateSettingsWithAuthSourceDefaults persists system settings and auth-source defaults in a single write.
+func (s *SettingService) UpdateSettingsWithAuthSourceDefaults(ctx context.Context, settings *SystemSettings, authDefaults *AuthSourceDefaultSettings) error {
+	updates, err := s.buildSystemSettingsUpdates(ctx, settings)
+	if err != nil {
+		return err
+	}
+
+	authSourceUpdates, err := s.buildAuthSourceDefaultUpdates(ctx, authDefaults)
+	if err != nil {
+		return err
+	}
+	for key, value := range authSourceUpdates {
+		updates[key] = value
+	}
+
+	err = s.settingRepo.SetMultiple(ctx, updates)
+	if err == nil {
+		s.refreshCachedSettings(settings)
+	}
+	return err
+}
+
+func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, settings *SystemSettings) (map[string]string, error) {
+	if err := s.validateDefaultSubscriptionGroups(ctx, settings.DefaultSubscriptions); err != nil {
+		return nil, err
 	}
 	normalizedWhitelist, err := NormalizeRegistrationEmailSuffixWhitelist(settings.RegistrationEmailSuffixWhitelist)
 	if err != nil {
-		return infraerrors.BadRequest("INVALID_REGISTRATION_EMAIL_SUFFIX_WHITELIST", err.Error())
+		return nil, infraerrors.BadRequest("INVALID_REGISTRATION_EMAIL_SUFFIX_WHITELIST", err.Error())
 	}
 	if normalizedWhitelist == nil {
 		normalizedWhitelist = []string{}
 	}
 	settings.RegistrationEmailSuffixWhitelist = normalizedWhitelist
-
 	updates := make(map[string]string)
 
 	// 注册设置
@@ -495,7 +591,7 @@ func (s *SettingService) UpdateSettings(ctx context.Context, settings *SystemSet
 	updates[SettingKeyEmailVerifyEnabled] = strconv.FormatBool(settings.EmailVerifyEnabled)
 	registrationEmailSuffixWhitelistJSON, err := json.Marshal(settings.RegistrationEmailSuffixWhitelist)
 	if err != nil {
-		return fmt.Errorf("marshal registration email suffix whitelist: %w", err)
+		return nil, fmt.Errorf("marshal registration email suffix whitelist: %w", err)
 	}
 	updates[SettingKeyRegistrationEmailSuffixWhitelist] = string(registrationEmailSuffixWhitelistJSON)
 	updates[SettingKeyPromoCodeEnabled] = strconv.FormatBool(settings.PromoCodeEnabled)
@@ -579,7 +675,7 @@ func (s *SettingService) UpdateSettings(ctx context.Context, settings *SystemSet
 	updates[SettingKeyTableDefaultPageSize] = strconv.Itoa(tableDefaultPageSize)
 	tablePageSizeOptionsJSON, err := json.Marshal(tablePageSizeOptions)
 	if err != nil {
-		return fmt.Errorf("marshal table page size options: %w", err)
+		return nil, fmt.Errorf("marshal table page size options: %w", err)
 	}
 	updates[SettingKeyTablePageSizeOptions] = string(tablePageSizeOptionsJSON)
 	updates[SettingKeyCustomMenuItems] = settings.CustomMenuItems
@@ -590,7 +686,7 @@ func (s *SettingService) UpdateSettings(ctx context.Context, settings *SystemSet
 	updates[SettingKeyDefaultBalance] = strconv.FormatFloat(settings.DefaultBalance, 'f', 8, 64)
 	defaultSubsJSON, err := json.Marshal(settings.DefaultSubscriptions)
 	if err != nil {
-		return fmt.Errorf("marshal default subscriptions: %w", err)
+		return nil, fmt.Errorf("marshal default subscriptions: %w", err)
 	}
 	updates[SettingKeyDefaultSubscriptions] = string(defaultSubsJSON)
 
@@ -632,33 +728,78 @@ func (s *SettingService) UpdateSettings(ctx context.Context, settings *SystemSet
 	updates[SettingKeyEnableFingerprintUnification] = strconv.FormatBool(settings.EnableFingerprintUnification)
 	updates[SettingKeyEnableMetadataPassthrough] = strconv.FormatBool(settings.EnableMetadataPassthrough)
 	updates[SettingKeyEnableCCHSigning] = strconv.FormatBool(settings.EnableCCHSigning)
+	if settings.PaymentVisibleMethodAlipaySource != "" {
+		normalized, err := normalizeVisibleMethodSettingSource("alipay", settings.PaymentVisibleMethodAlipaySource, false)
+		if err != nil {
+			return nil, err
+		}
+		updates[SettingPaymentVisibleMethodAlipaySource] = normalized
+	}
+	if settings.PaymentVisibleMethodWxpaySource != "" {
+		normalized, err := normalizeVisibleMethodSettingSource("wxpay", settings.PaymentVisibleMethodWxpaySource, false)
+		if err != nil {
+			return nil, err
+		}
+		updates[SettingPaymentVisibleMethodWxpaySource] = normalized
+	}
+	updates[SettingPaymentVisibleMethodAlipayEnabled] = strconv.FormatBool(settings.PaymentVisibleMethodAlipayEnabled)
+	updates[SettingPaymentVisibleMethodWxpayEnabled] = strconv.FormatBool(settings.PaymentVisibleMethodWxpayEnabled)
 
-	err = s.settingRepo.SetMultiple(ctx, updates)
-	if err == nil {
-		// 先使 inflight singleflight 失效，再刷新缓存，缩小旧值覆盖新值的竞态窗口
-		versionBoundsSF.Forget("version_bounds")
-		versionBoundsCache.Store(&cachedVersionBounds{
-			min:       settings.MinClaudeCodeVersion,
-			max:       settings.MaxClaudeCodeVersion,
-			expiresAt: time.Now().Add(versionBoundsCacheTTL).UnixNano(),
-		})
-		backendModeSF.Forget("backend_mode")
-		backendModeCache.Store(&cachedBackendMode{
-			value:     settings.BackendModeEnabled,
-			expiresAt: time.Now().Add(backendModeCacheTTL).UnixNano(),
-		})
-		gatewayForwardingSF.Forget("gateway_forwarding")
-		gatewayForwardingCache.Store(&cachedGatewayForwardingSettings{
-			fingerprintUnification: settings.EnableFingerprintUnification,
-			metadataPassthrough:    settings.EnableMetadataPassthrough,
-			cchSigning:             settings.EnableCCHSigning,
-			expiresAt:              time.Now().Add(gatewayForwardingCacheTTL).UnixNano(),
-		})
-		if s.onUpdate != nil {
-			s.onUpdate() // Invalidate cache after settings update
+	return updates, nil
+}
+
+func (s *SettingService) buildAuthSourceDefaultUpdates(ctx context.Context, settings *AuthSourceDefaultSettings) (map[string]string, error) {
+	if settings == nil {
+		return nil, nil
+	}
+
+	for _, subscriptions := range [][]DefaultSubscriptionSetting{
+		settings.Email.Subscriptions,
+		settings.LinuxDo.Subscriptions,
+		settings.OIDC.Subscriptions,
+		settings.WeChat.Subscriptions,
+	} {
+		if err := s.validateDefaultSubscriptionGroups(ctx, subscriptions); err != nil {
+			return nil, err
 		}
 	}
-	return err
+
+	updates := make(map[string]string, 21)
+	writeProviderDefaultGrantUpdates(updates, emailAuthSourceDefaultKeys, settings.Email)
+	writeProviderDefaultGrantUpdates(updates, linuxDoAuthSourceDefaultKeys, settings.LinuxDo)
+	writeProviderDefaultGrantUpdates(updates, oidcAuthSourceDefaultKeys, settings.OIDC)
+	writeProviderDefaultGrantUpdates(updates, weChatAuthSourceDefaultKeys, settings.WeChat)
+	updates[SettingKeyForceEmailOnThirdPartySignup] = strconv.FormatBool(settings.ForceEmailOnThirdPartySignup)
+	return updates, nil
+}
+
+func (s *SettingService) refreshCachedSettings(settings *SystemSettings) {
+	if settings == nil {
+		return
+	}
+
+	// 先使 inflight singleflight 失效，再刷新缓存，缩小旧值覆盖新值的竞态窗口
+	versionBoundsSF.Forget("version_bounds")
+	versionBoundsCache.Store(&cachedVersionBounds{
+		min:       settings.MinClaudeCodeVersion,
+		max:       settings.MaxClaudeCodeVersion,
+		expiresAt: time.Now().Add(versionBoundsCacheTTL).UnixNano(),
+	})
+	backendModeSF.Forget("backend_mode")
+	backendModeCache.Store(&cachedBackendMode{
+		value:     settings.BackendModeEnabled,
+		expiresAt: time.Now().Add(backendModeCacheTTL).UnixNano(),
+	})
+	gatewayForwardingSF.Forget("gateway_forwarding")
+	gatewayForwardingCache.Store(&cachedGatewayForwardingSettings{
+		fingerprintUnification: settings.EnableFingerprintUnification,
+		metadataPassthrough:    settings.EnableMetadataPassthrough,
+		cchSigning:             settings.EnableCCHSigning,
+		expiresAt:              time.Now().Add(gatewayForwardingCacheTTL).UnixNano(),
+	})
+	if s.onUpdate != nil {
+		s.onUpdate() // Invalidate cache after settings update
+	}
 }
 
 func (s *SettingService) validateDefaultSubscriptionGroups(ctx context.Context, items []DefaultSubscriptionSetting) error {
@@ -951,6 +1092,88 @@ func (s *SettingService) GetDefaultSubscriptions(ctx context.Context) []DefaultS
 	return parseDefaultSubscriptions(value)
 }
 
+func (s *SettingService) GetAuthSourceDefaultSettings(ctx context.Context) (*AuthSourceDefaultSettings, error) {
+	keys := []string{
+		SettingKeyAuthSourceDefaultEmailBalance,
+		SettingKeyAuthSourceDefaultEmailConcurrency,
+		SettingKeyAuthSourceDefaultEmailSubscriptions,
+		SettingKeyAuthSourceDefaultEmailGrantOnSignup,
+		SettingKeyAuthSourceDefaultEmailGrantOnFirstBind,
+		SettingKeyAuthSourceDefaultLinuxDoBalance,
+		SettingKeyAuthSourceDefaultLinuxDoConcurrency,
+		SettingKeyAuthSourceDefaultLinuxDoSubscriptions,
+		SettingKeyAuthSourceDefaultLinuxDoGrantOnSignup,
+		SettingKeyAuthSourceDefaultLinuxDoGrantOnFirstBind,
+		SettingKeyAuthSourceDefaultOIDCBalance,
+		SettingKeyAuthSourceDefaultOIDCConcurrency,
+		SettingKeyAuthSourceDefaultOIDCSubscriptions,
+		SettingKeyAuthSourceDefaultOIDCGrantOnSignup,
+		SettingKeyAuthSourceDefaultOIDCGrantOnFirstBind,
+		SettingKeyAuthSourceDefaultWeChatBalance,
+		SettingKeyAuthSourceDefaultWeChatConcurrency,
+		SettingKeyAuthSourceDefaultWeChatSubscriptions,
+		SettingKeyAuthSourceDefaultWeChatGrantOnSignup,
+		SettingKeyAuthSourceDefaultWeChatGrantOnFirstBind,
+		SettingKeyForceEmailOnThirdPartySignup,
+	}
+
+	settings, err := s.settingRepo.GetMultiple(ctx, keys)
+	if err != nil {
+		return nil, fmt.Errorf("get auth source default settings: %w", err)
+	}
+
+	return &AuthSourceDefaultSettings{
+		Email:                        parseProviderDefaultGrantSettings(settings, emailAuthSourceDefaultKeys),
+		LinuxDo:                      parseProviderDefaultGrantSettings(settings, linuxDoAuthSourceDefaultKeys),
+		OIDC:                         parseProviderDefaultGrantSettings(settings, oidcAuthSourceDefaultKeys),
+		WeChat:                       parseProviderDefaultGrantSettings(settings, weChatAuthSourceDefaultKeys),
+		ForceEmailOnThirdPartySignup: settings[SettingKeyForceEmailOnThirdPartySignup] == "true",
+	}, nil
+}
+
+func (s *SettingService) ResolveAuthSourceGrantSettings(ctx context.Context, signupSource string, firstBind bool) (ProviderDefaultGrantSettings, bool, error) {
+	result := ProviderDefaultGrantSettings{
+		Balance:       s.GetDefaultBalance(ctx),
+		Concurrency:   s.GetDefaultConcurrency(ctx),
+		Subscriptions: s.GetDefaultSubscriptions(ctx),
+	}
+
+	defaults, err := s.GetAuthSourceDefaultSettings(ctx)
+	if err != nil {
+		return result, false, err
+	}
+
+	providerDefaults, ok := authSourceSignupSettings(defaults, signupSource)
+	if !ok {
+		return result, false, nil
+	}
+
+	enabled := providerDefaults.GrantOnSignup
+	if firstBind {
+		enabled = providerDefaults.GrantOnFirstBind
+	}
+	if !enabled {
+		return result, false, nil
+	}
+
+	return mergeProviderDefaultGrantSettings(result, providerDefaults), true, nil
+}
+
+func (s *SettingService) UpdateAuthSourceDefaultSettings(ctx context.Context, settings *AuthSourceDefaultSettings) error {
+	updates, err := s.buildAuthSourceDefaultUpdates(ctx, settings)
+	if err != nil {
+		return err
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+
+	if err := s.settingRepo.SetMultiple(ctx, updates); err != nil {
+		return fmt.Errorf("update auth source default settings: %w", err)
+	}
+	return nil
+}
+
 // InitializeDefaultSettings 初始化默认设置
 func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 	// 检查是否已有设置
@@ -965,30 +1188,51 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 
 	// 初始化默认设置
 	defaults := map[string]string{
-		SettingKeyRegistrationEnabled:              "true",
-		SettingKeyEmailVerifyEnabled:               "false",
-		SettingKeyRegistrationEmailSuffixWhitelist: "[]",
-		SettingKeyPromoCodeEnabled:                 "true", // 默认启用优惠码功能
-		SettingKeySiteName:                         "Sub2API",
-		SettingKeySiteLogo:                         "",
-		SettingKeyPurchaseSubscriptionEnabled:      "false",
-		SettingKeyPurchaseSubscriptionURL:          "",
-		SettingKeyTableDefaultPageSize:             "20",
-		SettingKeyTablePageSizeOptions:             "[10,20,50,100]",
-		SettingKeyCustomMenuItems:                  "[]",
-		SettingKeyCustomEndpoints:                  "[]",
-		SettingKeyOIDCConnectEnabled:               "false",
-		SettingKeyOIDCConnectProviderName:          "OIDC",
-		SettingKeyDefaultConcurrency:               strconv.Itoa(s.cfg.Default.UserConcurrency),
-		SettingKeyDefaultBalance:                   strconv.FormatFloat(s.cfg.Default.UserBalance, 'f', 8, 64),
-		SettingKeyDefaultSubscriptions:             "[]",
-		SettingKeySMTPPort:                         "587",
-		SettingKeySMTPUseTLS:                       "false",
-		SettingKeyBalanceLowNotifyEnabled:          "false",
-		SettingKeyBalanceLowNotifyThreshold:        "0",
-		SettingKeyBalanceLowNotifyRechargeURL:      "",
-		SettingKeyAccountQuotaNotifyEnabled:        "false",
-		SettingKeyAccountQuotaNotifyEmails:         "[]",
+		SettingKeyRegistrationEnabled:                      "true",
+		SettingKeyEmailVerifyEnabled:                       "false",
+		SettingKeyRegistrationEmailSuffixWhitelist:         "[]",
+		SettingKeyPromoCodeEnabled:                         "true", // 默认启用优惠码功能
+		SettingKeySiteName:                                 "Sub2API",
+		SettingKeySiteLogo:                                 "",
+		SettingKeyPurchaseSubscriptionEnabled:              "false",
+		SettingKeyPurchaseSubscriptionURL:                  "",
+		SettingKeyTableDefaultPageSize:                     "20",
+		SettingKeyTablePageSizeOptions:                     "[10,20,50,100]",
+		SettingKeyCustomMenuItems:                          "[]",
+		SettingKeyCustomEndpoints:                          "[]",
+		SettingKeyOIDCConnectEnabled:                       "false",
+		SettingKeyOIDCConnectProviderName:                  "OIDC",
+		SettingKeyDefaultConcurrency:                       strconv.Itoa(s.cfg.Default.UserConcurrency),
+		SettingKeyDefaultBalance:                           strconv.FormatFloat(s.cfg.Default.UserBalance, 'f', 8, 64),
+		SettingKeyDefaultSubscriptions:                     "[]",
+		SettingKeyAuthSourceDefaultEmailBalance:            "0",
+		SettingKeyAuthSourceDefaultEmailConcurrency:        "5",
+		SettingKeyAuthSourceDefaultEmailSubscriptions:      "[]",
+		SettingKeyAuthSourceDefaultEmailGrantOnSignup:      "true",
+		SettingKeyAuthSourceDefaultEmailGrantOnFirstBind:   "false",
+		SettingKeyAuthSourceDefaultLinuxDoBalance:          "0",
+		SettingKeyAuthSourceDefaultLinuxDoConcurrency:      "5",
+		SettingKeyAuthSourceDefaultLinuxDoSubscriptions:    "[]",
+		SettingKeyAuthSourceDefaultLinuxDoGrantOnSignup:    "true",
+		SettingKeyAuthSourceDefaultLinuxDoGrantOnFirstBind: "false",
+		SettingKeyAuthSourceDefaultOIDCBalance:             "0",
+		SettingKeyAuthSourceDefaultOIDCConcurrency:         "5",
+		SettingKeyAuthSourceDefaultOIDCSubscriptions:       "[]",
+		SettingKeyAuthSourceDefaultOIDCGrantOnSignup:       "true",
+		SettingKeyAuthSourceDefaultOIDCGrantOnFirstBind:    "false",
+		SettingKeyAuthSourceDefaultWeChatBalance:           "0",
+		SettingKeyAuthSourceDefaultWeChatConcurrency:       "5",
+		SettingKeyAuthSourceDefaultWeChatSubscriptions:     "[]",
+		SettingKeyAuthSourceDefaultWeChatGrantOnSignup:     "true",
+		SettingKeyAuthSourceDefaultWeChatGrantOnFirstBind:  "false",
+		SettingKeyForceEmailOnThirdPartySignup:             "false",
+		SettingKeySMTPPort:                                 "587",
+		SettingKeySMTPUseTLS:                               "false",
+		SettingKeyBalanceLowNotifyEnabled:                  "false",
+		SettingKeyBalanceLowNotifyThreshold:                "0",
+		SettingKeyBalanceLowNotifyRechargeURL:              "",
+		SettingKeyAccountQuotaNotifyEnabled:                "false",
+		SettingKeyAccountQuotaNotifyEmails:                 "[]",
 		// Model fallback defaults
 		SettingKeyEnableModelFallback:      "false",
 		SettingKeyFallbackModelAnthropic:   "claude-3-5-sonnet-20241022",
@@ -1313,6 +1557,10 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	}
 	result.EnableMetadataPassthrough = settings[SettingKeyEnableMetadataPassthrough] == "true"
 	result.EnableCCHSigning = settings[SettingKeyEnableCCHSigning] == "true"
+	result.PaymentVisibleMethodAlipaySource = settings[SettingPaymentVisibleMethodAlipaySource]
+	result.PaymentVisibleMethodWxpaySource = settings[SettingPaymentVisibleMethodWxpaySource]
+	result.PaymentVisibleMethodAlipayEnabled = settings[SettingPaymentVisibleMethodAlipayEnabled] == "true"
+	result.PaymentVisibleMethodWxpayEnabled = settings[SettingPaymentVisibleMethodWxpayEnabled] == "true"
 
 	// Web search emulation: quick enabled check from the JSON config
 	if raw := settings[SettingKeyWebSearchEmulationConfig]; raw != "" {
@@ -1321,7 +1569,6 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 			result.WebSearchEmulationEnabled = wsCfg.Enabled && len(wsCfg.Providers) > 0
 		}
 	}
-
 	return result
 }
 
@@ -1357,6 +1604,73 @@ func parseDefaultSubscriptions(raw string) []DefaultSubscriptionSetting {
 	}
 
 	return normalized
+}
+
+func parseProviderDefaultGrantSettings(settings map[string]string, keys authSourceDefaultKeySet) ProviderDefaultGrantSettings {
+	result := ProviderDefaultGrantSettings{
+		Balance:          defaultAuthSourceBalance,
+		Concurrency:      defaultAuthSourceConcurrency,
+		Subscriptions:    []DefaultSubscriptionSetting{},
+		GrantOnSignup:    false,
+		GrantOnFirstBind: false,
+	}
+
+	if v, err := strconv.ParseFloat(strings.TrimSpace(settings[keys.balance]), 64); err == nil {
+		result.Balance = v
+	}
+	if v, err := strconv.Atoi(strings.TrimSpace(settings[keys.concurrency])); err == nil {
+		result.Concurrency = v
+	}
+	if items := parseDefaultSubscriptions(settings[keys.subscriptions]); items != nil {
+		result.Subscriptions = items
+	}
+	if raw, ok := settings[keys.grantOnSignup]; ok {
+		result.GrantOnSignup = raw == "true"
+	}
+	if raw, ok := settings[keys.grantOnFirstBind]; ok {
+		result.GrantOnFirstBind = raw == "true"
+	}
+
+	return result
+}
+
+func writeProviderDefaultGrantUpdates(updates map[string]string, keys authSourceDefaultKeySet, settings ProviderDefaultGrantSettings) {
+	updates[keys.balance] = strconv.FormatFloat(settings.Balance, 'f', 8, 64)
+	updates[keys.concurrency] = strconv.Itoa(settings.Concurrency)
+
+	subscriptions := settings.Subscriptions
+	if subscriptions == nil {
+		subscriptions = []DefaultSubscriptionSetting{}
+	}
+	raw, err := json.Marshal(subscriptions)
+	if err != nil {
+		raw = []byte("[]")
+	}
+	updates[keys.subscriptions] = string(raw)
+	updates[keys.grantOnSignup] = strconv.FormatBool(settings.GrantOnSignup)
+	updates[keys.grantOnFirstBind] = strconv.FormatBool(settings.GrantOnFirstBind)
+}
+
+func mergeProviderDefaultGrantSettings(globalDefaults ProviderDefaultGrantSettings, providerDefaults ProviderDefaultGrantSettings) ProviderDefaultGrantSettings {
+	result := ProviderDefaultGrantSettings{
+		Balance:          globalDefaults.Balance,
+		Concurrency:      globalDefaults.Concurrency,
+		Subscriptions:    append([]DefaultSubscriptionSetting(nil), globalDefaults.Subscriptions...),
+		GrantOnSignup:    providerDefaults.GrantOnSignup,
+		GrantOnFirstBind: providerDefaults.GrantOnFirstBind,
+	}
+
+	if providerDefaults.Balance != defaultAuthSourceBalance {
+		result.Balance = providerDefaults.Balance
+	}
+	if providerDefaults.Concurrency > 0 && providerDefaults.Concurrency != defaultAuthSourceConcurrency {
+		result.Concurrency = providerDefaults.Concurrency
+	}
+	if len(providerDefaults.Subscriptions) > 0 {
+		result.Subscriptions = append([]DefaultSubscriptionSetting(nil), providerDefaults.Subscriptions...)
+	}
+
+	return result
 }
 
 func parseTablePreferences(defaultPageSizeRaw, optionsRaw string) (int, []int) {

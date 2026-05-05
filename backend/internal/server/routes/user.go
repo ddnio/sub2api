@@ -29,6 +29,8 @@ func RegisterUserRoutes(
 			user.POST("/notify-email/verify", h.User.VerifyNotifyEmail)
 			user.PUT("/notify-email/toggle", h.User.ToggleNotifyEmail)
 			user.DELETE("/notify-email", h.User.RemoveNotifyEmail)
+			user.DELETE("/account-bindings/:provider", h.User.UnbindIdentity)
+			user.POST("/auth-identities/bind/start", h.User.StartIdentityBinding)
 
 			// TOTP 双因素认证
 			totp := user.Group("/totp")

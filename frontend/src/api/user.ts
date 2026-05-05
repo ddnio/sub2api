@@ -4,7 +4,8 @@
  */
 
 import { apiClient } from './client'
-import type { UserProfile, ChangePasswordRequest } from '@/types'
+import { prepareOAuthBindAccessTokenCookie } from './auth'
+import type { UserProfile, ChangePasswordRequest, UserAuthProvider } from '@/types'
 
 /**
  * Get current user profile
@@ -22,6 +23,7 @@ export async function getProfile(): Promise<UserProfile> {
  */
 export async function updateProfile(profile: {
   username?: string
+  avatar_url?: string | null
   balance_notify_enabled?: boolean
   balance_notify_threshold?: number | null
 }): Promise<UserProfile> {
@@ -66,6 +68,36 @@ export async function toggleNotifyEmail(email: string, disabled: boolean): Promi
   return data
 }
 
+export type BindableOAuthProvider = Exclude<UserAuthProvider, 'email' | 'wechat'>
+
+export interface StartOAuthBindingResponse {
+  provider: BindableOAuthProvider
+  authorize_url: string
+  method: string
+  use_browser_redirect: boolean
+}
+
+export async function startOAuthBinding(
+  provider: BindableOAuthProvider,
+  redirectTo = '/profile'
+): Promise<void> {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  prepareOAuthBindAccessTokenCookie()
+  const { data } = await apiClient.post<StartOAuthBindingResponse>('/user/auth-identities/bind/start', {
+    provider,
+    redirect_to: redirectTo,
+  })
+  window.location.href = data.authorize_url
+}
+
+export async function unbindAuthProvider(provider: Exclude<UserAuthProvider, 'email'>): Promise<UserProfile> {
+  const { data } = await apiClient.delete<UserProfile>(`/user/account-bindings/${provider}`)
+  return data
+}
+
 export const userAPI = {
   getProfile,
   updateProfile,
@@ -73,7 +105,9 @@ export const userAPI = {
   sendNotifyEmailCode,
   verifyNotifyEmail,
   removeNotifyEmail,
-  toggleNotifyEmail
+  toggleNotifyEmail,
+  startOAuthBinding,
+  unbindAuthProvider
 }
 
 export default userAPI

@@ -201,17 +201,6 @@ func (s *BillingService) initFallbackPricing() {
 		SupportsCacheBreakdown:     false,
 	}
 
-	// OpenAI GPT-5.1（本地兜底，防止动态定价不可用时拒绝计费）
-	s.fallbackPrices["gpt-5.1"] = &ModelPricing{
-		InputPricePerToken:             1.25e-6, // $1.25 per MTok
-		InputPricePerTokenPriority:     2.5e-6,  // $2.5 per MTok
-		OutputPricePerToken:            10e-6,   // $10 per MTok
-		OutputPricePerTokenPriority:    20e-6,   // $20 per MTok
-		CacheCreationPricePerToken:     1.25e-6, // $1.25 per MTok
-		CacheReadPricePerToken:         0.125e-6,
-		CacheReadPricePerTokenPriority: 0.25e-6,
-		SupportsCacheBreakdown:         false,
-	}
 	// OpenAI GPT-5.4（业务指定价格）
 	s.fallbackPrices["gpt-5.4"] = &ModelPricing{
 		InputPricePerToken:             2.5e-6,  // $2.5 per MTok
@@ -232,10 +221,10 @@ func (s *BillingService) initFallbackPricing() {
 		CacheReadPricePerToken: 7.5e-8,
 		SupportsCacheBreakdown: false,
 	}
-	s.fallbackPrices["gpt-5.4-nano"] = &ModelPricing{
-		InputPricePerToken:     2e-7,
-		OutputPricePerToken:    1.25e-6,
-		CacheReadPricePerToken: 2e-8,
+	s.fallbackPrices["gpt-5.1"] = &ModelPricing{
+		InputPricePerToken:     1.25e-6,
+		OutputPricePerToken:    10e-6,
+		CacheReadPricePerToken: 0.125e-6,
 		SupportsCacheBreakdown: false,
 	}
 	// OpenAI GPT-5.2（本地兜底）
@@ -249,8 +238,8 @@ func (s *BillingService) initFallbackPricing() {
 		CacheReadPricePerTokenPriority: 0.35e-6,
 		SupportsCacheBreakdown:         false,
 	}
-	// Codex 族兜底统一按 GPT-5.1 Codex 价格计费
-	s.fallbackPrices["gpt-5.1-codex"] = &ModelPricing{
+	// Codex 族兜底统一按 GPT-5.3 Codex 价格计费
+	s.fallbackPrices["gpt-5.3-codex"] = &ModelPricing{
 		InputPricePerToken:             1.5e-6, // $1.5 per MTok
 		InputPricePerTokenPriority:     3e-6,   // $3 per MTok
 		OutputPricePerToken:            12e-6,  // $12 per MTok
@@ -260,17 +249,6 @@ func (s *BillingService) initFallbackPricing() {
 		CacheReadPricePerTokenPriority: 0.3e-6,
 		SupportsCacheBreakdown:         false,
 	}
-	s.fallbackPrices["gpt-5.2-codex"] = &ModelPricing{
-		InputPricePerToken:             1.75e-6,
-		InputPricePerTokenPriority:     3.5e-6,
-		OutputPricePerToken:            14e-6,
-		OutputPricePerTokenPriority:    28e-6,
-		CacheCreationPricePerToken:     1.75e-6,
-		CacheReadPricePerToken:         0.175e-6,
-		CacheReadPricePerTokenPriority: 0.35e-6,
-		SupportsCacheBreakdown:         false,
-	}
-	s.fallbackPrices["gpt-5.3-codex"] = s.fallbackPrices["gpt-5.1-codex"]
 }
 
 // getFallbackPricing 根据模型系列获取回退价格
@@ -314,22 +292,16 @@ func (s *BillingService) getFallbackPricing(model string) *ModelPricing {
 	if strings.Contains(modelLower, "gpt-5") || strings.Contains(modelLower, "codex") {
 		normalized := normalizeCodexModel(modelLower)
 		switch normalized {
+		case "gpt-5.1":
+			return s.fallbackPrices["gpt-5.1"]
 		case "gpt-5.4-mini":
 			return s.fallbackPrices["gpt-5.4-mini"]
-		case "gpt-5.4-nano":
-			return s.fallbackPrices["gpt-5.4-nano"]
 		case "gpt-5.4":
 			return s.fallbackPrices["gpt-5.4"]
 		case "gpt-5.2":
 			return s.fallbackPrices["gpt-5.2"]
-		case "gpt-5.2-codex":
-			return s.fallbackPrices["gpt-5.2-codex"]
-		case "gpt-5.3-codex":
+		case "gpt-5.3-codex", "gpt-5.3-codex-spark":
 			return s.fallbackPrices["gpt-5.3-codex"]
-		case "gpt-5.1-codex", "gpt-5.1-codex-max", "gpt-5.1-codex-mini", "codex-mini-latest":
-			return s.fallbackPrices["gpt-5.1-codex"]
-		case "gpt-5.1":
-			return s.fallbackPrices["gpt-5.1"]
 		}
 	}
 
@@ -446,8 +418,8 @@ func (s *BillingService) CalculateCostUnified(input CostInput) (*CostBreakdown, 
 		})
 	}
 
-	if input.RateMultiplier <= 0 {
-		input.RateMultiplier = 1.0
+	if input.RateMultiplier < 0 {
+		input.RateMultiplier = 0
 	}
 
 	var breakdown *CostBreakdown
@@ -491,8 +463,8 @@ func (s *BillingService) computeTokenBreakdown(
 	rateMultiplier float64, serviceTier string,
 	applyLongCtx bool,
 ) *CostBreakdown {
-	if rateMultiplier <= 0 {
-		rateMultiplier = 1.0
+	if rateMultiplier < 0 {
+		rateMultiplier = 0
 	}
 
 	inputPrice := pricing.InputPricePerToken
@@ -663,7 +635,11 @@ func (s *BillingService) shouldApplySessionLongContextPricing(tokens UsageTokens
 }
 
 func isOpenAIGPT54Model(model string) bool {
-	normalized := normalizeCodexModel(strings.TrimSpace(strings.ToLower(model)))
+	trimmed := strings.TrimSpace(strings.ToLower(model))
+	if !strings.Contains(trimmed, "gpt-5") && !strings.Contains(trimmed, "codex") {
+		return false
+	}
+	normalized := normalizeCodexModel(trimmed)
 	return normalized == "gpt-5.4"
 }
 
@@ -830,8 +806,8 @@ func (s *BillingService) CalculateImageCost(model string, imageSize string, imag
 	totalCost := unitPrice * float64(imageCount)
 
 	// 应用倍率
-	if rateMultiplier <= 0 {
-		rateMultiplier = 1.0
+	if rateMultiplier < 0 {
+		rateMultiplier = 0
 	}
 	actualCost := totalCost * rateMultiplier
 

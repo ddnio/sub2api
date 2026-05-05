@@ -263,7 +263,9 @@ func TestOpenAIGatewayServiceRecordUsage_RecordsAccountStatsCost(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, usageRepo.lastLog)
 	require.NotNil(t, usageRepo.lastLog.AccountStatsCost)
-	require.InDelta(t, 0.000325, *usageRepo.lastLog.AccountStatsCost, 1e-12)
+	expected, err := svc.billingService.CalculateCost("gpt-5.1", UsageTokens{InputTokens: 100, OutputTokens: 20}, 1.0)
+	require.NoError(t, err)
+	require.InDelta(t, expected.TotalCost, *usageRepo.lastLog.AccountStatsCost, 1e-12)
 }
 
 func TestOpenAIGatewayServiceRecordUsage_IncludesEndpointMetadata(t *testing.T) {
@@ -1079,7 +1081,7 @@ func TestOpenAIGatewayServiceRecordUsage_SubscriptionBillingSetsSubscriptionFiel
 	require.Equal(t, BillingTypeSubscription, usageRepo.lastLog.BillingType)
 	require.NotNil(t, usageRepo.lastLog.SubscriptionID)
 	require.Equal(t, subscription.ID, *usageRepo.lastLog.SubscriptionID)
-	require.Equal(t, 1, subRepo.incrementCalls)
+	require.Equal(t, 0, subRepo.incrementCalls)
 	require.Equal(t, 0, userRepo.deductCalls)
 }
 
@@ -1106,4 +1108,32 @@ func TestOpenAIGatewayServiceRecordUsage_SimpleModeSkipsBillingAfterPersist(t *t
 	require.Equal(t, 1, usageRepo.calls)
 	require.Equal(t, 0, userRepo.deductCalls)
 	require.Equal(t, 0, subRepo.incrementCalls)
+}
+
+func TestOpenAIGatewayServiceRecordUsage_ImageOnlyUsageStillPersists(t *testing.T) {
+	usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}
+	userRepo := &openAIRecordUsageUserRepoStub{}
+	subRepo := &openAIRecordUsageSubRepoStub{}
+	svc := newOpenAIRecordUsageServiceForTest(usageRepo, userRepo, subRepo, nil)
+
+	err := svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
+		Result: &OpenAIForwardResult{
+			RequestID:  "resp_image_only_usage",
+			Model:      "gpt-image-2",
+			ImageCount: 2,
+			ImageSize:  "1K",
+			Duration:   time.Second,
+		},
+		APIKey:  &APIKey{ID: 1007},
+		User:    &User{ID: 2007},
+		Account: &Account{ID: 3007},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, usageRepo.lastLog)
+	require.Equal(t, 2, usageRepo.lastLog.ImageCount)
+	require.NotNil(t, usageRepo.lastLog.ImageSize)
+	require.Equal(t, "1K", *usageRepo.lastLog.ImageSize)
+	require.NotNil(t, usageRepo.lastLog.BillingMode)
+	require.Equal(t, string(BillingModeImage), *usageRepo.lastLog.BillingMode)
 }

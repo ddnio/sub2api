@@ -1,0 +1,442 @@
+<template>
+  <AuthLayout>
+    <div class="space-y-6">
+      <div class="text-center">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+          {{ t('auth.oidc.callbackTitle', { providerName }) }}
+        </h2>
+        <p class="mt-2 text-sm text-gray-500 dark:text-dark-400">
+          {{
+            isProcessing
+              ? t('auth.oidc.callbackProcessing', { providerName })
+              : t('auth.oidc.callbackHint')
+          }}
+        </p>
+      </div>
+
+      <transition name="fade">
+        <div v-if="needsInvitation || needsAdoptionConfirmation" class="space-y-4">
+          <div
+            v-if="adoptionRequired && (suggestedDisplayName || suggestedAvatarUrl)"
+            class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-dark-600 dark:bg-dark-800/60"
+          >
+            <div class="space-y-3">
+              <div class="space-y-1">
+                <p class="text-sm font-medium text-gray-900 dark:text-white">
+                  Use {{ providerName }} profile details
+                </p>
+                <p class="text-xs text-gray-500 dark:text-dark-400">
+                  Choose whether to apply the nickname or avatar from {{ providerName }} to this account.
+                </p>
+              </div>
+
+              <label
+                v-if="suggestedDisplayName"
+                class="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm dark:border-dark-600 dark:bg-dark-900/50"
+              >
+                <input v-model="adoptDisplayName" type="checkbox" class="mt-1 h-4 w-4" />
+                <span class="space-y-1">
+                  <span class="block font-medium text-gray-900 dark:text-white">
+                    Use display name
+                  </span>
+                  <span class="block text-gray-500 dark:text-dark-400">
+                    {{ suggestedDisplayName }}
+                  </span>
+                </span>
+              </label>
+
+              <label
+                v-if="suggestedAvatarUrl"
+                class="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm dark:border-dark-600 dark:bg-dark-900/50"
+              >
+                <input v-model="adoptAvatar" type="checkbox" class="mt-1 h-4 w-4" />
+                <img
+                  :src="suggestedAvatarUrl"
+                  :alt="`${providerName} avatar`"
+                  class="h-10 w-10 rounded-full border border-gray-200 object-cover dark:border-dark-600"
+                />
+                <span class="space-y-1">
+                  <span class="block font-medium text-gray-900 dark:text-white">
+                    Use avatar
+                  </span>
+                  <span class="block break-all text-gray-500 dark:text-dark-400">
+                    {{ suggestedAvatarUrl }}
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <template v-if="needsInvitation">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              {{ t('auth.oidc.invitationRequired', { providerName }) }}
+            </p>
+            <div>
+              <input
+                v-model="invitationCode"
+                type="text"
+                class="input w-full"
+                :placeholder="t('auth.invitationCodePlaceholder')"
+                :disabled="isSubmitting"
+                @keyup.enter="handleSubmitInvitation"
+              />
+            </div>
+            <transition name="fade">
+              <p v-if="invitationError" class="text-sm text-red-600 dark:text-red-400">
+                {{ invitationError }}
+              </p>
+            </transition>
+            <button
+              class="btn btn-primary w-full"
+              :disabled="isSubmitting || !invitationCode.trim()"
+              @click="handleSubmitInvitation"
+            >
+              {{
+                isSubmitting
+                  ? t('auth.oidc.completing')
+                  : t('auth.oidc.completeRegistration')
+              }}
+            </button>
+
+            <div
+              class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-dark-600 dark:bg-dark-800/60"
+            >
+              <div class="space-y-3">
+                <div class="space-y-1">
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">
+                    {{ t('auth.alreadyHaveAccount') }}
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-dark-400">
+                    Sign in to an existing account, then bind this WeChat identity to it.
+                  </p>
+                </div>
+
+                <input
+                  v-model="existingAccountEmail"
+                  data-testid="existing-account-email"
+                  type="email"
+                  class="input w-full"
+                  :placeholder="t('auth.emailPlaceholder')"
+                  :disabled="isSubmitting"
+                />
+
+                <button
+                  data-testid="existing-account-submit"
+                  type="button"
+                  class="btn btn-secondary w-full"
+                  :disabled="isSubmitting"
+                  @click="handleExistingAccountBinding"
+                >
+                  {{ t('auth.signIn') }}
+                </button>
+              </div>
+            </div>
+          </template>
+
+          <template v-else-if="needsAdoptionConfirmation">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              Review the {{ providerName }} profile details before continuing.
+            </p>
+            <button class="btn btn-primary w-full" :disabled="isSubmitting" @click="handleContinueLogin">
+              {{ isSubmitting ? t('common.processing') : 'Continue' }}
+            </button>
+          </template>
+        </div>
+      </transition>
+
+      <transition name="fade">
+        <div
+          v-if="errorMessage"
+          class="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800/50 dark:bg-red-900/20"
+        >
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0">
+              <Icon name="exclamationCircle" size="md" class="text-red-500" />
+            </div>
+            <div class="space-y-2">
+              <p class="text-sm text-red-700 dark:text-red-400">
+                {{ errorMessage }}
+              </p>
+              <router-link to="/login" class="btn btn-primary">
+                {{ t('auth.oidc.backToLogin') }}
+              </router-link>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </div>
+  </AuthLayout>
+</template>
+
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { AuthLayout } from '@/components/layout'
+import Icon from '@/components/icons/Icon.vue'
+import { useAuthStore, useAppStore } from '@/stores'
+import {
+  completeWeChatOAuthRegistration,
+  exchangePendingOAuthCompletion,
+  getAuthToken,
+  getOAuthCompletionKind,
+  isOAuthLoginCompletion,
+  prepareOAuthBindAccessTokenCookie,
+  persistOAuthTokenContext,
+  type OAuthAdoptionDecision,
+  type PendingOAuthExchangeResponse
+} from '@/api/auth'
+
+const route = useRoute()
+const router = useRouter()
+const { t } = useI18n()
+
+const authStore = useAuthStore()
+const appStore = useAppStore()
+
+const isProcessing = ref(true)
+const errorMessage = ref('')
+const needsInvitation = ref(false)
+const invitationCode = ref('')
+const isSubmitting = ref(false)
+const invitationError = ref('')
+const redirectTo = ref('/dashboard')
+const adoptionRequired = ref(false)
+const suggestedDisplayName = ref('')
+const suggestedAvatarUrl = ref('')
+const existingAccountEmail = ref('')
+const adoptDisplayName = ref(true)
+const adoptAvatar = ref(true)
+const needsAdoptionConfirmation = ref(false)
+const bindSuccessMessage = t('profile.authBindings.bindSuccess')
+
+const providerName = 'WeChat'
+
+function parseFragmentParams(): URLSearchParams {
+  const raw = typeof window !== 'undefined' ? window.location.hash : ''
+  const hash = raw.startsWith('#') ? raw.slice(1) : raw
+  return new URLSearchParams(hash)
+}
+
+function sanitizeRedirectPath(path: string | null | undefined): string {
+  if (!path) return '/dashboard'
+  if (!path.startsWith('/')) return '/dashboard'
+  if (path.startsWith('//')) return '/dashboard'
+  if (path.includes('://')) return '/dashboard'
+  if (path.includes('\n') || path.includes('\r')) return '/dashboard'
+  return path
+}
+
+function resolveWeChatOAuthMode(): 'open' | 'mp' {
+  if (typeof navigator === 'undefined') {
+    return 'open'
+  }
+  return /MicroMessenger/i.test(navigator.userAgent) ? 'mp' : 'open'
+}
+
+function resolveRedirectTarget(): string {
+  return sanitizeRedirectPath(
+    (route.query.redirect as string | undefined) || redirectTo.value || '/dashboard'
+  )
+}
+
+function resolveWeChatStartURL(intent: 'bind_current_user' | 'adopt_existing_user_by_email'): string {
+  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
+  const normalized = apiBase.replace(/\/$/, '')
+  const params = new URLSearchParams({
+    mode: resolveWeChatOAuthMode(),
+    redirect: resolveRedirectTarget(),
+    intent,
+  })
+
+  const email = existingAccountEmail.value.trim()
+  if (email) {
+    params.set('email', email)
+  }
+
+  return `${normalized}/auth/oauth/wechat/start?${params.toString()}`
+}
+
+function buildExistingAccountResumePath(): string {
+  const params = new URLSearchParams({
+    wechat_bind_existing: '1',
+    redirect: resolveRedirectTarget(),
+  })
+
+  const email = existingAccountEmail.value.trim()
+  if (email) {
+    params.set('email', email)
+  }
+
+  return `/auth/wechat/callback?${params.toString()}`
+}
+
+function currentAdoptionDecision(): OAuthAdoptionDecision {
+  return {
+    adoptDisplayName: adoptDisplayName.value,
+    adoptAvatar: adoptAvatar.value
+  }
+}
+
+async function handleExistingAccountBinding() {
+  if (getAuthToken()) {
+    prepareOAuthBindAccessTokenCookie()
+    window.location.href = resolveWeChatStartURL('bind_current_user')
+    return
+  }
+
+  const params = new URLSearchParams({
+    redirect: buildExistingAccountResumePath(),
+  })
+  const email = existingAccountEmail.value.trim()
+  if (email) {
+    params.set('email', email)
+  }
+  await router.replace(`/login?${params.toString()}`)
+}
+
+function applyAdoptionSuggestionState(completion: PendingOAuthExchangeResponse) {
+  adoptionRequired.value = completion.adoption_required === true
+  suggestedDisplayName.value = completion.suggested_display_name || ''
+  suggestedAvatarUrl.value = completion.suggested_avatar_url || ''
+
+  if (!suggestedDisplayName.value) {
+    adoptDisplayName.value = false
+  }
+  if (!suggestedAvatarUrl.value) {
+    adoptAvatar.value = false
+  }
+}
+
+function hasSuggestedProfile(completion: PendingOAuthExchangeResponse): boolean {
+  return Boolean(completion.suggested_display_name || completion.suggested_avatar_url)
+}
+
+async function finalizeCompletion(completion: PendingOAuthExchangeResponse, redirect: string) {
+  if (getOAuthCompletionKind(completion) === 'bind') {
+    const bindRedirect = sanitizeRedirectPath(completion.redirect || '/profile')
+    appStore.showSuccess(bindSuccessMessage)
+    await router.replace(bindRedirect)
+    return
+  }
+
+  if (!isOAuthLoginCompletion(completion)) {
+    throw new Error(t('auth.oidc.callbackMissingToken'))
+  }
+
+  persistOAuthTokenContext(completion)
+  await authStore.setToken(completion.access_token)
+  appStore.showSuccess(t('auth.loginSuccess'))
+  await router.replace(redirect)
+}
+
+async function handleSubmitInvitation() {
+  invitationError.value = ''
+  if (!invitationCode.value.trim()) return
+
+  isSubmitting.value = true
+  try {
+    const tokenData = await completeWeChatOAuthRegistration(
+      invitationCode.value.trim(),
+      currentAdoptionDecision()
+    )
+    persistOAuthTokenContext(tokenData)
+    await authStore.setToken(tokenData.access_token)
+    appStore.showSuccess(t('auth.loginSuccess'))
+    await router.replace(redirectTo.value)
+  } catch (e: unknown) {
+    const err = e as { message?: string; response?: { data?: { message?: string } } }
+    invitationError.value =
+      err.response?.data?.message || err.message || t('auth.oidc.completeRegistrationFailed')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+async function handleContinueLogin() {
+  isSubmitting.value = true
+  try {
+    const completion = await exchangePendingOAuthCompletion(currentAdoptionDecision())
+    await finalizeCompletion(completion, redirectTo.value)
+  } catch (e: unknown) {
+    const err = e as { message?: string; response?: { data?: { detail?: string; message?: string } } }
+    errorMessage.value =
+      err.response?.data?.detail ||
+      err.response?.data?.message ||
+      err.message ||
+      t('auth.loginFailed')
+    appStore.showError(errorMessage.value)
+    needsAdoptionConfirmation.value = false
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+onMounted(async () => {
+  if (typeof route.query.email === 'string') {
+    existingAccountEmail.value = route.query.email
+  }
+
+  if (route.query.wechat_bind_existing === '1' && getAuthToken()) {
+    prepareOAuthBindAccessTokenCookie()
+    window.location.href = resolveWeChatStartURL('bind_current_user')
+    return
+  }
+
+  const params = parseFragmentParams()
+  const error = params.get('error')
+  const errorDesc = params.get('error_description') || params.get('error_message') || ''
+
+  if (error) {
+    errorMessage.value = errorDesc || error
+    appStore.showError(errorMessage.value)
+    isProcessing.value = false
+    return
+  }
+
+  try {
+    const completion = await exchangePendingOAuthCompletion()
+    const redirect = sanitizeRedirectPath(
+      completion.redirect || (route.query.redirect as string | undefined) || '/dashboard'
+    )
+    applyAdoptionSuggestionState(completion)
+    redirectTo.value = redirect
+
+    if (completion.error === 'invitation_required') {
+      needsInvitation.value = true
+      isProcessing.value = false
+      return
+    }
+
+    if (adoptionRequired.value && hasSuggestedProfile(completion)) {
+      needsAdoptionConfirmation.value = true
+      isProcessing.value = false
+      return
+    }
+
+    await finalizeCompletion(completion, redirect)
+  } catch (e: unknown) {
+    const err = e as { message?: string; response?: { data?: { detail?: string; message?: string } } }
+    errorMessage.value =
+      err.response?.data?.detail ||
+      err.response?.data?.message ||
+      err.message ||
+      t('auth.loginFailed')
+    appStore.showError(errorMessage.value)
+    isProcessing.value = false
+  }
+})
+</script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+</style>

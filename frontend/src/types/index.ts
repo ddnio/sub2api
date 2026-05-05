@@ -24,10 +24,56 @@ export interface FetchOptions {
 
 // ==================== User & Auth Types ====================
 
+export type UserAuthProvider = 'email' | 'linuxdo' | 'oidc' | 'wechat'
+
+export interface UserAuthBindingStatus {
+  provider: UserAuthProvider
+  bound: boolean
+  bound_count?: number
+  display_name?: string
+  subject_hint?: string
+  provider_key?: string
+  provider_subject?: string | null
+  issuer?: string | null
+  label?: string | null
+  provider_label?: string | null
+  metadata?: Record<string, unknown>
+  verified_at?: string
+  bind_start_path?: string
+  can_bind?: boolean
+  can_unbind?: boolean
+  note?: string
+}
+
+export interface UserProfileSourceContext {
+  provider?: UserAuthProvider | string
+  source?: string | null
+  label?: string | null
+  provider_label?: string | null
+}
+
 export interface User {
   id: number
   username: string
   email: string
+  avatar_url?: string | null
+  avatar_source?: string | UserProfileSourceContext | null
+  username_source?: string | UserProfileSourceContext | null
+  display_name_source?: string | UserProfileSourceContext | null
+  nickname_source?: string | UserProfileSourceContext | null
+  profile_sources?: {
+    avatar?: string | UserProfileSourceContext | null
+    username?: string | UserProfileSourceContext | null
+    display_name?: string | UserProfileSourceContext | null
+    nickname?: string | UserProfileSourceContext | null
+  }
+  auth_bindings?: Partial<Record<UserAuthProvider, boolean | UserAuthBindingStatus>>
+  identity_bindings?: Partial<Record<UserAuthProvider, boolean | UserAuthBindingStatus>>
+  identities?: UserAuthIdentitySet
+  email_bound?: boolean
+  linuxdo_bound?: boolean
+  oidc_bound?: boolean
+  wechat_bound?: boolean
   role: 'admin' | 'user' // User role for authorization
   balance: number // User balance for API usage
   concurrency: number // Allowed concurrent requests
@@ -38,6 +84,8 @@ export interface User {
   created_at: string
   updated_at: string
 }
+
+export type UserAuthIdentitySet = Partial<Record<UserAuthProvider, UserAuthBindingStatus>>
 
 /** Notification email entry with enable/disable and verification state. */
 export interface NotifyEmailEntry {
@@ -56,6 +104,7 @@ export interface UserProfile extends User {
 export interface AdminUser extends User {
   // 管理员备注（普通用户接口不返回）
   notes: string
+  last_used_at?: string | null
   // 用户专属分组倍率配置 (group_id -> rate_multiplier)
   group_rates?: Record<number, number>
   // 当前并发数（仅管理员列表接口返回）
@@ -118,6 +167,7 @@ export interface ContactChannel {
 export interface PublicSettings {
   registration_enabled: boolean
   email_verify_enabled: boolean
+  force_email_on_third_party_signup: boolean
   registration_email_suffix_whitelist: string[]
   promo_code_enabled: boolean
   password_reset_enabled: boolean
