@@ -728,6 +728,22 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 	updates[SettingKeyEnableFingerprintUnification] = strconv.FormatBool(settings.EnableFingerprintUnification)
 	updates[SettingKeyEnableMetadataPassthrough] = strconv.FormatBool(settings.EnableMetadataPassthrough)
 	updates[SettingKeyEnableCCHSigning] = strconv.FormatBool(settings.EnableCCHSigning)
+	if settings.PaymentVisibleMethodAlipaySource != "" {
+		normalized, err := normalizeVisibleMethodSettingSource("alipay", settings.PaymentVisibleMethodAlipaySource, false)
+		if err != nil {
+			return nil, err
+		}
+		updates[SettingPaymentVisibleMethodAlipaySource] = normalized
+	}
+	if settings.PaymentVisibleMethodWxpaySource != "" {
+		normalized, err := normalizeVisibleMethodSettingSource("wxpay", settings.PaymentVisibleMethodWxpaySource, false)
+		if err != nil {
+			return nil, err
+		}
+		updates[SettingPaymentVisibleMethodWxpaySource] = normalized
+	}
+	updates[SettingPaymentVisibleMethodAlipayEnabled] = strconv.FormatBool(settings.PaymentVisibleMethodAlipayEnabled)
+	updates[SettingPaymentVisibleMethodWxpayEnabled] = strconv.FormatBool(settings.PaymentVisibleMethodWxpayEnabled)
 
 	return updates, nil
 }
@@ -1541,6 +1557,10 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	}
 	result.EnableMetadataPassthrough = settings[SettingKeyEnableMetadataPassthrough] == "true"
 	result.EnableCCHSigning = settings[SettingKeyEnableCCHSigning] == "true"
+	result.PaymentVisibleMethodAlipaySource = settings[SettingPaymentVisibleMethodAlipaySource]
+	result.PaymentVisibleMethodWxpaySource = settings[SettingPaymentVisibleMethodWxpaySource]
+	result.PaymentVisibleMethodAlipayEnabled = settings[SettingPaymentVisibleMethodAlipayEnabled] == "true"
+	result.PaymentVisibleMethodWxpayEnabled = settings[SettingPaymentVisibleMethodWxpayEnabled] == "true"
 
 	// Web search emulation: quick enabled check from the JSON config
 	if raw := settings[SettingKeyWebSearchEmulationConfig]; raw != "" {

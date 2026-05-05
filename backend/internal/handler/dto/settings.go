@@ -146,6 +146,11 @@ type SystemSettings struct {
 
 	// Web Search Emulation
 	WebSearchEmulationEnabled bool `json:"web_search_emulation_enabled"`
+
+	PaymentVisibleMethodAlipaySource  string `json:"payment_visible_method_alipay_source"`
+	PaymentVisibleMethodWxpaySource   string `json:"payment_visible_method_wxpay_source"`
+	PaymentVisibleMethodAlipayEnabled bool   `json:"payment_visible_method_alipay_enabled"`
+	PaymentVisibleMethodWxpayEnabled  bool   `json:"payment_visible_method_wxpay_enabled"`
 }
 
 type DefaultSubscriptionSetting struct {

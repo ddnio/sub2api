@@ -217,7 +217,6 @@ func TestSettingHandler_UpdateSettings_PersistsPaymentVisibleMethodsAndAdvancedS
 		"payment_visible_method_wxpay_source":   "wxpay",
 		"payment_visible_method_alipay_enabled": true,
 		"payment_visible_method_wxpay_enabled":  false,
-		"openai_advanced_scheduler_enabled":     true,
 	}
 	rawBody, err := json.Marshal(body)
 	require.NoError(t, err)
@@ -234,7 +233,6 @@ func TestSettingHandler_UpdateSettings_PersistsPaymentVisibleMethodsAndAdvancedS
 	require.Equal(t, service.VisibleMethodSourceOfficialWechat, repo.values[service.SettingPaymentVisibleMethodWxpaySource])
 	require.Equal(t, "true", repo.values[service.SettingPaymentVisibleMethodAlipayEnabled])
 	require.Equal(t, "false", repo.values[service.SettingPaymentVisibleMethodWxpayEnabled])
-	require.Equal(t, "true", repo.values["openai_advanced_scheduler_enabled"])
 
 	var resp response.Response
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
@@ -244,7 +242,6 @@ func TestSettingHandler_UpdateSettings_PersistsPaymentVisibleMethodsAndAdvancedS
 	require.Equal(t, service.VisibleMethodSourceOfficialWechat, data["payment_visible_method_wxpay_source"])
 	require.Equal(t, true, data["payment_visible_method_alipay_enabled"])
 	require.Equal(t, false, data["payment_visible_method_wxpay_enabled"])
-	require.Equal(t, true, data["openai_advanced_scheduler_enabled"])
 }
 
 func TestSettingHandler_UpdateSettings_RejectsInvalidPaymentVisibleMethodSource(t *testing.T) {

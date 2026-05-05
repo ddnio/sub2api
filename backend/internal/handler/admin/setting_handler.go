@@ -176,6 +176,10 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		EnableMetadataPassthrough:            settings.EnableMetadataPassthrough,
 		EnableCCHSigning:                     settings.EnableCCHSigning,
 		WebSearchEmulationEnabled:            settings.WebSearchEmulationEnabled,
+		PaymentVisibleMethodAlipaySource:     settings.PaymentVisibleMethodAlipaySource,
+		PaymentVisibleMethodWxpaySource:      settings.PaymentVisibleMethodWxpaySource,
+		PaymentVisibleMethodAlipayEnabled:    settings.PaymentVisibleMethodAlipayEnabled,
+		PaymentVisibleMethodWxpayEnabled:     settings.PaymentVisibleMethodWxpayEnabled,
 	}
 	response.Success(c, systemSettingsResponseData(payload, authSourceDefaults))
 }
@@ -317,6 +321,11 @@ type UpdateSettingsRequest struct {
 	EnableFingerprintUnification *bool `json:"enable_fingerprint_unification"`
 	EnableMetadataPassthrough    *bool `json:"enable_metadata_passthrough"`
 	EnableCCHSigning             *bool `json:"enable_cch_signing"`
+
+	PaymentVisibleMethodAlipaySource  string `json:"payment_visible_method_alipay_source"`
+	PaymentVisibleMethodWxpaySource   string `json:"payment_visible_method_wxpay_source"`
+	PaymentVisibleMethodAlipayEnabled bool   `json:"payment_visible_method_alipay_enabled"`
+	PaymentVisibleMethodWxpayEnabled  bool   `json:"payment_visible_method_wxpay_enabled"`
 }
 
 // UpdateSettings 更新系统设置
@@ -899,6 +908,10 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			}
 			return previousSettings.EnableCCHSigning
 		}(),
+		PaymentVisibleMethodAlipaySource:  req.PaymentVisibleMethodAlipaySource,
+		PaymentVisibleMethodWxpaySource:   req.PaymentVisibleMethodWxpaySource,
+		PaymentVisibleMethodAlipayEnabled: req.PaymentVisibleMethodAlipayEnabled,
+		PaymentVisibleMethodWxpayEnabled:  req.PaymentVisibleMethodWxpayEnabled,
 	}
 
 	authSourceDefaults := &service.AuthSourceDefaultSettings{
@@ -1043,6 +1056,10 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		EnableMetadataPassthrough:            updatedSettings.EnableMetadataPassthrough,
 		EnableCCHSigning:                     updatedSettings.EnableCCHSigning,
 		WebSearchEmulationEnabled:            updatedSettings.WebSearchEmulationEnabled,
+		PaymentVisibleMethodAlipaySource:     updatedSettings.PaymentVisibleMethodAlipaySource,
+		PaymentVisibleMethodWxpaySource:      updatedSettings.PaymentVisibleMethodWxpaySource,
+		PaymentVisibleMethodAlipayEnabled:    updatedSettings.PaymentVisibleMethodAlipayEnabled,
+		PaymentVisibleMethodWxpayEnabled:     updatedSettings.PaymentVisibleMethodWxpayEnabled,
 	}
 	updatedAuthSourceDefaults, err := h.settingService.GetAuthSourceDefaultSettings(c.Request.Context())
 	if err != nil {

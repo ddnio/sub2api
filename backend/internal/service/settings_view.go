@@ -120,6 +120,11 @@ type SystemSettings struct {
 
 	// Web Search Emulation (read-only quick check; full config via dedicated API)
 	WebSearchEmulationEnabled bool
+
+	PaymentVisibleMethodAlipaySource  string
+	PaymentVisibleMethodWxpaySource   string
+	PaymentVisibleMethodAlipayEnabled bool
+	PaymentVisibleMethodWxpayEnabled  bool
 }
 
 type DefaultSubscriptionSetting struct {
