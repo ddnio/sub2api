@@ -507,6 +507,13 @@ func (h *AuthHandler) CompleteWeChatOAuthRegistration(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
+	completionResponse, _ := readCompletionResponse(session.LocalFlowState)
+	if !strings.EqualFold(strings.TrimSpace(session.ProviderType), "wechat") ||
+		!strings.EqualFold(strings.TrimSpace(session.Intent), oauthIntentLogin) ||
+		!pendingSessionWantsInvitation(completionResponse) {
+		response.ErrorFrom(c, infraerrors.BadRequest("PENDING_AUTH_SESSION_INVALID", "pending auth registration context is invalid"))
+		return
+	}
 
 	email := strings.TrimSpace(session.ResolvedEmail)
 	username := pendingSessionStringValue(session.UpstreamIdentityClaims, "username")
@@ -530,6 +537,14 @@ func (h *AuthHandler) CompleteWeChatOAuthRegistration(c *gin.Context) {
 	}
 	if err := applyPendingOAuthAdoption(c.Request.Context(), h.entClient(), h.authService, h.userService, session, decision, &user.ID); err != nil {
 		response.ErrorFrom(c, infraerrors.InternalServer("PENDING_AUTH_ADOPTION_APPLY_FAILED", "failed to apply oauth profile adoption").WithCause(err))
+		return
+	}
+	if err := h.ensureWeChatRuntimeIdentityBinding(c.Request.Context(), user.ID, service.PendingAuthIdentityKey{
+		ProviderType:    session.ProviderType,
+		ProviderKey:     session.ProviderKey,
+		ProviderSubject: session.ProviderSubject,
+	}, session.UpstreamIdentityClaims); err != nil {
+		response.ErrorFrom(c, err)
 		return
 	}
 	if _, err := pendingSvc.ConsumeBrowserSession(c.Request.Context(), sessionToken, browserSessionKey); err != nil {
@@ -934,7 +949,7 @@ func (h *AuthHandler) repairLegacyWeChatIdentity(
 		_, err = client.AuthIdentity.UpdateOneID(legacy.ID).
 			SetProviderKey(providerKey).
 			SetProviderSubject(providerSubject).
-			SetMetadata(clonePendingCompletionMap(upstreamClaims)).
+			SetMetadata(cloneOAuthMetadata(upstreamClaims)).
 			Save(ctx)
 		if err != nil {
 			return err
@@ -980,6 +995,8 @@ func (h *AuthHandler) repairLegacyWeChatIdentity(
 		}
 		return nil
 	}
+	channelMetadata := cloneOAuthMetadata(upstreamClaims)
+	channelMetadata["openid"] = channelSubject
 	return client.AuthIdentityChannel.Create().
 		SetIdentityID(identityRecord.ID).
 		SetProviderType(providerType).
@@ -987,7 +1004,7 @@ func (h *AuthHandler) repairLegacyWeChatIdentity(
 		SetChannel(channel).
 		SetChannelAppID(channelAppID).
 		SetChannelSubject(channelSubject).
-		SetMetadata(map[string]any{"openid": channelSubject}).
+		SetMetadata(channelMetadata).
 		Exec(ctx)
 }
 

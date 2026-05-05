@@ -276,7 +276,18 @@ func clonePendingCompletionMap(values map[string]any) map[string]any {
 }
 
 func cloneOAuthMetadata(values map[string]any) map[string]any {
-	return clonePendingCompletionMap(values)
+	metadata := clonePendingCompletionMap(values)
+	if _, exists := metadata["display_name"]; !exists {
+		if displayName := pendingSessionStringValue(values, "suggested_display_name"); displayName != "" {
+			metadata["display_name"] = displayName
+		}
+	}
+	if _, exists := metadata["avatar_url"]; !exists {
+		if avatarURL := pendingSessionStringValue(values, "suggested_avatar_url"); avatarURL != "" {
+			metadata["avatar_url"] = avatarURL
+		}
+	}
+	return metadata
 }
 
 func mergePendingCompletionResponse(session *dbent.PendingAuthSession, overrides map[string]any) map[string]any {
@@ -610,7 +621,7 @@ func ensurePendingOAuthIdentityRecordForUser(ctx context.Context, client *dbent.
 			return nil, infraerrors.Conflict("AUTH_IDENTITY_OWNERSHIP_CONFLICT", "auth identity already belongs to another user")
 		}
 		identity, err = client.AuthIdentity.UpdateOneID(identity.ID).
-			SetMetadata(clonePendingCompletionMap(session.UpstreamIdentityClaims)).
+			SetMetadata(cloneOAuthMetadata(session.UpstreamIdentityClaims)).
 			Save(ctx)
 		return identity, err
 	}
@@ -619,7 +630,7 @@ func ensurePendingOAuthIdentityRecordForUser(ctx context.Context, client *dbent.
 		SetProviderType(providerType).
 		SetProviderKey(providerKey).
 		SetProviderSubject(providerSubject).
-		SetMetadata(clonePendingCompletionMap(session.UpstreamIdentityClaims)).
+		SetMetadata(cloneOAuthMetadata(session.UpstreamIdentityClaims)).
 		Save(ctx)
 	return identity, err
 }
