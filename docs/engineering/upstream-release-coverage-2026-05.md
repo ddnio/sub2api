@@ -790,11 +790,12 @@ Main-based candidate gates:
 - `cd frontend && pnpm exec vitest run src/utils/__tests__/usageLoadQueue.spec.ts`: 10 tests passed.
 - `cd frontend && pnpm run lint:check`: passed.
 - `cd frontend && pnpm run build`: passed with existing Vite dynamic/static import and chunk-size warnings only.
+- `hotfix/v0.1.116-datatable-rendering` was cherry-picked as `8a1e667a`; `cd frontend && pnpm run typecheck`, `pnpm run lint:check`, `pnpm run build`, and `git diff --check HEAD~1` passed.
 
 Shared test deployment evidence:
 
 - Pre-deploy test database backup: `/home/nio/backups/sub2api_test_pre_v0.1.117_20260506_080558.dump` (`7.1M`, mode `600`).
-- Test server repo `/data/service/sub2api`: `release/v0.1.117` at `48ae70e3`, `backend/cmd/server/VERSION` is `0.1.117`.
+- Test server repo `/data/service/sub2api`: `release/v0.1.117` at `8a1e667a`, `backend/cmd/server/VERSION` is `0.1.117`.
 - `./deploy/deploy-server.sh test`: built `sub2api:test`, replaced `sub2api-test`, and exposed `127.0.0.1:8081`.
 - Container: `sub2api-test` is `running healthy`.
 - Local and public `/health`: 200 with `{"status":"ok"}`.
@@ -803,8 +804,9 @@ Shared test deployment evidence:
 - Public SPA routes `/admin/orders`, `/admin/orders/dashboard`, `/admin/orders/plans`, `/admin/channel-monitor`, and `/user/channel-status`: 200.
 - Test DB `schema_migrations` includes `125b_add_channel_monitors.sql`, `126b_add_channel_monitor_aggregation.sql`, `127b_drop_channel_monitor_deleted_at.sql`, `128b_add_channel_monitor_request_templates.sql`, and `129_seed_claude_code_template.sql`.
 - Severe log scan over the deployment window found no `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常| 500 | 404 ` matches.
+- After the DataTable hotfix redeploy, public `/health`, `/api/v1/settings/public`, `/admin/orders`, `/admin/channel-monitor`, `/user/channel-status`, unauthenticated `/v1/models`, container health, and severe-log scan were rechecked successfully.
 
-Gate status: `v0.1.117` is deployed and smoke-verified on shared test from `48ae70e3`. Remaining gate before production is human/interactive functional validation of the new channel monitor and image-generation flows, plus any additional payment webhook checks the operator wants repeated against live test data.
+Gate status: `v0.1.117` is deployed and smoke-verified on shared test from `8a1e667a`. Remaining gate before production is human/interactive functional validation of the new channel monitor and image-generation flows, plus any additional payment webhook checks the operator wants repeated against live test data.
 
 ### v0.1.118
 
