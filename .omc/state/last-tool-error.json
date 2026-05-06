@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"git merge v0.1.116 --no-ff -m \\\"sync: merge upstream v0.1.116\\\" 2>&1\",\"description\":\"执行 upstream v0.1.116 merge\"}",
-  "error": "Exit code 1\nAuto-merging .gitignore\nCONFLICT (content): Merge conflict in .gitignore\nAuto-merging README.md\nAuto-merging README_CN.md\nAuto-merging README_JA.md\nAuto-merging backend/cmd/server/wire.go\nCONFLICT (content): Merge conflict in backend/cmd/server/wire.go\nAuto-merging backend/cmd/server/wire_gen.go\nCONFLICT (content): Merge conflict in backend/cmd/server/wire_gen.go\nAuto-merging backend/cmd/server/wire_gen_test.go\nCONFLICT (content): Merge conflict in backend/cmd/server/wire_gen_test.go...",
-  "timestamp": "2026-05-05T13:50:53.363Z",
-  "retry_count": 2
-}
