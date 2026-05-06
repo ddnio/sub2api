@@ -724,12 +724,57 @@ Range: `v0.1.116..v0.1.117`.
 | Upstream source | Area | Local state | Action | Notes |
 | --- | --- | --- | --- | --- |
 | `0a80ec80` | Version sync to v0.1.116 | Chore only | SKIP | Upstream version stamp, not behavior. |
-| `ac114738` / PR #1850 | Channel insights | Held feature | HOLD | Ent/migration/backend/frontend feature family. |
-| `ff08f9d7` / PR #1853 | Codex image generation bridge | Divergent image feature | HOLD | Image family conflicts with fork behavior and prior HOLD list. |
-| `ca204ddd` | Preserve image outputs when text serialization fails | Image-adjacent fix | HOLD | Potentially useful, but tied to held image path; reopen only in image batch. |
-| `a4e329c1` | Add default GPT-5.5 model | Model catalog/policy | HOLD | Not a safety fix; handle with a model catalog policy pass. |
+| `ac114738` / PR #1850 | Channel insights | Scratch imported | ADAPTED | Direct-merged in `scratch/v0.1.117-import-audit` as an import-audit exception. Preserved fork payment/referral/auth data models and renamed channel monitor migrations to fork-safe names. |
+| `ff08f9d7` / PR #1853 | Codex image generation bridge | Scratch imported | MERGED/PENDING | Present in scratch merge; still needs targeted OpenAI/Codex image and gateway route tests before release closeout. |
+| `ca204ddd` | Preserve image outputs when text serialization fails | Scratch imported | MERGED/PENDING | Present in scratch merge; still needs targeted serialization/image output tests before release closeout. |
+| `a4e329c1` | Add default GPT-5.5 model | Scratch imported | ADAPTED | Kept fork's existing `gpt-5.5`, `gpt-5.5-mini`, and `gpt-5.5-nano` model catalog entries; discarded the duplicate upstream timestamp-only conflict side. |
 
-Gate status: blocked by HOLD. Do not mark `v0.1.117` complete until channel insights, image-family items, and model-catalog policy are explicitly accepted for later, rejected, or long-term frozen.
+Scratch audit evidence recorded 2026-05-06 on branch `scratch/v0.1.117-import-audit`, base `origin/release/v0.1.116` (`63ff13dc`), upstream tag `v0.1.117` (`b0713bfb`). The direct merge is an import-audit rehearsal only; it does not authorize shared test deployment while `v0.1.116` production/main/tag closeout remains unrecorded.
+
+Conflict resolution groups:
+
+| Group | Files | Resolution |
+| --- | --- | --- |
+| Handler DI | `backend/internal/handler/handler.go`, `backend/internal/handler/wire.go`, `backend/cmd/server/wire_gen.go` | Kept fork `Pricing` and `Referral`; added upstream `ChannelMonitor` and `AvailableChannel`; regenerated Wire after adding missing fork providers. |
+| Ent generated code | `backend/ent/client.go`, `backend/ent/ent.go`, `backend/ent/mutation.go` | Kept fork `PaymentPlan` and `UserReferral`; added upstream `ChannelMonitor*`; regenerated Ent from schema. |
+| Model catalog | `backend/internal/pkg/openai/constants.go` | Kept fork model catalog including `gpt-5.5-mini` and `gpt-5.5-nano`; avoided duplicate `gpt-5.5`. |
+| Frontend API/state | `frontend/src/api/admin/index.ts`, `frontend/src/stores/app.ts` | Added channel monitor/template APIs and public settings defaults while preserving fork payment/admin exports. |
+| Migrations | `backend/migrations/125..129` | Renamed upstream channel monitor migrations to `125b_add_channel_monitors.sql`, `126b_add_channel_monitor_aggregation.sql`, `127b_drop_channel_monitor_deleted_at.sql`, `128b_add_channel_monitor_request_templates.sql`; kept `129_seed_claude_code_template.sql`. |
+
+Protected deletion matrix:
+
+| Protected class | Static upstream risk | Scratch resolution | Verification |
+| --- | --- | --- | --- |
+| Payment schema/Ent | Upstream deletes `backend/ent/schema/payment_plan.go` and payment-related generated references. | Preserved fork `PaymentPlan` schema/generated paths. | `git diff --name-status --diff-filter=D` returned no deletions; targeted backend tests passed. |
+| Referral schema/Ent | Upstream deletes `backend/ent/schema/user_referral.go` and referral generated references. | Preserved fork `UserReferral`, `ReferralService`, and `ReferralHandler`. | `git diff --name-status --diff-filter=D` returned no deletions; targeted backend tests passed. |
+| Payment/referral/auth migrations | Static diff deletes deployed fork migrations including `077`, `078`, `091`, `092`, `102a`, `114a`, `120b`, `121`, `122`, `123`, `124`, `125`, `126`, `127`, `128`. | Rejected upstream deletions by retaining fork migration files from `origin/release/v0.1.116`. | `git diff --name-status --diff-filter=D` returned no deletions after conflict repair. |
+| Channel monitor migrations | Upstream adds `125_add_channel_monitors.sql` through `128_add_channel_monitor_request_templates.sql`, colliding with existing fork numeric prefixes. | Renamed to `125b`, `126b`, `127b`, `128b` to avoid overwriting or reusing deployed fork filenames. | Migration listing shows fork `125/126/127/128` files and new `125b/126b/127b/128b/129` files together. |
+
+PR #1850 subitem ledger:
+
+| Subitem | Internal commits | Scratch outcome | Evidence / next gate |
+| --- | --- | --- | --- |
+| Monitor schema, migrations, Ent | `20a4e418`, `8cf83c98`, `ef6ec8a1`, `a7415d4d` | ADAPTED | Ent regenerated; migrations renumbered. Still needs migration/checksum targeted gate. |
+| Backend monitor checker, runner, repositories | `20a4e418`, `b363bff1`, `c2f9ad7a`, `c46744f3`, `a3ea8eca` | MERGED | Wire generation succeeded; `go test ./cmd/server ./internal/handler ./internal/repository ./internal/service` passed. |
+| Request templates and seed data | `a2964259`, `6925ac25`, `a7415d4d`, `e1193212` | MERGED | Template repo/service/handler imported; seed migration kept as `129_seed_claude_code_template.sql`. |
+| Available channels aggregation | `654cfb64`, `365ef1fd`, `88decb6e`, `375aefa2`, `4a3652ec`, `59290e39`, `9ba42aa5`, `800802b8`, `3cdd5754`, `ff4ef1b5`, `9dae6c7a`, `25a50355`, `6cd7c605` | MERGED/PENDING | Backend target tests and frontend typecheck passed; still needs targeted pricing/channel behavior tests. |
+| Settings/public settings/feature flags | `7da51240`, `ba98243c`, `84b03efa`, `1f81b779`, `1949425a`, `5eedf782`, `6f04c25e` | MERGED | Public settings defaults and DTO additions imported; frontend typecheck passed. |
+| Admin/user monitor UI | `a1425b45`, `0d01bd90`, `ba98243c`, `0c48f08f`, `800802b8`, `0dcc0e05`, `f7c8377a`, `6699d337`, `09fd83ab` | MERGED/PENDING | Frontend typecheck passed; component/build/visual smoke still required before release closeout. |
+| Payment webhook unknown-order behavior | `75e1b40f`, `d5dac84e` | MERGED/PENDING | Payment webhook files imported while preserving fork payment providers; targeted payment webhook test still required. |
+| Cleanup/release sync/test-only commits | `0a80ec80`, `748a84d8`, `49787269`, `67518a59`, `375cce29`, `5e060b22`, `ac114738` | ADAPTED | Scratch merge accepted relevant upstream state, rejected fork-protected deletions, and restored the `usageLoadQueue` regression test that was dropped during the direct merge. |
+
+Scratch local gates:
+
+- `make generate` in `backend`: passed after restoring fork Wire providers for `NewReferralService`, `AffiliateService`, `NewPricingHandler`, and `NewReferralHandler`.
+- `cd backend && go test ./cmd/server ./internal/handler ./internal/repository ./internal/service`: passed.
+- `cd frontend && pnpm install --frozen-lockfile`: passed, using lockfile/cache.
+- `cd frontend && pnpm run typecheck`: passed.
+- `rg -n "^<<<<<<<|^=======$|^>>>>>>>" .`: no conflict markers.
+- `git diff --check`: passed.
+- `git diff --name-status --diff-filter=D`: no remaining deletions after restoring `frontend/src/utils/__tests__/usageLoadQueue.spec.ts`.
+- `v0.1.116` production deployment: confirmed by operator on 2026-05-06.
+
+Gate status: scratch rehearsal passed the local import-audit gates, and the `v0.1.116` production deployment prerequisite is now satisfied. Stop before creating/deploying a shared `v0.1.117` test candidate until the `v0.1.116` main merge, ledger closeout, and `fork/v0.1.116` tag status are recorded. Remaining `v0.1.117` release gates include full `go test ./...`, frontend lint/build, migration/checksum preflight, targeted image/gateway tests, targeted payment webhook tests, and shared test smoke after the 116 closeout gate.
 
 ### v0.1.118
 
