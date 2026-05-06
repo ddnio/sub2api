@@ -43,11 +43,25 @@ const normalizedProviderName = computed(() => {
 
 const providerInitial = computed(() => normalizedProviderName.value.charAt(0).toUpperCase() || 'O')
 
+function queryStringValue(value: unknown): string {
+  if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0] : ''
+  return typeof value === 'string' ? value : ''
+}
+
+function currentAffiliateCode(): string {
+  return (queryStringValue(route.query.aff_code) || queryStringValue(route.query.aff)).trim()
+}
+
 function startLogin(): void {
   const redirectTo = (route.query.redirect as string) || '/dashboard'
   const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
   const normalized = apiBase.replace(/\/$/, '')
-  const startURL = `${normalized}/auth/oauth/oidc/start?redirect=${encodeURIComponent(redirectTo)}`
+  const params = new URLSearchParams({ redirect: redirectTo })
+  const affiliateCode = currentAffiliateCode()
+  if (affiliateCode) {
+    params.set('aff_code', affiliateCode)
+  }
+  const startURL = `${normalized}/auth/oauth/oidc/start?${params.toString()}`
   window.location.href = startURL
 }
 </script>

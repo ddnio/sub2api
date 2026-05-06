@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -1773,8 +1774,7 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 				if clearSticky {
 					_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
 				}
-				if !clearSticky && s.isAccountInGroup(account, groupID) &&
-					s.isAccountAllowedForPlatform(account, platform, useMixed) &&
+				if !clearSticky && s.isAccountAllowedForPlatform(account, platform, useMixed) &&
 					(requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) &&
 					s.isAccountSchedulableForModelSelection(ctx, account, requestedModel) &&
 					s.isAccountSchedulableForQuota(account) &&
@@ -6881,9 +6881,25 @@ func (s *GatewayService) handleStreamingResponse(ctx context.Context, resp *http
 		_, _ = fmt.Fprintf(w, "event: error\ndata: {\"error\":\"%s\"}\n\n", reason)
 		flusher.Flush()
 	}
+	sendStreamReadErrorEvent := func(message string) {
+		if errorEventSent {
+			return
+		}
+		errorEventSent = true
+		body, _ := json.Marshal(map[string]any{
+			"type": "error",
+			"error": map[string]string{
+				"type":    "stream_read_error",
+				"message": message,
+			},
+		})
+		_, _ = fmt.Fprintf(w, "event: error\ndata: %s\n\n", body)
+		flusher.Flush()
+	}
 
 	needModelReplace := originalModel != mappedModel
 	clientDisconnected := false // 客户端断开标志，断开后继续读取上游以获取完整usage
+	wroteOutput := false
 	sawTerminalEvent := false
 
 	pendingEventLines := make([]string, 0, 4)
@@ -7041,7 +7057,26 @@ func (s *GatewayService) handleStreamingResponse(ctx context.Context, resp *http
 					sendErrorEvent("response_too_large")
 					return &streamingResult{usage: usage, firstTokenMs: firstTokenMs}, ev.err
 				}
-				sendErrorEvent("stream_read_error")
+				detail := sanitizeStreamError(ev.err)
+				message := "upstream stream disconnected"
+				if detail != "" {
+					message += ": " + detail
+				}
+				if !wroteOutput {
+					body, _ := json.Marshal(map[string]any{
+						"type": "error",
+						"error": map[string]string{
+							"type":    "upstream_disconnected",
+							"message": message,
+						},
+					})
+					return nil, &UpstreamFailoverError{
+						StatusCode:             http.StatusBadGateway,
+						ResponseBody:           body,
+						RetryableOnSameAccount: true,
+					}
+				}
+				sendStreamReadErrorEvent(message)
 				return &streamingResult{usage: usage, firstTokenMs: firstTokenMs}, fmt.Errorf("stream read error: %w", ev.err)
 			}
 			line := ev.line
@@ -7070,6 +7105,7 @@ func (s *GatewayService) handleStreamingResponse(ctx context.Context, resp *http
 							break
 						}
 						flusher.Flush()
+						wroteOutput = true
 						lastDataAt = time.Now()
 					}
 					if data != "" {
@@ -7118,9 +7154,34 @@ func (s *GatewayService) handleStreamingResponse(ctx context.Context, resp *http
 				continue
 			}
 			flusher.Flush()
+			wroteOutput = true
 		}
 	}
 
+}
+
+func sanitizeStreamError(err error) string {
+	if err == nil {
+		return ""
+	}
+	switch {
+	case errors.Is(err, io.ErrUnexpectedEOF):
+		return "unexpected EOF"
+	case errors.Is(err, io.EOF):
+		return "EOF"
+	case errors.Is(err, context.Canceled):
+		return "canceled"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "deadline exceeded"
+	case errors.Is(err, syscall.ECONNRESET):
+		return "connection reset by peer"
+	case errors.Is(err, syscall.EPIPE):
+		return "broken pipe"
+	case errors.Is(err, syscall.ETIMEDOUT):
+		return "connection timed out"
+	default:
+		return "upstream connection error"
+	}
 }
 
 func (s *GatewayService) parseSSEUsage(data string, usage *ClaudeUsage) {

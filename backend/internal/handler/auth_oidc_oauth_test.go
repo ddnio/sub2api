@@ -524,6 +524,7 @@ func TestOIDCOAuthCallbackCreatesChoicePendingSessionWhenSignupRequiresInvite(t 
 	req.AddCookie(encodedCookie(oidcOAuthVerifierCookie, "verifier-456"))
 	req.AddCookie(encodedCookie(oidcOAuthNonceCookie, "nonce-oidc-subject-invite"))
 	req.AddCookie(encodedCookie(oidcOAuthIntentCookieName, oauthIntentLogin))
+	req.AddCookie(encodedCookie(oidcOAuthAffiliateCookie, "ABCDEF123456"))
 	req.AddCookie(encodedCookie(oauthPendingBrowserCookieName, "browser-456"))
 	c.Request = req
 
@@ -542,6 +543,7 @@ func TestOIDCOAuthCallbackCreatesChoicePendingSessionWhenSignupRequiresInvite(t 
 	require.NoError(t, err)
 	require.Equal(t, oauthIntentLogin, session.Intent)
 	require.Nil(t, session.TargetUserID)
+	require.Equal(t, "ABCDEF123456", session.LocalFlowState[oauthAffiliateCodeKey])
 
 	completion, ok := session.LocalFlowState[oauthCompletionResponseKey].(map[string]any)
 	require.True(t, ok)

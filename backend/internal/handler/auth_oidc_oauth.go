@@ -40,6 +40,7 @@ const (
 	oidcOAuthNonceCookie        = "oidc_oauth_nonce"
 	oidcOAuthIntentCookieName   = "oidc_oauth_intent"
 	oidcOAuthBindUserCookieName = "oidc_oauth_bind_user"
+	oidcOAuthAffiliateCookie    = "oidc_oauth_affiliate"
 	oidcOAuthCookieMaxAgeSec    = 10 * 60 // 10 minutes
 	oidcOAuthDefaultRedirectTo  = "/dashboard"
 	oidcOAuthDefaultFrontendCB  = "/auth/oidc/callback"
@@ -143,6 +144,15 @@ func (h *AuthHandler) OIDCOAuthStart(c *gin.Context) {
 	oidcSetCookie(c, oidcOAuthRedirectCookie, encodeCookieValue(redirectTo), oidcOAuthCookieMaxAgeSec, secureCookie)
 	intent := normalizeOAuthIntent(c.Query("intent"))
 	oidcSetCookie(c, oidcOAuthIntentCookieName, encodeCookieValue(intent), oidcOAuthCookieMaxAgeSec, secureCookie)
+	affiliateCode := ""
+	if intent == oauthIntentLogin {
+		affiliateCode = oauthAffiliateCodeFromRequest(c)
+	}
+	if affiliateCode != "" {
+		oidcSetCookie(c, oidcOAuthAffiliateCookie, encodeCookieValue(affiliateCode), oidcOAuthCookieMaxAgeSec, secureCookie)
+	} else {
+		oidcClearCookie(c, oidcOAuthAffiliateCookie, secureCookie)
+	}
 	setOAuthPendingBrowserCookie(c, browserSessionKey, secureCookie)
 	clearOAuthPendingSessionCookie(c, secureCookie)
 	if intent == oauthIntentBindCurrentUser {
@@ -226,6 +236,7 @@ func (h *AuthHandler) OIDCOAuthCallback(c *gin.Context) {
 		oidcClearCookie(c, oidcOAuthNonceCookie, secureCookie)
 		oidcClearCookie(c, oidcOAuthIntentCookieName, secureCookie)
 		oidcClearCookie(c, oidcOAuthBindUserCookieName, secureCookie)
+		oidcClearCookie(c, oidcOAuthAffiliateCookie, secureCookie)
 	}()
 
 	expectedState, err := readCookieDecoded(c, oidcOAuthStateCookieName)
@@ -246,6 +257,11 @@ func (h *AuthHandler) OIDCOAuthCallback(c *gin.Context) {
 	}
 	intent, _ := readCookieDecoded(c, oidcOAuthIntentCookieName)
 	intent = normalizeOAuthIntent(intent)
+	affiliateCode, _ := readCookieDecoded(c, oidcOAuthAffiliateCookie)
+	affiliateCode = normalizeOAuthAffiliateCode(affiliateCode)
+	if intent != oauthIntentLogin {
+		affiliateCode = ""
+	}
 
 	codeVerifier := ""
 	if cfg.UsePKCE {
@@ -466,6 +482,7 @@ func (h *AuthHandler) OIDCOAuthCallback(c *gin.Context) {
 			compatEmail,
 			compatEmailUser,
 			true,
+			affiliateCode,
 		); err != nil {
 			redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
 			return
@@ -485,6 +502,7 @@ func (h *AuthHandler) OIDCOAuthCallback(c *gin.Context) {
 		compatEmail,
 		compatEmailUser,
 		h.isForceEmailOnThirdPartySignup(c.Request.Context()),
+		affiliateCode,
 	); err != nil {
 		redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
 		return
@@ -527,6 +545,7 @@ func (h *AuthHandler) createOIDCOAuthChoicePendingSession(
 	compatEmail string,
 	compatEmailUser *dbent.User,
 	forceEmailOnSignup bool,
+	affiliateCode string,
 ) error {
 	suggestionEmail := strings.TrimSpace(suggestedEmail)
 	canonicalEmail := strings.TrimSpace(resolvedEmail)
@@ -575,6 +594,7 @@ func (h *AuthHandler) createOIDCOAuthChoicePendingSession(
 		ResolvedEmail:          resolvedChoiceEmail,
 		RedirectTo:             redirectTo,
 		BrowserSessionKey:      browserSessionKey,
+		AffiliateCode:          affiliateCode,
 		UpstreamIdentityClaims: upstreamClaims,
 		CompletionResponse:     completionResponse,
 	})
@@ -665,7 +685,7 @@ func (h *AuthHandler) CompleteOIDCOAuthRegistration(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPairForSource(c.Request.Context(), email, username, req.InvitationCode, "oidc")
+	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPairForSourceAndAffiliate(c.Request.Context(), email, username, req.InvitationCode, "oidc", pendingOAuthAffiliateCode(session))
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return

@@ -35,6 +35,8 @@ const (
 	oauthPendingChoiceStep        = "choose_account_action_required"
 
 	oauthCompletionResponseKey = "completion_response"
+	oauthAffiliateCodeKey      = "affiliate_code"
+	oauthAffiliateCodeMaxLen   = 128
 )
 
 var pendingOAuthCreateAccountPreCommitHook func(context.Context, *dbent.PendingAuthSession) error
@@ -46,6 +48,7 @@ type oauthPendingSessionPayload struct {
 	ResolvedEmail          string
 	RedirectTo             string
 	BrowserSessionKey      string
+	AffiliateCode          string
 	UpstreamIdentityClaims map[string]any
 	CompletionResponse     map[string]any
 }
@@ -181,6 +184,13 @@ func (h *AuthHandler) createOAuthPendingSession(c *gin.Context, payload oauthPen
 		return err
 	}
 
+	localFlowState := map[string]any{
+		oauthCompletionResponseKey: payload.CompletionResponse,
+	}
+	if affiliateCode := normalizeOAuthAffiliateCode(payload.AffiliateCode); affiliateCode != "" {
+		localFlowState[oauthAffiliateCodeKey] = affiliateCode
+	}
+
 	session, err := svc.CreatePendingSession(c.Request.Context(), service.CreatePendingAuthSessionInput{
 		Intent:                 strings.TrimSpace(payload.Intent),
 		Identity:               payload.Identity,
@@ -189,9 +199,7 @@ func (h *AuthHandler) createOAuthPendingSession(c *gin.Context, payload oauthPen
 		RedirectTo:             strings.TrimSpace(payload.RedirectTo),
 		BrowserSessionKey:      strings.TrimSpace(payload.BrowserSessionKey),
 		UpstreamIdentityClaims: payload.UpstreamIdentityClaims,
-		LocalFlowState: map[string]any{
-			oauthCompletionResponseKey: payload.CompletionResponse,
-		},
+		LocalFlowState:         localFlowState,
 	})
 	if err != nil {
 		return infraerrors.InternalServer("PENDING_AUTH_SESSION_CREATE_FAILED", "failed to create pending auth session").WithCause(err)
@@ -259,6 +267,28 @@ func pendingSessionStringValue(values map[string]any, key string) string {
 		return ""
 	}
 	return strings.TrimSpace(value)
+}
+
+func normalizeOAuthAffiliateCode(raw string) string {
+	value := strings.TrimSpace(raw)
+	if len(value) > oauthAffiliateCodeMaxLen {
+		return ""
+	}
+	return value
+}
+
+func oauthAffiliateCodeFromRequest(c *gin.Context) string {
+	if c == nil {
+		return ""
+	}
+	return normalizeOAuthAffiliateCode(firstNonEmpty(c.Query("aff_code"), c.Query("aff")))
+}
+
+func pendingOAuthAffiliateCode(session *dbent.PendingAuthSession) string {
+	if session == nil {
+		return ""
+	}
+	return normalizeOAuthAffiliateCode(pendingSessionStringValue(session.LocalFlowState, oauthAffiliateCodeKey))
 }
 
 func pendingSessionWantsInvitation(payload map[string]any) bool {
@@ -1424,6 +1454,7 @@ func clearOAuthLogoutCookies(c *gin.Context) {
 	clearCookie(c, linuxDoOAuthRedirectCookie, secureCookie)
 	clearCookie(c, linuxDoOAuthIntentCookieName, secureCookie)
 	clearCookie(c, linuxDoOAuthBindUserCookieName, secureCookie)
+	clearCookie(c, linuxDoOAuthAffiliateCookie, secureCookie)
 
 	oidcClearCookie(c, oidcOAuthStateCookieName, secureCookie)
 	oidcClearCookie(c, oidcOAuthVerifierCookie, secureCookie)
@@ -1431,12 +1462,14 @@ func clearOAuthLogoutCookies(c *gin.Context) {
 	oidcClearCookie(c, oidcOAuthNonceCookie, secureCookie)
 	oidcClearCookie(c, oidcOAuthIntentCookieName, secureCookie)
 	oidcClearCookie(c, oidcOAuthBindUserCookieName, secureCookie)
+	oidcClearCookie(c, oidcOAuthAffiliateCookie, secureCookie)
 
 	wechatClearCookie(c, wechatOAuthStateCookieName, secureCookie)
 	wechatClearCookie(c, wechatOAuthRedirectCookieName, secureCookie)
 	wechatClearCookie(c, wechatOAuthIntentCookieName, secureCookie)
 	wechatClearCookie(c, wechatOAuthModeCookieName, secureCookie)
 	wechatClearCookie(c, wechatOAuthBindUserCookieName, secureCookie)
+	wechatClearCookie(c, wechatOAuthAffiliateCookie, secureCookie)
 
 	wechatPaymentClearCookie(c, wechatPaymentOAuthStateName, secureCookie)
 	wechatPaymentClearCookie(c, wechatPaymentOAuthRedirect, secureCookie)
@@ -1751,6 +1784,7 @@ func (h *AuthHandler) createPendingOAuthAccount(c *gin.Context, provider string)
 		user,
 		strings.TrimSpace(req.InvitationCode),
 		strings.TrimSpace(session.ProviderType),
+		pendingOAuthAffiliateCode(session),
 	); err != nil {
 		_ = tx.Rollback()
 		if rollbackCreatedUser(err) {

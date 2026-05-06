@@ -593,6 +593,7 @@ func TestLinuxDoOAuthCallbackCreatesChoicePendingSessionWhenSignupRequiresInvite
 	req.AddCookie(encodedCookie(linuxDoOAuthRedirectCookie, "/dashboard"))
 	req.AddCookie(encodedCookie(linuxDoOAuthVerifierCookie, "verifier-456"))
 	req.AddCookie(encodedCookie(linuxDoOAuthIntentCookieName, oauthIntentLogin))
+	req.AddCookie(encodedCookie(linuxDoOAuthAffiliateCookie, "ABCDEF123456"))
 	req.AddCookie(encodedCookie(oauthPendingBrowserCookieName, "browser-456"))
 	c.Request = req
 
@@ -611,6 +612,7 @@ func TestLinuxDoOAuthCallbackCreatesChoicePendingSessionWhenSignupRequiresInvite
 	require.NoError(t, err)
 	require.Equal(t, oauthIntentLogin, session.Intent)
 	require.Nil(t, session.TargetUserID)
+	require.Equal(t, "ABCDEF123456", session.LocalFlowState[oauthAffiliateCodeKey])
 
 	completion, ok := session.LocalFlowState[oauthCompletionResponseKey].(map[string]any)
 	require.True(t, ok)

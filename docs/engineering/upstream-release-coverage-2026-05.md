@@ -864,7 +864,24 @@ Range: `v0.1.117..v0.1.118`.
 | `641e6107` / PR #1940 | Codex CLI version bump | Dependency/tooling | HOLD | Dependency/policy update, not a low-risk runtime fix. |
 | `5d1c12e6` / PR #1943 | Responses pre-output failover | Not portable | HOLD | Requires upstream buffering structure absent in fork. |
 
-Gate status: blocked by HOLD / unresolved PARTIAL items. Do not mark `v0.1.118` complete until these are resolved after `v0.1.117`.
+Direct-merge recheck on 2026-05-06: the pre-merge HOLD / PARTIAL rows above are superseded by the `release/v0.1.118` batch candidate. The checklist items were re-audited against the merged tree:
+
+- OpenAI `/responses/compact` account support, scheduler routing, model mapping, admin probes, and pass-through path handling are present with service tests.
+- Affiliate invite rebate is present across migrations `130`/`131`, service/repository/payment fulfillment, user/admin APIs, frontend invite page, and OAuth attribution for LinuxDo/OIDC/WeChat.
+- Claude Code mimicry is runtime-aligned to CLI `2.1.92`, Codex CLI probing is aligned to `0.125.0`, and migration `132_update_claude_code_monitor_template.sql` updates existing 117-era monitor templates/snapshots from the old `2.1.114` seed without overwriting `body_override`.
+- Responses `web_search` / `google_search`, Stripe top-level display, and OpenAI test/rate-limit reconciliation have local implementation and targeted regression coverage.
+- `backend/cmd/server/VERSION` is `0.1.118` for test-environment smoke identification.
+
+Local verification before test deployment:
+
+- `git diff --check`
+- `cd backend && go test -tags unit ./migrations ./internal/handler ./internal/service`
+- `cd backend && go test -tags unit ./cmd/server`
+- targeted backend service/handler tests for Claude mimicry, web search, compact, account test state, OAuth affiliate attribution, and payment order paths
+- `cd frontend && pnpm exec vitest run src/components/auth/__tests__/OAuthAffiliateStart.spec.ts src/components/auth/__tests__/WechatOAuthSection.spec.ts src/views/user/__tests__/PaymentView.spec.ts src/views/user/__tests__/paymentUx.spec.ts`
+- `cd frontend && pnpm run typecheck`
+
+Gate status: ready for shared test-environment deployment after commit/push of the local `release/v0.1.118` candidate. Production deployment remains out of scope until test smoke is recorded and separately approved.
 
 ### v0.1.119
 

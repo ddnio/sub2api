@@ -79,6 +79,15 @@ onMounted(() => {
   }
 })
 
+function queryStringValue(value: unknown): string {
+  if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0] : ''
+  return typeof value === 'string' ? value : ''
+}
+
+function currentAffiliateCode(): string {
+  return (queryStringValue(route.query.aff_code) || queryStringValue(route.query.aff)).trim()
+}
+
 function startLogin(): void {
   if (buttonDisabled.value || !resolvedStart.value.mode) {
     return
@@ -87,7 +96,12 @@ function startLogin(): void {
   const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
   const normalized = apiBase.replace(/\/$/, '')
   const mode = resolvedStart.value.mode
-  const startURL = `${normalized}/auth/oauth/wechat/start?mode=${mode}&redirect=${encodeURIComponent(redirectTo)}`
+  const params = new URLSearchParams({ mode, redirect: redirectTo })
+  const affiliateCode = currentAffiliateCode()
+  if (affiliateCode) {
+    params.set('aff_code', affiliateCode)
+  }
+  const startURL = `${normalized}/auth/oauth/wechat/start?${params.toString()}`
   window.location.href = startURL
 }
 </script>

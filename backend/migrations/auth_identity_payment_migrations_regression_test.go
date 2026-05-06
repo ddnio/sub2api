@@ -127,3 +127,37 @@ func TestMigration124BackfillsLegacyOIDCSecurityFlagsSafely(t *testing.T) {
 	require.Contains(t, sql, "oidc_connect_enabled")
 	require.Contains(t, sql, "'false'")
 }
+
+func TestMigration131KeepsPaymentAuditUniquenessScopedToAffiliateClaims(t *testing.T) {
+	content, err := FS.ReadFile("131_affiliate_rebate_hardening.sql")
+	require.NoError(t, err)
+
+	sql := string(content)
+	require.NotContains(t, sql, "idx_payment_audit_logs_order_action_uniq")
+	require.Contains(t, sql, "CREATE UNIQUE INDEX IF NOT EXISTS uq_payment_audit_logs_affiliate_claim")
+	require.Contains(t, sql, "WHERE action IN ('AFFILIATE_REBATE_APPLIED', 'AFFILIATE_REBATE_SKIPPED')")
+
+	rankedStart := strings.Index(sql, "WITH ranked AS")
+	deleteStart := strings.Index(sql, "DELETE FROM payment_audit_logs")
+	require.NotEqual(t, -1, rankedStart)
+	require.NotEqual(t, -1, deleteStart)
+	require.Less(t, rankedStart, deleteStart)
+	require.Contains(t, sql[rankedStart:deleteStart], "WHERE action IN ('AFFILIATE_REBATE_APPLIED', 'AFFILIATE_REBATE_SKIPPED')")
+}
+
+func TestMigration132UpgradesClaudeCodeMonitorTemplateSnapshots(t *testing.T) {
+	content, err := FS.ReadFile("132_update_claude_code_monitor_template.sql")
+	require.NoError(t, err)
+
+	sql := string(content)
+	require.Contains(t, sql, "UPDATE channel_monitor_request_templates")
+	require.Contains(t, sql, "UPDATE channel_monitors")
+	require.Contains(t, sql, "claude-cli/2.1.92 (external, cli)")
+	require.Contains(t, sql, "oauth-2025-04-20")
+	require.Contains(t, sql, "effort-2025-11-24")
+	require.Contains(t, sql, "redact-thinking-2026-02-12")
+	require.Contains(t, sql, "extended-cache-ttl-2025-04-11")
+	require.Contains(t, sql, "advisor-tool-2026-03-01")
+	require.Contains(t, sql, "jsonb_set")
+	require.NotContains(t, sql, "SET body_override")
+}

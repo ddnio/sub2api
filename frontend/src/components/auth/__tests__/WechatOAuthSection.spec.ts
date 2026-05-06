@@ -139,6 +139,23 @@ describe('WechatOAuthSection', () => {
     )
   })
 
+  it('preserves affiliate codes when starting the OAuth flow', async () => {
+    routeState.query = { redirect: '/billing?plan=pro', aff: 'ABCDEF123456' }
+    seedPublicSettings({
+      wechat_oauth_open_enabled: true,
+      wechat_oauth_mp_enabled: false,
+    })
+    const wrapper = mount(WechatOAuthSection, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.get('button').trigger('click')
+
+    expect(locationState.current.href).toContain('aff_code=ABCDEF123456')
+  })
+
   it('uses mp mode inside the WeChat browser when mp mode is configured', async () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
