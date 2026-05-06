@@ -791,7 +791,20 @@ Main-based candidate gates:
 - `cd frontend && pnpm run lint:check`: passed.
 - `cd frontend && pnpm run build`: passed with existing Vite dynamic/static import and chunk-size warnings only.
 
-Gate status: local main-based `release/v0.1.117` candidate is ready for shared test-environment deployment from `1b79196a`. Remaining gate is live test smoke after deployment: `/health`, `/api/v1/settings/public` reporting `"version":"0.1.117"`, unauthenticated `/v1/models` returning 401, relevant admin/user channel-monitor pages, payment/order pages, and severe-log scan with no `panic|fatal|migration failed|preflight failed|postcheck failed|500|404|异常` matches.
+Shared test deployment evidence:
+
+- Pre-deploy test database backup: `/home/nio/backups/sub2api_test_pre_v0.1.117_20260506_080558.dump` (`7.1M`, mode `600`).
+- Test server repo `/data/service/sub2api`: `release/v0.1.117` at `48ae70e3`, `backend/cmd/server/VERSION` is `0.1.117`.
+- `./deploy/deploy-server.sh test`: built `sub2api:test`, replaced `sub2api-test`, and exposed `127.0.0.1:8081`.
+- Container: `sub2api-test` is `running healthy`.
+- Local and public `/health`: 200 with `{"status":"ok"}`.
+- Public `/api/v1/settings/public`: 200 and reports `"version":"0.1.117"`, `payment_enabled:true`, and `channel_monitor_enabled:true`.
+- Public unauthenticated `/v1/models`: 401.
+- Public SPA routes `/admin/orders`, `/admin/orders/dashboard`, `/admin/orders/plans`, `/admin/channel-monitor`, and `/user/channel-status`: 200.
+- Test DB `schema_migrations` includes `125b_add_channel_monitors.sql`, `126b_add_channel_monitor_aggregation.sql`, `127b_drop_channel_monitor_deleted_at.sql`, `128b_add_channel_monitor_request_templates.sql`, and `129_seed_claude_code_template.sql`.
+- Severe log scan over the deployment window found no `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常| 500 | 404 ` matches.
+
+Gate status: `v0.1.117` is deployed and smoke-verified on shared test from `48ae70e3`. Remaining gate before production is human/interactive functional validation of the new channel monitor and image-generation flows, plus any additional payment webhook checks the operator wants repeated against live test data.
 
 ### v0.1.118
 
