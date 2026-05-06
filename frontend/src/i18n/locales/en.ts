@@ -3476,6 +3476,8 @@ export default {
       readAt: 'Read at',
       unread: 'Unread',
       searchUsers: 'Search users...',
+      empty: 'No announcements',
+      emptyDescription: 'There are no announcements yet',
       failedToLoad: 'Failed to load announcements',
       failedToCreate: 'Failed to create announcement',
       failedToUpdate: 'Failed to update announcement',

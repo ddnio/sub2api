@@ -3632,6 +3632,8 @@ export default {
       readAt: '已读时间',
       unread: '未读',
       searchUsers: '搜索用户...',
+      empty: '暂无公告',
+      emptyDescription: '当前没有公告',
       failedToLoad: '加载公告失败',
       failedToCreate: '创建公告失败',
       failedToUpdate: '更新公告失败',
