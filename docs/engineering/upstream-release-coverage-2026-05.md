@@ -806,7 +806,21 @@ Shared test deployment evidence:
 - Severe log scan over the deployment window found no `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常| 500 | 404 ` matches.
 - After the DataTable hotfix redeploy, public `/health`, `/api/v1/settings/public`, `/admin/orders`, `/admin/channel-monitor`, `/user/channel-status`, unauthenticated `/v1/models`, container health, and severe-log scan were rechecked successfully.
 
-Gate status: `v0.1.117` is deployed and smoke-verified on shared test from `8a1e667a`. Remaining gate before production is human/interactive functional validation of the new channel monitor and image-generation flows, plus any additional payment webhook checks the operator wants repeated against live test data.
+ToB/fx deployment evidence:
+
+- Pre-deploy ToB database backup: `/home/nio/backups/sub2api_tob_pre_v0.1.117_20260506_164440.dump` (`78M`, mode `600`).
+- ToB server repo `/data/service/sub2api`: `release/v0.1.117` at `361f34a3`, `backend/cmd/server/VERSION` is `0.1.117`.
+- `./deploy/deploy-server.sh prod`: built `sub2api:prod`, replaced `sub2api-prod`, and exposed `127.0.0.1:8080`.
+- Container: `sub2api-prod` is `running healthy` on image `sha256:7ae27cc3156d362e7ac2f751306a16829b166f1b22d0ef4ff264cbbc10a26d7a`.
+- Local and public `/health`: 200 with `{"status":"ok"}`.
+- Public `/api/v1/settings/public`: 200 and reports `"version":"0.1.117"` and `channel_monitor_enabled:true`.
+- Public unauthenticated `/v1/models`: 401.
+- Public SPA routes `/admin/orders`, `/admin/channel-monitor`, and `/user/channel-status`: 200.
+- ToB DB `schema_migrations` includes the new channel monitor/template migrations `125b_add_channel_monitors.sql`, `126b_add_channel_monitor_aggregation.sql`, `127b_drop_channel_monitor_deleted_at.sql`, `128b_add_channel_monitor_request_templates.sql`, and `129_seed_claude_code_template.sql`, alongside the earlier fork migrations through `128_auth_identity_foundation.sql`.
+- Severe log scan over the deployment window found no `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常| 500 | 404 ` matches.
+- ToC production (`router.nanafox.com` on `108.160.133.141`) was intentionally not deployed in this step because it still had active users.
+
+Gate status: `v0.1.117` is deployed and smoke-verified on shared test from `8a1e667a` and on ToB/fx from `361f34a3`. ToC production remains pending by operator decision. Remaining gate before ToC production is human/interactive functional validation of the new channel monitor and image-generation flows, plus any additional payment webhook checks the operator wants repeated against live test data.
 
 ### v0.1.118
 
