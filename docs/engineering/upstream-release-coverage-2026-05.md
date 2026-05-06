@@ -818,9 +818,22 @@ ToB/fx deployment evidence:
 - Public SPA routes `/admin/orders`, `/admin/channel-monitor`, and `/user/channel-status`: 200.
 - ToB DB `schema_migrations` includes the new channel monitor/template migrations `125b_add_channel_monitors.sql`, `126b_add_channel_monitor_aggregation.sql`, `127b_drop_channel_monitor_deleted_at.sql`, `128b_add_channel_monitor_request_templates.sql`, and `129_seed_claude_code_template.sql`, alongside the earlier fork migrations through `128_auth_identity_foundation.sql`.
 - Severe log scan over the deployment window found no `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常| 500 | 404 ` matches.
-- ToC production (`router.nanafox.com` on `108.160.133.141`) was intentionally not deployed in this step because it still had active users.
 
-Gate status: `v0.1.117` is deployed and smoke-verified on shared test from `8a1e667a` and on ToB/fx from `361f34a3`. ToC production remains pending by operator decision. Remaining gate before ToC production is human/interactive functional validation of the new channel monitor and image-generation flows, plus any additional payment webhook checks the operator wants repeated against live test data.
+ToC production deployment evidence:
+
+- Pre-deploy ToC production database backup: `/home/nio/backups/sub2api_prod_pre_v0.1.117_20260506_093959.dump` (`264M`, mode `600`).
+- ToC production server repo `/data/service/sub2api`: `release/v0.1.117` at `00b361c0`, `backend/cmd/server/VERSION` is `0.1.117`.
+- `./deploy/deploy-server.sh prod`: fast-forwarded the repo from `8a1e667a` to `00b361c0`, built `sub2api:prod`, replaced `sub2api-prod`, and exposed `127.0.0.1:8080`.
+- Container: `sub2api-prod` is `running healthy` on image `sha256:693674fb8f01acd109ef08b093d49101e0ee343cd3e569ea1d439e228747225d`.
+- Local and public `/health`: 200 with `{"status":"ok"}`.
+- Public `/api/v1/settings/public`: 200 and reports `"version":"0.1.117"`.
+- Local unauthenticated `/v1/models`: 401; public unauthenticated `/v1/models`: 401.
+- Local and public SPA routes `/admin/orders`, `/admin/orders/dashboard`, `/admin/orders/plans`, and `/admin/settings`: 200.
+- ToC production DB `schema_migrations` includes the new channel monitor/template migrations `125b_add_channel_monitors.sql`, `126b_add_channel_monitor_aggregation.sql`, `127b_drop_channel_monitor_deleted_at.sql`, `128b_add_channel_monitor_request_templates.sql`, and `129_seed_claude_code_template.sql`, alongside the earlier fork migration `128_auth_identity_foundation.sql`.
+- Severe startup/migration log scan over the deployment window found no `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常` matches. The broader `ERROR|WARN` scan found only existing configuration warnings for disabled URL allowlist, empty trusted proxies, and missing CORS allowed origins.
+- Residual cache note: stale hashed frontend asset URLs can still return embedded `index.html` under `/assets/*` and be cached by the edge/browser as immutable static content. A hard refresh fixed the observed `admin/settings` blank-page symptom; this remains a separate static-asset fallback/cache hardening item, not a failed 117 deployment check.
+
+Gate status: `v0.1.117` is deployed and smoke-verified on shared test from `8a1e667a`, on ToB/fx from `361f34a3`, and on ToC production from `00b361c0`. Remaining post-release follow-up is deeper human/interactive functional validation of the new channel monitor and image-generation flows, plus any additional payment webhook checks the operator wants repeated against live data.
 
 ### v0.1.118
 
