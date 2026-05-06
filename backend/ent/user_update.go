@@ -23,6 +23,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
+	"github.com/Wei-Shaw/sub2api/ent/userreferral"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 )
 
@@ -125,6 +126,96 @@ func (_u *UserUpdate) SetNillableBalance(v *float64) *UserUpdate {
 // AddBalance adds value to the "balance" field.
 func (_u *UserUpdate) AddBalance(v float64) *UserUpdate {
 	_u.mutation.AddBalance(v)
+	return _u
+}
+
+// SetBalanceNotifyEnabled sets the "balance_notify_enabled" field.
+func (_u *UserUpdate) SetBalanceNotifyEnabled(v bool) *UserUpdate {
+	_u.mutation.SetBalanceNotifyEnabled(v)
+	return _u
+}
+
+// SetNillableBalanceNotifyEnabled sets the "balance_notify_enabled" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableBalanceNotifyEnabled(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetBalanceNotifyEnabled(*v)
+	}
+	return _u
+}
+
+// SetBalanceNotifyThreshold sets the "balance_notify_threshold" field.
+func (_u *UserUpdate) SetBalanceNotifyThreshold(v float64) *UserUpdate {
+	_u.mutation.ResetBalanceNotifyThreshold()
+	_u.mutation.SetBalanceNotifyThreshold(v)
+	return _u
+}
+
+// SetNillableBalanceNotifyThreshold sets the "balance_notify_threshold" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableBalanceNotifyThreshold(v *float64) *UserUpdate {
+	if v != nil {
+		_u.SetBalanceNotifyThreshold(*v)
+	}
+	return _u
+}
+
+// AddBalanceNotifyThreshold adds value to the "balance_notify_threshold" field.
+func (_u *UserUpdate) AddBalanceNotifyThreshold(v float64) *UserUpdate {
+	_u.mutation.AddBalanceNotifyThreshold(v)
+	return _u
+}
+
+// ClearBalanceNotifyThreshold clears the value of the "balance_notify_threshold" field.
+func (_u *UserUpdate) ClearBalanceNotifyThreshold() *UserUpdate {
+	_u.mutation.ClearBalanceNotifyThreshold()
+	return _u
+}
+
+// SetBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field.
+func (_u *UserUpdate) SetBalanceNotifyExtraEmails(v string) *UserUpdate {
+	_u.mutation.SetBalanceNotifyExtraEmails(v)
+	return _u
+}
+
+// SetNillableBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableBalanceNotifyExtraEmails(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetBalanceNotifyExtraEmails(*v)
+	}
+	return _u
+}
+
+// SetBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field.
+func (_u *UserUpdate) SetBalanceNotifyThresholdType(v string) *UserUpdate {
+	_u.mutation.SetBalanceNotifyThresholdType(v)
+	return _u
+}
+
+// SetNillableBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableBalanceNotifyThresholdType(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetBalanceNotifyThresholdType(*v)
+	}
+	return _u
+}
+
+// SetTotalRecharged sets the "total_recharged" field.
+func (_u *UserUpdate) SetTotalRecharged(v float64) *UserUpdate {
+	_u.mutation.ResetTotalRecharged()
+	_u.mutation.SetTotalRecharged(v)
+	return _u
+}
+
+// SetNillableTotalRecharged sets the "total_recharged" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableTotalRecharged(v *float64) *UserUpdate {
+	if v != nil {
+		_u.SetTotalRecharged(*v)
+	}
+	return _u
+}
+
+// AddTotalRecharged adds value to the "total_recharged" field.
+func (_u *UserUpdate) AddTotalRecharged(v float64) *UserUpdate {
+	_u.mutation.AddTotalRecharged(v)
 	return _u
 }
 
@@ -299,93 +390,23 @@ func (_u *UserUpdate) ClearLastActiveAt() *UserUpdate {
 	return _u
 }
 
-// SetBalanceNotifyEnabled sets the "balance_notify_enabled" field.
-func (_u *UserUpdate) SetBalanceNotifyEnabled(v bool) *UserUpdate {
-	_u.mutation.SetBalanceNotifyEnabled(v)
+// SetReferralCode sets the "referral_code" field.
+func (_u *UserUpdate) SetReferralCode(v string) *UserUpdate {
+	_u.mutation.SetReferralCode(v)
 	return _u
 }
 
-// SetNillableBalanceNotifyEnabled sets the "balance_notify_enabled" field if the given value is not nil.
-func (_u *UserUpdate) SetNillableBalanceNotifyEnabled(v *bool) *UserUpdate {
+// SetNillableReferralCode sets the "referral_code" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableReferralCode(v *string) *UserUpdate {
 	if v != nil {
-		_u.SetBalanceNotifyEnabled(*v)
+		_u.SetReferralCode(*v)
 	}
 	return _u
 }
 
-// SetBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field.
-func (_u *UserUpdate) SetBalanceNotifyThresholdType(v string) *UserUpdate {
-	_u.mutation.SetBalanceNotifyThresholdType(v)
-	return _u
-}
-
-// SetNillableBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field if the given value is not nil.
-func (_u *UserUpdate) SetNillableBalanceNotifyThresholdType(v *string) *UserUpdate {
-	if v != nil {
-		_u.SetBalanceNotifyThresholdType(*v)
-	}
-	return _u
-}
-
-// SetBalanceNotifyThreshold sets the "balance_notify_threshold" field.
-func (_u *UserUpdate) SetBalanceNotifyThreshold(v float64) *UserUpdate {
-	_u.mutation.ResetBalanceNotifyThreshold()
-	_u.mutation.SetBalanceNotifyThreshold(v)
-	return _u
-}
-
-// SetNillableBalanceNotifyThreshold sets the "balance_notify_threshold" field if the given value is not nil.
-func (_u *UserUpdate) SetNillableBalanceNotifyThreshold(v *float64) *UserUpdate {
-	if v != nil {
-		_u.SetBalanceNotifyThreshold(*v)
-	}
-	return _u
-}
-
-// AddBalanceNotifyThreshold adds value to the "balance_notify_threshold" field.
-func (_u *UserUpdate) AddBalanceNotifyThreshold(v float64) *UserUpdate {
-	_u.mutation.AddBalanceNotifyThreshold(v)
-	return _u
-}
-
-// ClearBalanceNotifyThreshold clears the value of the "balance_notify_threshold" field.
-func (_u *UserUpdate) ClearBalanceNotifyThreshold() *UserUpdate {
-	_u.mutation.ClearBalanceNotifyThreshold()
-	return _u
-}
-
-// SetBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field.
-func (_u *UserUpdate) SetBalanceNotifyExtraEmails(v string) *UserUpdate {
-	_u.mutation.SetBalanceNotifyExtraEmails(v)
-	return _u
-}
-
-// SetNillableBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field if the given value is not nil.
-func (_u *UserUpdate) SetNillableBalanceNotifyExtraEmails(v *string) *UserUpdate {
-	if v != nil {
-		_u.SetBalanceNotifyExtraEmails(*v)
-	}
-	return _u
-}
-
-// SetTotalRecharged sets the "total_recharged" field.
-func (_u *UserUpdate) SetTotalRecharged(v float64) *UserUpdate {
-	_u.mutation.ResetTotalRecharged()
-	_u.mutation.SetTotalRecharged(v)
-	return _u
-}
-
-// SetNillableTotalRecharged sets the "total_recharged" field if the given value is not nil.
-func (_u *UserUpdate) SetNillableTotalRecharged(v *float64) *UserUpdate {
-	if v != nil {
-		_u.SetTotalRecharged(*v)
-	}
-	return _u
-}
-
-// AddTotalRecharged adds value to the "total_recharged" field.
-func (_u *UserUpdate) AddTotalRecharged(v float64) *UserUpdate {
-	_u.mutation.AddTotalRecharged(v)
+// ClearReferralCode clears the value of the "referral_code" field.
+func (_u *UserUpdate) ClearReferralCode() *UserUpdate {
+	_u.mutation.ClearReferralCode()
 	return _u
 }
 
@@ -558,6 +579,36 @@ func (_u *UserUpdate) AddPaymentOrders(v ...*PaymentOrder) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddPaymentOrderIDs(ids...)
+}
+
+// AddReferralsAsInviterIDs adds the "referrals_as_inviter" edge to the UserReferral entity by IDs.
+func (_u *UserUpdate) AddReferralsAsInviterIDs(ids ...int64) *UserUpdate {
+	_u.mutation.AddReferralsAsInviterIDs(ids...)
+	return _u
+}
+
+// AddReferralsAsInviter adds the "referrals_as_inviter" edges to the UserReferral entity.
+func (_u *UserUpdate) AddReferralsAsInviter(v ...*UserReferral) *UserUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReferralsAsInviterIDs(ids...)
+}
+
+// AddReferralsAsInviteeIDs adds the "referrals_as_invitee" edge to the UserReferral entity by IDs.
+func (_u *UserUpdate) AddReferralsAsInviteeIDs(ids ...int64) *UserUpdate {
+	_u.mutation.AddReferralsAsInviteeIDs(ids...)
+	return _u
+}
+
+// AddReferralsAsInvitee adds the "referrals_as_invitee" edges to the UserReferral entity.
+func (_u *UserUpdate) AddReferralsAsInvitee(v ...*UserReferral) *UserUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReferralsAsInviteeIDs(ids...)
 }
 
 // AddAuthIdentityIDs adds the "auth_identities" edge to the AuthIdentity entity by IDs.
@@ -805,6 +856,48 @@ func (_u *UserUpdate) RemovePaymentOrders(v ...*PaymentOrder) *UserUpdate {
 	return _u.RemovePaymentOrderIDs(ids...)
 }
 
+// ClearReferralsAsInviter clears all "referrals_as_inviter" edges to the UserReferral entity.
+func (_u *UserUpdate) ClearReferralsAsInviter() *UserUpdate {
+	_u.mutation.ClearReferralsAsInviter()
+	return _u
+}
+
+// RemoveReferralsAsInviterIDs removes the "referrals_as_inviter" edge to UserReferral entities by IDs.
+func (_u *UserUpdate) RemoveReferralsAsInviterIDs(ids ...int64) *UserUpdate {
+	_u.mutation.RemoveReferralsAsInviterIDs(ids...)
+	return _u
+}
+
+// RemoveReferralsAsInviter removes "referrals_as_inviter" edges to UserReferral entities.
+func (_u *UserUpdate) RemoveReferralsAsInviter(v ...*UserReferral) *UserUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReferralsAsInviterIDs(ids...)
+}
+
+// ClearReferralsAsInvitee clears all "referrals_as_invitee" edges to the UserReferral entity.
+func (_u *UserUpdate) ClearReferralsAsInvitee() *UserUpdate {
+	_u.mutation.ClearReferralsAsInvitee()
+	return _u
+}
+
+// RemoveReferralsAsInviteeIDs removes the "referrals_as_invitee" edge to UserReferral entities by IDs.
+func (_u *UserUpdate) RemoveReferralsAsInviteeIDs(ids ...int64) *UserUpdate {
+	_u.mutation.RemoveReferralsAsInviteeIDs(ids...)
+	return _u
+}
+
+// RemoveReferralsAsInvitee removes "referrals_as_invitee" edges to UserReferral entities.
+func (_u *UserUpdate) RemoveReferralsAsInvitee(v ...*UserReferral) *UserUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReferralsAsInviteeIDs(ids...)
+}
+
 // ClearAuthIdentities clears all "auth_identities" edges to the AuthIdentity entity.
 func (_u *UserUpdate) ClearAuthIdentities() *UserUpdate {
 	_u.mutation.ClearAuthIdentities()
@@ -906,6 +999,11 @@ func (_u *UserUpdate) check() error {
 			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "User.role": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.BalanceNotifyThresholdType(); ok {
+		if err := user.BalanceNotifyThresholdTypeValidator(v); err != nil {
+			return &ValidationError{Name: "balance_notify_threshold_type", err: fmt.Errorf(`ent: validator failed for field "User.balance_notify_threshold_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := user.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "User.status": %w`, err)}
@@ -919,6 +1017,11 @@ func (_u *UserUpdate) check() error {
 	if v, ok := _u.mutation.SignupSource(); ok {
 		if err := user.SignupSourceValidator(v); err != nil {
 			return &ValidationError{Name: "signup_source", err: fmt.Errorf(`ent: validator failed for field "User.signup_source": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ReferralCode(); ok {
+		if err := user.ReferralCodeValidator(v); err != nil {
+			return &ValidationError{Name: "referral_code", err: fmt.Errorf(`ent: validator failed for field "User.referral_code": %w`, err)}
 		}
 	}
 	return nil
@@ -959,6 +1062,30 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedBalance(); ok {
 		_spec.AddField(user.FieldBalance, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.BalanceNotifyEnabled(); ok {
+		_spec.SetField(user.FieldBalanceNotifyEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.BalanceNotifyThreshold(); ok {
+		_spec.SetField(user.FieldBalanceNotifyThreshold, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedBalanceNotifyThreshold(); ok {
+		_spec.AddField(user.FieldBalanceNotifyThreshold, field.TypeFloat64, value)
+	}
+	if _u.mutation.BalanceNotifyThresholdCleared() {
+		_spec.ClearField(user.FieldBalanceNotifyThreshold, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.BalanceNotifyExtraEmails(); ok {
+		_spec.SetField(user.FieldBalanceNotifyExtraEmails, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.BalanceNotifyThresholdType(); ok {
+		_spec.SetField(user.FieldBalanceNotifyThresholdType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.TotalRecharged(); ok {
+		_spec.SetField(user.FieldTotalRecharged, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedTotalRecharged(); ok {
+		_spec.AddField(user.FieldTotalRecharged, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.Concurrency(); ok {
 		_spec.SetField(user.FieldConcurrency, field.TypeInt, value)
@@ -1005,29 +1132,11 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.LastActiveAtCleared() {
 		_spec.ClearField(user.FieldLastActiveAt, field.TypeTime)
 	}
-	if value, ok := _u.mutation.BalanceNotifyEnabled(); ok {
-		_spec.SetField(user.FieldBalanceNotifyEnabled, field.TypeBool, value)
+	if value, ok := _u.mutation.ReferralCode(); ok {
+		_spec.SetField(user.FieldReferralCode, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.BalanceNotifyThresholdType(); ok {
-		_spec.SetField(user.FieldBalanceNotifyThresholdType, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.BalanceNotifyThreshold(); ok {
-		_spec.SetField(user.FieldBalanceNotifyThreshold, field.TypeFloat64, value)
-	}
-	if value, ok := _u.mutation.AddedBalanceNotifyThreshold(); ok {
-		_spec.AddField(user.FieldBalanceNotifyThreshold, field.TypeFloat64, value)
-	}
-	if _u.mutation.BalanceNotifyThresholdCleared() {
-		_spec.ClearField(user.FieldBalanceNotifyThreshold, field.TypeFloat64)
-	}
-	if value, ok := _u.mutation.BalanceNotifyExtraEmails(); ok {
-		_spec.SetField(user.FieldBalanceNotifyExtraEmails, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.TotalRecharged(); ok {
-		_spec.SetField(user.FieldTotalRecharged, field.TypeFloat64, value)
-	}
-	if value, ok := _u.mutation.AddedTotalRecharged(); ok {
-		_spec.AddField(user.FieldTotalRecharged, field.TypeFloat64, value)
+	if _u.mutation.ReferralCodeCleared() {
+		_spec.ClearField(user.FieldReferralCode, field.TypeString)
 	}
 	if value, ok := _u.mutation.RpmLimit(); ok {
 		_spec.SetField(user.FieldRpmLimit, field.TypeInt, value)
@@ -1497,6 +1606,96 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.ReferralsAsInviterCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviterTable,
+			Columns: []string{user.ReferralsAsInviterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReferralsAsInviterIDs(); len(nodes) > 0 && !_u.mutation.ReferralsAsInviterCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviterTable,
+			Columns: []string{user.ReferralsAsInviterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReferralsAsInviterIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviterTable,
+			Columns: []string{user.ReferralsAsInviterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReferralsAsInviteeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviteeTable,
+			Columns: []string{user.ReferralsAsInviteeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReferralsAsInviteeIDs(); len(nodes) > 0 && !_u.mutation.ReferralsAsInviteeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviteeTable,
+			Columns: []string{user.ReferralsAsInviteeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReferralsAsInviteeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviteeTable,
+			Columns: []string{user.ReferralsAsInviteeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _u.mutation.AuthIdentitiesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -1696,6 +1895,96 @@ func (_u *UserUpdateOne) AddBalance(v float64) *UserUpdateOne {
 	return _u
 }
 
+// SetBalanceNotifyEnabled sets the "balance_notify_enabled" field.
+func (_u *UserUpdateOne) SetBalanceNotifyEnabled(v bool) *UserUpdateOne {
+	_u.mutation.SetBalanceNotifyEnabled(v)
+	return _u
+}
+
+// SetNillableBalanceNotifyEnabled sets the "balance_notify_enabled" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableBalanceNotifyEnabled(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetBalanceNotifyEnabled(*v)
+	}
+	return _u
+}
+
+// SetBalanceNotifyThreshold sets the "balance_notify_threshold" field.
+func (_u *UserUpdateOne) SetBalanceNotifyThreshold(v float64) *UserUpdateOne {
+	_u.mutation.ResetBalanceNotifyThreshold()
+	_u.mutation.SetBalanceNotifyThreshold(v)
+	return _u
+}
+
+// SetNillableBalanceNotifyThreshold sets the "balance_notify_threshold" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableBalanceNotifyThreshold(v *float64) *UserUpdateOne {
+	if v != nil {
+		_u.SetBalanceNotifyThreshold(*v)
+	}
+	return _u
+}
+
+// AddBalanceNotifyThreshold adds value to the "balance_notify_threshold" field.
+func (_u *UserUpdateOne) AddBalanceNotifyThreshold(v float64) *UserUpdateOne {
+	_u.mutation.AddBalanceNotifyThreshold(v)
+	return _u
+}
+
+// ClearBalanceNotifyThreshold clears the value of the "balance_notify_threshold" field.
+func (_u *UserUpdateOne) ClearBalanceNotifyThreshold() *UserUpdateOne {
+	_u.mutation.ClearBalanceNotifyThreshold()
+	return _u
+}
+
+// SetBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field.
+func (_u *UserUpdateOne) SetBalanceNotifyExtraEmails(v string) *UserUpdateOne {
+	_u.mutation.SetBalanceNotifyExtraEmails(v)
+	return _u
+}
+
+// SetNillableBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableBalanceNotifyExtraEmails(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetBalanceNotifyExtraEmails(*v)
+	}
+	return _u
+}
+
+// SetBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field.
+func (_u *UserUpdateOne) SetBalanceNotifyThresholdType(v string) *UserUpdateOne {
+	_u.mutation.SetBalanceNotifyThresholdType(v)
+	return _u
+}
+
+// SetNillableBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableBalanceNotifyThresholdType(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetBalanceNotifyThresholdType(*v)
+	}
+	return _u
+}
+
+// SetTotalRecharged sets the "total_recharged" field.
+func (_u *UserUpdateOne) SetTotalRecharged(v float64) *UserUpdateOne {
+	_u.mutation.ResetTotalRecharged()
+	_u.mutation.SetTotalRecharged(v)
+	return _u
+}
+
+// SetNillableTotalRecharged sets the "total_recharged" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableTotalRecharged(v *float64) *UserUpdateOne {
+	if v != nil {
+		_u.SetTotalRecharged(*v)
+	}
+	return _u
+}
+
+// AddTotalRecharged adds value to the "total_recharged" field.
+func (_u *UserUpdateOne) AddTotalRecharged(v float64) *UserUpdateOne {
+	_u.mutation.AddTotalRecharged(v)
+	return _u
+}
+
 // SetConcurrency sets the "concurrency" field.
 func (_u *UserUpdateOne) SetConcurrency(v int) *UserUpdateOne {
 	_u.mutation.ResetConcurrency()
@@ -1867,93 +2156,23 @@ func (_u *UserUpdateOne) ClearLastActiveAt() *UserUpdateOne {
 	return _u
 }
 
-// SetBalanceNotifyEnabled sets the "balance_notify_enabled" field.
-func (_u *UserUpdateOne) SetBalanceNotifyEnabled(v bool) *UserUpdateOne {
-	_u.mutation.SetBalanceNotifyEnabled(v)
+// SetReferralCode sets the "referral_code" field.
+func (_u *UserUpdateOne) SetReferralCode(v string) *UserUpdateOne {
+	_u.mutation.SetReferralCode(v)
 	return _u
 }
 
-// SetNillableBalanceNotifyEnabled sets the "balance_notify_enabled" field if the given value is not nil.
-func (_u *UserUpdateOne) SetNillableBalanceNotifyEnabled(v *bool) *UserUpdateOne {
+// SetNillableReferralCode sets the "referral_code" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableReferralCode(v *string) *UserUpdateOne {
 	if v != nil {
-		_u.SetBalanceNotifyEnabled(*v)
+		_u.SetReferralCode(*v)
 	}
 	return _u
 }
 
-// SetBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field.
-func (_u *UserUpdateOne) SetBalanceNotifyThresholdType(v string) *UserUpdateOne {
-	_u.mutation.SetBalanceNotifyThresholdType(v)
-	return _u
-}
-
-// SetNillableBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field if the given value is not nil.
-func (_u *UserUpdateOne) SetNillableBalanceNotifyThresholdType(v *string) *UserUpdateOne {
-	if v != nil {
-		_u.SetBalanceNotifyThresholdType(*v)
-	}
-	return _u
-}
-
-// SetBalanceNotifyThreshold sets the "balance_notify_threshold" field.
-func (_u *UserUpdateOne) SetBalanceNotifyThreshold(v float64) *UserUpdateOne {
-	_u.mutation.ResetBalanceNotifyThreshold()
-	_u.mutation.SetBalanceNotifyThreshold(v)
-	return _u
-}
-
-// SetNillableBalanceNotifyThreshold sets the "balance_notify_threshold" field if the given value is not nil.
-func (_u *UserUpdateOne) SetNillableBalanceNotifyThreshold(v *float64) *UserUpdateOne {
-	if v != nil {
-		_u.SetBalanceNotifyThreshold(*v)
-	}
-	return _u
-}
-
-// AddBalanceNotifyThreshold adds value to the "balance_notify_threshold" field.
-func (_u *UserUpdateOne) AddBalanceNotifyThreshold(v float64) *UserUpdateOne {
-	_u.mutation.AddBalanceNotifyThreshold(v)
-	return _u
-}
-
-// ClearBalanceNotifyThreshold clears the value of the "balance_notify_threshold" field.
-func (_u *UserUpdateOne) ClearBalanceNotifyThreshold() *UserUpdateOne {
-	_u.mutation.ClearBalanceNotifyThreshold()
-	return _u
-}
-
-// SetBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field.
-func (_u *UserUpdateOne) SetBalanceNotifyExtraEmails(v string) *UserUpdateOne {
-	_u.mutation.SetBalanceNotifyExtraEmails(v)
-	return _u
-}
-
-// SetNillableBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field if the given value is not nil.
-func (_u *UserUpdateOne) SetNillableBalanceNotifyExtraEmails(v *string) *UserUpdateOne {
-	if v != nil {
-		_u.SetBalanceNotifyExtraEmails(*v)
-	}
-	return _u
-}
-
-// SetTotalRecharged sets the "total_recharged" field.
-func (_u *UserUpdateOne) SetTotalRecharged(v float64) *UserUpdateOne {
-	_u.mutation.ResetTotalRecharged()
-	_u.mutation.SetTotalRecharged(v)
-	return _u
-}
-
-// SetNillableTotalRecharged sets the "total_recharged" field if the given value is not nil.
-func (_u *UserUpdateOne) SetNillableTotalRecharged(v *float64) *UserUpdateOne {
-	if v != nil {
-		_u.SetTotalRecharged(*v)
-	}
-	return _u
-}
-
-// AddTotalRecharged adds value to the "total_recharged" field.
-func (_u *UserUpdateOne) AddTotalRecharged(v float64) *UserUpdateOne {
-	_u.mutation.AddTotalRecharged(v)
+// ClearReferralCode clears the value of the "referral_code" field.
+func (_u *UserUpdateOne) ClearReferralCode() *UserUpdateOne {
+	_u.mutation.ClearReferralCode()
 	return _u
 }
 
@@ -2126,6 +2345,36 @@ func (_u *UserUpdateOne) AddPaymentOrders(v ...*PaymentOrder) *UserUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.AddPaymentOrderIDs(ids...)
+}
+
+// AddReferralsAsInviterIDs adds the "referrals_as_inviter" edge to the UserReferral entity by IDs.
+func (_u *UserUpdateOne) AddReferralsAsInviterIDs(ids ...int64) *UserUpdateOne {
+	_u.mutation.AddReferralsAsInviterIDs(ids...)
+	return _u
+}
+
+// AddReferralsAsInviter adds the "referrals_as_inviter" edges to the UserReferral entity.
+func (_u *UserUpdateOne) AddReferralsAsInviter(v ...*UserReferral) *UserUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReferralsAsInviterIDs(ids...)
+}
+
+// AddReferralsAsInviteeIDs adds the "referrals_as_invitee" edge to the UserReferral entity by IDs.
+func (_u *UserUpdateOne) AddReferralsAsInviteeIDs(ids ...int64) *UserUpdateOne {
+	_u.mutation.AddReferralsAsInviteeIDs(ids...)
+	return _u
+}
+
+// AddReferralsAsInvitee adds the "referrals_as_invitee" edges to the UserReferral entity.
+func (_u *UserUpdateOne) AddReferralsAsInvitee(v ...*UserReferral) *UserUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReferralsAsInviteeIDs(ids...)
 }
 
 // AddAuthIdentityIDs adds the "auth_identities" edge to the AuthIdentity entity by IDs.
@@ -2373,6 +2622,48 @@ func (_u *UserUpdateOne) RemovePaymentOrders(v ...*PaymentOrder) *UserUpdateOne 
 	return _u.RemovePaymentOrderIDs(ids...)
 }
 
+// ClearReferralsAsInviter clears all "referrals_as_inviter" edges to the UserReferral entity.
+func (_u *UserUpdateOne) ClearReferralsAsInviter() *UserUpdateOne {
+	_u.mutation.ClearReferralsAsInviter()
+	return _u
+}
+
+// RemoveReferralsAsInviterIDs removes the "referrals_as_inviter" edge to UserReferral entities by IDs.
+func (_u *UserUpdateOne) RemoveReferralsAsInviterIDs(ids ...int64) *UserUpdateOne {
+	_u.mutation.RemoveReferralsAsInviterIDs(ids...)
+	return _u
+}
+
+// RemoveReferralsAsInviter removes "referrals_as_inviter" edges to UserReferral entities.
+func (_u *UserUpdateOne) RemoveReferralsAsInviter(v ...*UserReferral) *UserUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReferralsAsInviterIDs(ids...)
+}
+
+// ClearReferralsAsInvitee clears all "referrals_as_invitee" edges to the UserReferral entity.
+func (_u *UserUpdateOne) ClearReferralsAsInvitee() *UserUpdateOne {
+	_u.mutation.ClearReferralsAsInvitee()
+	return _u
+}
+
+// RemoveReferralsAsInviteeIDs removes the "referrals_as_invitee" edge to UserReferral entities by IDs.
+func (_u *UserUpdateOne) RemoveReferralsAsInviteeIDs(ids ...int64) *UserUpdateOne {
+	_u.mutation.RemoveReferralsAsInviteeIDs(ids...)
+	return _u
+}
+
+// RemoveReferralsAsInvitee removes "referrals_as_invitee" edges to UserReferral entities.
+func (_u *UserUpdateOne) RemoveReferralsAsInvitee(v ...*UserReferral) *UserUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReferralsAsInviteeIDs(ids...)
+}
+
 // ClearAuthIdentities clears all "auth_identities" edges to the AuthIdentity entity.
 func (_u *UserUpdateOne) ClearAuthIdentities() *UserUpdateOne {
 	_u.mutation.ClearAuthIdentities()
@@ -2487,6 +2778,11 @@ func (_u *UserUpdateOne) check() error {
 			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "User.role": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.BalanceNotifyThresholdType(); ok {
+		if err := user.BalanceNotifyThresholdTypeValidator(v); err != nil {
+			return &ValidationError{Name: "balance_notify_threshold_type", err: fmt.Errorf(`ent: validator failed for field "User.balance_notify_threshold_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := user.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "User.status": %w`, err)}
@@ -2500,6 +2796,11 @@ func (_u *UserUpdateOne) check() error {
 	if v, ok := _u.mutation.SignupSource(); ok {
 		if err := user.SignupSourceValidator(v); err != nil {
 			return &ValidationError{Name: "signup_source", err: fmt.Errorf(`ent: validator failed for field "User.signup_source": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ReferralCode(); ok {
+		if err := user.ReferralCodeValidator(v); err != nil {
+			return &ValidationError{Name: "referral_code", err: fmt.Errorf(`ent: validator failed for field "User.referral_code": %w`, err)}
 		}
 	}
 	return nil
@@ -2558,6 +2859,30 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	if value, ok := _u.mutation.AddedBalance(); ok {
 		_spec.AddField(user.FieldBalance, field.TypeFloat64, value)
 	}
+	if value, ok := _u.mutation.BalanceNotifyEnabled(); ok {
+		_spec.SetField(user.FieldBalanceNotifyEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.BalanceNotifyThreshold(); ok {
+		_spec.SetField(user.FieldBalanceNotifyThreshold, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedBalanceNotifyThreshold(); ok {
+		_spec.AddField(user.FieldBalanceNotifyThreshold, field.TypeFloat64, value)
+	}
+	if _u.mutation.BalanceNotifyThresholdCleared() {
+		_spec.ClearField(user.FieldBalanceNotifyThreshold, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.BalanceNotifyExtraEmails(); ok {
+		_spec.SetField(user.FieldBalanceNotifyExtraEmails, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.BalanceNotifyThresholdType(); ok {
+		_spec.SetField(user.FieldBalanceNotifyThresholdType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.TotalRecharged(); ok {
+		_spec.SetField(user.FieldTotalRecharged, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedTotalRecharged(); ok {
+		_spec.AddField(user.FieldTotalRecharged, field.TypeFloat64, value)
+	}
 	if value, ok := _u.mutation.Concurrency(); ok {
 		_spec.SetField(user.FieldConcurrency, field.TypeInt, value)
 	}
@@ -2603,29 +2928,11 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	if _u.mutation.LastActiveAtCleared() {
 		_spec.ClearField(user.FieldLastActiveAt, field.TypeTime)
 	}
-	if value, ok := _u.mutation.BalanceNotifyEnabled(); ok {
-		_spec.SetField(user.FieldBalanceNotifyEnabled, field.TypeBool, value)
+	if value, ok := _u.mutation.ReferralCode(); ok {
+		_spec.SetField(user.FieldReferralCode, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.BalanceNotifyThresholdType(); ok {
-		_spec.SetField(user.FieldBalanceNotifyThresholdType, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.BalanceNotifyThreshold(); ok {
-		_spec.SetField(user.FieldBalanceNotifyThreshold, field.TypeFloat64, value)
-	}
-	if value, ok := _u.mutation.AddedBalanceNotifyThreshold(); ok {
-		_spec.AddField(user.FieldBalanceNotifyThreshold, field.TypeFloat64, value)
-	}
-	if _u.mutation.BalanceNotifyThresholdCleared() {
-		_spec.ClearField(user.FieldBalanceNotifyThreshold, field.TypeFloat64)
-	}
-	if value, ok := _u.mutation.BalanceNotifyExtraEmails(); ok {
-		_spec.SetField(user.FieldBalanceNotifyExtraEmails, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.TotalRecharged(); ok {
-		_spec.SetField(user.FieldTotalRecharged, field.TypeFloat64, value)
-	}
-	if value, ok := _u.mutation.AddedTotalRecharged(); ok {
-		_spec.AddField(user.FieldTotalRecharged, field.TypeFloat64, value)
+	if _u.mutation.ReferralCodeCleared() {
+		_spec.ClearField(user.FieldReferralCode, field.TypeString)
 	}
 	if value, ok := _u.mutation.RpmLimit(); ok {
 		_spec.SetField(user.FieldRpmLimit, field.TypeInt, value)
@@ -3088,6 +3395,96 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReferralsAsInviterCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviterTable,
+			Columns: []string{user.ReferralsAsInviterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReferralsAsInviterIDs(); len(nodes) > 0 && !_u.mutation.ReferralsAsInviterCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviterTable,
+			Columns: []string{user.ReferralsAsInviterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReferralsAsInviterIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviterTable,
+			Columns: []string{user.ReferralsAsInviterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReferralsAsInviteeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviteeTable,
+			Columns: []string{user.ReferralsAsInviteeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReferralsAsInviteeIDs(); len(nodes) > 0 && !_u.mutation.ReferralsAsInviteeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviteeTable,
+			Columns: []string{user.ReferralsAsInviteeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReferralsAsInviteeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviteeTable,
+			Columns: []string{user.ReferralsAsInviteeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

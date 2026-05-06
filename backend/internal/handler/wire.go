@@ -94,6 +94,8 @@ func ProvideHandlers(
 	paymentWebhookHandler *PaymentWebhookHandler,
 	_ *service.IdempotencyCoordinator,
 	_ *service.IdempotencyCleanupService,
+	pricingHandler *PricingHandler,
+	referralHandler *ReferralHandler,
 ) *Handlers {
 	return &Handlers{
 		Auth:           authHandler,
@@ -110,6 +112,8 @@ func ProvideHandlers(
 		Totp:           totpHandler,
 		Payment:        paymentHandler,
 		PaymentWebhook: paymentWebhookHandler,
+		Pricing:        pricingHandler,
+		Referral:       referralHandler,
 	}
 }
 

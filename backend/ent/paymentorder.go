@@ -99,8 +99,9 @@ type PaymentOrder struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PaymentOrderQuery when eager-loading is set.
-	Edges        PaymentOrderEdges `json:"edges"`
-	selectValues sql.SelectValues
+	Edges               PaymentOrderEdges `json:"edges"`
+	payment_plan_orders *int64
+	selectValues        sql.SelectValues
 }
 
 // PaymentOrderEdges holds the relations/edges for other nodes in the graph.
@@ -140,6 +141,8 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case paymentorder.FieldRefundAt, paymentorder.FieldRefundRequestedAt, paymentorder.FieldExpiresAt, paymentorder.FieldPaidAt, paymentorder.FieldCompletedAt, paymentorder.FieldFailedAt, paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
+		case paymentorder.ForeignKeys[0]: // payment_plan_orders
+			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -415,6 +418,13 @@ func (_m *PaymentOrder) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
 				_m.UpdatedAt = value.Time
+			}
+		case paymentorder.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field payment_plan_orders", value)
+			} else if value.Valid {
+				_m.payment_plan_orders = new(int64)
+				*_m.payment_plan_orders = int64(value.Int64)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])

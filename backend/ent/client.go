@@ -28,6 +28,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
 	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
+	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
 	"github.com/Wei-Shaw/sub2api/ent/paymentproviderinstance"
 	"github.com/Wei-Shaw/sub2api/ent/pendingauthsession"
 	"github.com/Wei-Shaw/sub2api/ent/promocode"
@@ -44,6 +45,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/userallowedgroup"
 	"github.com/Wei-Shaw/sub2api/ent/userattributedefinition"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
+	"github.com/Wei-Shaw/sub2api/ent/userreferral"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 
 	stdsql "database/sql"
@@ -80,6 +82,8 @@ type Client struct {
 	PaymentAuditLog *PaymentAuditLogClient
 	// PaymentOrder is the client for interacting with the PaymentOrder builders.
 	PaymentOrder *PaymentOrderClient
+	// PaymentPlan is the client for interacting with the PaymentPlan builders.
+	PaymentPlan *PaymentPlanClient
 	// PaymentProviderInstance is the client for interacting with the PaymentProviderInstance builders.
 	PaymentProviderInstance *PaymentProviderInstanceClient
 	// PendingAuthSession is the client for interacting with the PendingAuthSession builders.
@@ -112,6 +116,8 @@ type Client struct {
 	UserAttributeDefinition *UserAttributeDefinitionClient
 	// UserAttributeValue is the client for interacting with the UserAttributeValue builders.
 	UserAttributeValue *UserAttributeValueClient
+	// UserReferral is the client for interacting with the UserReferral builders.
+	UserReferral *UserReferralClient
 	// UserSubscription is the client for interacting with the UserSubscription builders.
 	UserSubscription *UserSubscriptionClient
 }
@@ -138,6 +144,7 @@ func (c *Client) init() {
 	c.IdentityAdoptionDecision = NewIdentityAdoptionDecisionClient(c.config)
 	c.PaymentAuditLog = NewPaymentAuditLogClient(c.config)
 	c.PaymentOrder = NewPaymentOrderClient(c.config)
+	c.PaymentPlan = NewPaymentPlanClient(c.config)
 	c.PaymentProviderInstance = NewPaymentProviderInstanceClient(c.config)
 	c.PendingAuthSession = NewPendingAuthSessionClient(c.config)
 	c.PromoCode = NewPromoCodeClient(c.config)
@@ -154,6 +161,7 @@ func (c *Client) init() {
 	c.UserAllowedGroup = NewUserAllowedGroupClient(c.config)
 	c.UserAttributeDefinition = NewUserAttributeDefinitionClient(c.config)
 	c.UserAttributeValue = NewUserAttributeValueClient(c.config)
+	c.UserReferral = NewUserReferralClient(c.config)
 	c.UserSubscription = NewUserSubscriptionClient(c.config)
 }
 
@@ -260,6 +268,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		IdentityAdoptionDecision: NewIdentityAdoptionDecisionClient(cfg),
 		PaymentAuditLog:          NewPaymentAuditLogClient(cfg),
 		PaymentOrder:             NewPaymentOrderClient(cfg),
+		PaymentPlan:              NewPaymentPlanClient(cfg),
 		PaymentProviderInstance:  NewPaymentProviderInstanceClient(cfg),
 		PendingAuthSession:       NewPendingAuthSessionClient(cfg),
 		PromoCode:                NewPromoCodeClient(cfg),
@@ -276,6 +285,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		UserAllowedGroup:         NewUserAllowedGroupClient(cfg),
 		UserAttributeDefinition:  NewUserAttributeDefinitionClient(cfg),
 		UserAttributeValue:       NewUserAttributeValueClient(cfg),
+		UserReferral:             NewUserReferralClient(cfg),
 		UserSubscription:         NewUserSubscriptionClient(cfg),
 	}, nil
 }
@@ -309,6 +319,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		IdentityAdoptionDecision: NewIdentityAdoptionDecisionClient(cfg),
 		PaymentAuditLog:          NewPaymentAuditLogClient(cfg),
 		PaymentOrder:             NewPaymentOrderClient(cfg),
+		PaymentPlan:              NewPaymentPlanClient(cfg),
 		PaymentProviderInstance:  NewPaymentProviderInstanceClient(cfg),
 		PendingAuthSession:       NewPendingAuthSessionClient(cfg),
 		PromoCode:                NewPromoCodeClient(cfg),
@@ -325,6 +336,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		UserAllowedGroup:         NewUserAllowedGroupClient(cfg),
 		UserAttributeDefinition:  NewUserAttributeDefinitionClient(cfg),
 		UserAttributeValue:       NewUserAttributeValueClient(cfg),
+		UserReferral:             NewUserReferralClient(cfg),
 		UserSubscription:         NewUserSubscriptionClient(cfg),
 	}, nil
 }
@@ -358,11 +370,11 @@ func (c *Client) Use(hooks ...Hook) {
 		c.APIKey, c.Account, c.AccountGroup, c.Announcement, c.AnnouncementRead,
 		c.AuthIdentity, c.AuthIdentityChannel, c.ErrorPassthroughRule, c.Group,
 		c.IdempotencyRecord, c.IdentityAdoptionDecision, c.PaymentAuditLog,
-		c.PaymentOrder, c.PaymentProviderInstance, c.PendingAuthSession, c.PromoCode,
-		c.PromoCodeUsage, c.Proxy, c.RedeemCode, c.SecuritySecret, c.Setting,
-		c.SubscriptionPlan, c.TLSFingerprintProfile, c.UsageCleanupTask, c.UsageLog,
-		c.User, c.UserAllowedGroup, c.UserAttributeDefinition, c.UserAttributeValue,
-		c.UserSubscription,
+		c.PaymentOrder, c.PaymentPlan, c.PaymentProviderInstance, c.PendingAuthSession,
+		c.PromoCode, c.PromoCodeUsage, c.Proxy, c.RedeemCode, c.SecuritySecret,
+		c.Setting, c.SubscriptionPlan, c.TLSFingerprintProfile, c.UsageCleanupTask,
+		c.UsageLog, c.User, c.UserAllowedGroup, c.UserAttributeDefinition,
+		c.UserAttributeValue, c.UserReferral, c.UserSubscription,
 	} {
 		n.Use(hooks...)
 	}
@@ -375,11 +387,11 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.APIKey, c.Account, c.AccountGroup, c.Announcement, c.AnnouncementRead,
 		c.AuthIdentity, c.AuthIdentityChannel, c.ErrorPassthroughRule, c.Group,
 		c.IdempotencyRecord, c.IdentityAdoptionDecision, c.PaymentAuditLog,
-		c.PaymentOrder, c.PaymentProviderInstance, c.PendingAuthSession, c.PromoCode,
-		c.PromoCodeUsage, c.Proxy, c.RedeemCode, c.SecuritySecret, c.Setting,
-		c.SubscriptionPlan, c.TLSFingerprintProfile, c.UsageCleanupTask, c.UsageLog,
-		c.User, c.UserAllowedGroup, c.UserAttributeDefinition, c.UserAttributeValue,
-		c.UserSubscription,
+		c.PaymentOrder, c.PaymentPlan, c.PaymentProviderInstance, c.PendingAuthSession,
+		c.PromoCode, c.PromoCodeUsage, c.Proxy, c.RedeemCode, c.SecuritySecret,
+		c.Setting, c.SubscriptionPlan, c.TLSFingerprintProfile, c.UsageCleanupTask,
+		c.UsageLog, c.User, c.UserAllowedGroup, c.UserAttributeDefinition,
+		c.UserAttributeValue, c.UserReferral, c.UserSubscription,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -414,6 +426,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.PaymentAuditLog.mutate(ctx, m)
 	case *PaymentOrderMutation:
 		return c.PaymentOrder.mutate(ctx, m)
+	case *PaymentPlanMutation:
+		return c.PaymentPlan.mutate(ctx, m)
 	case *PaymentProviderInstanceMutation:
 		return c.PaymentProviderInstance.mutate(ctx, m)
 	case *PendingAuthSessionMutation:
@@ -446,6 +460,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.UserAttributeDefinition.mutate(ctx, m)
 	case *UserAttributeValueMutation:
 		return c.UserAttributeValue.mutate(ctx, m)
+	case *UserReferralMutation:
+		return c.UserReferral.mutate(ctx, m)
 	case *UserSubscriptionMutation:
 		return c.UserSubscription.mutate(ctx, m)
 	default:
@@ -1900,6 +1916,22 @@ func (c *GroupClient) QueryUsageLogs(_m *Group) *UsageLogQuery {
 	return query
 }
 
+// QueryPaymentPlans queries the payment_plans edge of a Group.
+func (c *GroupClient) QueryPaymentPlans(_m *Group) *PaymentPlanQuery {
+	query := (&PaymentPlanClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(group.Table, group.FieldID, id),
+			sqlgraph.To(paymentplan.Table, paymentplan.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, group.PaymentPlansTable, group.PaymentPlansColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryAccounts queries the accounts edge of a Group.
 func (c *GroupClient) QueryAccounts(_m *Group) *AccountQuery {
 	query := (&AccountClient{config: c.config}).Query()
@@ -2568,6 +2600,173 @@ func (c *PaymentOrderClient) mutate(ctx context.Context, m *PaymentOrderMutation
 		return (&PaymentOrderDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown PaymentOrder mutation op: %q", m.Op())
+	}
+}
+
+// PaymentPlanClient is a client for the PaymentPlan schema.
+type PaymentPlanClient struct {
+	config
+}
+
+// NewPaymentPlanClient returns a client for the PaymentPlan from the given config.
+func NewPaymentPlanClient(c config) *PaymentPlanClient {
+	return &PaymentPlanClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `paymentplan.Hooks(f(g(h())))`.
+func (c *PaymentPlanClient) Use(hooks ...Hook) {
+	c.hooks.PaymentPlan = append(c.hooks.PaymentPlan, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `paymentplan.Intercept(f(g(h())))`.
+func (c *PaymentPlanClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PaymentPlan = append(c.inters.PaymentPlan, interceptors...)
+}
+
+// Create returns a builder for creating a PaymentPlan entity.
+func (c *PaymentPlanClient) Create() *PaymentPlanCreate {
+	mutation := newPaymentPlanMutation(c.config, OpCreate)
+	return &PaymentPlanCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PaymentPlan entities.
+func (c *PaymentPlanClient) CreateBulk(builders ...*PaymentPlanCreate) *PaymentPlanCreateBulk {
+	return &PaymentPlanCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PaymentPlanClient) MapCreateBulk(slice any, setFunc func(*PaymentPlanCreate, int)) *PaymentPlanCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PaymentPlanCreateBulk{err: fmt.Errorf("calling to PaymentPlanClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PaymentPlanCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PaymentPlanCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PaymentPlan.
+func (c *PaymentPlanClient) Update() *PaymentPlanUpdate {
+	mutation := newPaymentPlanMutation(c.config, OpUpdate)
+	return &PaymentPlanUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PaymentPlanClient) UpdateOne(_m *PaymentPlan) *PaymentPlanUpdateOne {
+	mutation := newPaymentPlanMutation(c.config, OpUpdateOne, withPaymentPlan(_m))
+	return &PaymentPlanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PaymentPlanClient) UpdateOneID(id int64) *PaymentPlanUpdateOne {
+	mutation := newPaymentPlanMutation(c.config, OpUpdateOne, withPaymentPlanID(id))
+	return &PaymentPlanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PaymentPlan.
+func (c *PaymentPlanClient) Delete() *PaymentPlanDelete {
+	mutation := newPaymentPlanMutation(c.config, OpDelete)
+	return &PaymentPlanDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PaymentPlanClient) DeleteOne(_m *PaymentPlan) *PaymentPlanDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PaymentPlanClient) DeleteOneID(id int64) *PaymentPlanDeleteOne {
+	builder := c.Delete().Where(paymentplan.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PaymentPlanDeleteOne{builder}
+}
+
+// Query returns a query builder for PaymentPlan.
+func (c *PaymentPlanClient) Query() *PaymentPlanQuery {
+	return &PaymentPlanQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePaymentPlan},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PaymentPlan entity by its id.
+func (c *PaymentPlanClient) Get(ctx context.Context, id int64) (*PaymentPlan, error) {
+	return c.Query().Where(paymentplan.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PaymentPlanClient) GetX(ctx context.Context, id int64) *PaymentPlan {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryGroup queries the group edge of a PaymentPlan.
+func (c *PaymentPlanClient) QueryGroup(_m *PaymentPlan) *GroupQuery {
+	query := (&GroupClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentplan.Table, paymentplan.FieldID, id),
+			sqlgraph.To(group.Table, group.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, paymentplan.GroupTable, paymentplan.GroupColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOrders queries the orders edge of a PaymentPlan.
+func (c *PaymentPlanClient) QueryOrders(_m *PaymentPlan) *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentplan.Table, paymentplan.FieldID, id),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, paymentplan.OrdersTable, paymentplan.OrdersColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *PaymentPlanClient) Hooks() []Hook {
+	hooks := c.hooks.PaymentPlan
+	return append(hooks[:len(hooks):len(hooks)], paymentplan.Hooks[:]...)
+}
+
+// Interceptors returns the client interceptors.
+func (c *PaymentPlanClient) Interceptors() []Interceptor {
+	inters := c.inters.PaymentPlan
+	return append(inters[:len(inters):len(inters)], paymentplan.Interceptors[:]...)
+}
+
+func (c *PaymentPlanClient) mutate(ctx context.Context, m *PaymentPlanMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PaymentPlanCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PaymentPlanUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PaymentPlanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PaymentPlanDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PaymentPlan mutation op: %q", m.Op())
 	}
 }
 
@@ -4645,6 +4844,38 @@ func (c *UserClient) QueryPaymentOrders(_m *User) *PaymentOrderQuery {
 	return query
 }
 
+// QueryReferralsAsInviter queries the referrals_as_inviter edge of a User.
+func (c *UserClient) QueryReferralsAsInviter(_m *User) *UserReferralQuery {
+	query := (&UserReferralClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(userreferral.Table, userreferral.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ReferralsAsInviterTable, user.ReferralsAsInviterColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryReferralsAsInvitee queries the referrals_as_invitee edge of a User.
+func (c *UserClient) QueryReferralsAsInvitee(_m *User) *UserReferralQuery {
+	query := (&UserReferralClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(userreferral.Table, userreferral.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ReferralsAsInviteeTable, user.ReferralsAsInviteeColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryAuthIdentities queries the auth_identities edge of a User.
 func (c *UserClient) QueryAuthIdentities(_m *User) *AuthIdentityQuery {
 	query := (&AuthIdentityClient{config: c.config}).Query()
@@ -5152,6 +5383,171 @@ func (c *UserAttributeValueClient) mutate(ctx context.Context, m *UserAttributeV
 	}
 }
 
+// UserReferralClient is a client for the UserReferral schema.
+type UserReferralClient struct {
+	config
+}
+
+// NewUserReferralClient returns a client for the UserReferral from the given config.
+func NewUserReferralClient(c config) *UserReferralClient {
+	return &UserReferralClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `userreferral.Hooks(f(g(h())))`.
+func (c *UserReferralClient) Use(hooks ...Hook) {
+	c.hooks.UserReferral = append(c.hooks.UserReferral, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `userreferral.Intercept(f(g(h())))`.
+func (c *UserReferralClient) Intercept(interceptors ...Interceptor) {
+	c.inters.UserReferral = append(c.inters.UserReferral, interceptors...)
+}
+
+// Create returns a builder for creating a UserReferral entity.
+func (c *UserReferralClient) Create() *UserReferralCreate {
+	mutation := newUserReferralMutation(c.config, OpCreate)
+	return &UserReferralCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of UserReferral entities.
+func (c *UserReferralClient) CreateBulk(builders ...*UserReferralCreate) *UserReferralCreateBulk {
+	return &UserReferralCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UserReferralClient) MapCreateBulk(slice any, setFunc func(*UserReferralCreate, int)) *UserReferralCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UserReferralCreateBulk{err: fmt.Errorf("calling to UserReferralClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*UserReferralCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &UserReferralCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for UserReferral.
+func (c *UserReferralClient) Update() *UserReferralUpdate {
+	mutation := newUserReferralMutation(c.config, OpUpdate)
+	return &UserReferralUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UserReferralClient) UpdateOne(_m *UserReferral) *UserReferralUpdateOne {
+	mutation := newUserReferralMutation(c.config, OpUpdateOne, withUserReferral(_m))
+	return &UserReferralUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UserReferralClient) UpdateOneID(id int64) *UserReferralUpdateOne {
+	mutation := newUserReferralMutation(c.config, OpUpdateOne, withUserReferralID(id))
+	return &UserReferralUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for UserReferral.
+func (c *UserReferralClient) Delete() *UserReferralDelete {
+	mutation := newUserReferralMutation(c.config, OpDelete)
+	return &UserReferralDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *UserReferralClient) DeleteOne(_m *UserReferral) *UserReferralDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *UserReferralClient) DeleteOneID(id int64) *UserReferralDeleteOne {
+	builder := c.Delete().Where(userreferral.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UserReferralDeleteOne{builder}
+}
+
+// Query returns a query builder for UserReferral.
+func (c *UserReferralClient) Query() *UserReferralQuery {
+	return &UserReferralQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeUserReferral},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a UserReferral entity by its id.
+func (c *UserReferralClient) Get(ctx context.Context, id int64) (*UserReferral, error) {
+	return c.Query().Where(userreferral.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UserReferralClient) GetX(ctx context.Context, id int64) *UserReferral {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryInviter queries the inviter edge of a UserReferral.
+func (c *UserReferralClient) QueryInviter(_m *UserReferral) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userreferral.Table, userreferral.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, userreferral.InviterTable, userreferral.InviterColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryInvitee queries the invitee edge of a UserReferral.
+func (c *UserReferralClient) QueryInvitee(_m *UserReferral) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userreferral.Table, userreferral.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, userreferral.InviteeTable, userreferral.InviteeColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *UserReferralClient) Hooks() []Hook {
+	return c.hooks.UserReferral
+}
+
+// Interceptors returns the client interceptors.
+func (c *UserReferralClient) Interceptors() []Interceptor {
+	return c.inters.UserReferral
+}
+
+func (c *UserReferralClient) mutate(ctx context.Context, m *UserReferralMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&UserReferralCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&UserReferralUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&UserReferralUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&UserReferralDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown UserReferral mutation op: %q", m.Op())
+	}
+}
+
 // UserSubscriptionClient is a client for the UserSubscription schema.
 type UserSubscriptionClient struct {
 	config
@@ -5356,20 +5752,20 @@ type (
 	hooks struct {
 		APIKey, Account, AccountGroup, Announcement, AnnouncementRead, AuthIdentity,
 		AuthIdentityChannel, ErrorPassthroughRule, Group, IdempotencyRecord,
-		IdentityAdoptionDecision, PaymentAuditLog, PaymentOrder,
+		IdentityAdoptionDecision, PaymentAuditLog, PaymentOrder, PaymentPlan,
 		PaymentProviderInstance, PendingAuthSession, PromoCode, PromoCodeUsage, Proxy,
 		RedeemCode, SecuritySecret, Setting, SubscriptionPlan, TLSFingerprintProfile,
 		UsageCleanupTask, UsageLog, User, UserAllowedGroup, UserAttributeDefinition,
-		UserAttributeValue, UserSubscription []ent.Hook
+		UserAttributeValue, UserReferral, UserSubscription []ent.Hook
 	}
 	inters struct {
 		APIKey, Account, AccountGroup, Announcement, AnnouncementRead, AuthIdentity,
 		AuthIdentityChannel, ErrorPassthroughRule, Group, IdempotencyRecord,
-		IdentityAdoptionDecision, PaymentAuditLog, PaymentOrder,
+		IdentityAdoptionDecision, PaymentAuditLog, PaymentOrder, PaymentPlan,
 		PaymentProviderInstance, PendingAuthSession, PromoCode, PromoCodeUsage, Proxy,
 		RedeemCode, SecuritySecret, Setting, SubscriptionPlan, TLSFingerprintProfile,
 		UsageCleanupTask, UsageLog, User, UserAllowedGroup, UserAttributeDefinition,
-		UserAttributeValue, UserSubscription []ent.Interceptor
+		UserAttributeValue, UserReferral, UserSubscription []ent.Interceptor
 	}
 )
 

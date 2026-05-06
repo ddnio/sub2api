@@ -25,6 +25,7 @@ type PaymentOrderQuery struct {
 	inters     []Interceptor
 	predicates []predicate.PaymentOrder
 	withUser   *UserQuery
+	withFKs    bool
 	modifiers  []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -371,11 +372,15 @@ func (_q *PaymentOrderQuery) prepareQuery(ctx context.Context) error {
 func (_q *PaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*PaymentOrder, error) {
 	var (
 		nodes       = []*PaymentOrder{}
+		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
 			_q.withUser != nil,
 		}
 	)
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, paymentorder.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*PaymentOrder).scanValues(nil, columns)
 	}

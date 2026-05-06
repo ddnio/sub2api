@@ -31,6 +31,16 @@ type User struct {
 	Role string `json:"role,omitempty"`
 	// Balance holds the value of the "balance" field.
 	Balance float64 `json:"balance,omitempty"`
+	// BalanceNotifyEnabled holds the value of the "balance_notify_enabled" field.
+	BalanceNotifyEnabled bool `json:"balance_notify_enabled,omitempty"`
+	// BalanceNotifyThreshold holds the value of the "balance_notify_threshold" field.
+	BalanceNotifyThreshold *float64 `json:"balance_notify_threshold,omitempty"`
+	// BalanceNotifyExtraEmails holds the value of the "balance_notify_extra_emails" field.
+	BalanceNotifyExtraEmails string `json:"balance_notify_extra_emails,omitempty"`
+	// BalanceNotifyThresholdType holds the value of the "balance_notify_threshold_type" field.
+	BalanceNotifyThresholdType string `json:"balance_notify_threshold_type,omitempty"`
+	// TotalRecharged holds the value of the "total_recharged" field.
+	TotalRecharged float64 `json:"total_recharged,omitempty"`
 	// Concurrency holds the value of the "concurrency" field.
 	Concurrency int `json:"concurrency,omitempty"`
 	// Status holds the value of the "status" field.
@@ -51,16 +61,8 @@ type User struct {
 	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
 	// LastActiveAt holds the value of the "last_active_at" field.
 	LastActiveAt *time.Time `json:"last_active_at,omitempty"`
-	// BalanceNotifyEnabled holds the value of the "balance_notify_enabled" field.
-	BalanceNotifyEnabled bool `json:"balance_notify_enabled,omitempty"`
-	// BalanceNotifyThresholdType holds the value of the "balance_notify_threshold_type" field.
-	BalanceNotifyThresholdType string `json:"balance_notify_threshold_type,omitempty"`
-	// BalanceNotifyThreshold holds the value of the "balance_notify_threshold" field.
-	BalanceNotifyThreshold *float64 `json:"balance_notify_threshold,omitempty"`
-	// BalanceNotifyExtraEmails holds the value of the "balance_notify_extra_emails" field.
-	BalanceNotifyExtraEmails string `json:"balance_notify_extra_emails,omitempty"`
-	// TotalRecharged holds the value of the "total_recharged" field.
-	TotalRecharged float64 `json:"total_recharged,omitempty"`
+	// ReferralCode holds the value of the "referral_code" field.
+	ReferralCode *string `json:"referral_code,omitempty"`
 	// RpmLimit holds the value of the "rpm_limit" field.
 	RpmLimit int `json:"rpm_limit,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -91,6 +93,10 @@ type UserEdges struct {
 	PromoCodeUsages []*PromoCodeUsage `json:"promo_code_usages,omitempty"`
 	// PaymentOrders holds the value of the payment_orders edge.
 	PaymentOrders []*PaymentOrder `json:"payment_orders,omitempty"`
+	// ReferralsAsInviter holds the value of the referrals_as_inviter edge.
+	ReferralsAsInviter []*UserReferral `json:"referrals_as_inviter,omitempty"`
+	// ReferralsAsInvitee holds the value of the referrals_as_invitee edge.
+	ReferralsAsInvitee []*UserReferral `json:"referrals_as_invitee,omitempty"`
 	// AuthIdentities holds the value of the auth_identities edge.
 	AuthIdentities []*AuthIdentity `json:"auth_identities,omitempty"`
 	// PendingAuthSessions holds the value of the pending_auth_sessions edge.
@@ -99,7 +105,7 @@ type UserEdges struct {
 	UserAllowedGroups []*UserAllowedGroup `json:"user_allowed_groups,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [13]bool
+	loadedTypes [15]bool
 }
 
 // APIKeysOrErr returns the APIKeys value or an error if the edge
@@ -192,10 +198,28 @@ func (e UserEdges) PaymentOrdersOrErr() ([]*PaymentOrder, error) {
 	return nil, &NotLoadedError{edge: "payment_orders"}
 }
 
+// ReferralsAsInviterOrErr returns the ReferralsAsInviter value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ReferralsAsInviterOrErr() ([]*UserReferral, error) {
+	if e.loadedTypes[10] {
+		return e.ReferralsAsInviter, nil
+	}
+	return nil, &NotLoadedError{edge: "referrals_as_inviter"}
+}
+
+// ReferralsAsInviteeOrErr returns the ReferralsAsInvitee value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ReferralsAsInviteeOrErr() ([]*UserReferral, error) {
+	if e.loadedTypes[11] {
+		return e.ReferralsAsInvitee, nil
+	}
+	return nil, &NotLoadedError{edge: "referrals_as_invitee"}
+}
+
 // AuthIdentitiesOrErr returns the AuthIdentities value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) AuthIdentitiesOrErr() ([]*AuthIdentity, error) {
-	if e.loadedTypes[10] {
+	if e.loadedTypes[12] {
 		return e.AuthIdentities, nil
 	}
 	return nil, &NotLoadedError{edge: "auth_identities"}
@@ -204,7 +228,7 @@ func (e UserEdges) AuthIdentitiesOrErr() ([]*AuthIdentity, error) {
 // PendingAuthSessionsOrErr returns the PendingAuthSessions value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) PendingAuthSessionsOrErr() ([]*PendingAuthSession, error) {
-	if e.loadedTypes[11] {
+	if e.loadedTypes[13] {
 		return e.PendingAuthSessions, nil
 	}
 	return nil, &NotLoadedError{edge: "pending_auth_sessions"}
@@ -213,7 +237,7 @@ func (e UserEdges) PendingAuthSessionsOrErr() ([]*PendingAuthSession, error) {
 // UserAllowedGroupsOrErr returns the UserAllowedGroups value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) UserAllowedGroupsOrErr() ([]*UserAllowedGroup, error) {
-	if e.loadedTypes[12] {
+	if e.loadedTypes[14] {
 		return e.UserAllowedGroups, nil
 	}
 	return nil, &NotLoadedError{edge: "user_allowed_groups"}
@@ -224,13 +248,13 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldTotpEnabled, user.FieldBalanceNotifyEnabled:
+		case user.FieldBalanceNotifyEnabled, user.FieldTotpEnabled:
 			values[i] = new(sql.NullBool)
 		case user.FieldBalance, user.FieldBalanceNotifyThreshold, user.FieldTotalRecharged:
 			values[i] = new(sql.NullFloat64)
 		case user.FieldID, user.FieldConcurrency, user.FieldRpmLimit:
 			values[i] = new(sql.NullInt64)
-		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldStatus, user.FieldUsername, user.FieldNotes, user.FieldTotpSecretEncrypted, user.FieldSignupSource, user.FieldBalanceNotifyThresholdType, user.FieldBalanceNotifyExtraEmails:
+		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldBalanceNotifyExtraEmails, user.FieldBalanceNotifyThresholdType, user.FieldStatus, user.FieldUsername, user.FieldNotes, user.FieldTotpSecretEncrypted, user.FieldSignupSource, user.FieldReferralCode:
 			values[i] = new(sql.NullString)
 		case user.FieldCreatedAt, user.FieldUpdatedAt, user.FieldDeletedAt, user.FieldTotpEnabledAt, user.FieldLastLoginAt, user.FieldLastActiveAt:
 			values[i] = new(sql.NullTime)
@@ -298,6 +322,37 @@ func (_m *User) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Balance = value.Float64
 			}
+		case user.FieldBalanceNotifyEnabled:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field balance_notify_enabled", values[i])
+			} else if value.Valid {
+				_m.BalanceNotifyEnabled = value.Bool
+			}
+		case user.FieldBalanceNotifyThreshold:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field balance_notify_threshold", values[i])
+			} else if value.Valid {
+				_m.BalanceNotifyThreshold = new(float64)
+				*_m.BalanceNotifyThreshold = value.Float64
+			}
+		case user.FieldBalanceNotifyExtraEmails:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field balance_notify_extra_emails", values[i])
+			} else if value.Valid {
+				_m.BalanceNotifyExtraEmails = value.String
+			}
+		case user.FieldBalanceNotifyThresholdType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field balance_notify_threshold_type", values[i])
+			} else if value.Valid {
+				_m.BalanceNotifyThresholdType = value.String
+			}
+		case user.FieldTotalRecharged:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field total_recharged", values[i])
+			} else if value.Valid {
+				_m.TotalRecharged = value.Float64
+			}
 		case user.FieldConcurrency:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field concurrency", values[i])
@@ -362,36 +417,12 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				_m.LastActiveAt = new(time.Time)
 				*_m.LastActiveAt = value.Time
 			}
-		case user.FieldBalanceNotifyEnabled:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field balance_notify_enabled", values[i])
-			} else if value.Valid {
-				_m.BalanceNotifyEnabled = value.Bool
-			}
-		case user.FieldBalanceNotifyThresholdType:
+		case user.FieldReferralCode:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field balance_notify_threshold_type", values[i])
+				return fmt.Errorf("unexpected type %T for field referral_code", values[i])
 			} else if value.Valid {
-				_m.BalanceNotifyThresholdType = value.String
-			}
-		case user.FieldBalanceNotifyThreshold:
-			if value, ok := values[i].(*sql.NullFloat64); !ok {
-				return fmt.Errorf("unexpected type %T for field balance_notify_threshold", values[i])
-			} else if value.Valid {
-				_m.BalanceNotifyThreshold = new(float64)
-				*_m.BalanceNotifyThreshold = value.Float64
-			}
-		case user.FieldBalanceNotifyExtraEmails:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field balance_notify_extra_emails", values[i])
-			} else if value.Valid {
-				_m.BalanceNotifyExtraEmails = value.String
-			}
-		case user.FieldTotalRecharged:
-			if value, ok := values[i].(*sql.NullFloat64); !ok {
-				return fmt.Errorf("unexpected type %T for field total_recharged", values[i])
-			} else if value.Valid {
-				_m.TotalRecharged = value.Float64
+				_m.ReferralCode = new(string)
+				*_m.ReferralCode = value.String
 			}
 		case user.FieldRpmLimit:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -462,6 +493,16 @@ func (_m *User) QueryPaymentOrders() *PaymentOrderQuery {
 	return NewUserClient(_m.config).QueryPaymentOrders(_m)
 }
 
+// QueryReferralsAsInviter queries the "referrals_as_inviter" edge of the User entity.
+func (_m *User) QueryReferralsAsInviter() *UserReferralQuery {
+	return NewUserClient(_m.config).QueryReferralsAsInviter(_m)
+}
+
+// QueryReferralsAsInvitee queries the "referrals_as_invitee" edge of the User entity.
+func (_m *User) QueryReferralsAsInvitee() *UserReferralQuery {
+	return NewUserClient(_m.config).QueryReferralsAsInvitee(_m)
+}
+
 // QueryAuthIdentities queries the "auth_identities" edge of the User entity.
 func (_m *User) QueryAuthIdentities() *AuthIdentityQuery {
 	return NewUserClient(_m.config).QueryAuthIdentities(_m)
@@ -523,6 +564,23 @@ func (_m *User) String() string {
 	builder.WriteString("balance=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Balance))
 	builder.WriteString(", ")
+	builder.WriteString("balance_notify_enabled=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BalanceNotifyEnabled))
+	builder.WriteString(", ")
+	if v := _m.BalanceNotifyThreshold; v != nil {
+		builder.WriteString("balance_notify_threshold=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("balance_notify_extra_emails=")
+	builder.WriteString(_m.BalanceNotifyExtraEmails)
+	builder.WriteString(", ")
+	builder.WriteString("balance_notify_threshold_type=")
+	builder.WriteString(_m.BalanceNotifyThresholdType)
+	builder.WriteString(", ")
+	builder.WriteString("total_recharged=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TotalRecharged))
+	builder.WriteString(", ")
 	builder.WriteString("concurrency=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Concurrency))
 	builder.WriteString(", ")
@@ -561,22 +619,10 @@ func (_m *User) String() string {
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")
-	builder.WriteString("balance_notify_enabled=")
-	builder.WriteString(fmt.Sprintf("%v", _m.BalanceNotifyEnabled))
-	builder.WriteString(", ")
-	builder.WriteString("balance_notify_threshold_type=")
-	builder.WriteString(_m.BalanceNotifyThresholdType)
-	builder.WriteString(", ")
-	if v := _m.BalanceNotifyThreshold; v != nil {
-		builder.WriteString("balance_notify_threshold=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
+	if v := _m.ReferralCode; v != nil {
+		builder.WriteString("referral_code=")
+		builder.WriteString(*v)
 	}
-	builder.WriteString(", ")
-	builder.WriteString("balance_notify_extra_emails=")
-	builder.WriteString(_m.BalanceNotifyExtraEmails)
-	builder.WriteString(", ")
-	builder.WriteString("total_recharged=")
-	builder.WriteString(fmt.Sprintf("%v", _m.TotalRecharged))
 	builder.WriteString(", ")
 	builder.WriteString("rpm_limit=")
 	builder.WriteString(fmt.Sprintf("%v", _m.RpmLimit))

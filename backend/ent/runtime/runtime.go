@@ -18,6 +18,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
 	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
+	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
 	"github.com/Wei-Shaw/sub2api/ent/paymentproviderinstance"
 	"github.com/Wei-Shaw/sub2api/ent/pendingauthsession"
 	"github.com/Wei-Shaw/sub2api/ent/promocode"
@@ -35,6 +36,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/userallowedgroup"
 	"github.com/Wei-Shaw/sub2api/ent/userattributedefinition"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
+	"github.com/Wei-Shaw/sub2api/ent/userreferral"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
@@ -767,6 +769,69 @@ func init() {
 	paymentorder.DefaultUpdatedAt = paymentorderDescUpdatedAt.Default.(func() time.Time)
 	// paymentorder.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	paymentorder.UpdateDefaultUpdatedAt = paymentorderDescUpdatedAt.UpdateDefault.(func() time.Time)
+	paymentplanMixin := schema.PaymentPlan{}.Mixin()
+	paymentplanMixinHooks1 := paymentplanMixin[1].Hooks()
+	paymentplan.Hooks[0] = paymentplanMixinHooks1[0]
+	paymentplanMixinInters1 := paymentplanMixin[1].Interceptors()
+	paymentplan.Interceptors[0] = paymentplanMixinInters1[0]
+	paymentplanMixinFields0 := paymentplanMixin[0].Fields()
+	_ = paymentplanMixinFields0
+	paymentplanFields := schema.PaymentPlan{}.Fields()
+	_ = paymentplanFields
+	// paymentplanDescCreatedAt is the schema descriptor for created_at field.
+	paymentplanDescCreatedAt := paymentplanMixinFields0[0].Descriptor()
+	// paymentplan.DefaultCreatedAt holds the default value on creation for the created_at field.
+	paymentplan.DefaultCreatedAt = paymentplanDescCreatedAt.Default.(func() time.Time)
+	// paymentplanDescUpdatedAt is the schema descriptor for updated_at field.
+	paymentplanDescUpdatedAt := paymentplanMixinFields0[1].Descriptor()
+	// paymentplan.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	paymentplan.DefaultUpdatedAt = paymentplanDescUpdatedAt.Default.(func() time.Time)
+	// paymentplan.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	paymentplan.UpdateDefaultUpdatedAt = paymentplanDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// paymentplanDescName is the schema descriptor for name field.
+	paymentplanDescName := paymentplanFields[0].Descriptor()
+	// paymentplan.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	paymentplan.NameValidator = func() func(string) error {
+		validators := paymentplanDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// paymentplanDescDescription is the schema descriptor for description field.
+	paymentplanDescDescription := paymentplanFields[1].Descriptor()
+	// paymentplan.DefaultDescription holds the default value on creation for the description field.
+	paymentplan.DefaultDescription = paymentplanDescDescription.Default.(string)
+	// paymentplanDescBadge is the schema descriptor for badge field.
+	paymentplanDescBadge := paymentplanFields[2].Descriptor()
+	// paymentplan.BadgeValidator is a validator for the "badge" field. It is called by the builders before save.
+	paymentplan.BadgeValidator = paymentplanDescBadge.Validators[0].(func(string) error)
+	// paymentplanDescDurationDays is the schema descriptor for duration_days field.
+	paymentplanDescDurationDays := paymentplanFields[4].Descriptor()
+	// paymentplan.DurationDaysValidator is a validator for the "duration_days" field. It is called by the builders before save.
+	paymentplan.DurationDaysValidator = paymentplanDescDurationDays.Validators[0].(func(int) error)
+	// paymentplanDescPrice is the schema descriptor for price field.
+	paymentplanDescPrice := paymentplanFields[5].Descriptor()
+	// paymentplan.DefaultPrice holds the default value on creation for the price field.
+	paymentplan.DefaultPrice = paymentplanDescPrice.Default.(float64)
+	// paymentplanDescSortOrder is the schema descriptor for sort_order field.
+	paymentplanDescSortOrder := paymentplanFields[7].Descriptor()
+	// paymentplan.DefaultSortOrder holds the default value on creation for the sort_order field.
+	paymentplan.DefaultSortOrder = paymentplanDescSortOrder.Default.(int)
+	// paymentplan.SortOrderValidator is a validator for the "sort_order" field. It is called by the builders before save.
+	paymentplan.SortOrderValidator = paymentplanDescSortOrder.Validators[0].(func(int) error)
+	// paymentplanDescIsActive is the schema descriptor for is_active field.
+	paymentplanDescIsActive := paymentplanFields[8].Descriptor()
+	// paymentplan.DefaultIsActive holds the default value on creation for the is_active field.
+	paymentplan.DefaultIsActive = paymentplanDescIsActive.Default.(bool)
 	paymentproviderinstanceFields := schema.PaymentProviderInstance{}.Fields()
 	_ = paymentproviderinstanceFields
 	// paymentproviderinstanceDescProviderKey is the schema descriptor for provider_key field.
@@ -1533,54 +1598,60 @@ func init() {
 	userDescBalance := userFields[3].Descriptor()
 	// user.DefaultBalance holds the default value on creation for the balance field.
 	user.DefaultBalance = userDescBalance.Default.(float64)
+	// userDescBalanceNotifyEnabled is the schema descriptor for balance_notify_enabled field.
+	userDescBalanceNotifyEnabled := userFields[4].Descriptor()
+	// user.DefaultBalanceNotifyEnabled holds the default value on creation for the balance_notify_enabled field.
+	user.DefaultBalanceNotifyEnabled = userDescBalanceNotifyEnabled.Default.(bool)
+	// userDescBalanceNotifyExtraEmails is the schema descriptor for balance_notify_extra_emails field.
+	userDescBalanceNotifyExtraEmails := userFields[6].Descriptor()
+	// user.DefaultBalanceNotifyExtraEmails holds the default value on creation for the balance_notify_extra_emails field.
+	user.DefaultBalanceNotifyExtraEmails = userDescBalanceNotifyExtraEmails.Default.(string)
+	// userDescBalanceNotifyThresholdType is the schema descriptor for balance_notify_threshold_type field.
+	userDescBalanceNotifyThresholdType := userFields[7].Descriptor()
+	// user.DefaultBalanceNotifyThresholdType holds the default value on creation for the balance_notify_threshold_type field.
+	user.DefaultBalanceNotifyThresholdType = userDescBalanceNotifyThresholdType.Default.(string)
+	// user.BalanceNotifyThresholdTypeValidator is a validator for the "balance_notify_threshold_type" field. It is called by the builders before save.
+	user.BalanceNotifyThresholdTypeValidator = userDescBalanceNotifyThresholdType.Validators[0].(func(string) error)
+	// userDescTotalRecharged is the schema descriptor for total_recharged field.
+	userDescTotalRecharged := userFields[8].Descriptor()
+	// user.DefaultTotalRecharged holds the default value on creation for the total_recharged field.
+	user.DefaultTotalRecharged = userDescTotalRecharged.Default.(float64)
 	// userDescConcurrency is the schema descriptor for concurrency field.
-	userDescConcurrency := userFields[4].Descriptor()
+	userDescConcurrency := userFields[9].Descriptor()
 	// user.DefaultConcurrency holds the default value on creation for the concurrency field.
 	user.DefaultConcurrency = userDescConcurrency.Default.(int)
 	// userDescStatus is the schema descriptor for status field.
-	userDescStatus := userFields[5].Descriptor()
+	userDescStatus := userFields[10].Descriptor()
 	// user.DefaultStatus holds the default value on creation for the status field.
 	user.DefaultStatus = userDescStatus.Default.(string)
 	// user.StatusValidator is a validator for the "status" field. It is called by the builders before save.
 	user.StatusValidator = userDescStatus.Validators[0].(func(string) error)
 	// userDescUsername is the schema descriptor for username field.
-	userDescUsername := userFields[6].Descriptor()
+	userDescUsername := userFields[11].Descriptor()
 	// user.DefaultUsername holds the default value on creation for the username field.
 	user.DefaultUsername = userDescUsername.Default.(string)
 	// user.UsernameValidator is a validator for the "username" field. It is called by the builders before save.
 	user.UsernameValidator = userDescUsername.Validators[0].(func(string) error)
 	// userDescNotes is the schema descriptor for notes field.
-	userDescNotes := userFields[7].Descriptor()
+	userDescNotes := userFields[12].Descriptor()
 	// user.DefaultNotes holds the default value on creation for the notes field.
 	user.DefaultNotes = userDescNotes.Default.(string)
 	// userDescTotpEnabled is the schema descriptor for totp_enabled field.
-	userDescTotpEnabled := userFields[9].Descriptor()
+	userDescTotpEnabled := userFields[14].Descriptor()
 	// user.DefaultTotpEnabled holds the default value on creation for the totp_enabled field.
 	user.DefaultTotpEnabled = userDescTotpEnabled.Default.(bool)
 	// userDescSignupSource is the schema descriptor for signup_source field.
-	userDescSignupSource := userFields[11].Descriptor()
+	userDescSignupSource := userFields[16].Descriptor()
 	// user.DefaultSignupSource holds the default value on creation for the signup_source field.
 	user.DefaultSignupSource = userDescSignupSource.Default.(string)
 	// user.SignupSourceValidator is a validator for the "signup_source" field. It is called by the builders before save.
 	user.SignupSourceValidator = userDescSignupSource.Validators[0].(func(string) error)
-	// userDescBalanceNotifyEnabled is the schema descriptor for balance_notify_enabled field.
-	userDescBalanceNotifyEnabled := userFields[14].Descriptor()
-	// user.DefaultBalanceNotifyEnabled holds the default value on creation for the balance_notify_enabled field.
-	user.DefaultBalanceNotifyEnabled = userDescBalanceNotifyEnabled.Default.(bool)
-	// userDescBalanceNotifyThresholdType is the schema descriptor for balance_notify_threshold_type field.
-	userDescBalanceNotifyThresholdType := userFields[15].Descriptor()
-	// user.DefaultBalanceNotifyThresholdType holds the default value on creation for the balance_notify_threshold_type field.
-	user.DefaultBalanceNotifyThresholdType = userDescBalanceNotifyThresholdType.Default.(string)
-	// userDescBalanceNotifyExtraEmails is the schema descriptor for balance_notify_extra_emails field.
-	userDescBalanceNotifyExtraEmails := userFields[17].Descriptor()
-	// user.DefaultBalanceNotifyExtraEmails holds the default value on creation for the balance_notify_extra_emails field.
-	user.DefaultBalanceNotifyExtraEmails = userDescBalanceNotifyExtraEmails.Default.(string)
-	// userDescTotalRecharged is the schema descriptor for total_recharged field.
-	userDescTotalRecharged := userFields[18].Descriptor()
-	// user.DefaultTotalRecharged holds the default value on creation for the total_recharged field.
-	user.DefaultTotalRecharged = userDescTotalRecharged.Default.(float64)
+	// userDescReferralCode is the schema descriptor for referral_code field.
+	userDescReferralCode := userFields[19].Descriptor()
+	// user.ReferralCodeValidator is a validator for the "referral_code" field. It is called by the builders before save.
+	user.ReferralCodeValidator = userDescReferralCode.Validators[0].(func(string) error)
 	// userDescRpmLimit is the schema descriptor for rpm_limit field.
-	userDescRpmLimit := userFields[19].Descriptor()
+	userDescRpmLimit := userFields[20].Descriptor()
 	// user.DefaultRpmLimit holds the default value on creation for the rpm_limit field.
 	user.DefaultRpmLimit = userDescRpmLimit.Default.(int)
 	userallowedgroupFields := schema.UserAllowedGroup{}.Fields()
@@ -1711,6 +1782,46 @@ func init() {
 	userattributevalueDescValue := userattributevalueFields[2].Descriptor()
 	// userattributevalue.DefaultValue holds the default value on creation for the value field.
 	userattributevalue.DefaultValue = userattributevalueDescValue.Default.(string)
+	userreferralFields := schema.UserReferral{}.Fields()
+	_ = userreferralFields
+	// userreferralDescCode is the schema descriptor for code field.
+	userreferralDescCode := userreferralFields[2].Descriptor()
+	// userreferral.CodeValidator is a validator for the "code" field. It is called by the builders before save.
+	userreferral.CodeValidator = func() func(string) error {
+		validators := userreferralDescCode.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(code string) error {
+			for _, fn := range fns {
+				if err := fn(code); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// userreferralDescInviterRewarded is the schema descriptor for inviter_rewarded field.
+	userreferralDescInviterRewarded := userreferralFields[3].Descriptor()
+	// userreferral.DefaultInviterRewarded holds the default value on creation for the inviter_rewarded field.
+	userreferral.DefaultInviterRewarded = userreferralDescInviterRewarded.Default.(float64)
+	// userreferralDescInviteeRewarded is the schema descriptor for invitee_rewarded field.
+	userreferralDescInviteeRewarded := userreferralFields[4].Descriptor()
+	// userreferral.DefaultInviteeRewarded holds the default value on creation for the invitee_rewarded field.
+	userreferral.DefaultInviteeRewarded = userreferralDescInviteeRewarded.Default.(float64)
+	// userreferralDescInviterRewardSnapshot is the schema descriptor for inviter_reward_snapshot field.
+	userreferralDescInviterRewardSnapshot := userreferralFields[5].Descriptor()
+	// userreferral.DefaultInviterRewardSnapshot holds the default value on creation for the inviter_reward_snapshot field.
+	userreferral.DefaultInviterRewardSnapshot = userreferralDescInviterRewardSnapshot.Default.(float64)
+	// userreferralDescInviteeRewardSnapshot is the schema descriptor for invitee_reward_snapshot field.
+	userreferralDescInviteeRewardSnapshot := userreferralFields[6].Descriptor()
+	// userreferral.DefaultInviteeRewardSnapshot holds the default value on creation for the invitee_reward_snapshot field.
+	userreferral.DefaultInviteeRewardSnapshot = userreferralDescInviteeRewardSnapshot.Default.(float64)
+	// userreferralDescCreatedAt is the schema descriptor for created_at field.
+	userreferralDescCreatedAt := userreferralFields[8].Descriptor()
+	// userreferral.DefaultCreatedAt holds the default value on creation for the created_at field.
+	userreferral.DefaultCreatedAt = userreferralDescCreatedAt.Default.(func() time.Time)
 	usersubscriptionMixin := schema.UserSubscription{}.Mixin()
 	usersubscriptionMixinHooks1 := usersubscriptionMixin[1].Hooks()
 	usersubscription.Hooks[0] = usersubscriptionMixinHooks1[0]

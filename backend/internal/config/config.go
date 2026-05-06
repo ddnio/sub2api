@@ -2634,8 +2634,7 @@ func ValidateFrontendRedirectURL(raw string) error {
 	if raw == "" {
 		return fmt.Errorf("empty url")
 	}
-	if strings.ContainsAny(raw, "
-") {
+	if strings.ContainsAny(raw, "\r\n") {
 		return fmt.Errorf("contains invalid characters")
 	}
 	if strings.HasPrefix(raw, "/") {

@@ -8929,3 +8929,100 @@ func (s *GatewayService) debugLogGatewaySnapshot(tag string, headers http.Header
 	// 写入文件（调试用，并发写入可能交错但不影响可读性）
 	_, _ = f.WriteString(buf.String())
 }
+
+// applyClaudeCodeOAuthMimicryToBody 将"非 Claude Code 客户端 + Claude OAuth 账号"
+// 路径上原本只在 /v1/messages 里做的完整伪装应用到任意 body 上。
+func (s *GatewayService) applyClaudeCodeOAuthMimicryToBody(
+	ctx context.Context,
+	c *gin.Context,
+	account *Account,
+	body []byte,
+	systemRaw any,
+	model string,
+) []byte {
+	if account == nil || !account.IsOAuth() || len(body) == 0 {
+		return body
+	}
+
+	systemRewritten := false
+	if !strings.Contains(strings.ToLower(model), "haiku") {
+		body = rewriteSystemForNonClaudeCode(body, systemRaw)
+		systemRewritten = true
+	}
+
+	normalizeOpts := claudeOAuthNormalizeOptions{stripSystemCacheControl: !systemRewritten}
+
+	if s.identityService != nil && c != nil && c.Request != nil {
+		if fp, err := s.identityService.GetOrCreateFingerprint(ctx, account.ID, c.Request.Header); err == nil && fp != nil {
+			mimicMPT := false
+			if s.settingService != nil {
+				_, mimicMPT, _ = s.settingService.GetGatewayForwardingSettings(ctx)
+			}
+			if !mimicMPT {
+				if uid := s.buildOAuthMetadataUserIDFromBody(ctx, account, fp, body); uid != "" {
+					normalizeOpts.injectMetadata = true
+					normalizeOpts.metadataUserID = uid
+				}
+			}
+		}
+	}
+
+	body, _ = normalizeClaudeOAuthRequestBody(body, model, normalizeOpts)
+
+	body = stripMessageCacheControl(body)
+	body = addMessageCacheBreakpoints(body)
+
+	if rw := buildToolNameRewriteFromBody(body); rw != nil {
+		body = applyToolNameRewriteToBody(body, rw)
+		if c != nil {
+			c.Set(toolNameRewriteKey, rw)
+		}
+	} else {
+		body = applyToolsLastCacheBreakpoint(body)
+	}
+
+	return body
+}
+
+func (s *GatewayService) buildOAuthMetadataUserIDFromBody(
+	ctx context.Context,
+	account *Account,
+	fp *Fingerprint,
+	body []byte,
+) string {
+	_ = ctx
+	if account == nil {
+		return ""
+	}
+	if existing := gjson.GetBytes(body, "metadata.user_id").String(); existing != "" {
+		return ""
+	}
+
+	userID := strings.TrimSpace(account.GetClaudeUserID())
+	if userID == "" && fp != nil {
+		userID = fp.ClientID
+	}
+	if userID == "" {
+		userID = generateClientID()
+	}
+
+	sessionID := uuid.NewString()
+	if hash := hashBodyForSessionSeed(body); hash != "" {
+		sessionID = generateSessionUUID(fmt.Sprintf("%d::%s", account.ID, hash))
+	}
+
+	var uaVersion string
+	if fp != nil {
+		uaVersion = ExtractCLIVersion(fp.UserAgent)
+	}
+	accountUUID := strings.TrimSpace(account.GetExtraString("account_uuid"))
+	return FormatMetadataUserID(userID, accountUUID, sessionID, uaVersion)
+}
+
+func hashBodyForSessionSeed(body []byte) string {
+	if len(body) == 0 {
+		return ""
+	}
+	sum := sha256.Sum256(body)
+	return fmt.Sprintf("%x", sum[:16])
+}

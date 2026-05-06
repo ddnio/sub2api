@@ -22,6 +22,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
+	"github.com/Wei-Shaw/sub2api/ent/userreferral"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 )
 
@@ -111,6 +112,76 @@ func (_c *UserCreate) SetBalance(v float64) *UserCreate {
 func (_c *UserCreate) SetNillableBalance(v *float64) *UserCreate {
 	if v != nil {
 		_c.SetBalance(*v)
+	}
+	return _c
+}
+
+// SetBalanceNotifyEnabled sets the "balance_notify_enabled" field.
+func (_c *UserCreate) SetBalanceNotifyEnabled(v bool) *UserCreate {
+	_c.mutation.SetBalanceNotifyEnabled(v)
+	return _c
+}
+
+// SetNillableBalanceNotifyEnabled sets the "balance_notify_enabled" field if the given value is not nil.
+func (_c *UserCreate) SetNillableBalanceNotifyEnabled(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetBalanceNotifyEnabled(*v)
+	}
+	return _c
+}
+
+// SetBalanceNotifyThreshold sets the "balance_notify_threshold" field.
+func (_c *UserCreate) SetBalanceNotifyThreshold(v float64) *UserCreate {
+	_c.mutation.SetBalanceNotifyThreshold(v)
+	return _c
+}
+
+// SetNillableBalanceNotifyThreshold sets the "balance_notify_threshold" field if the given value is not nil.
+func (_c *UserCreate) SetNillableBalanceNotifyThreshold(v *float64) *UserCreate {
+	if v != nil {
+		_c.SetBalanceNotifyThreshold(*v)
+	}
+	return _c
+}
+
+// SetBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field.
+func (_c *UserCreate) SetBalanceNotifyExtraEmails(v string) *UserCreate {
+	_c.mutation.SetBalanceNotifyExtraEmails(v)
+	return _c
+}
+
+// SetNillableBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field if the given value is not nil.
+func (_c *UserCreate) SetNillableBalanceNotifyExtraEmails(v *string) *UserCreate {
+	if v != nil {
+		_c.SetBalanceNotifyExtraEmails(*v)
+	}
+	return _c
+}
+
+// SetBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field.
+func (_c *UserCreate) SetBalanceNotifyThresholdType(v string) *UserCreate {
+	_c.mutation.SetBalanceNotifyThresholdType(v)
+	return _c
+}
+
+// SetNillableBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field if the given value is not nil.
+func (_c *UserCreate) SetNillableBalanceNotifyThresholdType(v *string) *UserCreate {
+	if v != nil {
+		_c.SetBalanceNotifyThresholdType(*v)
+	}
+	return _c
+}
+
+// SetTotalRecharged sets the "total_recharged" field.
+func (_c *UserCreate) SetTotalRecharged(v float64) *UserCreate {
+	_c.mutation.SetTotalRecharged(v)
+	return _c
+}
+
+// SetNillableTotalRecharged sets the "total_recharged" field if the given value is not nil.
+func (_c *UserCreate) SetNillableTotalRecharged(v *float64) *UserCreate {
+	if v != nil {
+		_c.SetTotalRecharged(*v)
 	}
 	return _c
 }
@@ -255,72 +326,16 @@ func (_c *UserCreate) SetNillableLastActiveAt(v *time.Time) *UserCreate {
 	return _c
 }
 
-// SetBalanceNotifyEnabled sets the "balance_notify_enabled" field.
-func (_c *UserCreate) SetBalanceNotifyEnabled(v bool) *UserCreate {
-	_c.mutation.SetBalanceNotifyEnabled(v)
+// SetReferralCode sets the "referral_code" field.
+func (_c *UserCreate) SetReferralCode(v string) *UserCreate {
+	_c.mutation.SetReferralCode(v)
 	return _c
 }
 
-// SetNillableBalanceNotifyEnabled sets the "balance_notify_enabled" field if the given value is not nil.
-func (_c *UserCreate) SetNillableBalanceNotifyEnabled(v *bool) *UserCreate {
+// SetNillableReferralCode sets the "referral_code" field if the given value is not nil.
+func (_c *UserCreate) SetNillableReferralCode(v *string) *UserCreate {
 	if v != nil {
-		_c.SetBalanceNotifyEnabled(*v)
-	}
-	return _c
-}
-
-// SetBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field.
-func (_c *UserCreate) SetBalanceNotifyThresholdType(v string) *UserCreate {
-	_c.mutation.SetBalanceNotifyThresholdType(v)
-	return _c
-}
-
-// SetNillableBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field if the given value is not nil.
-func (_c *UserCreate) SetNillableBalanceNotifyThresholdType(v *string) *UserCreate {
-	if v != nil {
-		_c.SetBalanceNotifyThresholdType(*v)
-	}
-	return _c
-}
-
-// SetBalanceNotifyThreshold sets the "balance_notify_threshold" field.
-func (_c *UserCreate) SetBalanceNotifyThreshold(v float64) *UserCreate {
-	_c.mutation.SetBalanceNotifyThreshold(v)
-	return _c
-}
-
-// SetNillableBalanceNotifyThreshold sets the "balance_notify_threshold" field if the given value is not nil.
-func (_c *UserCreate) SetNillableBalanceNotifyThreshold(v *float64) *UserCreate {
-	if v != nil {
-		_c.SetBalanceNotifyThreshold(*v)
-	}
-	return _c
-}
-
-// SetBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field.
-func (_c *UserCreate) SetBalanceNotifyExtraEmails(v string) *UserCreate {
-	_c.mutation.SetBalanceNotifyExtraEmails(v)
-	return _c
-}
-
-// SetNillableBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field if the given value is not nil.
-func (_c *UserCreate) SetNillableBalanceNotifyExtraEmails(v *string) *UserCreate {
-	if v != nil {
-		_c.SetBalanceNotifyExtraEmails(*v)
-	}
-	return _c
-}
-
-// SetTotalRecharged sets the "total_recharged" field.
-func (_c *UserCreate) SetTotalRecharged(v float64) *UserCreate {
-	_c.mutation.SetTotalRecharged(v)
-	return _c
-}
-
-// SetNillableTotalRecharged sets the "total_recharged" field if the given value is not nil.
-func (_c *UserCreate) SetNillableTotalRecharged(v *float64) *UserCreate {
-	if v != nil {
-		_c.SetTotalRecharged(*v)
+		_c.SetReferralCode(*v)
 	}
 	return _c
 }
@@ -489,6 +504,36 @@ func (_c *UserCreate) AddPaymentOrders(v ...*PaymentOrder) *UserCreate {
 	return _c.AddPaymentOrderIDs(ids...)
 }
 
+// AddReferralsAsInviterIDs adds the "referrals_as_inviter" edge to the UserReferral entity by IDs.
+func (_c *UserCreate) AddReferralsAsInviterIDs(ids ...int64) *UserCreate {
+	_c.mutation.AddReferralsAsInviterIDs(ids...)
+	return _c
+}
+
+// AddReferralsAsInviter adds the "referrals_as_inviter" edges to the UserReferral entity.
+func (_c *UserCreate) AddReferralsAsInviter(v ...*UserReferral) *UserCreate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddReferralsAsInviterIDs(ids...)
+}
+
+// AddReferralsAsInviteeIDs adds the "referrals_as_invitee" edge to the UserReferral entity by IDs.
+func (_c *UserCreate) AddReferralsAsInviteeIDs(ids ...int64) *UserCreate {
+	_c.mutation.AddReferralsAsInviteeIDs(ids...)
+	return _c
+}
+
+// AddReferralsAsInvitee adds the "referrals_as_invitee" edges to the UserReferral entity.
+func (_c *UserCreate) AddReferralsAsInvitee(v ...*UserReferral) *UserCreate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddReferralsAsInviteeIDs(ids...)
+}
+
 // AddAuthIdentityIDs adds the "auth_identities" edge to the AuthIdentity entity by IDs.
 func (_c *UserCreate) AddAuthIdentityIDs(ids ...int64) *UserCreate {
 	_c.mutation.AddAuthIdentityIDs(ids...)
@@ -578,6 +623,22 @@ func (_c *UserCreate) defaults() error {
 		v := user.DefaultBalance
 		_c.mutation.SetBalance(v)
 	}
+	if _, ok := _c.mutation.BalanceNotifyEnabled(); !ok {
+		v := user.DefaultBalanceNotifyEnabled
+		_c.mutation.SetBalanceNotifyEnabled(v)
+	}
+	if _, ok := _c.mutation.BalanceNotifyExtraEmails(); !ok {
+		v := user.DefaultBalanceNotifyExtraEmails
+		_c.mutation.SetBalanceNotifyExtraEmails(v)
+	}
+	if _, ok := _c.mutation.BalanceNotifyThresholdType(); !ok {
+		v := user.DefaultBalanceNotifyThresholdType
+		_c.mutation.SetBalanceNotifyThresholdType(v)
+	}
+	if _, ok := _c.mutation.TotalRecharged(); !ok {
+		v := user.DefaultTotalRecharged
+		_c.mutation.SetTotalRecharged(v)
+	}
 	if _, ok := _c.mutation.Concurrency(); !ok {
 		v := user.DefaultConcurrency
 		_c.mutation.SetConcurrency(v)
@@ -601,22 +662,6 @@ func (_c *UserCreate) defaults() error {
 	if _, ok := _c.mutation.SignupSource(); !ok {
 		v := user.DefaultSignupSource
 		_c.mutation.SetSignupSource(v)
-	}
-	if _, ok := _c.mutation.BalanceNotifyEnabled(); !ok {
-		v := user.DefaultBalanceNotifyEnabled
-		_c.mutation.SetBalanceNotifyEnabled(v)
-	}
-	if _, ok := _c.mutation.BalanceNotifyThresholdType(); !ok {
-		v := user.DefaultBalanceNotifyThresholdType
-		_c.mutation.SetBalanceNotifyThresholdType(v)
-	}
-	if _, ok := _c.mutation.BalanceNotifyExtraEmails(); !ok {
-		v := user.DefaultBalanceNotifyExtraEmails
-		_c.mutation.SetBalanceNotifyExtraEmails(v)
-	}
-	if _, ok := _c.mutation.TotalRecharged(); !ok {
-		v := user.DefaultTotalRecharged
-		_c.mutation.SetTotalRecharged(v)
 	}
 	if _, ok := _c.mutation.RpmLimit(); !ok {
 		v := user.DefaultRpmLimit
@@ -660,6 +705,23 @@ func (_c *UserCreate) check() error {
 	if _, ok := _c.mutation.Balance(); !ok {
 		return &ValidationError{Name: "balance", err: errors.New(`ent: missing required field "User.balance"`)}
 	}
+	if _, ok := _c.mutation.BalanceNotifyEnabled(); !ok {
+		return &ValidationError{Name: "balance_notify_enabled", err: errors.New(`ent: missing required field "User.balance_notify_enabled"`)}
+	}
+	if _, ok := _c.mutation.BalanceNotifyExtraEmails(); !ok {
+		return &ValidationError{Name: "balance_notify_extra_emails", err: errors.New(`ent: missing required field "User.balance_notify_extra_emails"`)}
+	}
+	if _, ok := _c.mutation.BalanceNotifyThresholdType(); !ok {
+		return &ValidationError{Name: "balance_notify_threshold_type", err: errors.New(`ent: missing required field "User.balance_notify_threshold_type"`)}
+	}
+	if v, ok := _c.mutation.BalanceNotifyThresholdType(); ok {
+		if err := user.BalanceNotifyThresholdTypeValidator(v); err != nil {
+			return &ValidationError{Name: "balance_notify_threshold_type", err: fmt.Errorf(`ent: validator failed for field "User.balance_notify_threshold_type": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.TotalRecharged(); !ok {
+		return &ValidationError{Name: "total_recharged", err: errors.New(`ent: missing required field "User.total_recharged"`)}
+	}
 	if _, ok := _c.mutation.Concurrency(); !ok {
 		return &ValidationError{Name: "concurrency", err: errors.New(`ent: missing required field "User.concurrency"`)}
 	}
@@ -693,17 +755,10 @@ func (_c *UserCreate) check() error {
 			return &ValidationError{Name: "signup_source", err: fmt.Errorf(`ent: validator failed for field "User.signup_source": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.BalanceNotifyEnabled(); !ok {
-		return &ValidationError{Name: "balance_notify_enabled", err: errors.New(`ent: missing required field "User.balance_notify_enabled"`)}
-	}
-	if _, ok := _c.mutation.BalanceNotifyThresholdType(); !ok {
-		return &ValidationError{Name: "balance_notify_threshold_type", err: errors.New(`ent: missing required field "User.balance_notify_threshold_type"`)}
-	}
-	if _, ok := _c.mutation.BalanceNotifyExtraEmails(); !ok {
-		return &ValidationError{Name: "balance_notify_extra_emails", err: errors.New(`ent: missing required field "User.balance_notify_extra_emails"`)}
-	}
-	if _, ok := _c.mutation.TotalRecharged(); !ok {
-		return &ValidationError{Name: "total_recharged", err: errors.New(`ent: missing required field "User.total_recharged"`)}
+	if v, ok := _c.mutation.ReferralCode(); ok {
+		if err := user.ReferralCodeValidator(v); err != nil {
+			return &ValidationError{Name: "referral_code", err: fmt.Errorf(`ent: validator failed for field "User.referral_code": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.RpmLimit(); !ok {
 		return &ValidationError{Name: "rpm_limit", err: errors.New(`ent: missing required field "User.rpm_limit"`)}
@@ -763,6 +818,26 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldBalance, field.TypeFloat64, value)
 		_node.Balance = value
 	}
+	if value, ok := _c.mutation.BalanceNotifyEnabled(); ok {
+		_spec.SetField(user.FieldBalanceNotifyEnabled, field.TypeBool, value)
+		_node.BalanceNotifyEnabled = value
+	}
+	if value, ok := _c.mutation.BalanceNotifyThreshold(); ok {
+		_spec.SetField(user.FieldBalanceNotifyThreshold, field.TypeFloat64, value)
+		_node.BalanceNotifyThreshold = &value
+	}
+	if value, ok := _c.mutation.BalanceNotifyExtraEmails(); ok {
+		_spec.SetField(user.FieldBalanceNotifyExtraEmails, field.TypeString, value)
+		_node.BalanceNotifyExtraEmails = value
+	}
+	if value, ok := _c.mutation.BalanceNotifyThresholdType(); ok {
+		_spec.SetField(user.FieldBalanceNotifyThresholdType, field.TypeString, value)
+		_node.BalanceNotifyThresholdType = value
+	}
+	if value, ok := _c.mutation.TotalRecharged(); ok {
+		_spec.SetField(user.FieldTotalRecharged, field.TypeFloat64, value)
+		_node.TotalRecharged = value
+	}
 	if value, ok := _c.mutation.Concurrency(); ok {
 		_spec.SetField(user.FieldConcurrency, field.TypeInt, value)
 		_node.Concurrency = value
@@ -803,25 +878,9 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldLastActiveAt, field.TypeTime, value)
 		_node.LastActiveAt = &value
 	}
-	if value, ok := _c.mutation.BalanceNotifyEnabled(); ok {
-		_spec.SetField(user.FieldBalanceNotifyEnabled, field.TypeBool, value)
-		_node.BalanceNotifyEnabled = value
-	}
-	if value, ok := _c.mutation.BalanceNotifyThresholdType(); ok {
-		_spec.SetField(user.FieldBalanceNotifyThresholdType, field.TypeString, value)
-		_node.BalanceNotifyThresholdType = value
-	}
-	if value, ok := _c.mutation.BalanceNotifyThreshold(); ok {
-		_spec.SetField(user.FieldBalanceNotifyThreshold, field.TypeFloat64, value)
-		_node.BalanceNotifyThreshold = &value
-	}
-	if value, ok := _c.mutation.BalanceNotifyExtraEmails(); ok {
-		_spec.SetField(user.FieldBalanceNotifyExtraEmails, field.TypeString, value)
-		_node.BalanceNotifyExtraEmails = value
-	}
-	if value, ok := _c.mutation.TotalRecharged(); ok {
-		_spec.SetField(user.FieldTotalRecharged, field.TypeFloat64, value)
-		_node.TotalRecharged = value
+	if value, ok := _c.mutation.ReferralCode(); ok {
+		_spec.SetField(user.FieldReferralCode, field.TypeString, value)
+		_node.ReferralCode = &value
 	}
 	if value, ok := _c.mutation.RpmLimit(); ok {
 		_spec.SetField(user.FieldRpmLimit, field.TypeInt, value)
@@ -984,6 +1043,38 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ReferralsAsInviterIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviterTable,
+			Columns: []string{user.ReferralsAsInviterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ReferralsAsInviteeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReferralsAsInviteeTable,
+			Columns: []string{user.ReferralsAsInviteeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userreferral.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {
@@ -1159,6 +1250,84 @@ func (u *UserUpsert) AddBalance(v float64) *UserUpsert {
 	return u
 }
 
+// SetBalanceNotifyEnabled sets the "balance_notify_enabled" field.
+func (u *UserUpsert) SetBalanceNotifyEnabled(v bool) *UserUpsert {
+	u.Set(user.FieldBalanceNotifyEnabled, v)
+	return u
+}
+
+// UpdateBalanceNotifyEnabled sets the "balance_notify_enabled" field to the value that was provided on create.
+func (u *UserUpsert) UpdateBalanceNotifyEnabled() *UserUpsert {
+	u.SetExcluded(user.FieldBalanceNotifyEnabled)
+	return u
+}
+
+// SetBalanceNotifyThreshold sets the "balance_notify_threshold" field.
+func (u *UserUpsert) SetBalanceNotifyThreshold(v float64) *UserUpsert {
+	u.Set(user.FieldBalanceNotifyThreshold, v)
+	return u
+}
+
+// UpdateBalanceNotifyThreshold sets the "balance_notify_threshold" field to the value that was provided on create.
+func (u *UserUpsert) UpdateBalanceNotifyThreshold() *UserUpsert {
+	u.SetExcluded(user.FieldBalanceNotifyThreshold)
+	return u
+}
+
+// AddBalanceNotifyThreshold adds v to the "balance_notify_threshold" field.
+func (u *UserUpsert) AddBalanceNotifyThreshold(v float64) *UserUpsert {
+	u.Add(user.FieldBalanceNotifyThreshold, v)
+	return u
+}
+
+// ClearBalanceNotifyThreshold clears the value of the "balance_notify_threshold" field.
+func (u *UserUpsert) ClearBalanceNotifyThreshold() *UserUpsert {
+	u.SetNull(user.FieldBalanceNotifyThreshold)
+	return u
+}
+
+// SetBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field.
+func (u *UserUpsert) SetBalanceNotifyExtraEmails(v string) *UserUpsert {
+	u.Set(user.FieldBalanceNotifyExtraEmails, v)
+	return u
+}
+
+// UpdateBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field to the value that was provided on create.
+func (u *UserUpsert) UpdateBalanceNotifyExtraEmails() *UserUpsert {
+	u.SetExcluded(user.FieldBalanceNotifyExtraEmails)
+	return u
+}
+
+// SetBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field.
+func (u *UserUpsert) SetBalanceNotifyThresholdType(v string) *UserUpsert {
+	u.Set(user.FieldBalanceNotifyThresholdType, v)
+	return u
+}
+
+// UpdateBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field to the value that was provided on create.
+func (u *UserUpsert) UpdateBalanceNotifyThresholdType() *UserUpsert {
+	u.SetExcluded(user.FieldBalanceNotifyThresholdType)
+	return u
+}
+
+// SetTotalRecharged sets the "total_recharged" field.
+func (u *UserUpsert) SetTotalRecharged(v float64) *UserUpsert {
+	u.Set(user.FieldTotalRecharged, v)
+	return u
+}
+
+// UpdateTotalRecharged sets the "total_recharged" field to the value that was provided on create.
+func (u *UserUpsert) UpdateTotalRecharged() *UserUpsert {
+	u.SetExcluded(user.FieldTotalRecharged)
+	return u
+}
+
+// AddTotalRecharged adds v to the "total_recharged" field.
+func (u *UserUpsert) AddTotalRecharged(v float64) *UserUpsert {
+	u.Add(user.FieldTotalRecharged, v)
+	return u
+}
+
 // SetConcurrency sets the "concurrency" field.
 func (u *UserUpsert) SetConcurrency(v int) *UserUpsert {
 	u.Set(user.FieldConcurrency, v)
@@ -1309,81 +1478,21 @@ func (u *UserUpsert) ClearLastActiveAt() *UserUpsert {
 	return u
 }
 
-// SetBalanceNotifyEnabled sets the "balance_notify_enabled" field.
-func (u *UserUpsert) SetBalanceNotifyEnabled(v bool) *UserUpsert {
-	u.Set(user.FieldBalanceNotifyEnabled, v)
+// SetReferralCode sets the "referral_code" field.
+func (u *UserUpsert) SetReferralCode(v string) *UserUpsert {
+	u.Set(user.FieldReferralCode, v)
 	return u
 }
 
-// UpdateBalanceNotifyEnabled sets the "balance_notify_enabled" field to the value that was provided on create.
-func (u *UserUpsert) UpdateBalanceNotifyEnabled() *UserUpsert {
-	u.SetExcluded(user.FieldBalanceNotifyEnabled)
+// UpdateReferralCode sets the "referral_code" field to the value that was provided on create.
+func (u *UserUpsert) UpdateReferralCode() *UserUpsert {
+	u.SetExcluded(user.FieldReferralCode)
 	return u
 }
 
-// SetBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field.
-func (u *UserUpsert) SetBalanceNotifyThresholdType(v string) *UserUpsert {
-	u.Set(user.FieldBalanceNotifyThresholdType, v)
-	return u
-}
-
-// UpdateBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field to the value that was provided on create.
-func (u *UserUpsert) UpdateBalanceNotifyThresholdType() *UserUpsert {
-	u.SetExcluded(user.FieldBalanceNotifyThresholdType)
-	return u
-}
-
-// SetBalanceNotifyThreshold sets the "balance_notify_threshold" field.
-func (u *UserUpsert) SetBalanceNotifyThreshold(v float64) *UserUpsert {
-	u.Set(user.FieldBalanceNotifyThreshold, v)
-	return u
-}
-
-// UpdateBalanceNotifyThreshold sets the "balance_notify_threshold" field to the value that was provided on create.
-func (u *UserUpsert) UpdateBalanceNotifyThreshold() *UserUpsert {
-	u.SetExcluded(user.FieldBalanceNotifyThreshold)
-	return u
-}
-
-// AddBalanceNotifyThreshold adds v to the "balance_notify_threshold" field.
-func (u *UserUpsert) AddBalanceNotifyThreshold(v float64) *UserUpsert {
-	u.Add(user.FieldBalanceNotifyThreshold, v)
-	return u
-}
-
-// ClearBalanceNotifyThreshold clears the value of the "balance_notify_threshold" field.
-func (u *UserUpsert) ClearBalanceNotifyThreshold() *UserUpsert {
-	u.SetNull(user.FieldBalanceNotifyThreshold)
-	return u
-}
-
-// SetBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field.
-func (u *UserUpsert) SetBalanceNotifyExtraEmails(v string) *UserUpsert {
-	u.Set(user.FieldBalanceNotifyExtraEmails, v)
-	return u
-}
-
-// UpdateBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field to the value that was provided on create.
-func (u *UserUpsert) UpdateBalanceNotifyExtraEmails() *UserUpsert {
-	u.SetExcluded(user.FieldBalanceNotifyExtraEmails)
-	return u
-}
-
-// SetTotalRecharged sets the "total_recharged" field.
-func (u *UserUpsert) SetTotalRecharged(v float64) *UserUpsert {
-	u.Set(user.FieldTotalRecharged, v)
-	return u
-}
-
-// UpdateTotalRecharged sets the "total_recharged" field to the value that was provided on create.
-func (u *UserUpsert) UpdateTotalRecharged() *UserUpsert {
-	u.SetExcluded(user.FieldTotalRecharged)
-	return u
-}
-
-// AddTotalRecharged adds v to the "total_recharged" field.
-func (u *UserUpsert) AddTotalRecharged(v float64) *UserUpsert {
-	u.Add(user.FieldTotalRecharged, v)
+// ClearReferralCode clears the value of the "referral_code" field.
+func (u *UserUpsert) ClearReferralCode() *UserUpsert {
+	u.SetNull(user.FieldReferralCode)
 	return u
 }
 
@@ -1545,6 +1654,97 @@ func (u *UserUpsertOne) AddBalance(v float64) *UserUpsertOne {
 func (u *UserUpsertOne) UpdateBalance() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateBalance()
+	})
+}
+
+// SetBalanceNotifyEnabled sets the "balance_notify_enabled" field.
+func (u *UserUpsertOne) SetBalanceNotifyEnabled(v bool) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetBalanceNotifyEnabled(v)
+	})
+}
+
+// UpdateBalanceNotifyEnabled sets the "balance_notify_enabled" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateBalanceNotifyEnabled() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateBalanceNotifyEnabled()
+	})
+}
+
+// SetBalanceNotifyThreshold sets the "balance_notify_threshold" field.
+func (u *UserUpsertOne) SetBalanceNotifyThreshold(v float64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetBalanceNotifyThreshold(v)
+	})
+}
+
+// AddBalanceNotifyThreshold adds v to the "balance_notify_threshold" field.
+func (u *UserUpsertOne) AddBalanceNotifyThreshold(v float64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.AddBalanceNotifyThreshold(v)
+	})
+}
+
+// UpdateBalanceNotifyThreshold sets the "balance_notify_threshold" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateBalanceNotifyThreshold() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateBalanceNotifyThreshold()
+	})
+}
+
+// ClearBalanceNotifyThreshold clears the value of the "balance_notify_threshold" field.
+func (u *UserUpsertOne) ClearBalanceNotifyThreshold() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearBalanceNotifyThreshold()
+	})
+}
+
+// SetBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field.
+func (u *UserUpsertOne) SetBalanceNotifyExtraEmails(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetBalanceNotifyExtraEmails(v)
+	})
+}
+
+// UpdateBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateBalanceNotifyExtraEmails() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateBalanceNotifyExtraEmails()
+	})
+}
+
+// SetBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field.
+func (u *UserUpsertOne) SetBalanceNotifyThresholdType(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetBalanceNotifyThresholdType(v)
+	})
+}
+
+// UpdateBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateBalanceNotifyThresholdType() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateBalanceNotifyThresholdType()
+	})
+}
+
+// SetTotalRecharged sets the "total_recharged" field.
+func (u *UserUpsertOne) SetTotalRecharged(v float64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetTotalRecharged(v)
+	})
+}
+
+// AddTotalRecharged adds v to the "total_recharged" field.
+func (u *UserUpsertOne) AddTotalRecharged(v float64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.AddTotalRecharged(v)
+	})
+}
+
+// UpdateTotalRecharged sets the "total_recharged" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateTotalRecharged() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateTotalRecharged()
 	})
 }
 
@@ -1723,94 +1923,24 @@ func (u *UserUpsertOne) ClearLastActiveAt() *UserUpsertOne {
 	})
 }
 
-// SetBalanceNotifyEnabled sets the "balance_notify_enabled" field.
-func (u *UserUpsertOne) SetBalanceNotifyEnabled(v bool) *UserUpsertOne {
+// SetReferralCode sets the "referral_code" field.
+func (u *UserUpsertOne) SetReferralCode(v string) *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
-		s.SetBalanceNotifyEnabled(v)
+		s.SetReferralCode(v)
 	})
 }
 
-// UpdateBalanceNotifyEnabled sets the "balance_notify_enabled" field to the value that was provided on create.
-func (u *UserUpsertOne) UpdateBalanceNotifyEnabled() *UserUpsertOne {
+// UpdateReferralCode sets the "referral_code" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateReferralCode() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
-		s.UpdateBalanceNotifyEnabled()
+		s.UpdateReferralCode()
 	})
 }
 
-// SetBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field.
-func (u *UserUpsertOne) SetBalanceNotifyThresholdType(v string) *UserUpsertOne {
+// ClearReferralCode clears the value of the "referral_code" field.
+func (u *UserUpsertOne) ClearReferralCode() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
-		s.SetBalanceNotifyThresholdType(v)
-	})
-}
-
-// UpdateBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field to the value that was provided on create.
-func (u *UserUpsertOne) UpdateBalanceNotifyThresholdType() *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.UpdateBalanceNotifyThresholdType()
-	})
-}
-
-// SetBalanceNotifyThreshold sets the "balance_notify_threshold" field.
-func (u *UserUpsertOne) SetBalanceNotifyThreshold(v float64) *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.SetBalanceNotifyThreshold(v)
-	})
-}
-
-// AddBalanceNotifyThreshold adds v to the "balance_notify_threshold" field.
-func (u *UserUpsertOne) AddBalanceNotifyThreshold(v float64) *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.AddBalanceNotifyThreshold(v)
-	})
-}
-
-// UpdateBalanceNotifyThreshold sets the "balance_notify_threshold" field to the value that was provided on create.
-func (u *UserUpsertOne) UpdateBalanceNotifyThreshold() *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.UpdateBalanceNotifyThreshold()
-	})
-}
-
-// ClearBalanceNotifyThreshold clears the value of the "balance_notify_threshold" field.
-func (u *UserUpsertOne) ClearBalanceNotifyThreshold() *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.ClearBalanceNotifyThreshold()
-	})
-}
-
-// SetBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field.
-func (u *UserUpsertOne) SetBalanceNotifyExtraEmails(v string) *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.SetBalanceNotifyExtraEmails(v)
-	})
-}
-
-// UpdateBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field to the value that was provided on create.
-func (u *UserUpsertOne) UpdateBalanceNotifyExtraEmails() *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.UpdateBalanceNotifyExtraEmails()
-	})
-}
-
-// SetTotalRecharged sets the "total_recharged" field.
-func (u *UserUpsertOne) SetTotalRecharged(v float64) *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.SetTotalRecharged(v)
-	})
-}
-
-// AddTotalRecharged adds v to the "total_recharged" field.
-func (u *UserUpsertOne) AddTotalRecharged(v float64) *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.AddTotalRecharged(v)
-	})
-}
-
-// UpdateTotalRecharged sets the "total_recharged" field to the value that was provided on create.
-func (u *UserUpsertOne) UpdateTotalRecharged() *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.UpdateTotalRecharged()
+		s.ClearReferralCode()
 	})
 }
 
@@ -2144,6 +2274,97 @@ func (u *UserUpsertBulk) UpdateBalance() *UserUpsertBulk {
 	})
 }
 
+// SetBalanceNotifyEnabled sets the "balance_notify_enabled" field.
+func (u *UserUpsertBulk) SetBalanceNotifyEnabled(v bool) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetBalanceNotifyEnabled(v)
+	})
+}
+
+// UpdateBalanceNotifyEnabled sets the "balance_notify_enabled" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateBalanceNotifyEnabled() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateBalanceNotifyEnabled()
+	})
+}
+
+// SetBalanceNotifyThreshold sets the "balance_notify_threshold" field.
+func (u *UserUpsertBulk) SetBalanceNotifyThreshold(v float64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetBalanceNotifyThreshold(v)
+	})
+}
+
+// AddBalanceNotifyThreshold adds v to the "balance_notify_threshold" field.
+func (u *UserUpsertBulk) AddBalanceNotifyThreshold(v float64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.AddBalanceNotifyThreshold(v)
+	})
+}
+
+// UpdateBalanceNotifyThreshold sets the "balance_notify_threshold" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateBalanceNotifyThreshold() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateBalanceNotifyThreshold()
+	})
+}
+
+// ClearBalanceNotifyThreshold clears the value of the "balance_notify_threshold" field.
+func (u *UserUpsertBulk) ClearBalanceNotifyThreshold() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearBalanceNotifyThreshold()
+	})
+}
+
+// SetBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field.
+func (u *UserUpsertBulk) SetBalanceNotifyExtraEmails(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetBalanceNotifyExtraEmails(v)
+	})
+}
+
+// UpdateBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateBalanceNotifyExtraEmails() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateBalanceNotifyExtraEmails()
+	})
+}
+
+// SetBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field.
+func (u *UserUpsertBulk) SetBalanceNotifyThresholdType(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetBalanceNotifyThresholdType(v)
+	})
+}
+
+// UpdateBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateBalanceNotifyThresholdType() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateBalanceNotifyThresholdType()
+	})
+}
+
+// SetTotalRecharged sets the "total_recharged" field.
+func (u *UserUpsertBulk) SetTotalRecharged(v float64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetTotalRecharged(v)
+	})
+}
+
+// AddTotalRecharged adds v to the "total_recharged" field.
+func (u *UserUpsertBulk) AddTotalRecharged(v float64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.AddTotalRecharged(v)
+	})
+}
+
+// UpdateTotalRecharged sets the "total_recharged" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateTotalRecharged() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateTotalRecharged()
+	})
+}
+
 // SetConcurrency sets the "concurrency" field.
 func (u *UserUpsertBulk) SetConcurrency(v int) *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
@@ -2319,94 +2540,24 @@ func (u *UserUpsertBulk) ClearLastActiveAt() *UserUpsertBulk {
 	})
 }
 
-// SetBalanceNotifyEnabled sets the "balance_notify_enabled" field.
-func (u *UserUpsertBulk) SetBalanceNotifyEnabled(v bool) *UserUpsertBulk {
+// SetReferralCode sets the "referral_code" field.
+func (u *UserUpsertBulk) SetReferralCode(v string) *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
-		s.SetBalanceNotifyEnabled(v)
+		s.SetReferralCode(v)
 	})
 }
 
-// UpdateBalanceNotifyEnabled sets the "balance_notify_enabled" field to the value that was provided on create.
-func (u *UserUpsertBulk) UpdateBalanceNotifyEnabled() *UserUpsertBulk {
+// UpdateReferralCode sets the "referral_code" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateReferralCode() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
-		s.UpdateBalanceNotifyEnabled()
+		s.UpdateReferralCode()
 	})
 }
 
-// SetBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field.
-func (u *UserUpsertBulk) SetBalanceNotifyThresholdType(v string) *UserUpsertBulk {
+// ClearReferralCode clears the value of the "referral_code" field.
+func (u *UserUpsertBulk) ClearReferralCode() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
-		s.SetBalanceNotifyThresholdType(v)
-	})
-}
-
-// UpdateBalanceNotifyThresholdType sets the "balance_notify_threshold_type" field to the value that was provided on create.
-func (u *UserUpsertBulk) UpdateBalanceNotifyThresholdType() *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.UpdateBalanceNotifyThresholdType()
-	})
-}
-
-// SetBalanceNotifyThreshold sets the "balance_notify_threshold" field.
-func (u *UserUpsertBulk) SetBalanceNotifyThreshold(v float64) *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.SetBalanceNotifyThreshold(v)
-	})
-}
-
-// AddBalanceNotifyThreshold adds v to the "balance_notify_threshold" field.
-func (u *UserUpsertBulk) AddBalanceNotifyThreshold(v float64) *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.AddBalanceNotifyThreshold(v)
-	})
-}
-
-// UpdateBalanceNotifyThreshold sets the "balance_notify_threshold" field to the value that was provided on create.
-func (u *UserUpsertBulk) UpdateBalanceNotifyThreshold() *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.UpdateBalanceNotifyThreshold()
-	})
-}
-
-// ClearBalanceNotifyThreshold clears the value of the "balance_notify_threshold" field.
-func (u *UserUpsertBulk) ClearBalanceNotifyThreshold() *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.ClearBalanceNotifyThreshold()
-	})
-}
-
-// SetBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field.
-func (u *UserUpsertBulk) SetBalanceNotifyExtraEmails(v string) *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.SetBalanceNotifyExtraEmails(v)
-	})
-}
-
-// UpdateBalanceNotifyExtraEmails sets the "balance_notify_extra_emails" field to the value that was provided on create.
-func (u *UserUpsertBulk) UpdateBalanceNotifyExtraEmails() *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.UpdateBalanceNotifyExtraEmails()
-	})
-}
-
-// SetTotalRecharged sets the "total_recharged" field.
-func (u *UserUpsertBulk) SetTotalRecharged(v float64) *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.SetTotalRecharged(v)
-	})
-}
-
-// AddTotalRecharged adds v to the "total_recharged" field.
-func (u *UserUpsertBulk) AddTotalRecharged(v float64) *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.AddTotalRecharged(v)
-	})
-}
-
-// UpdateTotalRecharged sets the "total_recharged" field to the value that was provided on create.
-func (u *UserUpsertBulk) UpdateTotalRecharged() *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.UpdateTotalRecharged()
+		s.ClearReferralCode()
 	})
 }
 

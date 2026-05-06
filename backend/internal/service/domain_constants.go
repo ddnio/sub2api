@@ -53,6 +53,8 @@ const (
 const (
 	AdjustmentTypeAdminBalance     = domain.AdjustmentTypeAdminBalance     // 管理员调整余额
 	AdjustmentTypeAdminConcurrency = domain.AdjustmentTypeAdminConcurrency // 管理员调整并发数
+	AdjustmentTypeReferralInviter  = "ref_inviter"                         // 邀请人奖励
+	AdjustmentTypeReferralInvitee  = "ref_invitee"                         // 被邀请人奖励
 )
 
 // Group subscription type constants
@@ -168,6 +170,7 @@ const (
 	SettingKeyTablePageSizeOptions        = "table_page_size_options"       // 表格可选每页条数（JSON 数组）
 	SettingKeyCustomMenuItems             = "custom_menu_items"             // 自定义菜单项（JSON 数组）
 	SettingKeyCustomEndpoints             = "custom_endpoints"              // 自定义端点列表（JSON 数组）
+	SettingKeyContactChannels             = "contact_channels"              // 悬浮联系按钮渠道列表（JSON 数组）
 
 	// 默认配置
 	SettingKeyDefaultConcurrency   = "default_concurrency"    // 新用户默认并发量
@@ -200,6 +203,11 @@ const (
 
 	// 管理员 API Key
 	SettingKeyAdminAPIKey = "admin_api_key" // 全局管理员 API Key（用于外部系统集成）
+
+	// 推荐码
+	SettingKeyReferralEnabled       = "referral_enabled"        // 推荐码功能总开关
+	SettingKeyReferralInviterAmount = "referral_inviter_amount" // 邀请人奖励金额
+	SettingKeyReferralInviteeAmount = "referral_invitee_amount" // 被邀请人额外奖励金额
 
 	// Gemini 配额策略（JSON）
 	SettingKeyGeminiQuotaPolicy = "gemini_quota_policy"
