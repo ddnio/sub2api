@@ -729,7 +729,9 @@ Range: `v0.1.116..v0.1.117`.
 | `ca204ddd` | Preserve image outputs when text serialization fails | Scratch imported | MERGED/PENDING | Present in scratch merge; still needs targeted serialization/image output tests before release closeout. |
 | `a4e329c1` | Add default GPT-5.5 model | Scratch imported | ADAPTED | Kept fork's existing `gpt-5.5`, `gpt-5.5-mini`, and `gpt-5.5-nano` model catalog entries; discarded the duplicate upstream timestamp-only conflict side. |
 
-Scratch audit evidence recorded 2026-05-06 on branch `scratch/v0.1.117-import-audit`, base `origin/release/v0.1.116` (`63ff13dc`), upstream tag `v0.1.117` (`b0713bfb`). The direct merge is an import-audit rehearsal only; it does not authorize shared test deployment while `v0.1.116` production/main/tag closeout remains unrecorded.
+Scratch audit evidence recorded 2026-05-06 on branch `scratch/v0.1.117-import-audit`, base `origin/release/v0.1.116` (`63ff13dc`), upstream tag `v0.1.117` (`b0713bfb`). The direct merge was an import-audit rehearsal only.
+
+Main-based release candidate evidence recorded 2026-05-06 on branch `rehearsal/v0.1.117-from-main`, base `origin/main` (`18b1b72d`, already containing `release/v0.1.116`), candidate `release/v0.1.117` at `1b79196a`. This second merge was required because the `v0.1.116` main merge tree differed from `origin/release/v0.1.116` by omitting the `fmt` import in `backend/internal/handler/auth_oauth_pending_flow.go` while still using `fmt.Errorf`. The candidate also bumps `backend/cmd/server/VERSION` to `0.1.117` so test smoke can distinguish it from the already deployed 116 release.
 
 Conflict resolution groups:
 
@@ -774,7 +776,22 @@ Scratch local gates:
 - `git diff --name-status --diff-filter=D`: no remaining deletions after restoring `frontend/src/utils/__tests__/usageLoadQueue.spec.ts`.
 - `v0.1.116` production deployment: confirmed by operator on 2026-05-06.
 
-Gate status: scratch rehearsal passed the local import-audit gates, and the `v0.1.116` production deployment prerequisite is now satisfied. Stop before creating/deploying a shared `v0.1.117` test candidate until the `v0.1.116` main merge, ledger closeout, and `fork/v0.1.116` tag status are recorded. Remaining `v0.1.117` release gates include full `go test ./...`, frontend lint/build, migration/checksum preflight, targeted image/gateway tests, targeted payment webhook tests, and shared test smoke after the 116 closeout gate.
+Main-based candidate gates:
+
+- `git fetch origin main`: passed; `origin/main` remained `18b1b72d`.
+- `git merge --no-ff a7130b2e` into `rehearsal/v0.1.117-from-main`: passed, producing merge commit `d1095144`.
+- `git diff --check HEAD`: passed before and after release-label fix.
+- `rg -n "^(<<<<<<<( |$)|=======$|>>>>>>>( |$))" .`: no conflict markers.
+- `git diff origin/main --name-status --diff-filter=D`: no deletions.
+- `cd backend && go test ./cmd/server ./internal/handler ./internal/repository ./internal/service`: passed.
+- `cd backend && go test ./...`: passed.
+- `cd backend && go test ./cmd/server`: passed after `VERSION` changed to `0.1.117`.
+- `cd frontend && pnpm run typecheck`: passed.
+- `cd frontend && pnpm exec vitest run src/utils/__tests__/usageLoadQueue.spec.ts`: 10 tests passed.
+- `cd frontend && pnpm run lint:check`: passed.
+- `cd frontend && pnpm run build`: passed with existing Vite dynamic/static import and chunk-size warnings only.
+
+Gate status: local main-based `release/v0.1.117` candidate is ready for shared test-environment deployment from `1b79196a`. Remaining gate is live test smoke after deployment: `/health`, `/api/v1/settings/public` reporting `"version":"0.1.117"`, unauthenticated `/v1/models` returning 401, relevant admin/user channel-monitor pages, payment/order pages, and severe-log scan with no `panic|fatal|migration failed|preflight failed|postcheck failed|500|404|异常` matches.
 
 ### v0.1.118
 
