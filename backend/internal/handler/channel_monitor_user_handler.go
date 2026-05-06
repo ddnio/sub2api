@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"strings"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/handler/admin"
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
+	"github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -14,6 +16,7 @@ import (
 // ChannelMonitorUserHandler 渠道监控用户只读 handler。
 type ChannelMonitorUserHandler struct {
 	monitorService *service.ChannelMonitorService
+	apiKeyService  *service.APIKeyService
 	settingService *service.SettingService
 }
 
@@ -21,10 +24,12 @@ type ChannelMonitorUserHandler struct {
 // settingService 用于每次请求前读取功能开关；关闭时 List/GetStatus 直接返回空/404。
 func NewChannelMonitorUserHandler(
 	monitorService *service.ChannelMonitorService,
+	apiKeyService *service.APIKeyService,
 	settingService *service.SettingService,
 ) *ChannelMonitorUserHandler {
 	return &ChannelMonitorUserHandler{
 		monitorService: monitorService,
+		apiKeyService:  apiKeyService,
 		settingService: settingService,
 	}
 }
@@ -36,6 +41,40 @@ func (h *ChannelMonitorUserHandler) featureEnabled(c *gin.Context) bool {
 		return true
 	}
 	return h.settingService.GetChannelMonitorRuntime(c.Request.Context()).Enabled
+}
+
+func (h *ChannelMonitorUserHandler) authSubject(c *gin.Context) (middleware.AuthSubject, bool) {
+	subject, ok := middleware.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return middleware.AuthSubject{}, false
+	}
+	return subject, true
+}
+
+func (h *ChannelMonitorUserHandler) userAllowedGroupNames(c *gin.Context, userID int64) (map[string]struct{}, bool) {
+	if h.apiKeyService == nil {
+		response.InternalError(c, "channel monitor user dependency is unavailable")
+		return nil, false
+	}
+	groups, err := h.apiKeyService.GetAvailableGroups(c.Request.Context(), userID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return nil, false
+	}
+	return allowedMonitorGroupNames(groups), true
+}
+
+func allowedMonitorGroupNames(groups []service.Group) map[string]struct{} {
+	allowed := make(map[string]struct{}, len(groups))
+	for _, g := range groups {
+		name := strings.TrimSpace(g.Name)
+		if name == "" {
+			continue
+		}
+		allowed[name] = struct{}{}
+	}
+	return allowed
 }
 
 // --- Response ---
@@ -140,11 +179,19 @@ func userMonitorDetailToResponse(d *service.UserMonitorDetail) *channelMonitorUs
 
 // List GET /api/v1/channel-monitors
 func (h *ChannelMonitorUserHandler) List(c *gin.Context) {
+	subject, ok := h.authSubject(c)
+	if !ok {
+		return
+	}
 	if !h.featureEnabled(c) {
 		response.Success(c, gin.H{"items": []channelMonitorUserListItem{}})
 		return
 	}
-	views, err := h.monitorService.ListUserView(c.Request.Context())
+	allowedGroupNames, ok := h.userAllowedGroupNames(c, subject.UserID)
+	if !ok {
+		return
+	}
+	views, err := h.monitorService.ListUserView(c.Request.Context(), allowedGroupNames)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -158,6 +205,10 @@ func (h *ChannelMonitorUserHandler) List(c *gin.Context) {
 
 // GetStatus GET /api/v1/channel-monitors/:id/status
 func (h *ChannelMonitorUserHandler) GetStatus(c *gin.Context) {
+	subject, ok := h.authSubject(c)
+	if !ok {
+		return
+	}
 	if !h.featureEnabled(c) {
 		response.ErrorFrom(c, service.ErrChannelMonitorNotFound)
 		return
@@ -167,7 +218,11 @@ func (h *ChannelMonitorUserHandler) GetStatus(c *gin.Context) {
 	if !ok {
 		return
 	}
-	detail, err := h.monitorService.GetUserDetail(c.Request.Context(), id)
+	allowedGroupNames, ok := h.userAllowedGroupNames(c, subject.UserID)
+	if !ok {
+		return
+	}
+	detail, err := h.monitorService.GetUserDetail(c.Request.Context(), id, allowedGroupNames)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return

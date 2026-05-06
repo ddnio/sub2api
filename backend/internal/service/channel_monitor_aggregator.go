@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 )
 
 // 渠道监控聚合层：把 latest + availability 拼成 admin/user 视图所需的 summary / detail。
@@ -48,18 +49,19 @@ func (s *ChannelMonitorService) BatchMonitorStatusSummary(
 	return out
 }
 
-// ListUserView 用户只读视图：列出所有 enabled 监控的概览。
+// ListUserView 用户只读视图：列出当前用户可访问分组下 enabled 监控的概览。
 // 使用批量聚合接口避免 N+1：
 //
 //	1 次查 monitors；
 //	1 次批量 latest（含 ping_latency_ms）；
 //	1 次批量 7d availability；
 //	1 次批量 timeline（主模型最近 N 条）。
-func (s *ChannelMonitorService) ListUserView(ctx context.Context) ([]*UserMonitorView, error) {
+func (s *ChannelMonitorService) ListUserView(ctx context.Context, allowedGroupNames map[string]struct{}) ([]*UserMonitorView, error) {
 	monitors, err := s.repo.ListEnabled(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list enabled monitors: %w", err)
 	}
+	monitors = filterUserVisibleMonitors(monitors, allowedGroupNames)
 	if len(monitors) == 0 {
 		return []*UserMonitorView{}, nil
 	}
@@ -75,6 +77,30 @@ func (s *ChannelMonitorService) ListUserView(ctx context.Context) ([]*UserMonito
 		views = append(views, buildUserViewFromSummary(m, summaries[m.ID], primaryLatest, timelineMap[m.ID]))
 	}
 	return views, nil
+}
+
+// filterUserVisibleMonitors keeps only enabled monitors whose group name is
+// explicitly present in the user's available group set.
+func filterUserVisibleMonitors(monitors []*ChannelMonitor, allowedGroupNames map[string]struct{}) []*ChannelMonitor {
+	visible := make([]*ChannelMonitor, 0, len(monitors))
+	for _, m := range monitors {
+		if monitorVisibleToGroupNames(m, allowedGroupNames) {
+			visible = append(visible, m)
+		}
+	}
+	return visible
+}
+
+func monitorVisibleToGroupNames(m *ChannelMonitor, allowedGroupNames map[string]struct{}) bool {
+	if m == nil || !m.Enabled || len(allowedGroupNames) == 0 {
+		return false
+	}
+	groupName := strings.TrimSpace(m.GroupName)
+	if groupName == "" {
+		return false
+	}
+	_, ok := allowedGroupNames[groupName]
+	return ok
 }
 
 // collectMonitorIndexes 把 monitors 列表按 ID 展开为聚合查询所需的三个索引结构。
@@ -127,14 +153,14 @@ func pickLatest(rows []*ChannelMonitorLatest, model string) *ChannelMonitorLates
 	return nil
 }
 
-// GetUserDetail 用户只读视图：单个监控详情（每个模型 7d/15d/30d 可用率与平均延迟）。
+// GetUserDetail 用户只读视图：当前用户可访问分组下的单个监控详情（每个模型 7d/15d/30d 可用率与平均延迟）。
 // 不暴露 api_key。
-func (s *ChannelMonitorService) GetUserDetail(ctx context.Context, id int64) (*UserMonitorDetail, error) {
+func (s *ChannelMonitorService) GetUserDetail(ctx context.Context, id int64, allowedGroupNames map[string]struct{}) (*UserMonitorDetail, error) {
 	m, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	if !m.Enabled {
+	if !monitorVisibleToGroupNames(m, allowedGroupNames) {
 		return nil, ErrChannelMonitorNotFound
 	}
 

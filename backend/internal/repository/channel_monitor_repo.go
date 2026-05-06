@@ -296,7 +296,6 @@ func assignNullInt(dst **int, n sql.NullInt64) {
 // ComputeAvailability 计算指定窗口内每个模型的可用率与平均延迟。
 // "可用" = status IN (operational, degraded)。
 //
-// 数据来源：明细表只保留 1 天；窗口前其余天数走聚合表。
 // 明细保留 30 天（monitorHistoryRetentionDays），窗口 <= 30 天时直接扫 histories，
 // 精度到秒，避免与聚合表 UNION 带来的 UTC 日切精度损失。
 func (r *channelMonitorRepository) ComputeAvailability(ctx context.Context, monitorID int64, windowDays int) ([]*service.ChannelMonitorAvailability, error) {

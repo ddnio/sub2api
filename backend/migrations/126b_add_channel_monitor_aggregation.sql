@@ -1,11 +1,11 @@
 -- Migration: 126_add_channel_monitor_aggregation
--- 渠道监控日聚合：把 channel_monitor_histories 的明细按天聚合，明细只保留 1 天，
--- 聚合保留 30 天。明细和聚合表都用软删除（deleted_at），由 ops cleanup 任务每天
--- 凌晨随运维监控清理一起跑（共享 cron）。
+-- 渠道监控日聚合：把 channel_monitor_histories 的明细按天预聚合到 rollup 表，
+-- 作为未来长窗口/降级查询的兜底。当前读路径直接使用 30 天 raw histories，
+-- rollup 同样保留 30 天并由 ops cleanup 任务每天维护。
 --
 -- 设计要点：
---   - channel_monitor_histories 加 deleted_at 软删除字段（SoftDeleteMixin 全局
---     Hook 会把 DELETE 自动改写成 UPDATE deleted_at = NOW()）。
+--   - channel_monitor_histories 在本迁移先加 deleted_at；后续 127b 会移除该列，
+--     最终策略是 raw histories 物理保留 30 天，避免 read-side 过滤软删除状态。
 --   - channel_monitor_daily_rollups 按 (monitor_id, model, bucket_date) 唯一，
 --     用 ON CONFLICT DO UPDATE 实现幂等回填，状态分布和延迟分子分母都保留，
 --     方便后续按窗口任意求加权可用率和均值。

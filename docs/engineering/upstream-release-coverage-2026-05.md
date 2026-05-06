@@ -761,7 +761,7 @@ PR #1850 subitem ledger:
 | Settings/public settings/feature flags | `7da51240`, `ba98243c`, `84b03efa`, `1f81b779`, `1949425a`, `5eedf782`, `6f04c25e` | MERGED | Public settings defaults and DTO additions imported; frontend typecheck passed. |
 | Admin/user monitor UI | `a1425b45`, `0d01bd90`, `ba98243c`, `0c48f08f`, `800802b8`, `0dcc0e05`, `f7c8377a`, `6699d337`, `09fd83ab` | MERGED/PENDING | Frontend typecheck passed; component/build/visual smoke still required before release closeout. |
 | Payment webhook unknown-order behavior | `75e1b40f`, `d5dac84e` | MERGED/PENDING | Payment webhook files imported while preserving fork payment providers; targeted payment webhook test still required. |
-| Cleanup/release sync/test-only commits | `0a80ec80`, `748a84d8`, `49787269`, `67518a59`, `375cce29`, `5e060b22`, `ac114738` | ADAPTED | Scratch merge accepted relevant upstream state but rejected fork-protected deletions. |
+| Cleanup/release sync/test-only commits | `0a80ec80`, `748a84d8`, `49787269`, `67518a59`, `375cce29`, `5e060b22`, `ac114738` | ADAPTED | Scratch merge accepted relevant upstream state, rejected fork-protected deletions, and restored the `usageLoadQueue` regression test that was dropped during the direct merge. |
 
 Scratch local gates:
 
@@ -771,9 +771,10 @@ Scratch local gates:
 - `cd frontend && pnpm run typecheck`: passed.
 - `rg -n "^<<<<<<<|^=======$|^>>>>>>>" .`: no conflict markers.
 - `git diff --check`: passed.
-- `git diff --name-status --diff-filter=D`: no deletions.
+- `git diff --name-status --diff-filter=D`: no remaining deletions after restoring `frontend/src/utils/__tests__/usageLoadQueue.spec.ts`.
+- `v0.1.116` production deployment: confirmed by operator on 2026-05-06.
 
-Gate status: scratch rehearsal passed the local import-audit gates. Stop before creating/deploying a shared `v0.1.117` test candidate until `v0.1.116` production deployment, main merge, ledger closeout, and `fork/v0.1.116` tag status are recorded. Remaining `v0.1.117` release gates include full `go test ./...`, frontend lint/build, migration/checksum preflight, targeted image/gateway tests, targeted payment webhook tests, and shared test smoke after the 116 closeout gate.
+Gate status: scratch rehearsal passed the local import-audit gates, and the `v0.1.116` production deployment prerequisite is now satisfied. Stop before creating/deploying a shared `v0.1.117` test candidate until the `v0.1.116` main merge, ledger closeout, and `fork/v0.1.116` tag status are recorded. Remaining `v0.1.117` release gates include full `go test ./...`, frontend lint/build, migration/checksum preflight, targeted image/gateway tests, targeted payment webhook tests, and shared test smoke after the 116 closeout gate.
 
 ### v0.1.118
 

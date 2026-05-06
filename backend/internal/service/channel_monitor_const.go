@@ -18,10 +18,11 @@ const (
 	// monitorHistoryRetentionDays 明细历史保留天数。
 	// 60s 默认间隔 * 30 天 ≈ 43200 行/monitor/model，一般部署总量 <= 2M 行，
 	// PG 无压力；所以直接保留完整明细一个月，可用率查询可以全走原始行不依赖聚合。
-	// 聚合表 channel_monitor_daily_rollups 仍然保留，作为长期历史回填/降级查询的兜底。
+	// 聚合表 channel_monitor_daily_rollups 仍然保留并维护，作为未来长窗口历史/降级查询的预聚合兜底；
+	// 当前 7/15/30 天读路径直接查询 raw histories。
 	monitorHistoryRetentionDays = 30
 	// monitorRollupRetentionDays 日聚合保留天数。
-	// 日聚合行由 RunDailyMaintenance 在超过该窗口后软删。
+	// 日聚合行由 RunDailyMaintenance 在超过该窗口后清理。
 	monitorRollupRetentionDays = 30
 	// monitorMaintenanceMaxDaysPerRun 单次维护任务最多聚合的天数。
 	// 用于限制首次上线回填（30 天）+ 少量余量，避免长事务。

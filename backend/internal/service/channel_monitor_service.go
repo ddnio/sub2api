@@ -341,7 +341,7 @@ func (s *ChannelMonitorService) ListEnabledMonitors(ctx context.Context) ([]*Cha
 }
 
 // cleanupOldHistory 删除 monitorHistoryRetentionDays 天之前的明细历史记录。
-// 由 RunDailyMaintenance 调用；SoftDeleteMixin 自动把 DELETE 改为 UPDATE deleted_at。
+// 当前 schema 不再为 histories 使用 deleted_at；清理走分批物理删除。
 func (s *ChannelMonitorService) cleanupOldHistory(ctx context.Context) error {
 	before := time.Now().UTC().AddDate(0, 0, -monitorHistoryRetentionDays)
 	deleted, err := s.repo.DeleteHistoryBefore(ctx, before)
@@ -355,7 +355,7 @@ func (s *ChannelMonitorService) cleanupOldHistory(ctx context.Context) error {
 	return nil
 }
 
-// RunDailyMaintenance 每日维护任务：聚合昨天之前未聚合的明细，软删过期明细和聚合。
+// RunDailyMaintenance 每日维护任务：预聚合昨天之前未聚合的明细，清理过期明细和聚合。
 // 由 OpsCleanupService 的 cron 调度触发（共享 schedule 和 leader lock）。
 //
 // 幂等性：
@@ -429,7 +429,7 @@ func (s *ChannelMonitorService) resolveAggregationStart(watermark *time.Time, to
 	return watermark.UTC().Truncate(24 * time.Hour).Add(24 * time.Hour)
 }
 
-// cleanupOldRollups 软删 bucket_date < today - monitorRollupRetentionDays 的日聚合行。
+// cleanupOldRollups 清理 bucket_date < today - monitorRollupRetentionDays 的日聚合行。
 func (s *ChannelMonitorService) cleanupOldRollups(ctx context.Context, today time.Time) error {
 	cutoff := today.AddDate(0, 0, -monitorRollupRetentionDays)
 	deleted, err := s.repo.DeleteRollupsBefore(ctx, cutoff)
