@@ -5,7 +5,9 @@ package service
 import (
 	"context"
 	"math"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -82,6 +84,81 @@ func TestValidateExclusiveRate_BoundaryAndInvalid(t *testing.T) {
 	require.Error(t, validateExclusiveRate(&negInf))
 }
 
+func TestAccrueInviteRebate_SkipsWhenAffiliateDisabled(t *testing.T) {
+	t.Parallel()
+
+	repo := &fakeAffiliateRepository{
+		summaries: map[int64]*AffiliateSummary{},
+	}
+	settings := newAffiliateTestSettings(map[string]string{
+		SettingKeyAffiliateEnabled:    "false",
+		SettingKeyAffiliateRebateRate: "20",
+	})
+	svc := NewAffiliateService(repo, settings, nil, nil)
+
+	rebate, err := svc.AccrueInviteRebate(context.Background(), 2, 100)
+	require.NoError(t, err)
+	require.InDelta(t, 0.0, rebate, 1e-9)
+	require.Zero(t, repo.ensureCalls)
+	require.Empty(t, repo.accrueCalls)
+}
+
+func TestAccrueInviteRebate_SkipsWhenInviteeExpired(t *testing.T) {
+	t.Parallel()
+
+	inviterID := int64(10)
+	inviteeID := int64(20)
+	repo := &fakeAffiliateRepository{
+		summaries: map[int64]*AffiliateSummary{
+			inviteeID: {UserID: inviteeID, InviterID: &inviterID, CreatedAt: time.Now().Add(-48 * time.Hour)},
+			inviterID: {UserID: inviterID, CreatedAt: time.Now()},
+		},
+	}
+	settings := newAffiliateTestSettings(map[string]string{
+		SettingKeyAffiliateEnabled:            "true",
+		SettingKeyAffiliateRebateRate:         "20",
+		SettingKeyAffiliateRebateDurationDays: "1",
+	})
+	svc := NewAffiliateService(repo, settings, nil, nil)
+
+	rebate, err := svc.AccrueInviteRebate(context.Background(), inviteeID, 100)
+	require.NoError(t, err)
+	require.InDelta(t, 0.0, rebate, 1e-9)
+	require.Empty(t, repo.accrueCalls)
+}
+
+func TestAccrueInviteRebate_AppliesPerInviteeCapAndFreezeHours(t *testing.T) {
+	t.Parallel()
+
+	inviterID := int64(10)
+	inviteeID := int64(20)
+	repo := &fakeAffiliateRepository{
+		summaries: map[int64]*AffiliateSummary{
+			inviteeID: {UserID: inviteeID, InviterID: &inviterID, CreatedAt: time.Now()},
+			inviterID: {UserID: inviterID, CreatedAt: time.Now()},
+		},
+		accruedByPair: map[affiliatePair]float64{
+			{inviterID: inviterID, inviteeID: inviteeID}: 4,
+		},
+	}
+	settings := newAffiliateTestSettings(map[string]string{
+		SettingKeyAffiliateEnabled:             "true",
+		SettingKeyAffiliateRebateRate:          "20",
+		SettingKeyAffiliateRebateFreezeHours:   "24",
+		SettingKeyAffiliateRebatePerInviteeCap: "5",
+	})
+	svc := NewAffiliateService(repo, settings, nil, nil)
+
+	rebate, err := svc.AccrueInviteRebate(context.Background(), inviteeID, 100)
+	require.NoError(t, err)
+	require.InDelta(t, 1.0, rebate, 1e-9)
+	require.Len(t, repo.accrueCalls, 1)
+	require.Equal(t, inviterID, repo.accrueCalls[0].inviterID)
+	require.Equal(t, inviteeID, repo.accrueCalls[0].inviteeID)
+	require.InDelta(t, 1.0, repo.accrueCalls[0].amount, 1e-9)
+	require.Equal(t, 24, repo.accrueCalls[0].freezeHours)
+}
+
 func TestMaskEmail(t *testing.T) {
 	t.Parallel()
 	require.Equal(t, "a***@g***.com", maskEmail("alice@gmail.com"))
@@ -128,4 +205,94 @@ func TestIsValidAffiliateCodeFormat(t *testing.T) {
 			require.Equal(t, tc.want, isValidAffiliateCodeFormat(tc.in))
 		})
 	}
+}
+
+func newAffiliateTestSettings(values map[string]string) *SettingService {
+	repo := newMockSettingRepo()
+	for key, value := range values {
+		_ = repo.Set(context.Background(), key, value)
+	}
+	return NewSettingService(repo, nil)
+}
+
+type affiliatePair struct {
+	inviterID int64
+	inviteeID int64
+}
+
+type fakeAffiliateRepository struct {
+	summaries     map[int64]*AffiliateSummary
+	accruedByPair map[affiliatePair]float64
+	ensureCalls   int
+	accrueCalls   []fakeAffiliateAccrueCall
+}
+
+type fakeAffiliateAccrueCall struct {
+	inviterID   int64
+	inviteeID   int64
+	amount      float64
+	freezeHours int
+}
+
+func (r *fakeAffiliateRepository) EnsureUserAffiliate(_ context.Context, userID int64) (*AffiliateSummary, error) {
+	r.ensureCalls++
+	if summary, ok := r.summaries[userID]; ok {
+		cp := *summary
+		return &cp, nil
+	}
+	return &AffiliateSummary{UserID: userID, CreatedAt: time.Now()}, nil
+}
+
+func (r *fakeAffiliateRepository) GetAffiliateByCode(context.Context, string) (*AffiliateSummary, error) {
+	return nil, ErrAffiliateProfileNotFound
+}
+
+func (r *fakeAffiliateRepository) BindInviter(context.Context, int64, int64) (bool, error) {
+	return false, nil
+}
+
+func (r *fakeAffiliateRepository) AccrueQuota(_ context.Context, inviterID, inviteeUserID int64, amount float64, freezeHours int) (bool, error) {
+	r.accrueCalls = append(r.accrueCalls, fakeAffiliateAccrueCall{
+		inviterID:   inviterID,
+		inviteeID:   inviteeUserID,
+		amount:      amount,
+		freezeHours: freezeHours,
+	})
+	return true, nil
+}
+
+func (r *fakeAffiliateRepository) GetAccruedRebateFromInvitee(_ context.Context, inviterID, inviteeUserID int64) (float64, error) {
+	return r.accruedByPair[affiliatePair{inviterID: inviterID, inviteeID: inviteeUserID}], nil
+}
+
+func (r *fakeAffiliateRepository) ThawFrozenQuota(context.Context, int64) (float64, error) {
+	return 0, nil
+}
+
+func (r *fakeAffiliateRepository) TransferQuotaToBalance(context.Context, int64) (float64, float64, error) {
+	return 0, 0, nil
+}
+
+func (r *fakeAffiliateRepository) ListInvitees(context.Context, int64, int) ([]AffiliateInvitee, error) {
+	return nil, nil
+}
+
+func (r *fakeAffiliateRepository) UpdateUserAffCode(context.Context, int64, string) error {
+	return nil
+}
+
+func (r *fakeAffiliateRepository) ResetUserAffCode(_ context.Context, userID int64) (string, error) {
+	return "AFF" + strconv.FormatInt(userID, 10), nil
+}
+
+func (r *fakeAffiliateRepository) SetUserRebateRate(context.Context, int64, *float64) error {
+	return nil
+}
+
+func (r *fakeAffiliateRepository) BatchSetUserRebateRate(context.Context, []int64, *float64) error {
+	return nil
+}
+
+func (r *fakeAffiliateRepository) ListUsersWithCustomSettings(context.Context, AffiliateAdminFilter) ([]AffiliateAdminEntry, int64, error) {
+	return nil, 0, nil
 }

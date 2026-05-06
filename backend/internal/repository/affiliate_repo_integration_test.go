@@ -150,6 +150,74 @@ func TestAffiliateRepository_AccrueQuota_ReusesOuterTransaction(t *testing.T) {
 		"AccrueQuota must propagate the outer tx — found persisted rows after rollback")
 }
 
+func TestAffiliateRepository_AccrueQuota_FreezeAndThaw(t *testing.T) {
+	ctx := context.Background()
+	tx := testEntTx(t)
+	txCtx := dbent.NewTxContext(ctx, tx)
+	client := tx.Client()
+
+	repo := NewAffiliateRepository(client, integrationDB)
+
+	inviter := mustCreateUser(t, client, &service.User{
+		Email:        fmt.Sprintf("affiliate-freeze-inviter-%d@example.com", time.Now().UnixNano()),
+		PasswordHash: "hash",
+		Role:         service.RoleUser,
+		Status:       service.StatusActive,
+		Balance:      2,
+		Concurrency:  5,
+	})
+	invitee := mustCreateUser(t, client, &service.User{
+		Email:        fmt.Sprintf("affiliate-freeze-invitee-%d@example.com", time.Now().UnixNano()+1),
+		PasswordHash: "hash",
+		Role:         service.RoleUser,
+		Status:       service.StatusActive,
+		Concurrency:  5,
+	})
+
+	_, err := repo.EnsureUserAffiliate(txCtx, inviter.ID)
+	require.NoError(t, err)
+	_, err = repo.EnsureUserAffiliate(txCtx, invitee.ID)
+	require.NoError(t, err)
+	bound, err := repo.BindInviter(txCtx, invitee.ID, inviter.ID)
+	require.NoError(t, err)
+	require.True(t, bound)
+
+	applied, err := repo.AccrueQuota(txCtx, inviter.ID, invitee.ID, 4.25, 24)
+	require.NoError(t, err)
+	require.True(t, applied)
+
+	availableQuota := querySingleFloat(t, txCtx, client,
+		"SELECT aff_quota::double precision FROM user_affiliates WHERE user_id = $1", inviter.ID)
+	require.InDelta(t, 0.0, availableQuota, 1e-9)
+	frozenQuota := querySingleFloat(t, txCtx, client,
+		"SELECT aff_frozen_quota::double precision FROM user_affiliates WHERE user_id = $1", inviter.ID)
+	require.InDelta(t, 4.25, frozenQuota, 1e-9)
+	frozenLedgerCount := querySingleInt(t, txCtx, client,
+		"SELECT COUNT(*) FROM user_affiliate_ledger WHERE user_id = $1 AND action = 'accrue' AND frozen_until > NOW()", inviter.ID)
+	require.Equal(t, 1, frozenLedgerCount)
+
+	transferred, balance, err := repo.TransferQuotaToBalance(txCtx, inviter.ID)
+	require.ErrorIs(t, err, service.ErrAffiliateQuotaEmpty)
+	require.InDelta(t, 0.0, transferred, 1e-9)
+	require.InDelta(t, 0.0, balance, 1e-9)
+
+	_, err = client.ExecContext(txCtx,
+		"UPDATE user_affiliate_ledger SET frozen_until = NOW() - INTERVAL '1 hour' WHERE user_id = $1 AND action = 'accrue'",
+		inviter.ID)
+	require.NoError(t, err)
+
+	thawed, err := repo.ThawFrozenQuota(txCtx, inviter.ID)
+	require.NoError(t, err)
+	require.InDelta(t, 4.25, thawed, 1e-9)
+
+	availableQuota = querySingleFloat(t, txCtx, client,
+		"SELECT aff_quota::double precision FROM user_affiliates WHERE user_id = $1", inviter.ID)
+	require.InDelta(t, 4.25, availableQuota, 1e-9)
+	frozenQuota = querySingleFloat(t, txCtx, client,
+		"SELECT aff_frozen_quota::double precision FROM user_affiliates WHERE user_id = $1", inviter.ID)
+	require.InDelta(t, 0.0, frozenQuota, 1e-9)
+}
+
 func TestAffiliateRepository_TransferQuotaToBalance_EmptyQuota(t *testing.T) {
 	ctx := context.Background()
 	tx := testEntTx(t)
