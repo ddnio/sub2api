@@ -63,7 +63,7 @@ func TestAPIContracts(t *testing.T) {
 					"balance_notify_enabled": false,
 					"balance_notify_threshold_type": "",
 					"balance_notify_threshold": null,
-					"balance_notify_extra_emails": null,
+					"balance_notify_extra_emails": [],
 					"total_recharged": 0,
 					"linuxdo_bound": false,
 					"oidc_bound": false,
@@ -1090,7 +1090,7 @@ func newContractDeps(t *testing.T) *contractDeps {
 	subscriptionService := service.NewSubscriptionService(groupRepo, userSubRepo, nil, nil, cfg)
 	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionService)
 
-	redeemService := service.NewRedeemService(redeemRepo, userRepo, subscriptionService, nil, nil, nil, nil)
+	redeemService := service.NewRedeemService(redeemRepo, userRepo, subscriptionService, nil, nil, nil, nil, nil)
 	redeemHandler := handler.NewRedeemHandler(redeemService)
 
 	settingRepo := newStubSettingRepo()
