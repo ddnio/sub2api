@@ -27,7 +27,9 @@ func TestRegisterPaymentRoutesExposesUpstreamPaymentSurface(t *testing.T) {
 
 	RegisterPaymentRoutes(
 		v1,
-		handlers,
+		handlers.Payment,
+		handlers.PaymentWebhook,
+		handlers.Admin.Payment,
 		middleware.JWTAuthMiddleware(allow),
 		middleware.AdminAuthMiddleware(allow),
 		nil,

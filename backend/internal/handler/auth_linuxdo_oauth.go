@@ -518,7 +518,7 @@ func (h *AuthHandler) CompleteLinuxDoOAuthRegistration(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, req.InvitationCode)
+	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPairForSource(c.Request.Context(), email, username, req.InvitationCode, "linuxdo")
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return

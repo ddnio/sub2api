@@ -2209,6 +2209,7 @@ CREATE TABLE IF NOT EXISTS user_avatars (
 		nil,
 		nil,
 		nil,
+		nil,
 		options.defaultSubAssigner,
 	)
 	userSvc := service.NewUserService(userRepo, nil, nil, nil)

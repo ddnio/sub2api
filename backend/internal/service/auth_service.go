@@ -525,6 +525,7 @@ func (s *AuthService) LoginOrRegisterOAuth(ctx context.Context, email, username 
 				Balance:      grantPlan.Balance,
 				Concurrency:  grantPlan.Concurrency,
 				Status:       StatusActive,
+				SignupSource: signupSource,
 			}
 			applyUserNotifyDefaults(newUser)
 
@@ -574,6 +575,14 @@ func (s *AuthService) LoginOrRegisterOAuth(ctx context.Context, email, username 
 // 与 LoginOrRegisterOAuth 功能相同，但返回 TokenPair 而非单个 token。
 // invitationCode 仅在邀请码注册模式下新用户注册时使用；已有账号登录时忽略。
 func (s *AuthService) LoginOrRegisterOAuthWithTokenPair(ctx context.Context, email, username, invitationCode string) (*TokenPair, *User, error) {
+	return s.loginOrRegisterOAuthWithTokenPair(ctx, email, username, invitationCode, "")
+}
+
+func (s *AuthService) LoginOrRegisterOAuthWithTokenPairForSource(ctx context.Context, email, username, invitationCode, signupSource string) (*TokenPair, *User, error) {
+	return s.loginOrRegisterOAuthWithTokenPair(ctx, email, username, invitationCode, signupSource)
+}
+
+func (s *AuthService) loginOrRegisterOAuthWithTokenPair(ctx context.Context, email, username, invitationCode, signupSourceOverride string) (*TokenPair, *User, error) {
 	// 检查 refreshTokenCache 是否可用
 	if s.refreshTokenCache == nil {
 		return nil, nil, errors.New("refresh token cache not configured")
@@ -626,7 +635,10 @@ func (s *AuthService) LoginOrRegisterOAuthWithTokenPair(ctx context.Context, ema
 				return nil, nil, fmt.Errorf("hash password: %w", err)
 			}
 
-			signupSource := inferLegacySignupSource(email)
+			signupSource := normalizeOAuthSignupSource(signupSourceOverride)
+			if strings.TrimSpace(signupSourceOverride) == "" {
+				signupSource = inferLegacySignupSource(email)
+			}
 			grantPlan := s.resolveSignupGrantPlan(ctx, signupSource)
 
 			newUser := &User{
@@ -637,6 +649,7 @@ func (s *AuthService) LoginOrRegisterOAuthWithTokenPair(ctx context.Context, ema
 				Balance:      grantPlan.Balance,
 				Concurrency:  grantPlan.Concurrency,
 				Status:       StatusActive,
+				SignupSource: signupSource,
 			}
 			applyUserNotifyDefaults(newUser)
 

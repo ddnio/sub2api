@@ -514,7 +514,22 @@ func (s *stubAdminService) ListRedeemCodes(ctx context.Context, page, pageSize i
 	s.lastListRedeemCodes.sortBy = sortBy
 	s.lastListRedeemCodes.sortOrder = sortOrder
 	s.lastListRedeemCodes.calls++
-	return s.redeems, int64(len(s.redeems)), nil
+	search = strings.TrimSpace(strings.ToLower(search))
+	if search == "" {
+		return s.redeems, int64(len(s.redeems)), nil
+	}
+	filtered := make([]service.RedeemCode, 0, len(s.redeems))
+	for _, redeem := range s.redeems {
+		code := strings.ToLower(redeem.Code)
+		email := ""
+		if redeem.User != nil {
+			email = strings.ToLower(redeem.User.Email)
+		}
+		if strings.Contains(code, search) || strings.Contains(email, search) {
+			filtered = append(filtered, redeem)
+		}
+	}
+	return filtered, int64(len(filtered)), nil
 }
 
 func (s *stubAdminService) GetRedeemCode(ctx context.Context, id int64) (*service.RedeemCode, error) {

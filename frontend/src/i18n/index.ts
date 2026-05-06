@@ -60,7 +60,8 @@ export function normalizeLocaleMessages(messages: LocaleMessages): LocaleMessage
       && typeof paymentAdmin === 'object'
       && !(settings as LocaleMessages).payment
     ) {
-      ;(settings as LocaleMessages).payment = paymentAdmin
+      const settingsMessages = settings as LocaleMessages
+      settingsMessages.payment = paymentAdmin
     }
   }
   return messages

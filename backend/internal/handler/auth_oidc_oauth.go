@@ -665,7 +665,7 @@ func (h *AuthHandler) CompleteOIDCOAuthRegistration(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, req.InvitationCode)
+	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPairForSource(c.Request.Context(), email, username, req.InvitationCode, "oidc")
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return

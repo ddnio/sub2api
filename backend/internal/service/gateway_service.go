@@ -119,7 +119,7 @@ func openAIStreamEventIsTerminal(data string) bool {
 		return true
 	}
 	switch gjson.Get(trimmed, "type").String() {
-	case "response.completed", "response.done", "response.failed":
+	case "response.completed", "response.done", "response.failed", "response.incomplete":
 		return true
 	default:
 		return false
@@ -321,15 +321,19 @@ func isClaudeCodeCredentialScopeError(msg string) bool {
 	if m == "" {
 		return false
 	}
-	return strings.Contains(m, "only authorized for use with claude code") &&
-		strings.Contains(m, "cannot be used for other api requests")
+	if strings.Contains(m, "only authorized for use with claude code") &&
+		strings.Contains(m, "cannot be used for other api requests") {
+		return true
+	}
+	return strings.Contains(m, "third-party apps now draw from your extra usage") &&
+		strings.Contains(m, "not your plan limits")
 }
 
 // sseDataRe matches SSE data lines with optional whitespace after colon.
 // Some upstream APIs return non-standard "data:" without space (should be "data: ").
 var (
 	sseDataRe            = regexp.MustCompile(`^data:\s*`)
-	claudeCliUserAgentRe = regexp.MustCompile(`^claude-cli/\d+\.\d+\.\d+`)
+	claudeCliUserAgentRe = regexp.MustCompile(`(?i)^claude-cli/\d+\.\d+\.\d+`)
 
 	// claudeCodePromptPrefixes 用于检测 Claude Code 系统提示词的前缀列表
 	// 支持多种变体：标准版、Agent SDK 版、Explore Agent 版、Compact 版等
@@ -1074,12 +1078,13 @@ func normalizeClaudeOAuthRequestBody(body []byte, modelID string, opts claudeOAu
 		}
 	}
 
-	if gjson.GetBytes(out, "temperature").Exists() {
-		if next, ok := deleteJSONPathBytes(out, "temperature"); ok {
+	if !gjson.GetBytes(out, "max_tokens").Exists() {
+		if next, ok := setJSONValueBytes(out, "max_tokens", 128000); ok {
 			out = next
 			modified = true
 		}
 	}
+
 	if gjson.GetBytes(out, "tool_choice").Exists() {
 		if next, ok := deleteJSONPathBytes(out, "tool_choice"); ok {
 			out = next
@@ -3543,13 +3548,11 @@ func sleepWithContext(ctx context.Context, d time.Duration) error {
 	}
 }
 
-// isClaudeCodeClient 判断请求是否来自 Claude Code 客户端
-// 简化判断：User-Agent 匹配 + metadata.user_id 存在
 func isClaudeCodeClient(userAgent string, metadataUserID string) bool {
-	if metadataUserID == "" {
+	if !claudeCliUserAgentRe.MatchString(userAgent) {
 		return false
 	}
-	return claudeCliUserAgentRe.MatchString(userAgent)
+	return ParseMetadataUserID(metadataUserID) != nil
 }
 
 func isClaudeCodeRequest(ctx context.Context, c *gin.Context, parsed *ParsedRequest) bool {
@@ -3739,16 +3742,18 @@ func rewriteSystemForNonClaudeCode(body []byte, system any) []byte {
 	}
 
 	// 2. 将 system 替换为 Claude Code 标准提示词（array 格式，与真实 Claude Code 一致）
-	//    真实 Claude Code 始终以 [{type: "text", text: "...", cache_control: {type: "ephemeral"}}] 发送 system。
-	//    使用 string 格式会被 Anthropic 检测为第三方应用。
-	claudeCodeSystemBlock := []map[string]any{
-		{
-			"type":          "text",
-			"text":          claudeCodeSystemPrompt,
-			"cache_control": map[string]string{"type": "ephemeral"},
-		},
+	//    真实 Claude Code 先发送 billing attribution block，再发送带 cache_control 的提示词 block。
+	claudeCodeBlock, err := marshalAnthropicSystemTextBlock(claudeCodeSystemPrompt, true)
+	if err != nil {
+		logger.LegacyPrintf("service.gateway", "Warning: failed to build Claude Code system prompt")
+		return body
 	}
-	out, ok := setJSONValueBytes(body, "system", claudeCodeSystemBlock)
+	billingBlock, err := buildBillingAttributionBlockJSON(body, claude.CLICurrentVersion)
+	if err != nil {
+		logger.LegacyPrintf("service.gateway", "Warning: failed to build billing attribution block")
+		return body
+	}
+	out, ok := setJSONRawBytes(body, "system", buildJSONArrayRaw([][]byte{billingBlock, claudeCodeBlock}))
 	if !ok {
 		logger.LegacyPrintf("service.gateway", "Warning: failed to set Claude Code system prompt")
 		return body

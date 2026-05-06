@@ -60,7 +60,7 @@ func newJWTTestEnv(users map[int64]*service.User) (*gin.Engine, *service.AuthSer
 	cfg.JWT.AccessTokenExpireMinutes = 60
 
 	userRepo := &stubJWTUserRepo{users: users}
-	authSvc := service.NewAuthService(nil, userRepo, nil, nil, cfg, nil, nil, nil, nil, nil, nil)
+	authSvc := service.NewAuthService(nil, userRepo, nil, nil, cfg, nil, nil, nil, nil, nil, nil, nil)
 	userSvc := service.NewUserService(userRepo, nil, nil, nil)
 	mw := NewJWTAuthMiddleware(authSvc, userSvc)
 
@@ -104,6 +104,37 @@ func TestJWTAuth_ValidToken(t *testing.T) {
 	require.Equal(t, "user", body["role"])
 }
 
+func TestJWTAuth_ValidTokenWithLegacyUnresolvedTokenVersion(t *testing.T) {
+	user := &service.User{
+		ID:           1,
+		Email:        "legacy@example.com",
+		PasswordHash: "legacy-password-hash",
+		Role:         "user",
+		Status:       service.StatusActive,
+		Concurrency:  5,
+		TokenVersion: 3,
+	}
+	router, authSvc := newJWTTestEnv(map[int64]*service.User{1: user})
+
+	token, err := authSvc.GenerateToken(&service.User{
+		ID:           user.ID,
+		Email:        user.Email,
+		PasswordHash: user.PasswordHash,
+		Role:         user.Role,
+		Status:       user.Status,
+		Concurrency:  user.Concurrency,
+		TokenVersion: 3,
+	})
+	require.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+}
+
 func TestJWTAuth_ValidToken_LowercaseBearer(t *testing.T) {
 	user := &service.User{
 		ID:           1,
@@ -143,7 +174,7 @@ func TestJWTAuth_ValidToken_TouchesLastActive(t *testing.T) {
 	cfg.JWT.AccessTokenExpireMinutes = 60
 
 	userRepo := &stubJWTUserRepo{users: map[int64]*service.User{1: user}}
-	authSvc := service.NewAuthService(nil, userRepo, nil, nil, cfg, nil, nil, nil, nil, nil, nil)
+	authSvc := service.NewAuthService(nil, userRepo, nil, nil, cfg, nil, nil, nil, nil, nil, nil, nil)
 	userSvc := service.NewUserService(userRepo, nil, nil, nil)
 	toucher := &recordingActivityToucher{}
 

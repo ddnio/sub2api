@@ -8,6 +8,7 @@ import (
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/subscriptionplan"
+	"github.com/Wei-Shaw/sub2api/internal/domain"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 )
 
@@ -117,11 +118,45 @@ func (s *PaymentConfigService) ListPlans(ctx context.Context) ([]*dbent.Subscrip
 }
 
 func (s *PaymentConfigService) ListPlansForSale(ctx context.Context) ([]*dbent.SubscriptionPlan, error) {
-	return s.entClient.SubscriptionPlan.Query().Where(subscriptionplan.ForSaleEQ(true)).Order(subscriptionplan.BySortOrder()).All(ctx)
+	groups, err := s.entClient.Group.Query().
+		Where(
+			group.StatusEQ(domain.StatusActive),
+			group.SubscriptionTypeEQ(domain.SubscriptionTypeSubscription),
+		).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("query subscription groups: %w", err)
+	}
+	groupIDs := make([]int64, 0, len(groups))
+	for _, g := range groups {
+		groupIDs = append(groupIDs, int64(g.ID))
+	}
+	if len(groupIDs) == 0 {
+		return []*dbent.SubscriptionPlan{}, nil
+	}
+	return s.entClient.SubscriptionPlan.Query().
+		Where(subscriptionplan.ForSaleEQ(true)).
+		Where(subscriptionplan.GroupIDIn(groupIDs...)).
+		Order(subscriptionplan.BySortOrder()).
+		All(ctx)
+}
+
+func (s *PaymentConfigService) validatePlanGroup(ctx context.Context, groupID int64) error {
+	g, err := s.entClient.Group.Get(ctx, groupID)
+	if err != nil {
+		return infraerrors.NotFound("GROUP_NOT_FOUND", "subscription group not found")
+	}
+	if g.Status != domain.StatusActive || g.SubscriptionType != domain.SubscriptionTypeSubscription {
+		return infraerrors.BadRequest("PLAN_GROUP_INVALID", "plan group must be an active subscription group")
+	}
+	return nil
 }
 
 func (s *PaymentConfigService) CreatePlan(ctx context.Context, req CreatePlanRequest) (*dbent.SubscriptionPlan, error) {
 	if err := validatePlanRequired(req.Name, req.GroupID, req.Price, req.ValidityDays, req.ValidityUnit, req.OriginalPrice); err != nil {
+		return nil, err
+	}
+	if err := s.validatePlanGroup(ctx, req.GroupID); err != nil {
 		return nil, err
 	}
 	b := s.entClient.SubscriptionPlan.Create().
@@ -141,6 +176,19 @@ func (s *PaymentConfigService) CreatePlan(ctx context.Context, req CreatePlanReq
 func (s *PaymentConfigService) UpdatePlan(ctx context.Context, id int64, req UpdatePlanRequest) (*dbent.SubscriptionPlan, error) {
 	if err := validatePlanPatch(req); err != nil {
 		return nil, err
+	}
+	if req.GroupID != nil {
+		if err := s.validatePlanGroup(ctx, *req.GroupID); err != nil {
+			return nil, err
+		}
+	} else if req.ForSale != nil && *req.ForSale {
+		plan, err := s.entClient.SubscriptionPlan.Get(ctx, id)
+		if err != nil {
+			return nil, infraerrors.NotFound("PLAN_NOT_FOUND", "subscription plan not found")
+		}
+		if err := s.validatePlanGroup(ctx, plan.GroupID); err != nil {
+			return nil, err
+		}
 	}
 	u := s.entClient.SubscriptionPlan.UpdateOneID(id)
 	if req.GroupID != nil {
