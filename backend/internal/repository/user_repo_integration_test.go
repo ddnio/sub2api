@@ -364,6 +364,14 @@ func (s *UserRepoSuite) TestExistsByEmail() {
 	s.Require().False(notExists)
 }
 
+func (s *UserRepoSuite) TestExistsByEmailNormalizesLegacySpacingAndCase() {
+	s.mustCreateUser(&service.User{Email: " Legacy@Example.com "})
+
+	exists, err := s.repo.ExistsByEmail(s.ctx, "  LEGACY@example.com  ")
+	s.Require().NoError(err, "ExistsByEmail should work on Postgres with normalized lookup")
+	s.Require().True(exists)
+}
+
 // --- RemoveGroupFromAllowedGroups ---
 
 func (s *UserRepoSuite) TestRemoveGroupFromAllowedGroups() {

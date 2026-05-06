@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -664,15 +663,17 @@ func rejectPendingOAuthIdentityOwnedByAnotherUser(ctx context.Context, client *d
 }
 
 func userNormalizedEmailPredicate(email string) predicate.User {
-	normalized := strings.TrimSpace(email)
+	normalized := strings.ToLower(strings.TrimSpace(email))
 	if normalized == "" {
 		return dbuser.EmailEQ(email)
 	}
 	return predicate.User(func(s *entsql.Selector) {
-		s.Where(entsql.ExprP(
-			fmt.Sprintf("LOWER(TRIM(%s)) = LOWER(TRIM(?))", s.C(dbuser.FieldEmail)),
-			normalized,
-		))
+		s.Where(entsql.P(func(b *entsql.Builder) {
+			b.WriteString("LOWER(TRIM(").
+				Ident(s.C(dbuser.FieldEmail)).
+				WriteString(")) = ").
+				Arg(normalized)
+		}))
 	})
 }
 

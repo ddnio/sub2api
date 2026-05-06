@@ -656,16 +656,22 @@ func (r *userRepository) ExistsByEmail(ctx context.Context, email string) (bool,
 }
 
 func userEmailLookupPredicate(email string) predicate.User {
-	normalized := strings.TrimSpace(email)
+	normalized := normalizeEmailLookupValue(email)
 	if normalized == "" {
 		return dbuser.EmailEQ(email)
 	}
 	return predicate.User(func(s *entsql.Selector) {
-		s.Where(entsql.ExprP(
-			fmt.Sprintf("LOWER(TRIM(%s)) = LOWER(TRIM(?))", s.C(dbuser.FieldEmail)),
-			normalized,
-		))
+		s.Where(entsql.P(func(b *entsql.Builder) {
+			b.WriteString("LOWER(TRIM(").
+				Ident(s.C(dbuser.FieldEmail)).
+				WriteString(")) = ").
+				Arg(normalized)
+		}))
 	})
+}
+
+func normalizeEmailLookupValue(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
 }
 
 func (r *userRepository) AddGroupToAllowedGroups(ctx context.Context, userID int64, groupID int64) error {
