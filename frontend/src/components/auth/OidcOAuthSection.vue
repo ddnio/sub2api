@@ -23,9 +23,11 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { resolveAffiliateReferralCode, storeOAuthAffiliateCode } from '@/utils/oauthAffiliate'
 
 const props = withDefaults(defineProps<{
   disabled?: boolean
+  affCode?: string
   providerName?: string
   showDivider?: boolean
 }>(), {
@@ -54,6 +56,7 @@ function currentAffiliateCode(): string {
 
 function startLogin(): void {
   const redirectTo = (route.query.redirect as string) || '/dashboard'
+  storeOAuthAffiliateCode(resolveAffiliateReferralCode(props.affCode, route.query.aff, route.query.aff_code))
   const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
   const normalized = apiBase.replace(/\/$/, '')
   const params = new URLSearchParams({ redirect: redirectTo })

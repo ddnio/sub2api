@@ -120,7 +120,7 @@ func openAIStreamEventIsTerminal(data string) bool {
 		return true
 	}
 	switch gjson.Get(trimmed, "type").String() {
-	case "response.completed", "response.done", "response.failed", "response.incomplete":
+	case "response.completed", "response.done", "response.failed", "response.incomplete", "response.cancelled", "response.canceled":
 		return true
 	default:
 		return false
@@ -3720,6 +3720,14 @@ func sleepWithContext(ctx context.Context, d time.Duration) error {
 	}
 }
 
+// isClaudeCodeClient 判断请求是否来自真正的 Claude Code 客户端。
+// 判定条件：
+//  1. User-Agent 匹配 claude-cli/X.Y.Z（大小写不敏感）
+//  2. metadata.user_id 符合 Claude Code 格式（legacy 或 JSON 格式）
+//
+// 只检查 metadata.user_id 非空不够严格：第三方工具（opencode 等）可能伪造 UA
+// 并附带任意 metadata.user_id 字符串，从而绕过 mimicry。必须通过 ParseMetadataUserID
+// 验证格式才能确认是真正的 Claude Code 客户端。
 func isClaudeCodeClient(userAgent string, metadataUserID string) bool {
 	if !claudeCliUserAgentRe.MatchString(userAgent) {
 		return false
@@ -4153,12 +4161,15 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 		})
 	}
 
-	// OAuth 账号无条件走完整 mimicry，与 Parrot 对齐。
-	// 不再检查 isClaudeCodeRequest —— 即使客户端自称 Claude Code（opencode 等
-	// 第三方工具会伪装 UA / X-App / system prompt），它的伪装往往不完整（缺 billing
-	// block / 工具名混淆 / cache 策略等），被 Anthropic 判为 third-party。
-	// 无条件覆盖不会对真正的 Claude Code 造成问题，因为我们的伪装更完整。
-	shouldMimicClaudeCode := account.IsOAuth()
+	// Claude Code 客户端判定：UA 匹配 claude-cli/* 且携带 metadata.user_id。
+	// 真正的 Claude Code 客户端自带完整的 system prompt、cache_control 断点和 header，
+	// 不需要代理做任何 body 级别的 mimicry；强行替换反而会破坏客户端的缓存策略
+	// （长 system prompt 被替换为 ~45 tokens 的短 prompt，低于 Anthropic 1024 token
+	// 最低缓存门槛，导致系统级缓存失效）。
+	//
+	// 对于非 Claude Code 的第三方客户端（opencode 等），仍然走完整 mimicry。
+	isClaudeCode := IsClaudeCodeClient(ctx) || isClaudeCodeClient(c.GetHeader("User-Agent"), parsed.MetadataUserID)
+	shouldMimicClaudeCode := account.IsOAuth() && !isClaudeCode
 
 	if shouldMimicClaudeCode {
 		// 与 Parrot 对齐：OAuth 账号无条件重写 system（即使客户端已发了 Claude Code
@@ -8457,7 +8468,8 @@ func (s *GatewayService) ForwardCountTokens(ctx context.Context, c *gin.Context,
 	// Pre-filter: strip empty text blocks to prevent upstream 400.
 	body = StripEmptyTextBlocks(body)
 
-	shouldMimicClaudeCode := account.IsOAuth()
+	isClaudeCodeCT := IsClaudeCodeClient(ctx) || isClaudeCodeClient(c.GetHeader("User-Agent"), parsed.MetadataUserID)
+	shouldMimicClaudeCode := account.IsOAuth() && !isClaudeCodeCT
 
 	if shouldMimicClaudeCode {
 		normalizeOpts := claudeOAuthNormalizeOptions{stripSystemCacheControl: true}

@@ -213,6 +213,10 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 	}
 
 	grantPlan := s.resolveSignupGrantPlan(ctx, "email")
+	var defaultRPMLimit int
+	if s.settingService != nil {
+		defaultRPMLimit = s.settingService.GetDefaultUserRPMLimit(ctx)
+	}
 
 	// 创建用户
 	user := &User{
@@ -221,6 +225,7 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		Role:         RoleUser,
 		Balance:      grantPlan.Balance,
 		Concurrency:  grantPlan.Concurrency,
+		RPMLimit:     defaultRPMLimit,
 		Status:       StatusActive,
 	}
 	applyUserNotifyDefaults(user)
@@ -518,6 +523,10 @@ func (s *AuthService) LoginOrRegisterOAuth(ctx context.Context, email, username 
 
 			signupSource := inferLegacySignupSource(email)
 			grantPlan := s.resolveSignupGrantPlan(ctx, signupSource)
+			var defaultRPMLimit int
+			if s.settingService != nil {
+				defaultRPMLimit = s.settingService.GetDefaultUserRPMLimit(ctx)
+			}
 
 			newUser := &User{
 				Email:        email,
@@ -526,6 +535,7 @@ func (s *AuthService) LoginOrRegisterOAuth(ctx context.Context, email, username 
 				Role:         RoleUser,
 				Balance:      grantPlan.Balance,
 				Concurrency:  grantPlan.Concurrency,
+				RPMLimit:     defaultRPMLimit,
 				Status:       StatusActive,
 				SignupSource: signupSource,
 			}
@@ -576,8 +586,9 @@ func (s *AuthService) LoginOrRegisterOAuth(ctx context.Context, email, username 
 // LoginOrRegisterOAuthWithTokenPair 用于第三方 OAuth/SSO 登录，返回完整的 TokenPair。
 // 与 LoginOrRegisterOAuth 功能相同，但返回 TokenPair 而非单个 token。
 // invitationCode 仅在邀请码注册模式下新用户注册时使用；已有账号登录时忽略。
-func (s *AuthService) LoginOrRegisterOAuthWithTokenPair(ctx context.Context, email, username, invitationCode string) (*TokenPair, *User, error) {
-	return s.loginOrRegisterOAuthWithTokenPair(ctx, email, username, invitationCode, "", "")
+// affiliateCode 用于邀请返利绑定，仅在新用户注册时使用。
+func (s *AuthService) LoginOrRegisterOAuthWithTokenPair(ctx context.Context, email, username, invitationCode, affiliateCode string) (*TokenPair, *User, error) {
+	return s.loginOrRegisterOAuthWithTokenPair(ctx, email, username, invitationCode, "", affiliateCode)
 }
 
 func (s *AuthService) LoginOrRegisterOAuthWithTokenPairForSource(ctx context.Context, email, username, invitationCode, signupSource string) (*TokenPair, *User, error) {
@@ -646,6 +657,10 @@ func (s *AuthService) loginOrRegisterOAuthWithTokenPair(ctx context.Context, ema
 				signupSource = inferLegacySignupSource(email)
 			}
 			grantPlan := s.resolveSignupGrantPlan(ctx, signupSource)
+			var defaultRPMLimit int
+			if s.settingService != nil {
+				defaultRPMLimit = s.settingService.GetDefaultUserRPMLimit(ctx)
+			}
 
 			newUser := &User{
 				Email:        email,
@@ -654,6 +669,7 @@ func (s *AuthService) loginOrRegisterOAuthWithTokenPair(ctx context.Context, ema
 				Role:         RoleUser,
 				Balance:      grantPlan.Balance,
 				Concurrency:  grantPlan.Concurrency,
+				RPMLimit:     defaultRPMLimit,
 				Status:       StatusActive,
 				SignupSource: signupSource,
 			}

@@ -70,6 +70,7 @@ type createPendingOAuthAccountRequest struct {
 	VerifyCode       string `json:"verify_code,omitempty"`
 	Password         string `json:"password" binding:"required,min=6"`
 	InvitationCode   string `json:"invitation_code,omitempty"`
+	AffCode          string `json:"aff_code,omitempty"`
 	AdoptDisplayName *bool  `json:"adopt_display_name,omitempty"`
 	AdoptAvatar      *bool  `json:"adopt_avatar,omitempty"`
 }

@@ -230,6 +230,46 @@ func TestRegisterOAuthEmailAccountSetsNormalizedSignupSourceOnCreatedUser(t *tes
 	require.Equal(t, "oidc", userRepo.created[0].SignupSource)
 }
 
+func TestRegisterOAuthEmailAccountAppliesUserDefaults(t *testing.T) {
+	userRepo := &userRepoStub{nextID: 42}
+	emailCache := &emailCacheStub{
+		data: &VerificationCodeData{
+			Code:      "246810",
+			Attempts:  0,
+			CreatedAt: time.Now().UTC(),
+			ExpiresAt: time.Now().UTC().Add(15 * time.Minute),
+		},
+	}
+	authService := newOAuthEmailFlowAuthService(
+		userRepo,
+		&redeemCodeRepoStub{},
+		&refreshTokenCacheStub{},
+		map[string]string{
+			SettingKeyRegistrationEnabled: "true",
+			SettingKeyEmailVerifyEnabled:  "true",
+			SettingKeyDefaultUserRPMLimit: "37",
+		},
+		emailCache,
+	)
+
+	tokenPair, user, err := authService.RegisterOAuthEmailAccount(
+		context.Background(),
+		"fresh@example.com",
+		"secret-123",
+		"246810",
+		"",
+		"oidc",
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, tokenPair)
+	require.NotNil(t, user)
+	require.Len(t, userRepo.created, 1)
+	require.Equal(t, 37, userRepo.created[0].RPMLimit)
+	require.True(t, userRepo.created[0].BalanceNotifyEnabled)
+	require.Equal(t, defaultBalanceNotifyThresholdType, userRepo.created[0].BalanceNotifyThresholdType)
+}
+
 func TestRegisterOAuthEmailAccountFallsBackUnknownSignupSourceToEmail(t *testing.T) {
 	userRepo := &userRepoStub{nextID: 43}
 	emailCache := &emailCacheStub{

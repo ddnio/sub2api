@@ -95,8 +95,9 @@ Current gate:
 | `v0.1.113..v0.1.114` | Final | PR #44 was merged and deployed, and marker `fork/v0.1.114` exists. Rechecked after `v0.1.112..v0.1.113` became final; every release row has a closed outcome. |
 | `v0.1.114..v0.1.115` | Final | Merged to `main`, deployed and verified on ToC test, ToC production, and ToB production. `backend/cmd/server/VERSION` is `0.1.115`; annotated tag `fork/v0.1.115` points at marker commit `48d4a8de`. |
 | `v0.1.115..v0.1.116` | Final | Direct merge model used; merged to `main` at `18b1b72d`. |
-| `v0.1.116..v0.1.117` | Deployed / closeout pending | Direct merge model used; `origin/release/v0.1.117` at `01c8e36e` records test and production deployment evidence. `main` merge and `fork/v0.1.117` marker closeout remain required before final `v0.1.118` closeout. |
-| `v0.1.117..v0.1.118` | Test deployed | `origin/release/v0.1.118` at `e9fb884d` directly merged upstream `v0.1.118` at `4d128e9c`; local backend/frontend gates and shared test-environment smoke passed. Production deployment and marker/main closeout require explicit release approval. |
+| `v0.1.116..v0.1.117` | Deployed / closeout pending | Direct merge model used; `origin/release/v0.1.117` at `01c8e36e` records test and production deployment evidence. `main` merge and `fork/v0.1.117` marker closeout remain required before final historical marker closeout. |
+| `v0.1.117..v0.1.118` | Final / deployed | Direct merge model used; `origin/release/v0.1.118` at `71b85c55` records production deployment evidence and `main` promotion landed at `d97be0b7`. |
+| `v0.1.118..v0.1.119` | Production deployed / main closeout in progress | Direct merge model used; `origin/release/v0.1.119` at `f2fdf6be` is deployed and smoke-verified on shared test, ToC production, and ToB/FX production. Main merge and main-branch redeploy remain the active closeout steps. |
 
 Existing `fork/v0.1.111` through `fork/v0.1.114` tags must not be moved or deleted. They are historical fork sync markers. Any correctness gap found during recheck is fixed forward on latest `main`.
 
@@ -910,17 +911,58 @@ Range: `v0.1.118..v0.1.119`.
 | Upstream source | Area | Local state | Action | Notes |
 | --- | --- | --- | --- | --- |
 | `9d1751ec` | Version sync to v0.1.118 | Chore only | SKIP | Upstream version stamp. |
-| `4e1bb2b4` | Affiliate feature toggle/custom invite | Held feature | HOLD | Product/migration surface. |
-| `aff98d5a` / PR #1960 | Responses stream keepalive | Not portable | HOLD | Same stream failover/buffering family as PR #1943. |
-| `22b12775` / PR #1948 | OpenAI account test responses stream | Prior sync family | PRESENT/PARTIAL | No current missing behavior proven. |
+| `4e1bb2b4` | Affiliate feature toggle/custom invite | Direct-merged and audited | MERGED | Includes global switch, admin custom invite code, per-user rebate rate, admin UI/API contract, and migration `132_affiliate_custom_settings.sql`. |
+| `aff98d5a` / PR #1960 | Responses stream keepalive | Direct-merged and audited | MERGED | Downstream-idle keepalive behavior preserved in fork gateway; covered by targeted OpenAI stream tests. |
+| `22b12775` / PR #1948 | OpenAI account test responses stream | Direct-merged and audited | MERGED | Responses stream account test selection tightened; covered by targeted OpenAI account tests. |
 | `3af9940b` | gofmt/ineffassign lint | CI baseline | MERGED | PR #36 ports equivalent local lint cleanups only. |
-| `c1b52615` | Stripe payment pages bypass auth guard | Present | SKIP | Local Stripe payment routes are public/payment-safe. |
+| `c1b52615` | Stripe payment pages bypass auth guard | Present in fork baseline | PRESENT | Local Stripe payment routes are public/payment-safe; no final diff from `release/v0.1.118` because the fix was already carried forward. |
 | `496469ac` | Claude Code body mimicry skip | Merged | MERGED | Covered by PR #26. |
-| `9b6dcc57` | Affiliate rebate system | Held feature | HOLD | Product/migration surface. |
-| `41d06573` / PR #1970 | Anthropic cache usage semantics | Present | SKIP | Local tests and tracker record present behavior. |
-| `a0b5e5bf` / PR #1973 | Misc upstream PR | Unclassified low signal | HOLD | Do not port without candidate-specific evidence. |
+| `9b6dcc57` | Affiliate rebate system | Direct-merged and audited | MERGED | Includes freeze period, rebate duration, per-invitee cap, frozen ledger/quota migration `133_affiliate_rebate_freeze.sql`, and additional service/repository regression tests in `efaf23dd`. |
+| `41d06573` / PR #1970 | Anthropic cache usage semantics | Present in fork baseline | PRESENT | Local cache usage semantics already subtract cached input and map cache-read tokens; no final diff from `release/v0.1.118`. |
+| `a0b5e5bf` / PR #1973 | Zpay refund endpoint handling | Direct-merged / present in baseline | MERGED | Zpay refund posts to `/api.php?act=refund` with order/trade fallback; behavior verified by payment provider tests. |
 
-Gate status: blocked by HOLD / unresolved PARTIAL items. Do not mark `v0.1.119` complete until these are resolved after `v0.1.118`.
+Local release-audit repair:
+
+- `da15cf53` preserves signup defaults for local accounts created during pending OAuth registration, fixing a fork-specific gap introduced by combining OAuth affiliate binding with the pending email flow.
+- `efaf23dd` adds executable coverage for affiliate total switch, rebate duration, per-invitee cap truncation, freeze-hour propagation, and repository freeze/thaw semantics before test deployment.
+- Follow-up release marker repair updates `backend/cmd/server/VERSION` from `0.1.118` to `0.1.119` after shared-test verification exposed the stale public version stamp.
+
+Local verification:
+
+- `go test -tags=unit ./internal/service ./internal/handler ./internal/pkg/apicompat ./internal/payment/provider ./internal/repository -run 'Test.*(OAuth|Affiliate|Gateway|OpenAI|Claude|EasyPay|Refund|Migration|Auth|AccrueInviteRebate)' -count=1`
+- `go test -tags=integration ./internal/repository -run 'TestAffiliateRepository_TransferQuotaToBalance|TestAffiliateRepository_AccrueQuota|TestMigrationsSchema' -count=1`
+- `go test -tags=unit ./internal/server -run TestAPIContracts -count=1`
+- `pnpm --dir frontend exec vitest run src/utils/__tests__/oauthAffiliate.spec.ts src/api/__tests__/auth-oauth-adoption.spec.ts src/components/auth/__tests__/OAuthAffiliateStart.spec.ts src/views/auth/__tests__/LinuxDoCallbackView.spec.ts src/views/auth/__tests__/OidcCallbackView.spec.ts src/views/auth/__tests__/WechatCallbackView.spec.ts src/views/auth/__tests__/EmailVerifyView.spec.ts src/views/auth/__tests__/oauthPendingCallback.spec.ts`
+- `pnpm --dir frontend run build` passed with existing Vite chunk/dynamic import warnings.
+- `git diff --check origin/release/v0.1.118..HEAD` and conflict-marker scan passed.
+
+Shared test deployment evidence:
+
+- Branch pushed: `origin/release/v0.1.119`; initial test deploy was at `efaf23dd` (`Guard affiliate rebate policy behavior before v119 test deploy`) and the final release head is `f2fdf6be` (`Mark v0.1.119 release version for test deployment`), including the follow-up `0.1.119` version marker repair.
+- Test database backup: `/home/nio/backups/sub2api-test/sub2api_test_pre_v0.1.119_20260506_152014.dump`, size `7.2M`, mode `600`.
+- Preflight: test DB had `user_affiliates`, `user_affiliate_ledger`, and `schema_migrations`; pre-deploy migration set included `130_add_user_affiliates.sql`, `131_affiliate_rebate_hardening.sql`, and `132_update_claude_code_monitor_template.sql`. The new affiliate columns from `132_affiliate_custom_settings.sql` and `133_affiliate_rebate_freeze.sql` were not present before deploy.
+- Deploy command: on `108.160.133.141`, switched `/data/service/sub2api` from `release/v0.1.118` to tracking `origin/release/v0.1.119`, then ran `bash deploy/deploy-server.sh test`; container `sub2api-test` restarted healthy on `127.0.0.1:8081` at `2026-05-06T15:24:35Z`.
+- Smoke: local `/health` returned `{"status":"ok"}`, public `https://router-test.nanafox.com/health` returned `{"status":"ok"}`, and unauthenticated local/public `/v1/models` returned `401`.
+- Migration smoke: test DB now records both `132_affiliate_custom_settings.sql` and `133_affiliate_rebate_freeze.sql`; columns `user_affiliates.aff_rebate_rate_percent`, `user_affiliates.aff_code_custom`, `user_affiliates.aff_frozen_quota`, and `user_affiliate_ledger.frozen_until` exist.
+- Post-deploy severe-log scan for `panic|fatal|error|failed|traceback|异常` returned no matches.
+- Residual validation note: a mistaken all-watch frontend Vitest invocation reproduced the known unrelated frontend baseline failures; the targeted OAuth affiliate suite above passed 8 files / 88 tests.
+- Version-stamp redeploy recheck: after the marker repair, shared test was on branch `release/v0.1.119` at `f2fdf6be`, `backend/cmd/server/VERSION` was `0.1.119`, `sub2api-test` was `running healthy`, local and public `/health` returned `{"status":"ok"}`, public settings returned `"version":"0.1.119"`, unauthenticated local `/v1/models` returned `401`, public settings returned `affiliate_enabled=true`, and the severe-log scan for `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常` was empty.
+
+ToC production deployment evidence:
+
+- Pre-deploy ToC production database backup: `/home/nio/backups/sub2api-prod/sub2api_prod_pre_v0.1.119_20260506_154108.dump`, size `268M`, mode `600`.
+- Deployed branch `release/v0.1.119` at `f2fdf6be` to `sub2api-prod` on `108.160.133.141`; `backend/cmd/server/VERSION` was `0.1.119`.
+- Fresh smoke recheck: `sub2api-prod` was `running healthy`, local and public `/health` returned `{"status":"ok"}`, public settings returned `"version":"0.1.119"`, unauthenticated local `/v1/models` returned `401`, and the severe-log scan for `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常` was empty.
+- Migration/settings verification: `schema_migrations` recorded `132_affiliate_custom_settings.sql` and `133_affiliate_rebate_freeze.sql`; columns `user_affiliates.aff_code_custom`, `user_affiliates.aff_frozen_quota`, `user_affiliates.aff_rebate_rate_percent`, and `user_affiliate_ledger.frozen_until` exist. Production settings returned `affiliate_enabled=true`, `affiliate_rebate_rate=10.00000000`, `affiliate_rebate_duration_days=0`, and `affiliate_rebate_freeze_hours=0`.
+
+ToB/FX production deployment evidence:
+
+- ToB/FX database is `sub2api_tob`; pre-deploy backup: `/home/nio/backups/sub2api-fx/sub2api_tob_pre_v0.1.119_20260506_234202.dump`, size `78M`, mode `600`.
+- Deployed branch `release/v0.1.119` at `f2fdf6be` to `sub2api-prod` on `43.106.8.109`; `backend/cmd/server/VERSION` was `0.1.119`.
+- Fresh smoke recheck: `sub2api-prod` was `running healthy`, local and public `/health` returned `{"status":"ok"}`, public settings returned `"version":"0.1.119"`, unauthenticated local `/v1/models` returned `401`, public settings returned `affiliate_enabled=false`, and the severe-log scan for `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常` was empty.
+- Migration verification: `schema_migrations` recorded `132_affiliate_custom_settings.sql` and `133_affiliate_rebate_freeze.sql`; columns `user_affiliates.aff_code_custom`, `user_affiliates.aff_frozen_quota`, `user_affiliates.aff_rebate_rate_percent`, and `user_affiliate_ledger.frozen_until` exist.
+
+Gate status: `v0.1.119` is pushed to `origin/release/v0.1.119` and deployed/smoke-verified on shared test, ToC production, and ToB/FX production. Main promotion and main-branch redeploy remain the active closeout steps.
 
 ### v0.1.120
 

@@ -29,6 +29,7 @@ import tlsFingerprintProfileAPI from './tlsFingerprintProfile'
 import channelsAPI from './channels'
 import channelMonitorAPI from './channelMonitor'
 import channelMonitorTemplateAPI from './channelMonitorTemplate'
+import affiliatesAPI from './affiliates'
 
 /**
  * Unified admin API object for convenient access
@@ -59,7 +60,8 @@ export const adminAPI = {
   tlsFingerprintProfiles: tlsFingerprintProfileAPI,
   channels: channelsAPI,
   channelMonitor: channelMonitorAPI,
-  channelMonitorTemplate: channelMonitorTemplateAPI
+  channelMonitorTemplate: channelMonitorTemplateAPI,
+  affiliates: affiliatesAPI
 }
 
 export {
@@ -88,7 +90,8 @@ export {
   tlsFingerprintProfileAPI,
   channelsAPI,
   channelMonitorAPI,
-  channelMonitorTemplateAPI
+  channelMonitorTemplateAPI,
+  affiliatesAPI
 }
 
 export default adminAPI

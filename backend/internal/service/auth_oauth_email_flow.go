@@ -142,6 +142,10 @@ func (s *AuthService) RegisterOAuthEmailAccount(
 
 	signupSource = normalizeOAuthSignupSource(signupSource)
 	grantPlan := s.resolveSignupGrantPlan(ctx, signupSource)
+	var defaultRPMLimit int
+	if s.settingService != nil {
+		defaultRPMLimit = s.settingService.GetDefaultUserRPMLimit(ctx)
+	}
 
 	user := &User{
 		Email:        email,
@@ -149,9 +153,11 @@ func (s *AuthService) RegisterOAuthEmailAccount(
 		Role:         RoleUser,
 		Balance:      grantPlan.Balance,
 		Concurrency:  grantPlan.Concurrency,
+		RPMLimit:     defaultRPMLimit,
 		Status:       StatusActive,
 		SignupSource: signupSource,
 	}
+	applyUserNotifyDefaults(user)
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		if errors.Is(err, ErrEmailExists) {
