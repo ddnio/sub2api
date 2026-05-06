@@ -225,3 +225,15 @@ func TestUserRepositoryCreateSerializesNormalizedEmailConflictsUnderConcurrency(
 	require.NoError(t, err)
 	require.Equal(t, 1, count)
 }
+
+func TestUserEmailLookupPredicateBuildsPostgresParameter(t *testing.T) {
+	selector := entsql.Dialect(dialect.Postgres).
+		Select("*").
+		From(entsql.Table("users"))
+	userEmailLookupPredicate("  LEGACY@example.com  ")(selector)
+
+	query, args := selector.Query()
+	require.Contains(t, query, `LOWER(TRIM("users"."email")) = $1`)
+	require.NotContains(t, query, "TRIM()")
+	require.Equal(t, []any{"legacy@example.com"}, args)
+}
