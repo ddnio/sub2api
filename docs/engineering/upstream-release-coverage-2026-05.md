@@ -96,7 +96,7 @@ Current gate:
 | `v0.1.114..v0.1.115` | Final | Merged to `main`, deployed and verified on ToC test, ToC production, and ToB production. `backend/cmd/server/VERSION` is `0.1.115`; annotated tag `fork/v0.1.115` points at marker commit `48d4a8de`. |
 | `v0.1.115..v0.1.116` | Final | Direct merge model used; merged to `main` at `18b1b72d`. |
 | `v0.1.116..v0.1.117` | Deployed / closeout pending | Direct merge model used; `origin/release/v0.1.117` at `01c8e36e` records test and production deployment evidence. `main` merge and `fork/v0.1.117` marker closeout remain required before final `v0.1.118` closeout. |
-| `v0.1.117..v0.1.118` | Local release candidate | Local `release/v0.1.118` directly merged upstream `v0.1.118` at `4d128e9c`; local backend and frontend gates passed. Shared deployment, production smoke, and marker/main closeout require explicit release approval. |
+| `v0.1.117..v0.1.118` | Test deployed | `origin/release/v0.1.118` at `e9fb884d` directly merged upstream `v0.1.118` at `4d128e9c`; local backend/frontend gates and shared test-environment smoke passed. Production deployment and marker/main closeout require explicit release approval. |
 
 Existing `fork/v0.1.111` through `fork/v0.1.114` tags must not be moved or deleted. They are historical fork sync markers. Any correctness gap found during recheck is fixed forward on latest `main`.
 
@@ -881,7 +881,17 @@ Local verification before test deployment:
 - `cd frontend && pnpm exec vitest run src/components/auth/__tests__/OAuthAffiliateStart.spec.ts src/components/auth/__tests__/WechatOAuthSection.spec.ts src/views/user/__tests__/PaymentView.spec.ts src/views/user/__tests__/paymentUx.spec.ts`
 - `cd frontend && pnpm run typecheck`
 
-Gate status: ready for shared test-environment deployment after commit/push of the local `release/v0.1.118` candidate. Production deployment remains out of scope until test smoke is recorded and separately approved.
+Shared test deployment evidence:
+
+- Branch/commit: deployed `origin/release/v0.1.118` at `e9fb884d` (`Prepare v0.1.118 test deployment`) from `/data/service/sub2api`; `backend/cmd/server/VERSION` is `0.1.118`.
+- Test database backup: `/home/nio/backups/sub2api_test_pre_v0.1.118_20260506_132416.dump`, size `7.2M`, mode `600`.
+- Deploy command: `./deploy/deploy-server.sh test` completed on `108.160.133.141`; container `sub2api-test` started healthy on `127.0.0.1:8081`.
+- Smoke: local `/health` returned `{"status":"ok"}`, public `https://router-test.nanafox.com/health` returned `{"status":"ok"}`, public settings returned `"version":"0.1.118"`, and unauthenticated public `/v1/models` returned `401`.
+- Frontend route smoke: public `/admin/orders`, `/admin/channel-monitor`, and `/user/channel-status` each returned `200`.
+- Migration smoke: test DB recorded `132_update_claude_code_monitor_template.sql`; stale Claude monitor headers containing `2.1.114` or `advisor-tool-2026-03-01` counted `0` in both templates and monitor snapshots; the template now reports `User-Agent = claude-cli/2.1.92 (external, cli)` and `X-App = cli`.
+- Post-deploy severe-log scan for `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常| 500 | 404 ` returned no matches. Startup warnings were limited to existing deployment configuration warnings for URL allowlist, trusted proxies, and CORS.
+
+Gate status: shared test-environment deployment is complete. Production deployment remains out of scope until separately approved.
 
 ### v0.1.119
 
