@@ -26,6 +26,12 @@ If `upstream/main` advances, do not expand this ledger automatically. Only expan
 
 Fetch note: 2026-05-03 attempts to refresh `upstream` and `origin` failed with GitHub transport errors (`HTTP2 framing layer` / `Operation timed out`). Current decisions use the already present local refs above and the local upstream tags through `v0.1.121`. Push/fetch fallback order for this environment is: retry with `git -c http.version=HTTP/1.1`; if HTTPS still fails or hangs, use the explicit SSH URL (`git@github.com:ddnio/sub2api.git` for fork operations) or the GitHub Git Data API branch-creation fallback already documented in `docs/engineering/upstream-sync-2026-05-phase2.md`.
 
+## 2026-05-06 Direct-Merge Policy Update
+
+The active upstream release process changed after the `v0.1.116` and `v0.1.117` updates. For `v0.1.118` and later release planning, start from an isolated scratch worktree based on the latest fork release branch, run `git merge --no-ff <upstream-tag>` directly, then audit and repair conflicts, protected deletions, migration ordering, generated code, tests, and deployment notes before promoting the result to a release branch.
+
+Upstream commit and PR lists remain required, but they are post-merge coverage accounting rather than the default import mechanism. Do not plan per-PR or per-commit cherry-picks first unless the direct merge proves that one subfeature must be split out after repair.
+
 ## Repeated-Issue Log
 
 - GitHub HTTPS transport is unreliable in this environment. Do not spend multiple cycles retrying the same HTTPS fetch/push after `HTTP2 framing layer`, `Empty reply from server`, or timeout errors; switch to HTTP/1.1 once, then SSH or API fallback.
@@ -40,8 +46,8 @@ Fetch note: 2026-05-03 attempts to refresh `upstream` and `origin` failed with G
 
 ## Rules
 
-- Do not merge or cherry-pick an entire release.
-- Code merge unit is upstream first-parent commit / upstream PR merge commit. A smaller manually ported hunk is allowed only after the commit/PR has been tried or audited and the exact conflict/fork-divergence reason is recorded.
+- Start each upstream release update with a direct scratch merge of the whole upstream tag. The scratch merge is the import-audit mechanism; it is not automatic release readiness.
+- Code and PR lists are coverage ledgers after the scratch merge. Use cherry-picks or hand ports only as fallback for isolated subfeatures after direct-merge evidence shows why they must be split out.
 - Process releases in tag order. A later release must not start until the previous release gate is closed.
 - Inside a release, use upstream first-parent commits only as the mainline entry index. For every upstream merge PR entry, also expand the second-parent branch/internal commits before claiming the release is complete. Do not jump from one reopened item to a later release, and do not start a broad hand-written implementation before the corresponding upstream commit/PR and its internal commits have a direct-import or already-present audit.
 - Default fork PR packaging is one PR per upstream release gate. Keep all compatible items for the same release in one release worktree and one fork PR, with an itemized ledger and targeted tests. Split into separate PRs only for schema/migration changes, payment/auth/security/data-risk changes, very large or conflicted imports, or when a smaller PR is needed to unblock CI safely.
@@ -88,8 +94,9 @@ Current gate:
 | `v0.1.112..v0.1.113` | Final | Historical marker `fork/v0.1.113` exists and is intentionally retained without moving. PR #54 merged the stricter closeout into `main` at `6140ec11`; CI, independent review, ToC test/prod deployment, and ToB production verification are recorded below. |
 | `v0.1.113..v0.1.114` | Final | PR #44 was merged and deployed, and marker `fork/v0.1.114` exists. Rechecked after `v0.1.112..v0.1.113` became final; every release row has a closed outcome. |
 | `v0.1.114..v0.1.115` | Final | Merged to `main`, deployed and verified on ToC test, ToC production, and ToB production. `backend/cmd/server/VERSION` is `0.1.115`; annotated tag `fork/v0.1.115` points at marker commit `48d4a8de`. |
-| `v0.1.115..v0.1.116` | Next | Eleven upstream first-parent commits exist in this interval. Start here next; do not jump to later releases. |
-| `v0.1.116` and later | Blocked | Do not advance to later releases until earlier gates are closed in order. |
+| `v0.1.115..v0.1.116` | Final | Direct merge model used; merged to `main` at `18b1b72d`. |
+| `v0.1.116..v0.1.117` | Deployed / closeout pending | Direct merge model used; `origin/release/v0.1.117` at `01c8e36e` records test and production deployment evidence. `main` merge and `fork/v0.1.117` marker closeout remain required before final `v0.1.118` closeout. |
+| `v0.1.117..v0.1.118` | Local release candidate | Local `release/v0.1.118` directly merged upstream `v0.1.118` at `4d128e9c`; local backend and frontend gates passed. Shared deployment, production smoke, and marker/main closeout require explicit release approval. |
 
 Existing `fork/v0.1.111` through `fork/v0.1.114` tags must not be moved or deleted. They are historical fork sync markers. Any correctness gap found during recheck is fixed forward on latest `main`.
 
