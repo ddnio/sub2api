@@ -891,7 +891,17 @@ Shared test deployment evidence:
 - Migration smoke: test DB recorded `132_update_claude_code_monitor_template.sql`; stale Claude monitor headers containing `2.1.114` or `advisor-tool-2026-03-01` counted `0` in both templates and monitor snapshots; the template now reports `User-Agent = claude-cli/2.1.92 (external, cli)` and `X-App = cli`.
 - Post-deploy severe-log scan for `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常| 500 | 404 ` returned no matches. Startup warnings were limited to existing deployment configuration warnings for URL allowlist, trusted proxies, and CORS.
 
-Gate status: shared test-environment deployment is complete. Production deployment remains out of scope until separately approved.
+Production deployment evidence:
+
+- Branch/commit: deployed `origin/release/v0.1.118` at `1237d23b` (`Keep production merge contract tests current`) to both production servers on 2026-05-06.
+- ToC production (`108.160.133.141`, `router.nanafox.com`): `./deploy/deploy-server.sh prod` completed, `sub2api-prod` restarted healthy on `127.0.0.1:8080`, local `/health` and public `https://router.nanafox.com/health` returned `{"status":"ok"}`.
+- ToB/fx production (`43.106.8.109`, `fx.nanafox.com`): switched server repo from `release/v0.1.117` to `release/v0.1.118`, `./deploy/deploy-server.sh prod` completed, `sub2api-prod` restarted healthy on `127.0.0.1:8080`, local `/health` and public `https://fx.nanafox.com/health` returned `{"status":"ok"}`.
+- Production DB migration smoke: ToC `sub2api` and ToB `sub2api_tob` both recorded `130_add_user_affiliates.sql`, `131_affiliate_rebate_hardening.sql`, and `132_update_claude_code_monitor_template.sql`; latest migration on both is `132_update_claude_code_monitor_template.sql`.
+- Post-deploy severe-log scan over the deployment window found no log-level `ERROR`, `FATAL`, or `PANIC` entries on either production container. Startup warnings were limited to existing deployment configuration warnings for URL allowlist, trusted proxies, and CORS.
+- Main promotion: after both production deployments were healthy, `release/v0.1.118` was merged into `main` as `9233b7e6` (`merge release v0.1.118 into main`). The merge tree matches the deployed release tree.
+- Residual validation note: production smoke did not run a real paid order. Affiliate rebate behavior was validated on the shared test environment with order `38` after forward-porting the upstream SQL type-cast fix.
+
+Gate status: `v0.1.118` is deployed and smoke-verified on shared test, ToC production, and ToB/fx production, then promoted to `main`. Remaining post-release follow-up is deeper human/interactive functional validation of channel monitor, OpenAI compact/account flows, and any live payment-webhook checks the operator wants repeated against production data.
 
 ### v0.1.119
 
