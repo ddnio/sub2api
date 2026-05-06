@@ -444,11 +444,11 @@ func (s *PaymentService) tryClaimAffiliateRebateAudit(ctx context.Context, clien
 	})
 	rows, err := client.QueryContext(ctx, `
 INSERT INTO payment_audit_logs (order_id, action, detail, operator, created_at)
-SELECT $1, 'AFFILIATE_REBATE_APPLIED', $2, 'system', NOW()
+SELECT $1::text, 'AFFILIATE_REBATE_APPLIED', $2::text, 'system', NOW()
 WHERE NOT EXISTS (
 	SELECT 1
 	FROM payment_audit_logs
-	WHERE order_id = $1
+	WHERE order_id = $1::text
 	  AND action IN ('AFFILIATE_REBATE_APPLIED', 'AFFILIATE_REBATE_SKIPPED')
 )
 ON CONFLICT (order_id, action) WHERE action IN ('AFFILIATE_REBATE_APPLIED', 'AFFILIATE_REBATE_SKIPPED') DO NOTHING
