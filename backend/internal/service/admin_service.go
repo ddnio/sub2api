@@ -663,6 +663,7 @@ func (s *adminServiceImpl) CreateUser(ctx context.Context, input *CreateUserInpu
 		Status:        StatusActive,
 		AllowedGroups: input.AllowedGroups,
 	}
+	applyUserNotifyDefaults(user)
 	if err := user.SetPassword(input.Password); err != nil {
 		return nil, err
 	}

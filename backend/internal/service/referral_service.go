@@ -287,7 +287,7 @@ func (s *ReferralService) ListReferrals(ctx context.Context, userID int64, param
 	for _, r := range referrals {
 		email := ""
 		if r.Edges.Invitee != nil {
-			email = maskEmail(r.Edges.Invitee.Email)
+			email = maskReferralEmail(r.Edges.Invitee.Email)
 		}
 		records = append(records, ReferralRecord{
 			ID:                    r.ID,
@@ -463,8 +463,8 @@ func generateRandomCode(byteLen int) (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-// maskEmail 邮箱脱敏
-func maskEmail(email string) string {
+// maskReferralEmail 邮箱脱敏
+func maskReferralEmail(email string) string {
 	parts := strings.SplitN(email, "@", 2)
 	if len(parts) != 2 {
 		return "***"

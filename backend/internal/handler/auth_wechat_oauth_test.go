@@ -869,6 +869,7 @@ func TestCompleteWeChatOAuthRegistrationAfterInvitationPendingSessionReturnsPend
 	callbackReq.AddCookie(encodedCookie(wechatOAuthStateCookieName, "state-123"))
 	callbackReq.AddCookie(encodedCookie(wechatOAuthRedirectCookieName, "/dashboard"))
 	callbackReq.AddCookie(encodedCookie(wechatOAuthModeCookieName, "open"))
+	callbackReq.AddCookie(encodedCookie(wechatOAuthAffiliateCookie, "ABCDEF123456"))
 	callbackReq.AddCookie(encodedCookie(oauthPendingBrowserCookieName, "browser-123"))
 	callbackCtx.Request = callbackReq
 
@@ -886,6 +887,7 @@ func TestCompleteWeChatOAuthRegistrationAfterInvitationPendingSessionReturnsPend
 		Only(ctx)
 	require.NoError(t, err)
 	require.Equal(t, oauthPendingChoiceStep, pendingSession.LocalFlowState[oauthCompletionResponseKey].(map[string]any)["step"])
+	require.Equal(t, "ABCDEF123456", pendingSession.LocalFlowState[oauthAffiliateCodeKey])
 
 	body := bytes.NewBufferString(`{"invitation_code":"invite-1","adopt_display_name":true,"adopt_avatar":true}`)
 	completeRecorder := httptest.NewRecorder()
@@ -1394,6 +1396,8 @@ func newWeChatOAuthTestHandlerWithSettings(t *testing.T, invitationEnabled bool,
 		&wechatOAuthRefreshTokenCacheStub{},
 		cfg,
 		settingSvc,
+		nil,
+		nil,
 		nil,
 		nil,
 		nil,

@@ -23,16 +23,19 @@ func TestSanitizePaymentOrderForResponseKeepsZeroMoneyFields(t *testing.T) {
 
 	got := sanitizePaymentOrderForResponse(order)
 
-	for _, key := range []string{"amount", "pay_amount", "fee_rate", "refund_amount"} {
-		value, ok := got[key]
-		if !ok {
-			t.Fatalf("expected %q to be present in response: %#v", key, got)
-		}
-		if value != float64(0) {
-			t.Fatalf("expected %q to be 0, got %#v", key, value)
-		}
+	if got.Amount != 0 {
+		t.Fatalf("expected amount to be 0, got %#v", got.Amount)
 	}
-	if _, ok := got["provider_snapshot"]; ok {
-		t.Fatalf("provider_snapshot should not be exposed: %#v", got)
+	if got.PayAmount != 0 {
+		t.Fatalf("expected pay_amount to be 0, got %#v", got.PayAmount)
+	}
+	if got.FeeRate != 0 {
+		t.Fatalf("expected fee_rate to be 0, got %#v", got.FeeRate)
+	}
+	if got.RefundAmount != 0 {
+		t.Fatalf("expected refund_amount to be 0, got %#v", got.RefundAmount)
+	}
+	if got.ProviderSnapshot != nil {
+		t.Fatalf("provider_snapshot should not be exposed: %#v", got.ProviderSnapshot)
 	}
 }

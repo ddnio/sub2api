@@ -32,6 +32,7 @@ const (
 	wechatOAuthIntentCookieName   = "wechat_oauth_intent"
 	wechatOAuthModeCookieName     = "wechat_oauth_mode"
 	wechatOAuthBindUserCookieName = "wechat_oauth_bind_user"
+	wechatOAuthAffiliateCookie    = "wechat_oauth_affiliate"
 	wechatOAuthDefaultRedirectTo  = "/dashboard"
 	wechatOAuthDefaultFrontendCB  = "/auth/wechat/callback"
 	wechatOAuthProviderKey        = "wechat-main"
@@ -125,6 +126,15 @@ func (h *AuthHandler) WeChatOAuthStart(c *gin.Context) {
 	wechatSetCookie(c, wechatOAuthRedirectCookieName, encodeCookieValue(redirectTo), wechatOAuthCookieMaxAgeSec, secureCookie)
 	wechatSetCookie(c, wechatOAuthIntentCookieName, encodeCookieValue(intent), wechatOAuthCookieMaxAgeSec, secureCookie)
 	wechatSetCookie(c, wechatOAuthModeCookieName, encodeCookieValue(cfg.mode), wechatOAuthCookieMaxAgeSec, secureCookie)
+	affiliateCode := ""
+	if intent == wechatOAuthIntentLogin {
+		affiliateCode = oauthAffiliateCodeFromRequest(c)
+	}
+	if affiliateCode != "" {
+		wechatSetCookie(c, wechatOAuthAffiliateCookie, encodeCookieValue(affiliateCode), wechatOAuthCookieMaxAgeSec, secureCookie)
+	} else {
+		wechatClearCookie(c, wechatOAuthAffiliateCookie, secureCookie)
+	}
 	setOAuthPendingBrowserCookie(c, browserSessionKey, secureCookie)
 	clearOAuthPendingSessionCookie(c, secureCookie)
 	if intent == oauthIntentBindCurrentUser {
@@ -171,6 +181,7 @@ func (h *AuthHandler) WeChatOAuthCallback(c *gin.Context) {
 		wechatClearCookie(c, wechatOAuthIntentCookieName, secureCookie)
 		wechatClearCookie(c, wechatOAuthModeCookieName, secureCookie)
 		wechatClearCookie(c, wechatOAuthBindUserCookieName, secureCookie)
+		wechatClearCookie(c, wechatOAuthAffiliateCookie, secureCookie)
 	}()
 
 	expectedState, err := readCookieDecoded(c, wechatOAuthStateCookieName)
@@ -246,6 +257,11 @@ func (h *AuthHandler) WeChatOAuthCallback(c *gin.Context) {
 	}
 
 	normalizedIntent := normalizeWeChatOAuthIntent(intent)
+	affiliateCode, _ := readCookieDecoded(c, wechatOAuthAffiliateCookie)
+	affiliateCode = normalizeOAuthAffiliateCode(affiliateCode)
+	if normalizedIntent != wechatOAuthIntentLogin {
+		affiliateCode = ""
+	}
 	if normalizedIntent == wechatOAuthIntentBind {
 		if err := h.createWeChatBindPendingSession(c, cfg, providerSubject, openid, redirectTo, browserSessionKey, upstreamClaims); err != nil {
 			switch infraerrors.Code(err) {
@@ -299,6 +315,7 @@ func (h *AuthHandler) WeChatOAuthCallback(c *gin.Context) {
 			"",
 			nil,
 			true,
+			affiliateCode,
 		); err != nil {
 			redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
 			return
@@ -318,6 +335,7 @@ func (h *AuthHandler) WeChatOAuthCallback(c *gin.Context) {
 		"",
 		nil,
 		false,
+		affiliateCode,
 	); err != nil {
 		redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
 		return
@@ -547,7 +565,7 @@ func (h *AuthHandler) CompleteWeChatOAuthRegistration(c *gin.Context) {
 		return
 	}
 
-	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPairForSource(c.Request.Context(), email, username, req.InvitationCode, "wechat")
+	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPairForSourceAndAffiliate(c.Request.Context(), email, username, req.InvitationCode, "wechat", pendingOAuthAffiliateCode(session))
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -637,6 +655,7 @@ func (h *AuthHandler) createWeChatChoicePendingSession(
 	compatEmail string,
 	compatEmailUser *dbent.User,
 	forceEmailOnSignup bool,
+	affiliateCode string,
 ) error {
 	suggestionEmail := strings.TrimSpace(suggestedEmail)
 	canonicalEmail := strings.TrimSpace(resolvedEmail)
@@ -680,6 +699,7 @@ func (h *AuthHandler) createWeChatChoicePendingSession(
 		ResolvedEmail:          resolvedChoiceEmail,
 		RedirectTo:             redirectTo,
 		BrowserSessionKey:      browserSessionKey,
+		AffiliateCode:          affiliateCode,
 		UpstreamIdentityClaims: upstreamClaims,
 		CompletionResponse:     completionResponse,
 	})

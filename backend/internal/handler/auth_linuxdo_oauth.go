@@ -37,6 +37,7 @@ const (
 	linuxDoOAuthRedirectCookie     = "linuxdo_oauth_redirect"
 	linuxDoOAuthIntentCookieName   = "linuxdo_oauth_intent"
 	linuxDoOAuthBindUserCookieName = "linuxdo_oauth_bind_user"
+	linuxDoOAuthAffiliateCookie    = "linuxdo_oauth_affiliate"
 	oauthBindAccessTokenCookieName = "oauth_bind_access_token"
 	linuxDoOAuthCookieMaxAgeSec    = 10 * 60 // 10 minutes
 	linuxDoOAuthDefaultRedirectTo  = "/dashboard"
@@ -110,6 +111,15 @@ func (h *AuthHandler) LinuxDoOAuthStart(c *gin.Context) {
 	setCookie(c, linuxDoOAuthRedirectCookie, encodeCookieValue(redirectTo), linuxDoOAuthCookieMaxAgeSec, secureCookie)
 	intent := normalizeOAuthIntent(c.Query("intent"))
 	setCookie(c, linuxDoOAuthIntentCookieName, encodeCookieValue(intent), linuxDoOAuthCookieMaxAgeSec, secureCookie)
+	affiliateCode := ""
+	if intent == oauthIntentLogin {
+		affiliateCode = oauthAffiliateCodeFromRequest(c)
+	}
+	if affiliateCode != "" {
+		setCookie(c, linuxDoOAuthAffiliateCookie, encodeCookieValue(affiliateCode), linuxDoOAuthCookieMaxAgeSec, secureCookie)
+	} else {
+		clearCookie(c, linuxDoOAuthAffiliateCookie, secureCookie)
+	}
 	setOAuthPendingBrowserCookie(c, browserSessionKey, secureCookie)
 	clearOAuthPendingSessionCookie(c, secureCookie)
 	if intent == oauthIntentBindCurrentUser {
@@ -182,6 +192,7 @@ func (h *AuthHandler) LinuxDoOAuthCallback(c *gin.Context) {
 		clearCookie(c, linuxDoOAuthRedirectCookie, secureCookie)
 		clearCookie(c, linuxDoOAuthIntentCookieName, secureCookie)
 		clearCookie(c, linuxDoOAuthBindUserCookieName, secureCookie)
+		clearCookie(c, linuxDoOAuthAffiliateCookie, secureCookie)
 	}()
 
 	expectedState, err := readCookieDecoded(c, linuxDoOAuthStateCookieName)
@@ -202,6 +213,11 @@ func (h *AuthHandler) LinuxDoOAuthCallback(c *gin.Context) {
 	}
 	intent, _ := readCookieDecoded(c, linuxDoOAuthIntentCookieName)
 	intent = normalizeOAuthIntent(intent)
+	affiliateCode, _ := readCookieDecoded(c, linuxDoOAuthAffiliateCookie)
+	affiliateCode = normalizeOAuthAffiliateCode(affiliateCode)
+	if intent != oauthIntentLogin {
+		affiliateCode = ""
+	}
 
 	codeVerifier := ""
 	if cfg.UsePKCE {
@@ -333,6 +349,7 @@ func (h *AuthHandler) LinuxDoOAuthCallback(c *gin.Context) {
 		compatEmail,
 		compatEmailUser,
 		h.isForceEmailOnThirdPartySignup(c.Request.Context()),
+		affiliateCode,
 	); err != nil {
 		redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
 		return
@@ -382,6 +399,7 @@ func (h *AuthHandler) createLinuxDoOAuthChoicePendingSession(
 	compatEmail string,
 	compatEmailUser *dbent.User,
 	forceEmailOnSignup bool,
+	affiliateCode string,
 ) error {
 	suggestionEmail := strings.TrimSpace(suggestedEmail)
 	canonicalEmail := strings.TrimSpace(resolvedEmail)
@@ -428,6 +446,7 @@ func (h *AuthHandler) createLinuxDoOAuthChoicePendingSession(
 		ResolvedEmail:          resolvedChoiceEmail,
 		RedirectTo:             redirectTo,
 		BrowserSessionKey:      browserSessionKey,
+		AffiliateCode:          affiliateCode,
 		UpstreamIdentityClaims: upstreamClaims,
 		CompletionResponse:     completionResponse,
 	})
@@ -518,7 +537,7 @@ func (h *AuthHandler) CompleteLinuxDoOAuthRegistration(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPairForSource(c.Request.Context(), email, username, req.InvitationCode, "linuxdo")
+	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPairForSourceAndAffiliate(c.Request.Context(), email, username, req.InvitationCode, "linuxdo", pendingOAuthAffiliateCode(session))
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return

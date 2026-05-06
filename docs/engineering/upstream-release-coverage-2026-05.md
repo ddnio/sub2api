@@ -26,6 +26,12 @@ If `upstream/main` advances, do not expand this ledger automatically. Only expan
 
 Fetch note: 2026-05-03 attempts to refresh `upstream` and `origin` failed with GitHub transport errors (`HTTP2 framing layer` / `Operation timed out`). Current decisions use the already present local refs above and the local upstream tags through `v0.1.121`. Push/fetch fallback order for this environment is: retry with `git -c http.version=HTTP/1.1`; if HTTPS still fails or hangs, use the explicit SSH URL (`git@github.com:ddnio/sub2api.git` for fork operations) or the GitHub Git Data API branch-creation fallback already documented in `docs/engineering/upstream-sync-2026-05-phase2.md`.
 
+## 2026-05-06 Direct-Merge Policy Update
+
+The active upstream release process changed after the `v0.1.116` and `v0.1.117` updates. For `v0.1.118` and later release planning, start from an isolated scratch worktree based on the latest fork release branch, run `git merge --no-ff <upstream-tag>` directly, then audit and repair conflicts, protected deletions, migration ordering, generated code, tests, and deployment notes before promoting the result to a release branch.
+
+Upstream commit and PR lists remain required, but they are post-merge coverage accounting rather than the default import mechanism. Do not plan per-PR or per-commit cherry-picks first unless the direct merge proves that one subfeature must be split out after repair.
+
 ## Repeated-Issue Log
 
 - GitHub HTTPS transport is unreliable in this environment. Do not spend multiple cycles retrying the same HTTPS fetch/push after `HTTP2 framing layer`, `Empty reply from server`, or timeout errors; switch to HTTP/1.1 once, then SSH or API fallback.
@@ -40,8 +46,8 @@ Fetch note: 2026-05-03 attempts to refresh `upstream` and `origin` failed with G
 
 ## Rules
 
-- Do not merge or cherry-pick an entire release.
-- Code merge unit is upstream first-parent commit / upstream PR merge commit. A smaller manually ported hunk is allowed only after the commit/PR has been tried or audited and the exact conflict/fork-divergence reason is recorded.
+- Start each upstream release update with a direct scratch merge of the whole upstream tag. The scratch merge is the import-audit mechanism; it is not automatic release readiness.
+- Code and PR lists are coverage ledgers after the scratch merge. Use cherry-picks or hand ports only as fallback for isolated subfeatures after direct-merge evidence shows why they must be split out.
 - Process releases in tag order. A later release must not start until the previous release gate is closed.
 - Inside a release, use upstream first-parent commits only as the mainline entry index. For every upstream merge PR entry, also expand the second-parent branch/internal commits before claiming the release is complete. Do not jump from one reopened item to a later release, and do not start a broad hand-written implementation before the corresponding upstream commit/PR and its internal commits have a direct-import or already-present audit.
 - Default fork PR packaging is one PR per upstream release gate. Keep all compatible items for the same release in one release worktree and one fork PR, with an itemized ledger and targeted tests. Split into separate PRs only for schema/migration changes, payment/auth/security/data-risk changes, very large or conflicted imports, or when a smaller PR is needed to unblock CI safely.
@@ -88,8 +94,9 @@ Current gate:
 | `v0.1.112..v0.1.113` | Final | Historical marker `fork/v0.1.113` exists and is intentionally retained without moving. PR #54 merged the stricter closeout into `main` at `6140ec11`; CI, independent review, ToC test/prod deployment, and ToB production verification are recorded below. |
 | `v0.1.113..v0.1.114` | Final | PR #44 was merged and deployed, and marker `fork/v0.1.114` exists. Rechecked after `v0.1.112..v0.1.113` became final; every release row has a closed outcome. |
 | `v0.1.114..v0.1.115` | Final | Merged to `main`, deployed and verified on ToC test, ToC production, and ToB production. `backend/cmd/server/VERSION` is `0.1.115`; annotated tag `fork/v0.1.115` points at marker commit `48d4a8de`. |
-| `v0.1.115..v0.1.116` | Next | Eleven upstream first-parent commits exist in this interval. Start here next; do not jump to later releases. |
-| `v0.1.116` and later | Blocked | Do not advance to later releases until earlier gates are closed in order. |
+| `v0.1.115..v0.1.116` | Final | Direct merge model used; merged to `main` at `18b1b72d`. |
+| `v0.1.116..v0.1.117` | Deployed / closeout pending | Direct merge model used; `origin/release/v0.1.117` at `01c8e36e` records test and production deployment evidence. `main` merge and `fork/v0.1.117` marker closeout remain required before final `v0.1.118` closeout. |
+| `v0.1.117..v0.1.118` | Test deployed | `origin/release/v0.1.118` at `e9fb884d` directly merged upstream `v0.1.118` at `4d128e9c`; local backend/frontend gates and shared test-environment smoke passed. Production deployment and marker/main closeout require explicit release approval. |
 
 Existing `fork/v0.1.111` through `fork/v0.1.114` tags must not be moved or deleted. They are historical fork sync markers. Any correctness gap found during recheck is fixed forward on latest `main`.
 
@@ -724,12 +731,116 @@ Range: `v0.1.116..v0.1.117`.
 | Upstream source | Area | Local state | Action | Notes |
 | --- | --- | --- | --- | --- |
 | `0a80ec80` | Version sync to v0.1.116 | Chore only | SKIP | Upstream version stamp, not behavior. |
-| `ac114738` / PR #1850 | Channel insights | Held feature | HOLD | Ent/migration/backend/frontend feature family. |
-| `ff08f9d7` / PR #1853 | Codex image generation bridge | Divergent image feature | HOLD | Image family conflicts with fork behavior and prior HOLD list. |
-| `ca204ddd` | Preserve image outputs when text serialization fails | Image-adjacent fix | HOLD | Potentially useful, but tied to held image path; reopen only in image batch. |
-| `a4e329c1` | Add default GPT-5.5 model | Model catalog/policy | HOLD | Not a safety fix; handle with a model catalog policy pass. |
+| `ac114738` / PR #1850 | Channel insights | Scratch imported | ADAPTED | Direct-merged in `scratch/v0.1.117-import-audit` as an import-audit exception. Preserved fork payment/referral/auth data models and renamed channel monitor migrations to fork-safe names. |
+| `ff08f9d7` / PR #1853 | Codex image generation bridge | Scratch imported | MERGED/PENDING | Present in scratch merge; still needs targeted OpenAI/Codex image and gateway route tests before release closeout. |
+| `ca204ddd` | Preserve image outputs when text serialization fails | Scratch imported | MERGED/PENDING | Present in scratch merge; still needs targeted serialization/image output tests before release closeout. |
+| `a4e329c1` | Add default GPT-5.5 model | Scratch imported | ADAPTED | Kept fork's existing `gpt-5.5`, `gpt-5.5-mini`, and `gpt-5.5-nano` model catalog entries; discarded the duplicate upstream timestamp-only conflict side. |
 
-Gate status: blocked by HOLD. Do not mark `v0.1.117` complete until channel insights, image-family items, and model-catalog policy are explicitly accepted for later, rejected, or long-term frozen.
+Scratch audit evidence recorded 2026-05-06 on branch `scratch/v0.1.117-import-audit`, base `origin/release/v0.1.116` (`63ff13dc`), upstream tag `v0.1.117` (`b0713bfb`). The direct merge was an import-audit rehearsal only.
+
+Main-based release candidate evidence recorded 2026-05-06 on branch `rehearsal/v0.1.117-from-main`, base `origin/main` (`18b1b72d`, already containing `release/v0.1.116`), candidate `release/v0.1.117` at `1b79196a`. This second merge was required because the `v0.1.116` main merge tree differed from `origin/release/v0.1.116` by omitting the `fmt` import in `backend/internal/handler/auth_oauth_pending_flow.go` while still using `fmt.Errorf`. The candidate also bumps `backend/cmd/server/VERSION` to `0.1.117` so test smoke can distinguish it from the already deployed 116 release.
+
+Conflict resolution groups:
+
+| Group | Files | Resolution |
+| --- | --- | --- |
+| Handler DI | `backend/internal/handler/handler.go`, `backend/internal/handler/wire.go`, `backend/cmd/server/wire_gen.go` | Kept fork `Pricing` and `Referral`; added upstream `ChannelMonitor` and `AvailableChannel`; regenerated Wire after adding missing fork providers. |
+| Ent generated code | `backend/ent/client.go`, `backend/ent/ent.go`, `backend/ent/mutation.go` | Kept fork `PaymentPlan` and `UserReferral`; added upstream `ChannelMonitor*`; regenerated Ent from schema. |
+| Model catalog | `backend/internal/pkg/openai/constants.go` | Kept fork model catalog including `gpt-5.5-mini` and `gpt-5.5-nano`; avoided duplicate `gpt-5.5`. |
+| Frontend API/state | `frontend/src/api/admin/index.ts`, `frontend/src/stores/app.ts` | Added channel monitor/template APIs and public settings defaults while preserving fork payment/admin exports. |
+| Migrations | `backend/migrations/125..129` | Renamed upstream channel monitor migrations to `125b_add_channel_monitors.sql`, `126b_add_channel_monitor_aggregation.sql`, `127b_drop_channel_monitor_deleted_at.sql`, `128b_add_channel_monitor_request_templates.sql`; kept `129_seed_claude_code_template.sql`. |
+
+Protected deletion matrix:
+
+| Protected class | Static upstream risk | Scratch resolution | Verification |
+| --- | --- | --- | --- |
+| Payment schema/Ent | Upstream deletes `backend/ent/schema/payment_plan.go` and payment-related generated references. | Preserved fork `PaymentPlan` schema/generated paths. | `git diff --name-status --diff-filter=D` returned no deletions; targeted backend tests passed. |
+| Referral schema/Ent | Upstream deletes `backend/ent/schema/user_referral.go` and referral generated references. | Preserved fork `UserReferral`, `ReferralService`, and `ReferralHandler`. | `git diff --name-status --diff-filter=D` returned no deletions; targeted backend tests passed. |
+| Payment/referral/auth migrations | Static diff deletes deployed fork migrations including `077`, `078`, `091`, `092`, `102a`, `114a`, `120b`, `121`, `122`, `123`, `124`, `125`, `126`, `127`, `128`. | Rejected upstream deletions by retaining fork migration files from `origin/release/v0.1.116`. | `git diff --name-status --diff-filter=D` returned no deletions after conflict repair. |
+| Channel monitor migrations | Upstream adds `125_add_channel_monitors.sql` through `128_add_channel_monitor_request_templates.sql`, colliding with existing fork numeric prefixes. | Renamed to `125b`, `126b`, `127b`, `128b` to avoid overwriting or reusing deployed fork filenames. | Migration listing shows fork `125/126/127/128` files and new `125b/126b/127b/128b/129` files together. |
+
+PR #1850 subitem ledger:
+
+| Subitem | Internal commits | Scratch outcome | Evidence / next gate |
+| --- | --- | --- | --- |
+| Monitor schema, migrations, Ent | `20a4e418`, `8cf83c98`, `ef6ec8a1`, `a7415d4d` | ADAPTED | Ent regenerated; migrations renumbered. Still needs migration/checksum targeted gate. |
+| Backend monitor checker, runner, repositories | `20a4e418`, `b363bff1`, `c2f9ad7a`, `c46744f3`, `a3ea8eca` | MERGED | Wire generation succeeded; `go test ./cmd/server ./internal/handler ./internal/repository ./internal/service` passed. |
+| Request templates and seed data | `a2964259`, `6925ac25`, `a7415d4d`, `e1193212` | MERGED | Template repo/service/handler imported; seed migration kept as `129_seed_claude_code_template.sql`. |
+| Available channels aggregation | `654cfb64`, `365ef1fd`, `88decb6e`, `375aefa2`, `4a3652ec`, `59290e39`, `9ba42aa5`, `800802b8`, `3cdd5754`, `ff4ef1b5`, `9dae6c7a`, `25a50355`, `6cd7c605` | MERGED/PENDING | Backend target tests and frontend typecheck passed; still needs targeted pricing/channel behavior tests. |
+| Settings/public settings/feature flags | `7da51240`, `ba98243c`, `84b03efa`, `1f81b779`, `1949425a`, `5eedf782`, `6f04c25e` | MERGED | Public settings defaults and DTO additions imported; frontend typecheck passed. |
+| Admin/user monitor UI | `a1425b45`, `0d01bd90`, `ba98243c`, `0c48f08f`, `800802b8`, `0dcc0e05`, `f7c8377a`, `6699d337`, `09fd83ab` | MERGED/PENDING | Frontend typecheck passed; component/build/visual smoke still required before release closeout. |
+| Payment webhook unknown-order behavior | `75e1b40f`, `d5dac84e` | MERGED/PENDING | Payment webhook files imported while preserving fork payment providers; targeted payment webhook test still required. |
+| Cleanup/release sync/test-only commits | `0a80ec80`, `748a84d8`, `49787269`, `67518a59`, `375cce29`, `5e060b22`, `ac114738` | ADAPTED | Scratch merge accepted relevant upstream state, rejected fork-protected deletions, and restored the `usageLoadQueue` regression test that was dropped during the direct merge. |
+
+Scratch local gates:
+
+- `make generate` in `backend`: passed after restoring fork Wire providers for `NewReferralService`, `AffiliateService`, `NewPricingHandler`, and `NewReferralHandler`.
+- `cd backend && go test ./cmd/server ./internal/handler ./internal/repository ./internal/service`: passed.
+- `cd frontend && pnpm install --frozen-lockfile`: passed, using lockfile/cache.
+- `cd frontend && pnpm run typecheck`: passed.
+- `rg -n "^<<<<<<<|^=======$|^>>>>>>>" .`: no conflict markers.
+- `git diff --check`: passed.
+- `git diff --name-status --diff-filter=D`: no remaining deletions after restoring `frontend/src/utils/__tests__/usageLoadQueue.spec.ts`.
+- `v0.1.116` production deployment: confirmed by operator on 2026-05-06.
+
+Main-based candidate gates:
+
+- `git fetch origin main`: passed; `origin/main` remained `18b1b72d`.
+- `git merge --no-ff a7130b2e` into `rehearsal/v0.1.117-from-main`: passed, producing merge commit `d1095144`.
+- `git diff --check HEAD`: passed before and after release-label fix.
+- `rg -n "^(<<<<<<<( |$)|=======$|>>>>>>>( |$))" .`: no conflict markers.
+- `git diff origin/main --name-status --diff-filter=D`: no deletions.
+- `cd backend && go test ./cmd/server ./internal/handler ./internal/repository ./internal/service`: passed.
+- `cd backend && go test ./...`: passed.
+- `cd backend && go test ./cmd/server`: passed after `VERSION` changed to `0.1.117`.
+- `cd frontend && pnpm run typecheck`: passed.
+- `cd frontend && pnpm exec vitest run src/utils/__tests__/usageLoadQueue.spec.ts`: 10 tests passed.
+- `cd frontend && pnpm run lint:check`: passed.
+- `cd frontend && pnpm run build`: passed with existing Vite dynamic/static import and chunk-size warnings only.
+- `hotfix/v0.1.116-datatable-rendering` was cherry-picked as `8a1e667a`; `cd frontend && pnpm run typecheck`, `pnpm run lint:check`, `pnpm run build`, and `git diff --check HEAD~1` passed.
+
+Shared test deployment evidence:
+
+- Pre-deploy test database backup: `/home/nio/backups/sub2api_test_pre_v0.1.117_20260506_080558.dump` (`7.1M`, mode `600`).
+- Test server repo `/data/service/sub2api`: `release/v0.1.117` at `8a1e667a`, `backend/cmd/server/VERSION` is `0.1.117`.
+- `./deploy/deploy-server.sh test`: built `sub2api:test`, replaced `sub2api-test`, and exposed `127.0.0.1:8081`.
+- Container: `sub2api-test` is `running healthy`.
+- Local and public `/health`: 200 with `{"status":"ok"}`.
+- Public `/api/v1/settings/public`: 200 and reports `"version":"0.1.117"`, `payment_enabled:true`, and `channel_monitor_enabled:true`.
+- Public unauthenticated `/v1/models`: 401.
+- Public SPA routes `/admin/orders`, `/admin/orders/dashboard`, `/admin/orders/plans`, `/admin/channel-monitor`, and `/user/channel-status`: 200.
+- Test DB `schema_migrations` includes `125b_add_channel_monitors.sql`, `126b_add_channel_monitor_aggregation.sql`, `127b_drop_channel_monitor_deleted_at.sql`, `128b_add_channel_monitor_request_templates.sql`, and `129_seed_claude_code_template.sql`.
+- Severe log scan over the deployment window found no `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常| 500 | 404 ` matches.
+- After the DataTable hotfix redeploy, public `/health`, `/api/v1/settings/public`, `/admin/orders`, `/admin/channel-monitor`, `/user/channel-status`, unauthenticated `/v1/models`, container health, and severe-log scan were rechecked successfully.
+
+ToB/fx deployment evidence:
+
+- Pre-deploy ToB database backup: `/home/nio/backups/sub2api_tob_pre_v0.1.117_20260506_164440.dump` (`78M`, mode `600`).
+- ToB server repo `/data/service/sub2api`: `release/v0.1.117` at `361f34a3`, `backend/cmd/server/VERSION` is `0.1.117`.
+- `./deploy/deploy-server.sh prod`: built `sub2api:prod`, replaced `sub2api-prod`, and exposed `127.0.0.1:8080`.
+- Container: `sub2api-prod` is `running healthy` on image `sha256:7ae27cc3156d362e7ac2f751306a16829b166f1b22d0ef4ff264cbbc10a26d7a`.
+- Local and public `/health`: 200 with `{"status":"ok"}`.
+- Public `/api/v1/settings/public`: 200 and reports `"version":"0.1.117"` and `channel_monitor_enabled:true`.
+- Public unauthenticated `/v1/models`: 401.
+- Public SPA routes `/admin/orders`, `/admin/channel-monitor`, and `/user/channel-status`: 200.
+- ToB DB `schema_migrations` includes the new channel monitor/template migrations `125b_add_channel_monitors.sql`, `126b_add_channel_monitor_aggregation.sql`, `127b_drop_channel_monitor_deleted_at.sql`, `128b_add_channel_monitor_request_templates.sql`, and `129_seed_claude_code_template.sql`, alongside the earlier fork migrations through `128_auth_identity_foundation.sql`.
+- Severe log scan over the deployment window found no `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常| 500 | 404 ` matches.
+
+ToC production deployment evidence:
+
+- Pre-deploy ToC production database backup: `/home/nio/backups/sub2api_prod_pre_v0.1.117_20260506_093959.dump` (`264M`, mode `600`).
+- ToC production server repo `/data/service/sub2api`: `release/v0.1.117` at `00b361c0`, `backend/cmd/server/VERSION` is `0.1.117`.
+- `./deploy/deploy-server.sh prod`: fast-forwarded the repo from `8a1e667a` to `00b361c0`, built `sub2api:prod`, replaced `sub2api-prod`, and exposed `127.0.0.1:8080`.
+- Container: `sub2api-prod` is `running healthy` on image `sha256:693674fb8f01acd109ef08b093d49101e0ee343cd3e569ea1d439e228747225d`.
+- Local and public `/health`: 200 with `{"status":"ok"}`.
+- Public `/api/v1/settings/public`: 200 and reports `"version":"0.1.117"`.
+- Local unauthenticated `/v1/models`: 401; public unauthenticated `/v1/models`: 401.
+- Local and public SPA routes `/admin/orders`, `/admin/orders/dashboard`, `/admin/orders/plans`, and `/admin/settings`: 200.
+- ToC production DB `schema_migrations` includes the new channel monitor/template migrations `125b_add_channel_monitors.sql`, `126b_add_channel_monitor_aggregation.sql`, `127b_drop_channel_monitor_deleted_at.sql`, `128b_add_channel_monitor_request_templates.sql`, and `129_seed_claude_code_template.sql`, alongside the earlier fork migration `128_auth_identity_foundation.sql`.
+- Severe startup/migration log scan over the deployment window found no `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常` matches. The broader `ERROR|WARN` scan found only existing configuration warnings for disabled URL allowlist, empty trusted proxies, and missing CORS allowed origins.
+- Residual cache note: stale hashed frontend asset URLs can still return embedded `index.html` under `/assets/*` and be cached by the edge/browser as immutable static content. A hard refresh fixed the observed `admin/settings` blank-page symptom; this remains a separate static-asset fallback/cache hardening item, not a failed 117 deployment check.
+
+Gate status: `v0.1.117` is deployed and smoke-verified on shared test from `8a1e667a`, on ToB/fx from `361f34a3`, and on ToC production from `00b361c0`. Remaining post-release follow-up is deeper human/interactive functional validation of the new channel monitor and image-generation flows, plus any additional payment webhook checks the operator wants repeated against live data.
 
 ### v0.1.118
 
@@ -753,7 +864,34 @@ Range: `v0.1.117..v0.1.118`.
 | `641e6107` / PR #1940 | Codex CLI version bump | Dependency/tooling | HOLD | Dependency/policy update, not a low-risk runtime fix. |
 | `5d1c12e6` / PR #1943 | Responses pre-output failover | Not portable | HOLD | Requires upstream buffering structure absent in fork. |
 
-Gate status: blocked by HOLD / unresolved PARTIAL items. Do not mark `v0.1.118` complete until these are resolved after `v0.1.117`.
+Direct-merge recheck on 2026-05-06: the pre-merge HOLD / PARTIAL rows above are superseded by the `release/v0.1.118` batch candidate. The checklist items were re-audited against the merged tree:
+
+- OpenAI `/responses/compact` account support, scheduler routing, model mapping, admin probes, and pass-through path handling are present with service tests.
+- Affiliate invite rebate is present across migrations `130`/`131`, service/repository/payment fulfillment, user/admin APIs, frontend invite page, and OAuth attribution for LinuxDo/OIDC/WeChat.
+- Claude Code mimicry is runtime-aligned to CLI `2.1.92`, Codex CLI probing is aligned to `0.125.0`, and migration `132_update_claude_code_monitor_template.sql` updates existing 117-era monitor templates/snapshots from the old `2.1.114` seed without overwriting `body_override`.
+- Responses `web_search` / `google_search`, Stripe top-level display, and OpenAI test/rate-limit reconciliation have local implementation and targeted regression coverage.
+- `backend/cmd/server/VERSION` is `0.1.118` for test-environment smoke identification.
+
+Local verification before test deployment:
+
+- `git diff --check`
+- `cd backend && go test -tags unit ./migrations ./internal/handler ./internal/service`
+- `cd backend && go test -tags unit ./cmd/server`
+- targeted backend service/handler tests for Claude mimicry, web search, compact, account test state, OAuth affiliate attribution, and payment order paths
+- `cd frontend && pnpm exec vitest run src/components/auth/__tests__/OAuthAffiliateStart.spec.ts src/components/auth/__tests__/WechatOAuthSection.spec.ts src/views/user/__tests__/PaymentView.spec.ts src/views/user/__tests__/paymentUx.spec.ts`
+- `cd frontend && pnpm run typecheck`
+
+Shared test deployment evidence:
+
+- Branch/commit: deployed `origin/release/v0.1.118` at `e9fb884d` (`Prepare v0.1.118 test deployment`) from `/data/service/sub2api`; `backend/cmd/server/VERSION` is `0.1.118`.
+- Test database backup: `/home/nio/backups/sub2api_test_pre_v0.1.118_20260506_132416.dump`, size `7.2M`, mode `600`.
+- Deploy command: `./deploy/deploy-server.sh test` completed on `108.160.133.141`; container `sub2api-test` started healthy on `127.0.0.1:8081`.
+- Smoke: local `/health` returned `{"status":"ok"}`, public `https://router-test.nanafox.com/health` returned `{"status":"ok"}`, public settings returned `"version":"0.1.118"`, and unauthenticated public `/v1/models` returned `401`.
+- Frontend route smoke: public `/admin/orders`, `/admin/channel-monitor`, and `/user/channel-status` each returned `200`.
+- Migration smoke: test DB recorded `132_update_claude_code_monitor_template.sql`; stale Claude monitor headers containing `2.1.114` or `advisor-tool-2026-03-01` counted `0` in both templates and monitor snapshots; the template now reports `User-Agent = claude-cli/2.1.92 (external, cli)` and `X-App = cli`.
+- Post-deploy severe-log scan for `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常| 500 | 404 ` returned no matches. Startup warnings were limited to existing deployment configuration warnings for URL allowlist, trusted proxies, and CORS.
+
+Gate status: shared test-environment deployment is complete. Production deployment remains out of scope until separately approved.
 
 ### v0.1.119
 
