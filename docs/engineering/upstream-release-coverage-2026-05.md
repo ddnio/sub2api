@@ -97,7 +97,7 @@ Current gate:
 | `v0.1.115..v0.1.116` | Final | Direct merge model used; merged to `main` at `18b1b72d`. |
 | `v0.1.116..v0.1.117` | Deployed / closeout pending | Direct merge model used; `origin/release/v0.1.117` at `01c8e36e` records test and production deployment evidence. `main` merge and `fork/v0.1.117` marker closeout remain required before final historical marker closeout. |
 | `v0.1.117..v0.1.118` | Final / deployed | Direct merge model used; `origin/release/v0.1.118` at `71b85c55` records production deployment evidence and `main` promotion landed at `d97be0b7`. |
-| `v0.1.118..v0.1.119` | Production deployed / main closeout in progress | Direct merge model used; `origin/release/v0.1.119` at `f2fdf6be` is deployed and smoke-verified on shared test, ToC production, and ToB/FX production. Main merge and main-branch redeploy remain the active closeout steps. |
+| `v0.1.118..v0.1.119` | Final / deployed | Direct merge model used; `origin/release/v0.1.119` at `b7d95eca` records production deployment evidence. Promotion to `main` landed at `5d71ad2b`, then main was redeployed and smoke-verified on shared test, ToC production, and ToB/FX production. |
 
 Existing `fork/v0.1.111` through `fork/v0.1.114` tags must not be moved or deleted. They are historical fork sync markers. Any correctness gap found during recheck is fixed forward on latest `main`.
 
@@ -962,7 +962,15 @@ ToB/FX production deployment evidence:
 - Fresh smoke recheck: `sub2api-prod` was `running healthy`, local and public `/health` returned `{"status":"ok"}`, public settings returned `"version":"0.1.119"`, unauthenticated local `/v1/models` returned `401`, public settings returned `affiliate_enabled=false`, and the severe-log scan for `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常` was empty.
 - Migration verification: `schema_migrations` recorded `132_affiliate_custom_settings.sql` and `133_affiliate_rebate_freeze.sql`; columns `user_affiliates.aff_code_custom`, `user_affiliates.aff_frozen_quota`, `user_affiliates.aff_rebate_rate_percent`, and `user_affiliate_ledger.frozen_until` exist.
 
-Gate status: `v0.1.119` is pushed to `origin/release/v0.1.119` and deployed/smoke-verified on shared test, ToC production, and ToB/FX production. Main promotion and main-branch redeploy remain the active closeout steps.
+Main promotion and deployment closeout:
+
+- `release/v0.1.119` was merged to `main` as `5d71ad2b` (`Promote v0.1.119 after production verification`) and pushed to `origin/main`.
+- Post-merge verification on the main merge tree: `release/v0.1.119..HEAD` had no tree diff, `backend/cmd/server/VERSION` was `0.1.119`, `git diff --check origin/main..HEAD` passed before push, backend targeted OAuth/affiliate/API-contract tests passed for `internal/service`, `internal/handler`, `internal/server`, `internal/pkg/apicompat`, and `internal/payment/provider`, and the frontend OAuth affiliate suite passed 8 files / 88 tests.
+- ToC test main redeploy: `sub2api-test` on `108.160.133.141` was redeployed from `main` at `5d71ad2b`; `backend/cmd/server/VERSION` was `0.1.119`, the container was `running healthy`, local and public `/health` returned `{"status":"ok"}`, public settings returned `"version":"0.1.119"` and `affiliate_enabled=true`, unauthenticated local `/v1/models` returned `401`, and the severe-log scan was empty.
+- ToC production main redeploy: `sub2api-prod` on `108.160.133.141` was redeployed from `main` at `5d71ad2b`; `backend/cmd/server/VERSION` was `0.1.119`, the container was `running healthy`, local and public `/health` returned `{"status":"ok"}`, public settings returned `"version":"0.1.119"` and `affiliate_enabled=true`, unauthenticated local `/v1/models` returned `401`, and the severe-log scan was empty.
+- ToB/FX production main redeploy: `sub2api-prod` on `43.106.8.109` was redeployed from `main` at `5d71ad2b`; `backend/cmd/server/VERSION` was `0.1.119`, the container was `running healthy`, local and public `/health` returned `{"status":"ok"}`, public settings returned `"version":"0.1.119"` and `affiliate_enabled=false`, unauthenticated local `/v1/models` returned `401`, and the severe-log scan was empty.
+
+Gate status: `v0.1.119` is deployed/smoke-verified on shared test, ToC production, and ToB/FX production, promoted to `main`, and redeployed from `main` across all three environments. No release-local `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` item remains for `v0.1.118..v0.1.119`.
 
 ### v0.1.120
 
