@@ -141,20 +141,10 @@
         </div>
       </template>
       <template #table>
-        <AccountBulkActionsBar
-          :selected-ids="selIds"
-          :has-active-filters="hasActiveBulkEditFilters"
-          @delete="handleBulkDelete"
-          @reset-status="handleBulkResetStatus"
-          @refresh-token="handleBulkRefreshToken"
-          @edit-selected="openBulkEditSelected"
-          @edit-filtered="openBulkEditFiltered"
-          @clear="clearSelection"
-          @select-page="selectPage"
-          @toggle-schedulable="handleBulkToggleSchedulable"
-        />
+        <AccountBulkActionsBar :selected-ids="selIds" @delete="handleBulkDelete" @reset-status="handleBulkResetStatus" @refresh-token="handleBulkRefreshToken" @edit="showBulkEdit = true" @clear="clearSelection" @select-page="selectPage" @toggle-schedulable="handleBulkToggleSchedulable" />
         <div ref="accountTableRef" class="flex min-h-0 flex-1 flex-col overflow-hidden">
         <DataTable
+          ref="dataTableRef"
           :columns="cols"
           :data="accounts"
           :loading="loading"
@@ -164,6 +154,8 @@
           default-sort-key="name"
           default-sort-order="asc"
           :sort-storage-key="ACCOUNT_SORT_STORAGE_KEY"
+          :estimate-row-height="72"
+          :overscan="5"
         >
           <template #header-select>
             <input
@@ -175,7 +167,7 @@
             />
           </template>
           <template #cell-select="{ row }">
-            <input type="checkbox" :checked="selIds.includes(row.id)" @change="toggleSel(row.id)" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+            <input type="checkbox" :checked="isSelected(row.id)" @change="toggleSel(row.id)" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
           </template>
           <template #cell-name="{ row, value }">
             <div class="flex flex-col">
@@ -208,7 +200,9 @@
             <AccountCapacityCell :account="row" />
           </template>
           <template #cell-status="{ row }">
-            <AccountStatusIndicator :account="row" @show-temp-unsched="handleShowTempUnsched" />
+            <div class="flex items-center gap-1.5">
+              <AccountStatusIndicator :account="row" @show-temp-unsched="handleShowTempUnsched" />
+            </div>
           </template>
           <template #cell-schedulable="{ row }">
             <button @click="handleToggleSchedulable(row)" :disabled="togglingSchedulable === row.id" class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus:ring-offset-dark-800" :class="[row.schedulable ? 'bg-primary-500 hover:bg-primary-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-dark-600 dark:hover:bg-dark-500']" :title="row.schedulable ? t('admin.accounts.schedulableEnabled') : t('admin.accounts.schedulableDisabled')">
@@ -302,17 +296,7 @@
     <AccountActionMenu :show="menu.show" :account="menu.acc" :position="menu.pos" @close="menu.show = false" @test="handleTest" @stats="handleViewStats" @schedule="handleSchedule" @reauth="handleReAuth" @refresh-token="handleRefresh" @recover-state="handleRecoverState" @reset-quota="handleResetQuota" @set-privacy="handleSetPrivacy" />
     <SyncFromCrsModal :show="showSync" @close="showSync = false" @synced="reload" />
     <ImportDataModal :show="showImportData" @close="showImportData = false" @imported="handleDataImported" />
-    <BulkEditAccountModal
-      :show="showBulkEdit"
-      :account-ids="selIds"
-      :selected-platforms="selPlatforms"
-      :selected-types="selTypes"
-      :target="bulkEditTarget ?? undefined"
-      :proxies="proxies"
-      :groups="groups"
-      @close="showBulkEdit = false"
-      @updated="handleBulkUpdated"
-    />
+    <BulkEditAccountModal :show="showBulkEdit" :account-ids="selIds" :selected-platforms="selPlatforms" :selected-types="selTypes" :proxies="proxies" :groups="groups" @close="showBulkEdit = false" @updated="handleBulkUpdated" />
     <TempUnschedStatusModal :show="showTempUnsched" :account="tempUnschedAcc" @close="showTempUnsched = false" @reset="handleTempUnschedReset" />
     <ConfirmDialog :show="showDeleteDialog" :title="t('admin.accounts.deleteAccount')" :message="t('admin.accounts.deleteConfirm', { name: deletingAcc?.name })" :confirm-text="t('common.delete')" :cancel-text="t('common.cancel')" :danger="true" @confirm="confirmDelete" @cancel="showDeleteDialog = false" />
     <ConfirmDialog :show="showExportDataDialog" :title="t('admin.accounts.dataExport')" :message="t('admin.accounts.dataExportConfirmMessage')" :confirm-text="t('admin.accounts.dataExportConfirm')" :cancel-text="t('common.cancel')" @confirm="handleExportData" @cancel="showExportDataDialog = false">
@@ -334,7 +318,7 @@ import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import { adminAPI } from '@/api/admin'
 import { useTableLoader } from '@/composables/useTableLoader'
-import { useSwipeSelect } from '@/composables/useSwipeSelect'
+import { useSwipeSelect, type SwipeSelectVirtualContext } from '@/composables/useSwipeSelect'
 import { useTableSelection } from '@/composables/useTableSelection'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
@@ -372,27 +356,7 @@ const authStore = useAuthStore()
 const proxies = ref<AccountProxy[]>([])
 const groups = ref<AdminGroup[]>([])
 const accountTableRef = ref<HTMLElement | null>(null)
-type AccountBulkEditTarget =
-  | {
-      mode: 'selected'
-      accountIds: number[]
-      selectedPlatforms: AccountPlatform[]
-      selectedTypes: AccountType[]
-    }
-  | {
-      mode: 'filtered'
-      filters: {
-        platform?: string
-        type?: string
-        status?: string
-        group?: string
-        search?: string
-        privacy_mode?: string
-      }
-      previewCount: number
-      selectedPlatforms: AccountPlatform[]
-      selectedTypes: AccountType[]
-    }
+const dataTableRef = ref<InstanceType<typeof DataTable> | null>(null)
 const selPlatforms = computed<AccountPlatform[]>(() => {
   const platforms = new Set(
     accounts.value
@@ -416,7 +380,6 @@ const showImportData = ref(false)
 const showExportDataDialog = ref(false)
 const includeProxyOnExport = ref(true)
 const showBulkEdit = ref(false)
-const bulkEditTarget = ref<AccountBulkEditTarget | null>(null)
 const showTempUnsched = ref(false)
 const showDeleteDialog = ref(false)
 const showReAuth = ref(false)
@@ -693,17 +656,25 @@ const {
   clear: clearSelection,
   removeMany: removeSelectedAccounts,
   toggleVisible,
-  selectVisible: selectPage
+  selectVisible: selectPage,
+  batchUpdate
 } = useTableSelection<Account>({
   rows: accounts,
   getId: (account) => account.id
 })
 
+const swipeVirtualContext: SwipeSelectVirtualContext = {
+  getVirtualizer: () => dataTableRef.value?.virtualizer ?? null,
+  getSortedData: () => dataTableRef.value?.sortedData ?? accounts.value,
+  getRowId: (row: any) => row.id,
+}
+
 useSwipeSelect(accountTableRef, {
   isSelected,
   select,
-  deselect
-})
+  deselect,
+  batchUpdate
+}, swipeVirtualContext)
 
 const resetAutoRefreshCache = () => {
   autoRefreshETag.value = null
@@ -1201,72 +1172,7 @@ const handleBulkToggleSchedulable = async (schedulable: boolean) => {
     appStore.showError(t('common.error'))
   }
 }
-const buildBulkEditFilterSnapshot = () => {
-  const rawParams = toRaw(params) as Record<string, unknown>
-  return {
-    platform: typeof rawParams.platform === 'string' ? rawParams.platform : '',
-    type: typeof rawParams.type === 'string' ? rawParams.type : '',
-    status: typeof rawParams.status === 'string' ? rawParams.status : '',
-    group: typeof rawParams.group === 'string' ? rawParams.group : '',
-    search: typeof rawParams.search === 'string' ? rawParams.search : '',
-    privacy_mode: typeof rawParams.privacy_mode === 'string' ? rawParams.privacy_mode : ''
-  }
-}
-
-const hasBulkEditFilters = (filters: ReturnType<typeof buildBulkEditFilterSnapshot>) =>
-  Object.values(filters).some((value) => String(value).trim() !== '')
-
-const hasActiveBulkEditFilters = computed(() => hasBulkEditFilters(buildBulkEditFilterSnapshot()))
-
-const collectFilterMetadata = (filters: ReturnType<typeof buildBulkEditFilterSnapshot>) => {
-  return {
-    selectedPlatforms: filters.platform ? [filters.platform as AccountPlatform] : [],
-    selectedTypes: filters.type ? [filters.type as AccountType] : []
-  }
-}
-
-const openBulkEditSelected = () => {
-  bulkEditTarget.value = {
-    mode: 'selected',
-    accountIds: [...selIds.value],
-    selectedPlatforms: [...selPlatforms.value],
-    selectedTypes: [...selTypes.value]
-  }
-  showBulkEdit.value = true
-}
-
-const openBulkEditFiltered = async () => {
-  const filters = buildBulkEditFilterSnapshot()
-  if (!hasBulkEditFilters(filters)) {
-    appStore.showError(t('admin.accounts.bulkEdit.noSelection'))
-    return
-  }
-  try {
-    const preview = await adminAPI.accounts.list(1, 100, filters)
-    if (preview.total <= 0) {
-      appStore.showError(t('admin.accounts.bulkEdit.noSelection'))
-      return
-    }
-    const { selectedPlatforms, selectedTypes } = collectFilterMetadata(filters)
-    bulkEditTarget.value = {
-      mode: 'filtered',
-      filters,
-      previewCount: preview.total,
-      selectedPlatforms,
-      selectedTypes
-    }
-    showBulkEdit.value = true
-  } catch (error: any) {
-    appStore.showError(error.message || t('admin.accounts.failedToLoad'))
-  }
-}
-
-const handleBulkUpdated = () => {
-  showBulkEdit.value = false
-  bulkEditTarget.value = null
-  clearSelection()
-  reload()
-}
+const handleBulkUpdated = () => { showBulkEdit.value = false; clearSelection(); reload() }
 const handleDataImported = () => { showImportData.value = false; reload() }
 const ACCOUNT_UNGROUPED_GROUP_QUERY_VALUE = 'ungrouped'
 const ACCOUNT_PRIVACY_MODE_UNSET_QUERY_VALUE = '__unset__'

@@ -320,62 +320,6 @@ func TestUpdateProviderInstancePersistsEnabledAndSupportedTypes(t *testing.T) {
 	require.Equal(t, "alipay,wxpay", saved.SupportedTypes)
 }
 
-func TestCreateProviderInstanceValidatesEnabledWxpayConfig(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-	client := newPaymentConfigServiceTestClient(t)
-	svc := &PaymentConfigService{
-		entClient:     client,
-		encryptionKey: []byte("0123456789abcdef0123456789abcdef"),
-	}
-
-	cfg := validWxpayProviderConfig(t)
-	delete(cfg, "certSerial")
-
-	created, err := svc.CreateProviderInstance(ctx, CreateProviderInstanceRequest{
-		ProviderKey:    payment.TypeWxpay,
-		Name:           "Broken WeChat Pay",
-		Config:         cfg,
-		SupportedTypes: []string{payment.TypeWxpay},
-		Enabled:        true,
-	})
-	require.Nil(t, created)
-	require.Error(t, err)
-	require.Equal(t, "WXPAY_CONFIG_MISSING_KEY", infraerrors.Reason(err))
-	require.Equal(t, "certSerial", infraerrors.FromError(err).Metadata["key"])
-}
-
-func TestUpdateProviderInstanceValidatesWxpayConfigWhenEnabling(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-	client := newPaymentConfigServiceTestClient(t)
-	svc := &PaymentConfigService{
-		entClient:     client,
-		encryptionKey: []byte("0123456789abcdef0123456789abcdef"),
-	}
-
-	cfg := validWxpayProviderConfig(t)
-	cfg["apiV3Key"] = "short"
-	instance, err := svc.CreateProviderInstance(ctx, CreateProviderInstanceRequest{
-		ProviderKey:    payment.TypeWxpay,
-		Name:           "Draft WeChat Pay",
-		Config:         cfg,
-		SupportedTypes: []string{payment.TypeWxpay},
-		Enabled:        false,
-	})
-	require.NoError(t, err)
-
-	updated, err := svc.UpdateProviderInstance(ctx, instance.ID, UpdateProviderInstanceRequest{
-		Enabled: boolPtrValue(true),
-	})
-	require.Nil(t, updated)
-	require.Error(t, err)
-	require.Equal(t, "WXPAY_CONFIG_INVALID_KEY_LENGTH", infraerrors.Reason(err))
-	require.Equal(t, "apiV3Key", infraerrors.FromError(err).Metadata["key"])
-}
-
 func TestUpdateProviderInstanceRejectsProtectedConfigChangesWhilePendingOrders(t *testing.T) {
 	t.Parallel()
 

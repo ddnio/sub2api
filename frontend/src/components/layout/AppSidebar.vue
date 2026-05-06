@@ -27,28 +27,70 @@
       <template v-if="isAdmin">
         <!-- Admin Section -->
         <div class="sidebar-section">
-          <router-link
-            v-for="item in adminNavItems"
-            :key="item.path"
-            :to="item.path"
-            class="sidebar-link mb-1"
-            :class="{ 'sidebar-link-active': isActive(item.path), 'sidebar-link-collapsed': sidebarCollapsed }"
-            :title="sidebarCollapsed ? item.label : undefined"
-            :id="
-              item.path === '/admin/accounts'
-                ? 'sidebar-channel-manage'
-                : item.path === '/admin/groups'
-                  ? 'sidebar-group-manage'
-                  : item.path === '/admin/redeem'
-                    ? 'sidebar-wallet'
-                    : undefined
-            "
-            @click="handleMenuItemClick(item.path)"
-          >
-            <span v-if="item.iconSvg" class="h-5 w-5 flex-shrink-0 sidebar-svg-icon" v-html="sanitizeSvg(item.iconSvg)"></span>
-            <component v-else :is="item.icon" class="h-5 w-5 flex-shrink-0" />
-            <span class="sidebar-label" :class="{ 'sidebar-label-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">{{ item.label }}</span>
-          </router-link>
+          <template v-for="item in adminNavItems" :key="item.path">
+            <!-- Collapsible group (has children) -->
+            <template v-if="item.children?.length">
+              <button
+                type="button"
+                class="sidebar-link mb-1 w-full"
+                :class="{
+                  'sidebar-link-active': isGroupActive(item) && !isGroupExpanded(item),
+                  'sidebar-link-collapsed': sidebarCollapsed
+                }"
+                :title="sidebarCollapsed ? item.label : undefined"
+                @click="sidebarCollapsed ? undefined : toggleGroup(item)"
+              >
+                <component :is="item.icon" class="h-5 w-5 flex-shrink-0" />
+                <span
+                  class="sidebar-label sidebar-label-flex"
+                  :class="{ 'sidebar-label-collapsed': sidebarCollapsed }"
+                  :aria-hidden="sidebarCollapsed ? 'true' : 'false'"
+                >
+                  <span class="min-w-0 truncate">{{ item.label }}</span>
+                  <ChevronDownIcon
+                    class="h-4 w-4 flex-shrink-0 transition-transform duration-200"
+                    :class="isGroupExpanded(item) ? 'rotate-180' : ''"
+                  />
+                </span>
+              </button>
+              <!-- Children -->
+              <div v-if="!sidebarCollapsed && isGroupExpanded(item)" class="mb-1 ml-4 border-l border-gray-200 pl-2 dark:border-dark-600">
+                <router-link
+                  v-for="child in item.children"
+                  :key="child.path"
+                  :to="child.path"
+                  class="sidebar-link mb-0.5 py-1.5 text-sm"
+                  :class="{ 'sidebar-link-active': route.path === child.path }"
+                  @click="handleMenuItemClick(child.path)"
+                >
+                  <component :is="child.icon" class="h-4 w-4 flex-shrink-0" />
+                  <span>{{ child.label }}</span>
+                </router-link>
+              </div>
+            </template>
+            <!-- Normal item (no children) -->
+            <router-link
+              v-else
+              :to="item.path"
+              class="sidebar-link mb-1"
+              :class="{ 'sidebar-link-active': isActive(item.path), 'sidebar-link-collapsed': sidebarCollapsed }"
+              :title="sidebarCollapsed ? item.label : undefined"
+              :id="
+                item.path === '/admin/accounts'
+                  ? 'sidebar-channel-manage'
+                  : item.path === '/admin/groups'
+                    ? 'sidebar-group-manage'
+                    : item.path === '/admin/redeem'
+                      ? 'sidebar-wallet'
+                      : undefined
+              "
+              @click="handleMenuItemClick(item.path)"
+            >
+              <span v-if="item.iconSvg" class="h-5 w-5 flex-shrink-0 sidebar-svg-icon" v-html="sanitizeSvg(item.iconSvg)"></span>
+              <component v-else :is="item.icon" class="h-5 w-5 flex-shrink-0" />
+              <span class="sidebar-label" :class="{ 'sidebar-label-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">{{ item.label }}</span>
+            </router-link>
+          </template>
         </div>
 
         <!-- Personal Section for Admin (hidden in simple mode) -->
@@ -151,6 +193,7 @@ interface NavItem {
   icon: unknown
   iconSvg?: string
   hideInSimpleMode?: boolean
+  children?: NavItem[]
 }
 
 const { t } = useI18n()
@@ -165,6 +208,9 @@ const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
 const mobileOpen = computed(() => appStore.mobileOpen)
 const isAdmin = computed(() => authStore.isAdmin)
 const isDark = ref(document.documentElement.classList.contains('dark'))
+
+// Track which parent nav groups are expanded
+const expandedGroups = ref<Set<string>>(new Set())
 
 // Site settings from appStore (cached, no flicker)
 const siteName = computed(() => appStore.siteName)
@@ -458,6 +504,36 @@ const ChevronDoubleLeftIcon = {
     )
 }
 
+const OrderIcon = {
+  render: () =>
+    h(
+      'svg',
+      { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' },
+      [
+        h('path', {
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          d: 'M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z'
+        })
+      ]
+    )
+}
+
+const OrderListIcon = {
+  render: () =>
+    h(
+      'svg',
+      { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' },
+      [
+        h('path', {
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          d: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z'
+        })
+      ]
+    )
+}
+
 const ChevronDoubleRightIcon = {
   render: () =>
     h(
@@ -473,7 +549,7 @@ const ChevronDoubleRightIcon = {
     )
 }
 
-const TagIcon = {
+const ChevronDownIcon = {
   render: () =>
     h(
       'svg',
@@ -482,12 +558,7 @@ const TagIcon = {
         h('path', {
           'stroke-linecap': 'round',
           'stroke-linejoin': 'round',
-          d: 'M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L9.568 3z'
-        }),
-        h('path', {
-          'stroke-linecap': 'round',
-          'stroke-linejoin': 'round',
-          d: 'M6 6h.008v.008H6V6z'
+          d: 'm19.5 8.25-7.5 7.5-7.5-7.5'
         })
       ]
     )
@@ -498,15 +569,29 @@ const userNavItems = computed((): NavItem[] => {
   const items: NavItem[] = [
     { path: '/dashboard', label: t('nav.dashboard'), icon: DashboardIcon },
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon },
-    { path: '/pricing', label: t('nav.pricing'), icon: TagIcon, hideInSimpleMode: true },
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true },
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true },
-    { path: '/purchase', label: t('nav.payment'), icon: RechargeSubscriptionIcon, hideInSimpleMode: true },
-    { path: '/orders', label: t('nav.myOrders'), icon: CreditCardIcon, hideInSimpleMode: true },
-    { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
-    ...(appStore.cachedPublicSettings?.referral_enabled
-      ? [{ path: '/referral', label: t('nav.referral'), icon: UsersIcon, hideInSimpleMode: true }]
+    ...(appStore.cachedPublicSettings?.payment_enabled
+      ? [
+          {
+            path: '/purchase',
+            label: t('nav.buySubscription'),
+            icon: RechargeSubscriptionIcon,
+            hideInSimpleMode: true
+          },
+        ]
       : []),
+    ...(appStore.cachedPublicSettings?.payment_enabled
+      ? [
+          {
+            path: '/orders',
+            label: t('nav.myOrders'),
+            icon: OrderListIcon,
+            hideInSimpleMode: true
+          },
+        ]
+      : []),
+    { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
     { path: '/profile', label: t('nav.profile'), icon: UserIcon },
     ...customMenuItemsForUser.value.map((item): NavItem => ({
       path: `/custom/${item.id}`,
@@ -522,15 +607,29 @@ const userNavItems = computed((): NavItem[] => {
 const personalNavItems = computed((): NavItem[] => {
   const items: NavItem[] = [
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon },
-    { path: '/pricing', label: t('nav.pricing'), icon: TagIcon, hideInSimpleMode: true },
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true },
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true },
-    { path: '/purchase', label: t('nav.payment'), icon: RechargeSubscriptionIcon, hideInSimpleMode: true },
-    { path: '/orders', label: t('nav.myOrders'), icon: CreditCardIcon, hideInSimpleMode: true },
-    { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
-    ...(appStore.cachedPublicSettings?.referral_enabled
-      ? [{ path: '/referral', label: t('nav.referral'), icon: UsersIcon, hideInSimpleMode: true }]
+    ...(appStore.cachedPublicSettings?.payment_enabled
+      ? [
+          {
+            path: '/purchase',
+            label: t('nav.buySubscription'),
+            icon: RechargeSubscriptionIcon,
+            hideInSimpleMode: true
+          },
+        ]
       : []),
+    ...(appStore.cachedPublicSettings?.payment_enabled
+      ? [
+          {
+            path: '/orders',
+            label: t('nav.myOrders'),
+            icon: OrderListIcon,
+            hideInSimpleMode: true
+          },
+        ]
+      : []),
+    { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
     { path: '/profile', label: t('nav.profile'), icon: UserIcon },
     ...customMenuItemsForUser.value.map((item): NavItem => ({
       path: `/custom/${item.id}`,
@@ -570,11 +669,23 @@ const adminNavItems = computed((): NavItem[] => {
     { path: '/admin/accounts', label: t('nav.accounts'), icon: GlobeIcon },
     { path: '/admin/announcements', label: t('nav.announcements'), icon: BellIcon },
     { path: '/admin/proxies', label: t('nav.proxies'), icon: ServerIcon },
-    { path: '/admin/payment/dashboard', label: t('nav.paymentDashboard'), icon: ChartIcon, hideInSimpleMode: true },
-    { path: '/admin/payment/orders', label: t('nav.orderManagement'), icon: CreditCardIcon, hideInSimpleMode: true },
-    { path: '/admin/payment/plans', label: t('nav.paymentPlans'), icon: CreditCardIcon, hideInSimpleMode: true },
     { path: '/admin/redeem', label: t('nav.redeemCodes'), icon: TicketIcon, hideInSimpleMode: true },
     { path: '/admin/promo-codes', label: t('nav.promoCodes'), icon: GiftIcon, hideInSimpleMode: true },
+    ...(adminSettingsStore.paymentEnabled
+      ? [
+          {
+            path: '/admin/orders',
+            label: t('nav.orderManagement'),
+            icon: OrderIcon,
+            hideInSimpleMode: true,
+            children: [
+              { path: '/admin/orders/dashboard', label: t('nav.paymentDashboard'), icon: ChartIcon },
+              { path: '/admin/orders', label: t('nav.orderManagement'), icon: OrderIcon },
+              { path: '/admin/orders/plans', label: t('nav.paymentPlans'), icon: CreditCardIcon },
+            ],
+          },
+        ]
+      : []),
     { path: '/admin/usage', label: t('nav.usage'), icon: ChartIcon }
   ]
 
@@ -636,6 +747,23 @@ function isActive(path: string): boolean {
   return route.path === path || route.path.startsWith(path + '/')
 }
 
+function isGroupActive(item: NavItem): boolean {
+  if (!item.children) return false
+  return item.children.some(child => route.path === child.path)
+}
+
+function isGroupExpanded(item: NavItem): boolean {
+  return expandedGroups.value.has(item.path) || isGroupActive(item)
+}
+
+function toggleGroup(item: NavItem) {
+  if (expandedGroups.value.has(item.path)) {
+    expandedGroups.value.delete(item.path)
+  } else {
+    expandedGroups.value.add(item.path)
+  }
+}
+
 // Initialize theme
 const savedTheme = localStorage.getItem('theme')
 if (
@@ -679,7 +807,6 @@ onMounted(() => {
 .sidebar-brand {
   min-width: 0;
   flex: 1 1 auto;
-  overflow: hidden;
   white-space: nowrap;
   transition:
     max-width 0.22s ease,
@@ -690,6 +817,7 @@ onMounted(() => {
 
 .sidebar-brand-collapsed {
   max-width: 0;
+  overflow: hidden;
   opacity: 0;
   transform: translateX(-4px);
   pointer-events: none;
@@ -767,21 +895,18 @@ onMounted(() => {
   max-width: 12rem;
 }
 
+.sidebar-label-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 .sidebar-label-collapsed {
   max-width: 0;
   opacity: 0;
   transform: translateX(-4px);
   pointer-events: none;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
 }
 
 /* Custom SVG icon in sidebar: constrain size without overriding uploaded SVG colors */

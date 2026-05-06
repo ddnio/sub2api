@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"hash/fnv"
+	"log/slog"
 	"reflect"
 	"sort"
 	"strconv"
@@ -929,10 +930,8 @@ func (a *Account) SupportsOpenAIImageCapability(capability OpenAIImagesCapabilit
 		return false
 	}
 	switch capability {
-	case OpenAIImagesCapabilityBasic:
+	case OpenAIImagesCapabilityBasic, OpenAIImagesCapabilityNative:
 		return a.Type == AccountTypeOAuth || a.Type == AccountTypeAPIKey
-	case OpenAIImagesCapabilityNative:
-		return a.Type == AccountTypeAPIKey
 	default:
 		return true
 	}
@@ -1000,7 +999,7 @@ func (a *Account) IsOveragesEnabled() bool {
 	return false
 }
 
-// IsOpenAIPassthroughEnabled 返回 OpenAI 账号是否启用“自动透传（仅替换认证）”。
+// IsOpenAIPassthroughEnabled 返回 OpenAI 账号是否启用"自动透传（仅替换认证）"。
 //
 // 新字段：accounts.extra.openai_passthrough。
 // 兼容字段：accounts.extra.openai_oauth_passthrough（历史 OAuth 开关）。
@@ -1164,7 +1163,7 @@ func (a *Account) ResolveOpenAIResponsesWebSocketV2Mode(defaultMode string) stri
 	return resolvedDefault
 }
 
-// IsOpenAIWSForceHTTPEnabled 返回账号级“强制 HTTP”开关。
+// IsOpenAIWSForceHTTPEnabled 返回账号级"强制 HTTP"开关。
 // 字段：accounts.extra.openai_ws_force_http。
 func (a *Account) IsOpenAIWSForceHTTPEnabled() bool {
 	if a == nil || !a.IsOpenAI() || a.Extra == nil {
@@ -1189,7 +1188,7 @@ func (a *Account) IsOpenAIOAuthPassthroughEnabled() bool {
 	return a != nil && a.IsOpenAIOAuth() && a.IsOpenAIPassthroughEnabled()
 }
 
-// IsAnthropicAPIKeyPassthroughEnabled 返回 Anthropic API Key 账号是否启用“自动透传（仅替换认证）”。
+// IsAnthropicAPIKeyPassthroughEnabled 返回 Anthropic API Key 账号是否启用"自动透传（仅替换认证）"。
 // 字段：accounts.extra.anthropic_passthrough。
 // 字段缺失或类型不正确时，按 false（关闭）处理。
 func (a *Account) IsAnthropicAPIKeyPassthroughEnabled() bool {
@@ -1200,42 +1199,42 @@ func (a *Account) IsAnthropicAPIKeyPassthroughEnabled() bool {
 	return ok && enabled
 }
 
+// WebSearch 模拟三态常量
 const (
-	WebSearchModeDefault  = "default"
-	WebSearchModeEnabled  = "enabled"
-	WebSearchModeDisabled = "disabled"
+	WebSearchModeDefault  = "default"  // 跟随渠道配置
+	WebSearchModeEnabled  = "enabled"  // 强制开启
+	WebSearchModeDisabled = "disabled" // 强制关闭
 )
 
-// GetWebSearchEmulationMode returns the account-level web search emulation mode.
-// Backward compatibility: old boolean true maps to enabled, false/missing maps to default.
+// GetWebSearchEmulationMode 返回账号的 WebSearch 模拟模式。
+// 三态：default（跟随渠道）/ enabled（强制开启）/ disabled（强制关闭）。
+// 兼容旧 bool 值：true→enabled, false→default（并记录 debug 日志）。
 func (a *Account) GetWebSearchEmulationMode() string {
 	if a == nil || a.Platform != PlatformAnthropic || a.Type != AccountTypeAPIKey || a.Extra == nil {
 		return WebSearchModeDefault
 	}
-	switch value := a.Extra[featureKeyWebSearchEmulation].(type) {
-	case string:
-		switch value {
-		case WebSearchModeEnabled, WebSearchModeDisabled:
-			return value
-		default:
-			return WebSearchModeDefault
-		}
-	case bool:
-		if value {
+	raw := a.Extra[featureKeyWebSearchEmulation]
+	// Tolerant: legacy bool values (pre-migration or stale writes)
+	if b, ok := raw.(bool); ok {
+		slog.Debug("legacy bool web_search_emulation value", "account_id", a.ID, "value", b)
+		if b {
 			return WebSearchModeEnabled
 		}
 		return WebSearchModeDefault
+	}
+	mode, ok := raw.(string)
+	if !ok {
+		return WebSearchModeDefault
+	}
+	switch mode {
+	case WebSearchModeEnabled, WebSearchModeDisabled:
+		return mode
 	default:
 		return WebSearchModeDefault
 	}
 }
 
-// IsWebSearchEmulationEnabled 返回 Anthropic API Key 账号是否显式启用 web search 模拟。
-func (a *Account) IsWebSearchEmulationEnabled() bool {
-	return a.GetWebSearchEmulationMode() == WebSearchModeEnabled
-}
-
-// IsCodexCLIOnlyEnabled 返回 OpenAI OAuth 账号是否启用“仅允许 Codex 官方客户端”。
+// IsCodexCLIOnlyEnabled 返回 OpenAI OAuth 账号是否启用"仅允许 Codex 官方客户端"。
 // 字段：accounts.extra.codex_cli_only。
 // 字段缺失或类型不正确时，按 false（关闭）处理。
 func (a *Account) IsCodexCLIOnlyEnabled() bool {
@@ -1443,19 +1442,6 @@ func (a *Account) getExtraFloat64(key string) float64 {
 	return 0
 }
 
-// getExtraBool 从 Extra 中读取指定 key 的 bool 值
-func (a *Account) getExtraBool(key string) bool {
-	if a.Extra == nil {
-		return false
-	}
-	if v, ok := a.Extra[key]; ok {
-		if b, ok := v.(bool); ok {
-			return b
-		}
-	}
-	return false
-}
-
 // getExtraTime 从 Extra 中读取 RFC3339 时间戳
 func (a *Account) getExtraTime(key string) time.Time {
 	if a.Extra == nil {
@@ -1472,6 +1458,19 @@ func (a *Account) getExtraTime(key string) time.Time {
 		}
 	}
 	return time.Time{}
+}
+
+// getExtraBool 从 Extra 中读取指定 key 的 bool 值
+func (a *Account) getExtraBool(key string) bool {
+	if a.Extra == nil {
+		return false
+	}
+	if v, ok := a.Extra[key]; ok {
+		if b, ok := v.(bool); ok {
+			return b
+		}
+	}
+	return false
 }
 
 // getExtraString 从 Extra 中读取指定 key 的字符串值
@@ -1550,6 +1549,8 @@ func (a *Account) GetQuotaResetTimezone() string {
 	}
 	return "UTC"
 }
+
+// --- Quota Notification Getters ---
 
 // QuotaNotifyConfig returns the notify configuration for a given quota dimension.
 // dim must be one of quotaDimDaily, quotaDimWeekly, quotaDimTotal.

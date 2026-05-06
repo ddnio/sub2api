@@ -70,7 +70,7 @@ import {
   resolveWeChatOAuthStartStrict,
   type WeChatOAuthPublicSettings,
 } from '@/api/auth'
-import { startOAuthBinding, unbindAuthProvider } from '@/api/user'
+import { startOAuthBinding, unbindAuthIdentity as unbindAuthProvider } from '@/api/user'
 import { useAppStore } from '@/stores'
 import type { User, UserAuthBindingStatus, UserAuthProvider, UserProfile } from '@/types'
 
@@ -118,7 +118,7 @@ const wechatOAuthSettings = computed<WeChatOAuthPublicSettings | null>(() => {
 const resolvedWeChatBinding = computed(() => resolveWeChatOAuthStartStrict(wechatOAuthSettings.value))
 
 const emit = defineEmits<{
-  updated: [user: UserProfile]
+  updated: [user: User]
 }>()
 
 function getStatus(provider: UserAuthProvider): UserAuthBindingStatus | undefined {

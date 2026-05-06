@@ -61,6 +61,8 @@ const (
 	FieldLastActiveAt = "last_active_at"
 	// FieldReferralCode holds the string denoting the referral_code field in the database.
 	FieldReferralCode = "referral_code"
+	// FieldRpmLimit holds the string denoting the rpm_limit field in the database.
+	FieldRpmLimit = "rpm_limit"
 	// EdgeAPIKeys holds the string denoting the api_keys edge name in mutations.
 	EdgeAPIKeys = "api_keys"
 	// EdgeRedeemCodes holds the string denoting the redeem_codes edge name in mutations.
@@ -224,6 +226,7 @@ var Columns = []string{
 	FieldLastLoginAt,
 	FieldLastActiveAt,
 	FieldReferralCode,
+	FieldRpmLimit,
 }
 
 var (
@@ -296,6 +299,8 @@ var (
 	SignupSourceValidator func(string) error
 	// ReferralCodeValidator is a validator for the "referral_code" field. It is called by the builders before save.
 	ReferralCodeValidator func(string) error
+	// DefaultRpmLimit holds the default value on creation for the "rpm_limit" field.
+	DefaultRpmLimit int
 )
 
 // OrderOption defines the ordering options for the User queries.
@@ -419,6 +424,11 @@ func ByLastActiveAt(opts ...sql.OrderTermOption) OrderOption {
 // ByReferralCode orders the results by the referral_code field.
 func ByReferralCode(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldReferralCode, opts...).ToFunc()
+}
+
+// ByRpmLimit orders the results by the rpm_limit field.
+func ByRpmLimit(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRpmLimit, opts...).ToFunc()
 }
 
 // ByAPIKeysCount orders the results by api_keys count.

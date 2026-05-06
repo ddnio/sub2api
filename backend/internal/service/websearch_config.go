@@ -24,8 +24,8 @@ type WebSearchProviderConfig struct {
 	Type             string `json:"type"`                    // websearch.ProviderTypeBrave | Tavily
 	APIKey           string `json:"api_key,omitempty"`       // secret — omitted in API responses
 	APIKeyConfigured bool   `json:"api_key_configured"`      // read-only mask
-	QuotaLimit       *int64 `json:"quota_limit"`             // nil = unlimited, >0 = limited, 0 = legacy unlimited
-	SubscribedAt     *int64 `json:"subscribed_at,omitempty"` // subscription start; quota resets monthly
+	QuotaLimit       *int64 `json:"quota_limit"`             // nil = unlimited, >0 = limited
+	SubscribedAt     *int64 `json:"subscribed_at,omitempty"` // subscription start (unix seconds); quota resets monthly
 	QuotaUsed        int64  `json:"quota_used,omitempty"`    // read-only: current usage from Redis
 	ProxyID          *int64 `json:"proxy_id"`                // optional proxy association
 	ExpiresAt        *int64 `json:"expires_at,omitempty"`    // optional expiration timestamp
@@ -53,7 +53,7 @@ func validateWebSearchConfig(cfg *WebSearchEmulationConfig) error {
 			return fmt.Errorf("provider[%d]: invalid type %q", i, p.Type)
 		}
 		if p.QuotaLimit != nil && *p.QuotaLimit < 0 {
-			return fmt.Errorf("provider[%d]: quota_limit must be >= 0 or null", i)
+			return fmt.Errorf("provider[%d]: quota_limit must be > 0 or null", i)
 		}
 		if seen[p.Type] {
 			return fmt.Errorf("provider[%d]: duplicate type %q", i, p.Type)
@@ -84,8 +84,7 @@ const (
 // GetWebSearchEmulationConfig returns the configuration with in-process cache + singleflight.
 func (s *SettingService) GetWebSearchEmulationConfig(ctx context.Context) (*WebSearchEmulationConfig, error) {
 	if cached := webSearchEmulationCache.Load(); cached != nil {
-		c, ok := cached.(*cachedWebSearchEmulationConfig)
-		if ok && time.Now().UnixNano() < c.expiresAt {
+		if c, ok := cached.(*cachedWebSearchEmulationConfig); ok && time.Now().UnixNano() < c.expiresAt {
 			return c.config, nil
 		}
 	}
@@ -95,11 +94,10 @@ func (s *SettingService) GetWebSearchEmulationConfig(ctx context.Context) (*WebS
 	if err != nil {
 		return &WebSearchEmulationConfig{}, err
 	}
-	cfg, ok := result.(*WebSearchEmulationConfig)
-	if !ok {
-		return &WebSearchEmulationConfig{}, fmt.Errorf("websearch: unexpected config cache type %T", result)
+	if cfg, ok := result.(*WebSearchEmulationConfig); ok {
+		return cfg, nil
 	}
-	return cfg, nil
+	return &WebSearchEmulationConfig{}, nil
 }
 
 func (s *SettingService) loadWebSearchConfigFromDB() (*WebSearchEmulationConfig, error) {
@@ -141,13 +139,13 @@ func (s *SettingService) SaveWebSearchEmulationConfig(ctx context.Context, cfg *
 		return infraerrors.BadRequest("INVALID_WEB_SEARCH_CONFIG", err.Error())
 	}
 	s.mergeExistingAPIKeys(ctx, cfg)
+
+	// After merge, validate all enabled providers have API keys
 	if cfg.Enabled {
-		for _, provider := range cfg.Providers {
-			if provider.APIKey == "" {
-				return infraerrors.BadRequest(
-					"MISSING_API_KEY",
-					fmt.Sprintf("provider %s has no API key configured", provider.Type),
-				)
+		for _, p := range cfg.Providers {
+			if p.APIKey == "" {
+				return infraerrors.BadRequest("MISSING_API_KEY",
+					fmt.Sprintf("provider %s has no API key configured", p.Type))
 			}
 		}
 	}
@@ -167,7 +165,7 @@ func (s *SettingService) SaveWebSearchEmulationConfig(ctx context.Context, cfg *
 	})
 
 	// Hot-reload: rebuild the global Manager with new config
-	s.RebuildWebSearchManager(ctx)
+	s.rebuildWebSearchManager(ctx)
 	return nil
 }
 
@@ -209,69 +207,52 @@ func (s *SettingService) IsWebSearchEmulationEnabled(ctx context.Context) bool {
 	return cfg.Enabled && len(cfg.Providers) > 0
 }
 
-// SetWebSearchQuotaStore injects the store used for quota tracking.
-// Call after construction, before first use. Triggers initial Manager build.
-func (s *SettingService) SetWebSearchQuotaStore(ctx context.Context, quotaStore websearch.RedisClient) {
-	s.webSearchQuotaStore = quotaStore
-	s.RebuildWebSearchManager(ctx)
+// SetWebSearchManagerBuilder injects a callback that creates and wires a websearch.Manager.
+// The infra layer (main/wire) provides this builder, keeping redis out of the service layer.
+// Triggers initial build.
+func (s *SettingService) SetWebSearchManagerBuilder(ctx context.Context, builder WebSearchManagerBuilder) {
+	s.webSearchManagerBuilder = builder
+	s.rebuildWebSearchManager(ctx)
 }
 
-// SetWebSearchProxyRepository injects the proxy repository used to resolve provider proxy_id.
-func (s *SettingService) SetWebSearchProxyRepository(proxyRepo ProxyRepository) {
-	s.webSearchProxyRepo = proxyRepo
-}
-
-// RebuildWebSearchManager reads the current config and (re)creates the global websearch.Manager.
-// Called on startup and after SaveWebSearchEmulationConfig.
-func (s *SettingService) RebuildWebSearchManager(ctx context.Context) {
+// rebuildWebSearchManager reads the current config, resolves proxy URLs, and invokes the builder.
+func (s *SettingService) rebuildWebSearchManager(ctx context.Context) {
+	if s.webSearchManagerBuilder == nil {
+		return
+	}
 	cfg, err := s.GetWebSearchEmulationConfig(ctx)
-	if err != nil || !cfg.Enabled || len(cfg.Providers) == 0 {
+	if err != nil {
 		SetWebSearchManager(nil)
 		return
 	}
-	providerConfigs := make([]websearch.ProviderConfig, 0, len(cfg.Providers))
+	proxyURLs := s.resolveProviderProxyURLs(ctx, cfg)
+	s.webSearchManagerBuilder(cfg, proxyURLs)
+}
+
+// resolveProviderProxyURLs collects proxy IDs from providers and resolves them to URLs.
+func (s *SettingService) resolveProviderProxyURLs(ctx context.Context, cfg *WebSearchEmulationConfig) map[int64]string {
+	if cfg == nil || s.proxyRepo == nil {
+		return nil
+	}
+	var ids []int64
 	for _, p := range cfg.Providers {
-		providerConfigs = append(providerConfigs, websearch.ProviderConfig{
-			Type:         p.Type,
-			APIKey:       p.APIKey,
-			QuotaLimit:   webSearchQuotaLimitValue(p.QuotaLimit),
-			SubscribedAt: p.SubscribedAt,
-			ProxyURL:     s.resolveWebSearchProviderProxyURL(ctx, p.ProxyID),
-			ProxyID:      webSearchProxyIDValue(p.ProxyID),
-			ExpiresAt:    p.ExpiresAt,
-		})
+		if p.ProxyID != nil && *p.ProxyID > 0 {
+			ids = append(ids, *p.ProxyID)
+		}
 	}
-	SetWebSearchManager(websearch.NewManager(providerConfigs, s.webSearchQuotaStore))
-	slog.Info("websearch: manager rebuilt", "provider_count", len(providerConfigs))
-}
-
-func (s *SettingService) resolveWebSearchProviderProxyURL(ctx context.Context, proxyID *int64) string {
-	if proxyID == nil || *proxyID <= 0 || s.webSearchProxyRepo == nil {
-		return ""
+	if len(ids) == 0 {
+		return nil
 	}
-	proxy, err := s.webSearchProxyRepo.GetByID(ctx, *proxyID)
+	proxies, err := s.proxyRepo.ListByIDs(ctx, ids)
 	if err != nil {
-		slog.Warn("websearch: failed to resolve provider proxy", "proxy_id", *proxyID, "error", err)
-		return ""
+		slog.Warn("websearch: failed to resolve proxy URLs", "error", err)
+		return nil
 	}
-	if proxy == nil || !proxy.IsActive() {
-		return ""
+	result := make(map[int64]string, len(proxies))
+	for _, px := range proxies {
+		result[px.ID] = px.URL()
 	}
-	return proxy.URL()
-}
-
-func webSearchProxyIDValue(proxyID *int64) int64 {
-	if proxyID == nil {
-		return 0
-	}
-	return *proxyID
-}
-
-func webSearchQuotaLimitValue(quotaLimit *int64) int64 {
-	if quotaLimit == nil {
-		return 0
-	}
-	return *quotaLimit
+	return result
 }
 
 // WebSearchTestResult holds the result of a search test.
@@ -282,7 +263,7 @@ type WebSearchTestResult struct {
 }
 
 // TestWebSearch executes a test search using the currently configured Manager.
-// It bypasses quota tracking and is intended for admin config validation only.
+// Uses Manager.TestSearch which bypasses quota tracking.
 const testSearchTimeout = 15 * time.Second
 
 func TestWebSearch(ctx context.Context, query string) (*WebSearchTestResult, error) {
@@ -306,6 +287,28 @@ func TestWebSearch(ctx context.Context, query string) (*WebSearchTestResult, err
 	}, nil
 }
 
+// PopulateWebSearchUsage returns a copy with quota usage populated from Redis (api_key kept as-is).
+func PopulateWebSearchUsage(ctx context.Context, cfg *WebSearchEmulationConfig) *WebSearchEmulationConfig {
+	if cfg == nil {
+		return nil
+	}
+	out := *cfg
+	out.Providers = make([]WebSearchProviderConfig, len(cfg.Providers))
+
+	mgr := getWebSearchManager()
+
+	for i, p := range cfg.Providers {
+		out.Providers[i] = p
+		out.Providers[i].APIKeyConfigured = p.APIKey != ""
+
+		if mgr != nil {
+			used, _ := mgr.GetUsage(ctx, p.Type)
+			out.Providers[i].QuotaUsed = used
+		}
+	}
+	return &out
+}
+
 // ResetWebSearchUsage deletes the Redis quota key for the given provider type.
 func ResetWebSearchUsage(ctx context.Context, providerType string) error {
 	mgr := getWebSearchManager()
@@ -322,11 +325,16 @@ func SanitizeWebSearchConfig(ctx context.Context, cfg *WebSearchEmulationConfig)
 	}
 	out := *cfg
 	out.Providers = make([]WebSearchProviderConfig, len(cfg.Providers))
+
+	// Load usage from the global Manager (reads from Redis)
 	mgr := getWebSearchManager()
+
 	for i, p := range cfg.Providers {
 		out.Providers[i] = p
 		out.Providers[i].APIKeyConfigured = p.APIKey != ""
 		out.Providers[i].APIKey = "" // never return the secret
+
+		// Populate quota usage from Redis
 		if mgr != nil {
 			used, _ := mgr.GetUsage(ctx, p.Type)
 			out.Providers[i].QuotaUsed = used

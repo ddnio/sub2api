@@ -15,14 +15,21 @@ import (
 // UserHandler handles user-related requests
 type UserHandler struct {
 	userService  *service.UserService
+	authService  *service.AuthService
 	emailService *service.EmailService
 	emailCache   service.EmailCache
 }
 
 // NewUserHandler creates a new UserHandler
-func NewUserHandler(userService *service.UserService, emailService *service.EmailService, emailCache service.EmailCache) *UserHandler {
+func NewUserHandler(
+	userService *service.UserService,
+	authService *service.AuthService,
+	emailService *service.EmailService,
+	emailCache service.EmailCache,
+) *UserHandler {
 	return &UserHandler{
 		userService:  userService,
+		authService:  authService,
 		emailService: emailService,
 		emailCache:   emailCache,
 	}
@@ -157,6 +164,16 @@ type StartIdentityBindingRequest struct {
 	RedirectTo string `json:"redirect_to"`
 }
 
+type BindEmailIdentityRequest struct {
+	Email      string `json:"email" binding:"required,email"`
+	VerifyCode string `json:"verify_code" binding:"required"`
+	Password   string `json:"password" binding:"required"`
+}
+
+type SendEmailBindingCodeRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
 // StartIdentityBinding returns the backend authorize URL for starting a third-party identity bind flow.
 // POST /api/v1/user/auth-identities/bind/start
 func (h *UserHandler) StartIdentityBinding(c *gin.Context) {
@@ -183,19 +200,31 @@ func (h *UserHandler) StartIdentityBinding(c *gin.Context) {
 	response.Success(c, result)
 }
 
-// UnbindIdentity removes a third-party sign-in provider from the current user.
-// DELETE /api/v1/user/account-bindings/:provider
-func (h *UserHandler) UnbindIdentity(c *gin.Context) {
+// BindEmailIdentity verifies and binds a local email identity for the current user.
+// POST /api/v1/user/account-bindings/email
+func (h *UserHandler) BindEmailIdentity(c *gin.Context) {
 	subject, ok := middleware2.GetAuthSubjectFromContext(c)
 	if !ok {
 		response.Unauthorized(c, "User not authenticated")
 		return
 	}
+	if h.authService == nil {
+		response.InternalError(c, "Auth service not configured")
+		return
+	}
 
-	updatedUser, err := h.userService.UnbindUserAuthProvider(
+	var req BindEmailIdentityRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	updatedUser, err := h.authService.BindEmailIdentity(
 		c.Request.Context(),
 		subject.UserID,
-		c.Param("provider"),
+		req.Email,
+		req.VerifyCode,
+		req.Password,
 	)
 	if err != nil {
 		response.ErrorFrom(c, err)
@@ -209,6 +238,67 @@ func (h *UserHandler) UnbindIdentity(c *gin.Context) {
 	}
 
 	response.Success(c, profileResp)
+}
+
+// UnbindIdentity removes a third-party sign-in provider from the current user.
+// DELETE /api/v1/user/account-bindings/:provider
+func (h *UserHandler) UnbindIdentity(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	updatedUser, unbound, err := h.userService.UnbindUserAuthProviderWithResult(
+		c.Request.Context(),
+		subject.UserID,
+		c.Param("provider"),
+	)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	if unbound && h.authService != nil {
+		if err := h.authService.RevokeAllUserTokens(c.Request.Context(), subject.UserID); err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+	}
+
+	profileResp, err := h.buildUserProfileResponse(c.Request.Context(), subject.UserID, updatedUser)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, profileResp)
+}
+
+// SendEmailBindingCode sends a verification code for the current user's email binding flow.
+// POST /api/v1/user/account-bindings/email/send-code
+func (h *UserHandler) SendEmailBindingCode(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+	if h.authService == nil {
+		response.InternalError(c, "Auth service not configured")
+		return
+	}
+
+	var req SendEmailBindingCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	if err := h.authService.SendEmailIdentityBindCode(c.Request.Context(), subject.UserID, req.Email); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{"message": "Verification code sent successfully"})
 }
 
 // SendNotifyEmailCodeRequest represents the request to send notify email verification code
@@ -420,8 +510,12 @@ func inferUserProfileSources(user *service.User, identities service.UserIdentity
 
 	thirdParty := thirdPartyIdentityProviders(identities)
 	var avatarSource *userProfileSourceContext
-	if strings.TrimSpace(user.AvatarURL) != "" && len(thirdParty) == 1 {
-		avatarSource = buildUserProfileSourceContext(thirdParty[0].Provider)
+	avatarValue := strings.TrimSpace(user.AvatarURL)
+	for _, summary := range thirdParty {
+		if avatarValue != "" && avatarValue == strings.TrimSpace(summary.AvatarURL) {
+			avatarSource = buildUserProfileSourceContext(summary.Provider)
+			break
+		}
 	}
 
 	usernameValue := strings.TrimSpace(user.Username)
@@ -431,9 +525,6 @@ func inferUserProfileSources(user *service.User, identities service.UserIdentity
 			usernameSource = buildUserProfileSourceContext(summary.Provider)
 			break
 		}
-	}
-	if usernameSource == nil && usernameValue != "" && len(thirdParty) == 1 {
-		usernameSource = buildUserProfileSourceContext(thirdParty[0].Provider)
 	}
 
 	profileSources := map[string]*userProfileSourceContext{}

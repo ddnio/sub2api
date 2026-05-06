@@ -5,14 +5,22 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"hash/fnv"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
+	"entgo.io/ent/dialect"
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
 	"github.com/Wei-Shaw/sub2api/ent/pendingauthsession"
+	dbpredicate "github.com/Wei-Shaw/sub2api/ent/predicate"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+
+	entsql "entgo.io/ent/dialect/sql"
 )
 
 var (
@@ -70,6 +78,122 @@ type PendingIdentityAdoptionDecisionInput struct {
 
 type AuthPendingIdentityService struct {
 	entClient *dbent.Client
+}
+
+var authPendingIdentityScopedKeyLocks = newAuthPendingIdentityScopedKeyLockRegistry()
+
+type authPendingIdentityScopedKeyLockRegistry struct {
+	mu    sync.Mutex
+	locks map[string]*authPendingIdentityScopedKeyLockEntry
+}
+
+type authPendingIdentityScopedKeyLockEntry struct {
+	mu   sync.Mutex
+	refs int
+}
+
+func newAuthPendingIdentityScopedKeyLockRegistry() *authPendingIdentityScopedKeyLockRegistry {
+	return &authPendingIdentityScopedKeyLockRegistry{
+		locks: make(map[string]*authPendingIdentityScopedKeyLockEntry),
+	}
+}
+
+func (r *authPendingIdentityScopedKeyLockRegistry) lock(keys ...string) func() {
+	normalized := normalizeAuthPendingIdentityLockKeys(keys...)
+	if len(normalized) == 0 {
+		return func() {}
+	}
+
+	entries := make([]*authPendingIdentityScopedKeyLockEntry, 0, len(normalized))
+	r.mu.Lock()
+	for _, key := range normalized {
+		entry := r.locks[key]
+		if entry == nil {
+			entry = &authPendingIdentityScopedKeyLockEntry{}
+			r.locks[key] = entry
+		}
+		entry.refs++
+		entries = append(entries, entry)
+	}
+	r.mu.Unlock()
+
+	for _, entry := range entries {
+		entry.mu.Lock()
+	}
+
+	return func() {
+		for i := len(entries) - 1; i >= 0; i-- {
+			entries[i].mu.Unlock()
+		}
+
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		for idx, key := range normalized {
+			entry := entries[idx]
+			entry.refs--
+			if entry.refs == 0 {
+				delete(r.locks, key)
+			}
+		}
+	}
+}
+
+func normalizeAuthPendingIdentityLockKeys(keys ...string) []string {
+	if len(keys) == 0 {
+		return nil
+	}
+
+	deduped := make(map[string]struct{}, len(keys))
+	for _, key := range keys {
+		trimmed := strings.TrimSpace(key)
+		if trimmed == "" {
+			continue
+		}
+		deduped[trimmed] = struct{}{}
+	}
+	if len(deduped) == 0 {
+		return nil
+	}
+
+	normalized := make([]string, 0, len(deduped))
+	for key := range deduped {
+		normalized = append(normalized, key)
+	}
+	sort.Strings(normalized)
+	return normalized
+}
+
+func authPendingIdentityAdvisoryLockHash(key string) int64 {
+	hasher := fnv.New64a()
+	_, _ = hasher.Write([]byte(key))
+	return int64(hasher.Sum64())
+}
+
+func lockAuthPendingIdentityKeys(ctx context.Context, client *dbent.Client, keys ...string) (func(), error) {
+	release := authPendingIdentityScopedKeyLocks.lock(keys...)
+	normalized := normalizeAuthPendingIdentityLockKeys(keys...)
+	if len(normalized) == 0 || client == nil || client.Driver().Dialect() != dialect.Postgres {
+		return release, nil
+	}
+
+	for _, key := range normalized {
+		var rows entsql.Rows
+		if err := client.Driver().Query(ctx, "SELECT pg_advisory_xact_lock($1)", []any{authPendingIdentityAdvisoryLockHash(key)}, &rows); err != nil {
+			release()
+			return nil, err
+		}
+		_ = rows.Close()
+	}
+
+	return release, nil
+}
+
+func pendingIdentityAdoptionLockKeys(pendingAuthSessionID int64, identityID *int64) []string {
+	keys := []string{fmt.Sprintf("pending-auth-adoption:pending:%d", pendingAuthSessionID)}
+	if identityID != nil && *identityID > 0 {
+		keys = append(keys, fmt.Sprintf("pending-auth-adoption:identity:%d", *identityID))
+	}
+	return keys
 }
 
 func NewAuthPendingIdentityService(entClient *dbent.Client) *AuthPendingIdentityService {
@@ -233,28 +357,66 @@ func (s *AuthPendingIdentityService) consumeSession(
 		return nil, err
 	}
 
+	sanitizedLocalFlowState := sanitizePendingAuthLocalFlowState(session.LocalFlowState)
 	now := time.Now().UTC()
-	affected, err := s.entClient.PendingAuthSession.Update().
+	update := s.entClient.PendingAuthSession.UpdateOneID(session.ID).
 		Where(
-			pendingauthsession.IDEQ(session.ID),
 			pendingauthsession.ConsumedAtIsNil(),
+			pendingauthsession.ExpiresAtGTE(now),
+			pendingauthsession.Or(
+				pendingauthsession.CompletionCodeExpiresAtIsNil(),
+				pendingauthsession.CompletionCodeExpiresAtGTE(now),
+			),
 		).
 		SetConsumedAt(now).
+		SetLocalFlowState(sanitizedLocalFlowState).
 		SetCompletionCodeHash("").
-		ClearCompletionCodeExpiresAt().
-		Save(ctx)
-	if err != nil {
-		return nil, err
+		ClearCompletionCodeExpiresAt()
+	if expectedBrowserSessionKey := strings.TrimSpace(session.BrowserSessionKey); expectedBrowserSessionKey != "" {
+		update = update.Where(pendingauthsession.BrowserSessionKeyEQ(expectedBrowserSessionKey))
 	}
-	if affected == 0 {
-		return nil, consumedErr
+	updated, err := update.Save(ctx)
+	if err == nil {
+		return updated, nil
+	}
+	if !dbent.IsNotFound(err) {
+		return nil, err
 	}
 
-	updated, err := s.entClient.PendingAuthSession.Get(ctx, session.ID)
-	if err != nil {
+	current, currentErr := s.entClient.PendingAuthSession.Get(ctx, session.ID)
+	if currentErr != nil {
+		if dbent.IsNotFound(currentErr) {
+			return nil, ErrPendingAuthSessionNotFound
+		}
+		return nil, currentErr
+	}
+	if err := validatePendingSessionState(current, browserSessionKey, expiredErr, consumedErr); err != nil {
 		return nil, err
 	}
-	return updated, nil
+	return nil, consumedErr
+}
+
+func sanitizePendingAuthLocalFlowState(localFlowState map[string]any) map[string]any {
+	sanitized := copyPendingMap(localFlowState)
+	if len(sanitized) == 0 {
+		return sanitized
+	}
+
+	rawCompletion, ok := sanitized["completion_response"]
+	if !ok {
+		return sanitized
+	}
+	completion, ok := rawCompletion.(map[string]any)
+	if !ok {
+		return sanitized
+	}
+
+	cleanedCompletion := copyPendingMap(completion)
+	for _, key := range []string{"access_token", "refresh_token", "expires_in", "token_type"} {
+		delete(cleanedCompletion, key)
+	}
+	sanitized["completion_response"] = cleanedCompletion
+	return sanitized
 }
 
 func validatePendingSessionState(session *dbent.PendingAuthSession, browserSessionKey string, expiredErr error, consumedErr error) error {
@@ -283,31 +445,74 @@ func (s *AuthPendingIdentityService) UpsertAdoptionDecision(ctx context.Context,
 		return nil, fmt.Errorf("pending auth ent client is not configured")
 	}
 
-	existing, err := s.entClient.IdentityAdoptionDecision.Query().
-		Where(identityadoptiondecision.PendingAuthSessionIDEQ(input.PendingAuthSessionID)).
-		Only(ctx)
-	if err != nil && !dbent.IsNotFound(err) {
+	tx, err := s.entClient.Tx(ctx)
+	if err != nil && !errors.Is(err, dbent.ErrTxStarted) {
 		return nil, err
 	}
-	if existing == nil {
-		create := s.entClient.IdentityAdoptionDecision.Create().
-			SetPendingAuthSessionID(input.PendingAuthSessionID).
-			SetAdoptDisplayName(input.AdoptDisplayName).
-			SetAdoptAvatar(input.AdoptAvatar).
-			SetDecidedAt(time.Now().UTC())
-		if input.IdentityID != nil {
-			create = create.SetIdentityID(*input.IdentityID)
-		}
-		return create.Save(ctx)
+
+	client := s.entClient
+	txCtx := ctx
+	if err == nil {
+		defer func() { _ = tx.Rollback() }()
+		client = tx.Client()
+		txCtx = dbent.NewTxContext(ctx, tx)
+	} else if existingTx := dbent.TxFromContext(ctx); existingTx != nil {
+		client = existingTx.Client()
 	}
 
-	update := s.entClient.IdentityAdoptionDecision.UpdateOneID(existing.ID).
-		SetAdoptDisplayName(input.AdoptDisplayName).
-		SetAdoptAvatar(input.AdoptAvatar)
-	if input.IdentityID != nil {
-		update = update.SetIdentityID(*input.IdentityID)
+	releaseLocks, err := lockAuthPendingIdentityKeys(txCtx, client, pendingIdentityAdoptionLockKeys(input.PendingAuthSessionID, input.IdentityID)...)
+	if err != nil {
+		return nil, err
 	}
-	return update.Save(ctx)
+	defer releaseLocks()
+
+	if input.IdentityID != nil && *input.IdentityID > 0 {
+		if _, err := client.IdentityAdoptionDecision.Update().
+			Where(
+				identityadoptiondecision.IdentityIDEQ(*input.IdentityID),
+				dbpredicate.IdentityAdoptionDecision(func(s *entsql.Selector) {
+					col := s.C(identityadoptiondecision.FieldPendingAuthSessionID)
+					s.Where(entsql.Or(
+						entsql.IsNull(col),
+						entsql.NEQ(col, input.PendingAuthSessionID),
+					))
+				}),
+			).
+			ClearIdentityID().
+			Save(txCtx); err != nil {
+			return nil, err
+		}
+	}
+
+	create := client.IdentityAdoptionDecision.Create().
+		SetPendingAuthSessionID(input.PendingAuthSessionID).
+		SetAdoptDisplayName(input.AdoptDisplayName).
+		SetAdoptAvatar(input.AdoptAvatar).
+		SetDecidedAt(time.Now().UTC())
+	if input.IdentityID != nil && *input.IdentityID > 0 {
+		create = create.SetIdentityID(*input.IdentityID)
+	}
+
+	decisionID, err := create.
+		OnConflictColumns(identityadoptiondecision.FieldPendingAuthSessionID).
+		UpdateNewValues().
+		ID(txCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	decision, err := client.IdentityAdoptionDecision.Get(txCtx, decisionID)
+	if err != nil {
+		return nil, err
+	}
+
+	if tx != nil {
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+	}
+
+	return decision, nil
 }
 
 func copyPendingMap(in map[string]any) map[string]any {

@@ -12,12 +12,13 @@ import (
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
+	"github.com/Wei-Shaw/sub2api/ent/authidentitychannel"
 	dbgroup "github.com/Wei-Shaw/sub2api/ent/group"
+	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
 	dbuser "github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/userallowedgroup"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
-	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/lib/pq"
@@ -51,39 +52,57 @@ func (r *userRepository) Create(ctx context.Context, userIn *service.User) error
 	}
 
 	var txClient *dbent.Client
+	txCtx := ctx
 	if err == nil {
 		defer func() { _ = tx.Rollback() }()
 		txClient = tx.Client()
+		txCtx = dbent.NewTxContext(ctx, tx)
 	} else {
-		// 已处于外部事务中（ErrTxStarted），复用当前 client 并由调用方负责提交/回滚。
-		txClient = r.client
+		// 已处于外部事务中（ErrTxStarted），复用当前事务 client 并由调用方负责提交/回滚。
+		if existingTx := dbent.TxFromContext(ctx); existingTx != nil {
+			txClient = existingTx.Client()
+		} else {
+			txClient = r.client
+		}
 	}
 
-	create := txClient.User.Create().
+	releaseEmailLock, err := lockRepositoryScopedKeys(
+		txCtx,
+		txClient,
+		txAwareSQLExecutor(txCtx, r.sql, r.client),
+		normalizedEmailUniquenessLockKey(userIn.Email),
+	)
+	if err != nil {
+		return err
+	}
+	defer releaseEmailLock()
+
+	if err := ensureNormalizedEmailAvailableWithClient(txCtx, txClient, 0, userIn.Email); err != nil {
+		return err
+	}
+
+	created, err := txClient.User.Create().
 		SetEmail(userIn.Email).
 		SetUsername(userIn.Username).
 		SetNotes(userIn.Notes).
 		SetPasswordHash(userIn.PasswordHash).
 		SetRole(userIn.Role).
 		SetBalance(userIn.Balance).
-		SetBalanceNotifyEnabled(userIn.BalanceNotifyEnabled).
-		SetBalanceNotifyExtraEmails(service.MarshalNotifyEmails(userIn.BalanceNotifyExtraEmails)).
-		SetBalanceNotifyThresholdType(userIn.BalanceNotifyThresholdType).
-		SetTotalRecharged(userIn.TotalRecharged).
 		SetConcurrency(userIn.Concurrency).
-		SetStatus(userIn.Status)
-	if userIn.BalanceNotifyThreshold != nil {
-		create.SetBalanceNotifyThreshold(*userIn.BalanceNotifyThreshold)
-	}
-	created, err := create.Save(ctx)
+		SetStatus(userIn.Status).
+		SetSignupSource(userSignupSourceOrDefault(userIn.SignupSource)).
+		SetNillableLastLoginAt(userIn.LastLoginAt).
+		SetNillableLastActiveAt(userIn.LastActiveAt).
+		SetRpmLimit(userIn.RPMLimit).
+		Save(txCtx)
 	if err != nil {
 		return translatePersistenceError(err, nil, service.ErrEmailExists)
 	}
 
-	if err := r.syncUserAllowedGroupsWithClient(ctx, txClient, created.ID, userIn.AllowedGroups); err != nil {
+	if err := r.syncUserAllowedGroupsWithClient(txCtx, txClient, created.ID, userIn.AllowedGroups); err != nil {
 		return err
 	}
-	if err := ensureEmailAuthIdentityWithClient(ctx, txClient, created.ID, created.Email, "user_repo_create"); err != nil {
+	if err := ensureEmailAuthIdentityWithClient(txCtx, txClient, created.ID, created.Email, "user_repo_create"); err != nil {
 		return err
 	}
 
@@ -141,34 +160,6 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*service
 	return out, nil
 }
 
-func (r *userRepository) ListUserAuthIdentities(ctx context.Context, userID int64) ([]service.UserAuthIdentityRecord, error) {
-	identities, err := clientFromContext(ctx, r.client).AuthIdentity.Query().
-		Where(authidentity.UserIDEQ(userID)).
-		All(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	records := make([]service.UserAuthIdentityRecord, 0, len(identities))
-	for _, identity := range identities {
-		if identity == nil {
-			continue
-		}
-		records = append(records, service.UserAuthIdentityRecord{
-			ProviderType:    strings.TrimSpace(identity.ProviderType),
-			ProviderKey:     strings.TrimSpace(identity.ProviderKey),
-			ProviderSubject: strings.TrimSpace(identity.ProviderSubject),
-			VerifiedAt:      identity.VerifiedAt,
-			Issuer:          identity.Issuer,
-			Metadata:        cloneUserAuthIdentityMetadata(identity.Metadata),
-			CreatedAt:       identity.CreatedAt,
-			UpdatedAt:       identity.UpdatedAt,
-		})
-	}
-
-	return records, nil
-}
-
 func (r *userRepository) Update(ctx context.Context, userIn *service.User) error {
 	if userIn == nil {
 		return nil
@@ -181,46 +172,77 @@ func (r *userRepository) Update(ctx context.Context, userIn *service.User) error
 	}
 
 	var txClient *dbent.Client
+	txCtx := ctx
 	if err == nil {
 		defer func() { _ = tx.Rollback() }()
 		txClient = tx.Client()
+		txCtx = dbent.NewTxContext(ctx, tx)
 	} else {
-		// 已处于外部事务中（ErrTxStarted），复用当前 client 并由调用方负责提交/回滚。
-		txClient = r.client
+		// 已处于外部事务中（ErrTxStarted），复用当前事务 client 并由调用方负责提交/回滚。
+		if existingTx := dbent.TxFromContext(ctx); existingTx != nil {
+			txClient = existingTx.Client()
+		} else {
+			txClient = r.client
+		}
 	}
-	existing, err := clientFromContext(ctx, txClient).User.Get(ctx, userIn.ID)
+
+	releaseEmailLock, err := lockRepositoryScopedKeys(
+		txCtx,
+		txClient,
+		txAwareSQLExecutor(txCtx, r.sql, r.client),
+		normalizedEmailUniquenessLockKey(userIn.Email),
+	)
+	if err != nil {
+		return err
+	}
+	defer releaseEmailLock()
+
+	if err := ensureNormalizedEmailAvailableWithClient(txCtx, txClient, userIn.ID, userIn.Email); err != nil {
+		return err
+	}
+
+	existing, err := clientFromContext(txCtx, txClient).User.Get(txCtx, userIn.ID)
 	if err != nil {
 		return translatePersistenceError(err, service.ErrUserNotFound, nil)
 	}
 	oldEmail := existing.Email
 
-	update := txClient.User.UpdateOneID(userIn.ID).
+	updateOp := txClient.User.UpdateOneID(userIn.ID).
 		SetEmail(userIn.Email).
 		SetUsername(userIn.Username).
 		SetNotes(userIn.Notes).
 		SetPasswordHash(userIn.PasswordHash).
 		SetRole(userIn.Role).
 		SetBalance(userIn.Balance).
-		SetBalanceNotifyEnabled(userIn.BalanceNotifyEnabled).
-		SetBalanceNotifyExtraEmails(service.MarshalNotifyEmails(userIn.BalanceNotifyExtraEmails)).
-		SetBalanceNotifyThresholdType(userIn.BalanceNotifyThresholdType).
-		SetTotalRecharged(userIn.TotalRecharged).
 		SetConcurrency(userIn.Concurrency).
-		SetStatus(userIn.Status)
-	if userIn.BalanceNotifyThreshold == nil {
-		update.ClearBalanceNotifyThreshold()
-	} else {
-		update.SetBalanceNotifyThreshold(*userIn.BalanceNotifyThreshold)
+		SetStatus(userIn.Status).
+		SetBalanceNotifyEnabled(userIn.BalanceNotifyEnabled).
+		SetBalanceNotifyThresholdType(userIn.BalanceNotifyThresholdType).
+		SetNillableBalanceNotifyThreshold(userIn.BalanceNotifyThreshold).
+		SetBalanceNotifyExtraEmails(marshalExtraEmails(userIn.BalanceNotifyExtraEmails)).
+		SetTotalRecharged(userIn.TotalRecharged).
+		SetRpmLimit(userIn.RPMLimit)
+	if userIn.SignupSource != "" {
+		updateOp = updateOp.SetSignupSource(userIn.SignupSource)
 	}
-	updated, err := update.Save(ctx)
+	if userIn.LastLoginAt != nil {
+		updateOp = updateOp.SetLastLoginAt(*userIn.LastLoginAt)
+	}
+	if userIn.LastActiveAt != nil {
+		updateOp = updateOp.SetLastActiveAt(*userIn.LastActiveAt)
+	}
+	if userIn.BalanceNotifyThreshold == nil {
+		updateOp = updateOp.ClearBalanceNotifyThreshold()
+	}
+	updated, err := updateOp.Save(txCtx)
 	if err != nil {
 		return translatePersistenceError(err, service.ErrUserNotFound, service.ErrEmailExists)
 	}
 
-	if err := r.syncUserAllowedGroupsWithClient(ctx, txClient, updated.ID, userIn.AllowedGroups); err != nil {
+	if err := r.syncUserAllowedGroupsWithClient(txCtx, txClient, updated.ID, userIn.AllowedGroups); err != nil {
 		return err
 	}
-	if err := replaceEmailAuthIdentityWithClient(ctx, txClient, updated.ID, oldEmail, updated.Email, "user_repo_update"); err != nil {
+	if err := replaceEmailAuthIdentityWithClient(txCtx, txClient, updated.ID, oldEmail, updated.Email, "user_repo_update"); err != nil {
 		return err
 	}
 
@@ -232,14 +254,6 @@ func (r *userRepository) Update(ctx context.Context, userIn *service.User) error
 
 	userIn.UpdatedAt = updated.UpdatedAt
 	return nil
-}
-
-func (r *userRepository) EnsureEmailAuthIdentity(ctx context.Context, userID int64, email string) error {
-	return ensureEmailAuthIdentityWithClient(ctx, r.client, userID, email, "service_dual_write")
-}
-
-func (r *userRepository) ReplaceEmailAuthIdentity(ctx context.Context, userID int64, oldEmail, newEmail string) error {
-	return replaceEmailAuthIdentityWithClient(ctx, r.client, userID, oldEmail, newEmail, "service_dual_write")
 }
 
 func ensureEmailAuthIdentityWithClient(ctx context.Context, client *dbent.Client, userID int64, email string, source string) error {
@@ -267,7 +281,9 @@ func ensureEmailAuthIdentityWithClient(ctx context.Context, client *dbent.Client
 		).
 		DoNothing().
 		Exec(ctx); err != nil {
-		return err
+		if !isSQLNoRowsError(err) {
+			return err
+		}
 	}
 
 	identity, err := client.AuthIdentity.Query().
@@ -284,7 +300,7 @@ func ensureEmailAuthIdentityWithClient(ctx context.Context, client *dbent.Client
 		return err
 	}
 	if identity.UserID != userID {
-		return infraerrors.Conflict("AUTH_IDENTITY_OWNERSHIP_CONFLICT", "auth identity already belongs to another user")
+		return ErrAuthIdentityOwnershipConflict
 	}
 	return nil
 }
@@ -325,12 +341,60 @@ func normalizeEmailAuthIdentitySubject(email string) string {
 }
 
 func (r *userRepository) Delete(ctx context.Context, id int64) error {
-	affected, err := r.client.User.Delete().Where(dbuser.IDEQ(id)).Exec(ctx)
+	tx, err := r.client.Tx(ctx)
+	if err != nil && !errors.Is(err, dbent.ErrTxStarted) {
+		return translatePersistenceError(err, service.ErrUserNotFound, nil)
+	}
+
+	var txClient *dbent.Client
+	if err == nil {
+		defer func() { _ = tx.Rollback() }()
+		txClient = tx.Client()
+	} else {
+		if existingTx := dbent.TxFromContext(ctx); existingTx != nil {
+			txClient = existingTx.Client()
+		} else {
+			txClient = r.client
+		}
+	}
+
+	identityIDs, err := txClient.AuthIdentity.Query().
+		Where(authidentity.UserIDEQ(id)).
+		IDs(ctx)
+	if err != nil {
+		return translatePersistenceError(err, service.ErrUserNotFound, nil)
+	}
+	if len(identityIDs) > 0 {
+		if _, err := txClient.IdentityAdoptionDecision.Update().
+			Where(identityadoptiondecision.IdentityIDIn(identityIDs...)).
+			ClearIdentityID().
+			Save(ctx); err != nil {
+			return translatePersistenceError(err, service.ErrUserNotFound, nil)
+		}
+		if _, err := txClient.AuthIdentityChannel.Delete().
+			Where(authidentitychannel.IdentityIDIn(identityIDs...)).
+			Exec(ctx); err != nil {
+			return translatePersistenceError(err, service.ErrUserNotFound, nil)
+		}
+		if _, err := txClient.AuthIdentity.Delete().
+			Where(authidentity.UserIDEQ(id)).
+			Exec(ctx); err != nil {
+			return translatePersistenceError(err, service.ErrUserNotFound, nil)
+		}
+	}
+
+	affected, err := txClient.User.Delete().Where(dbuser.IDEQ(id)).Exec(ctx)
 	if err != nil {
 		return translatePersistenceError(err, service.ErrUserNotFound, nil)
 	}
 	if affected == 0 {
 		return service.ErrUserNotFound
+	}
+
+	if tx != nil {
+		if err := tx.Commit(); err != nil {
+			return translatePersistenceError(err, service.ErrUserNotFound, nil)
+		}
 	}
 	return nil
 }
@@ -455,6 +519,7 @@ func userListOrder(params pagination.PaginationParams) []func(*entsql.Selector) 
 
 	var field string
 	defaultField := true
+	nullsLastField := false
 	switch sortBy {
 	case "email":
 		field = dbuser.FieldEmail
@@ -477,6 +542,10 @@ func userListOrder(params pagination.PaginationParams) []func(*entsql.Selector) 
 	case "created_at":
 		field = dbuser.FieldCreatedAt
 		defaultField = false
+	case "last_active_at":
+		field = dbuser.FieldLastActiveAt
+		defaultField = false
+		nullsLastField = true
 	default:
 		field = dbuser.FieldID
 	}
@@ -485,10 +554,22 @@ func userListOrder(params pagination.PaginationParams) []func(*entsql.Selector) 
 		if defaultField && field == dbuser.FieldID {
 			return []func(*entsql.Selector){dbent.Asc(dbuser.FieldID)}
 		}
+		if nullsLastField {
+			return []func(*entsql.Selector){
+				entsql.OrderByField(field, entsql.OrderNullsLast()).ToFunc(),
+				dbent.Asc(dbuser.FieldID),
+			}
+		}
 		return []func(*entsql.Selector){dbent.Asc(field), dbent.Asc(dbuser.FieldID)}
 	}
 	if defaultField && field == dbuser.FieldID {
 		return []func(*entsql.Selector){dbent.Desc(dbuser.FieldID)}
+	}
+	if nullsLastField {
+		return []func(*entsql.Selector){
+			entsql.OrderByField(field, entsql.OrderDesc(), entsql.OrderNullsLast()).ToFunc(),
+			dbent.Desc(dbuser.FieldID),
+		}
 	}
 	return []func(*entsql.Selector){dbent.Desc(field), dbent.Desc(dbuser.FieldID)}
 }
@@ -611,7 +692,12 @@ func (r *userRepository) filterUsersByAttributes(ctx context.Context, attrs map[
 
 func (r *userRepository) UpdateBalance(ctx context.Context, id int64, amount float64) error {
 	client := clientFromContext(ctx, r.client)
-	n, err := client.User.Update().Where(dbuser.IDEQ(id)).AddBalance(amount).Save(ctx)
+	update := client.User.Update().Where(dbuser.IDEQ(id)).AddBalance(amount)
+	// Track cumulative recharge amount for percentage-based notifications
+	if amount > 0 {
+		update = update.AddTotalRecharged(amount)
+	}
+	n, err := update.Save(ctx)
 	if err != nil {
 		return translatePersistenceError(err, service.ErrUserNotFound, nil)
 	}
@@ -655,6 +741,26 @@ func (r *userRepository) ExistsByEmail(ctx context.Context, email string) (bool,
 	return r.client.User.Query().Where(userEmailLookupPredicate(email)).Exist(ctx)
 }
 
+func ensureNormalizedEmailAvailableWithClient(ctx context.Context, client *dbent.Client, userID int64, email string) error {
+	client = clientFromContext(ctx, client)
+	if client == nil {
+		return nil
+	}
+
+	matches, err := client.User.Query().
+		Where(userEmailLookupPredicate(email)).
+		All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, match := range matches {
+		if match.ID != userID {
+			return service.ErrEmailExists
+		}
+	}
+	return nil
+}
+
 func userEmailLookupPredicate(email string) predicate.User {
 	normalized := normalizeEmailLookupValue(email)
 	if normalized == "" {
@@ -674,14 +780,26 @@ func normalizeEmailLookupValue(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
 
+func normalizedEmailUniquenessLockKey(email string) string {
+	normalized := normalizeEmailLookupValue(email)
+	if normalized == "" {
+		return ""
+	}
+	return "users:normalized-email:" + normalized
+}
+
 func (r *userRepository) AddGroupToAllowedGroups(ctx context.Context, userID int64, groupID int64) error {
 	client := clientFromContext(ctx, r.client)
-	return client.UserAllowedGroup.Create().
+	err := client.UserAllowedGroup.Create().
 		SetUserID(userID).
 		SetGroupID(groupID).
 		OnConflictColumns(userallowedgroup.FieldUserID, userallowedgroup.FieldGroupID).
 		DoNothing().
 		Exec(ctx)
+	if isSQLNoRowsError(err) {
+		return nil
+	}
+	return err
 }
 
 func (r *userRepository) RemoveGroupFromAllowedGroups(ctx context.Context, groupID int64) (int64, error) {
@@ -781,6 +899,9 @@ func (r *userRepository) syncUserAllowedGroupsWithClient(ctx context.Context, cl
 			OnConflictColumns(userallowedgroup.FieldUserID, userallowedgroup.FieldGroupID).
 			DoNothing().
 			Exec(ctx); err != nil {
+			if isSQLNoRowsError(err) {
+				return nil
+			}
 			return err
 		}
 	}
@@ -793,8 +914,27 @@ func applyUserEntityToService(dst *service.User, src *dbent.User) {
 		return
 	}
 	dst.ID = src.ID
+	dst.SignupSource = src.SignupSource
+	dst.LastLoginAt = src.LastLoginAt
+	dst.LastActiveAt = src.LastActiveAt
 	dst.CreatedAt = src.CreatedAt
 	dst.UpdatedAt = src.UpdatedAt
+}
+
+func userSignupSourceOrDefault(signupSource string) string {
+	switch strings.TrimSpace(strings.ToLower(signupSource)) {
+	case "", "email":
+		return "email"
+	case "linuxdo", "wechat", "oidc":
+		return strings.TrimSpace(strings.ToLower(signupSource))
+	default:
+		return "email"
+	}
+}
+
+// marshalExtraEmails serializes notify email entries to JSON for storage.
+func marshalExtraEmails(entries []service.NotifyEmailEntry) string {
+	return service.MarshalNotifyEmails(entries)
 }
 
 // UpdateTotpSecret 更新用户的 TOTP 加密密钥

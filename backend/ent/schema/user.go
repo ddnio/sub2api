@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"fmt"
+
 	"github.com/Wei-Shaw/sub2api/ent/schema/mixins"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 
@@ -88,7 +90,14 @@ func (User) Fields() []ent.Field {
 			Optional().
 			Nillable(),
 		field.String("signup_source").
-			MaxLen(20).
+			Validate(func(value string) error {
+				switch value {
+				case "email", "linuxdo", "wechat", "oidc":
+					return nil
+				default:
+					return fmt.Errorf("must be one of email, linuxdo, wechat, oidc")
+				}
+			}).
 			Default("email"),
 		field.Time("last_login_at").
 			Optional().
@@ -104,6 +113,10 @@ func (User) Fields() []ent.Field {
 			MaxLen(16).
 			Optional().
 			Nillable(),
+
+		// 用户级每分钟请求数上限（0 = 不限制）。仅当所在分组未设置 rpm_limit 时作为兜底生效。
+		field.Int("rpm_limit").
+			Default(0),
 	}
 }
 
@@ -122,7 +135,8 @@ func (User) Edges() []ent.Edge {
 		edge.To("payment_orders", PaymentOrder.Type),
 		edge.To("referrals_as_inviter", UserReferral.Type),
 		edge.To("referrals_as_invitee", UserReferral.Type),
-		edge.To("auth_identities", AuthIdentity.Type),
+		edge.To("auth_identities", AuthIdentity.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("pending_auth_sessions", PendingAuthSession.Type),
 	}
 }

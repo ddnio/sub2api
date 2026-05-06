@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
-	"os"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -19,7 +17,6 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
-	"github.com/Wei-Shaw/sub2api/internal/pkg/websearch"
 	"github.com/imroc/req/v3"
 	"golang.org/x/sync/singleflight"
 )
@@ -102,15 +99,19 @@ type DefaultSubscriptionGroupReader interface {
 	GetByID(ctx context.Context, id int64) (*Group, error)
 }
 
+// WebSearchManagerBuilder creates a websearch.Manager from config (injected by infra layer).
+// proxyURLs maps proxy ID to resolved URL for provider-level proxy support.
+type WebSearchManagerBuilder func(cfg *WebSearchEmulationConfig, proxyURLs map[int64]string)
+
 // SettingService 系统设置服务
 type SettingService struct {
-	settingRepo           SettingRepository
-	defaultSubGroupReader DefaultSubscriptionGroupReader
-	cfg                   *config.Config
-	onUpdate              func()                // Callback when settings are updated (for cache invalidation)
-	version               string                // Application version
-	webSearchQuotaStore   websearch.RedisClient // optional: quota tracking store
-	webSearchProxyRepo    ProxyRepository
+	settingRepo             SettingRepository
+	defaultSubGroupReader   DefaultSubscriptionGroupReader
+	proxyRepo               ProxyRepository // for resolving websearch provider proxy URLs
+	cfg                     *config.Config
+	onUpdate                func() // Callback when settings are updated (for cache invalidation)
+	version                 string // Application version
+	webSearchManagerBuilder WebSearchManagerBuilder
 }
 
 type ProviderDefaultGrantSettings struct {
@@ -244,15 +245,119 @@ func parseWeChatConnectCapabilitySettings(settings map[string]string, enabled bo
 }
 
 func normalizeWeChatConnectStoredMode(openEnabled, mpEnabled, mobileEnabled bool, mode string) string {
+	mode = normalizeWeChatConnectModeSetting(mode)
+	switch mode {
+	case "open":
+		if openEnabled {
+			return "open"
+		}
+	case "mp":
+		if mpEnabled {
+			return "mp"
+		}
+	case "mobile":
+		if mobileEnabled {
+			return "mobile"
+		}
+	}
 	switch {
+	case openEnabled:
+		return "open"
 	case mpEnabled:
 		return "mp"
 	case mobileEnabled:
 		return "mobile"
-	case openEnabled:
-		return "open"
 	default:
-		return normalizeWeChatConnectModeSetting(mode)
+		return mode
+	}
+}
+
+func mergeWeChatConnectCapabilitySettings(settings map[string]string, base config.WeChatConnectConfig, enabled bool, mode string) (bool, bool, bool) {
+	mode = normalizeWeChatConnectModeSetting(firstNonEmpty(mode, base.Mode))
+	rawOpen, hasOpen := settings[SettingKeyWeChatConnectOpenEnabled]
+	rawMP, hasMP := settings[SettingKeyWeChatConnectMPEnabled]
+	rawMobile, hasMobile := settings[SettingKeyWeChatConnectMobileEnabled]
+	openConfigured := hasOpen && strings.TrimSpace(rawOpen) != ""
+	mpConfigured := hasMP && strings.TrimSpace(rawMP) != ""
+	mobileConfigured := hasMobile && strings.TrimSpace(rawMobile) != ""
+
+	if openConfigured || mpConfigured || mobileConfigured {
+		openEnabled := strings.TrimSpace(rawOpen) == "true"
+		mpEnabled := strings.TrimSpace(rawMP) == "true"
+		mobileEnabled := strings.TrimSpace(rawMobile) == "true"
+		_, enabledConfigured := settings[SettingKeyWeChatConnectEnabled]
+		if !enabledConfigured &&
+			enabled &&
+			!openEnabled &&
+			!mpEnabled &&
+			!mobileEnabled &&
+			(base.OpenEnabled || base.MPEnabled || base.MobileEnabled) {
+			return base.OpenEnabled, base.MPEnabled, base.MobileEnabled
+		}
+		return openEnabled, mpEnabled, mobileEnabled
+	}
+	if !enabled {
+		return false, false, false
+	}
+	if base.OpenEnabled || base.MPEnabled || base.MobileEnabled {
+		return base.OpenEnabled, base.MPEnabled, base.MobileEnabled
+	}
+	return parseWeChatConnectCapabilitySettings(settings, enabled, mode)
+}
+
+func (s *SettingService) effectiveWeChatConnectOAuthConfig(settings map[string]string) WeChatConnectOAuthConfig {
+	base := config.WeChatConnectConfig{}
+	if s != nil && s.cfg != nil {
+		base = s.cfg.WeChat
+	}
+
+	enabled := base.Enabled
+	if raw, ok := settings[SettingKeyWeChatConnectEnabled]; ok {
+		enabled = strings.TrimSpace(raw) == "true"
+	}
+
+	legacyAppID := strings.TrimSpace(firstNonEmpty(
+		settings[SettingKeyWeChatConnectAppID],
+		base.AppID,
+		base.OpenAppID,
+		base.MPAppID,
+		base.MobileAppID,
+	))
+	legacyAppSecret := strings.TrimSpace(firstNonEmpty(
+		settings[SettingKeyWeChatConnectAppSecret],
+		base.AppSecret,
+		base.OpenAppSecret,
+		base.MPAppSecret,
+		base.MobileAppSecret,
+	))
+	openAppID := strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectOpenAppID], base.OpenAppID, legacyAppID))
+	openAppSecret := strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectOpenAppSecret], base.OpenAppSecret, legacyAppSecret))
+	mpAppID := strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMPAppID], base.MPAppID, legacyAppID))
+	mpAppSecret := strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMPAppSecret], base.MPAppSecret, legacyAppSecret))
+	mobileAppID := strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMobileAppID], base.MobileAppID, legacyAppID))
+	mobileAppSecret := strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMobileAppSecret], base.MobileAppSecret, legacyAppSecret))
+
+	modeRaw := firstNonEmpty(settings[SettingKeyWeChatConnectMode], base.Mode)
+	openEnabled, mpEnabled, mobileEnabled := mergeWeChatConnectCapabilitySettings(settings, base, enabled, modeRaw)
+	mode := normalizeWeChatConnectStoredMode(openEnabled, mpEnabled, mobileEnabled, modeRaw)
+
+	return WeChatConnectOAuthConfig{
+		Enabled:             enabled,
+		LegacyAppID:         legacyAppID,
+		LegacyAppSecret:     legacyAppSecret,
+		OpenAppID:           openAppID,
+		OpenAppSecret:       openAppSecret,
+		MPAppID:             mpAppID,
+		MPAppSecret:         mpAppSecret,
+		MobileAppID:         mobileAppID,
+		MobileAppSecret:     mobileAppSecret,
+		OpenEnabled:         openEnabled,
+		MPEnabled:           mpEnabled,
+		MobileEnabled:       mobileEnabled,
+		Mode:                mode,
+		Scopes:              normalizeWeChatConnectScopeSetting(firstNonEmpty(settings[SettingKeyWeChatConnectScopes], base.Scopes), mode),
+		RedirectURL:         strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectRedirectURL], base.RedirectURL)),
+		FrontendRedirectURL: strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectFrontendRedirectURL], base.FrontendRedirectURL, defaultWeChatConnectFrontend)),
 	}
 }
 
@@ -267,6 +372,11 @@ func NewSettingService(settingRepo SettingRepository, cfg *config.Config) *Setti
 // SetDefaultSubscriptionGroupReader injects an optional group reader for default subscription validation.
 func (s *SettingService) SetDefaultSubscriptionGroupReader(reader DefaultSubscriptionGroupReader) {
 	s.defaultSubGroupReader = reader
+}
+
+// SetProxyRepository injects a proxy repo for resolving websearch provider proxy URLs.
+func (s *SettingService) SetProxyRepository(repo ProxyRepository) {
+	s.proxyRepo = repo
 }
 
 // GetAllSettings 获取所有系统设置
@@ -315,7 +425,6 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyTablePageSizeOptions,
 		SettingKeyCustomMenuItems,
 		SettingKeyCustomEndpoints,
-		SettingKeyContactChannels,
 		SettingKeyLinuxDoConnectEnabled,
 		SettingKeyWeChatConnectEnabled,
 		SettingKeyWeChatConnectAppID,
@@ -334,7 +443,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyWeChatConnectRedirectURL,
 		SettingKeyWeChatConnectFrontendRedirectURL,
 		SettingKeyBackendModeEnabled,
-		SettingKeyReferralEnabled,
+		SettingPaymentEnabled,
 		SettingKeyOIDCConnectEnabled,
 		SettingKeyOIDCConnectProviderName,
 		SettingKeyBalanceLowNotifyEnabled,
@@ -379,6 +488,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		settings[SettingKeyTableDefaultPageSize],
 		settings[SettingKeyTablePageSizeOptions],
 	)
+
 	var balanceLowNotifyThreshold float64
 	if v, err := strconv.ParseFloat(settings[SettingKeyBalanceLowNotifyThreshold], 64); err == nil && v >= 0 {
 		balanceLowNotifyThreshold = v
@@ -392,7 +502,6 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		PromoCodeEnabled:                 settings[SettingKeyPromoCodeEnabled] != "false", // 默认启用
 		PasswordResetEnabled:             passwordResetEnabled,
 		InvitationCodeEnabled:            settings[SettingKeyInvitationCodeEnabled] == "true",
-		ReferralEnabled:                  settings[SettingKeyReferralEnabled] == "true",
 		TotpEnabled:                      settings[SettingKeyTotpEnabled] == "true",
 		TurnstileEnabled:                 settings[SettingKeyTurnstileEnabled] == "true",
 		TurnstileSiteKey:                 settings[SettingKeyTurnstileSiteKey],
@@ -416,13 +525,13 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		WeChatOAuthMPEnabled:             weChatMPEnabled,
 		WeChatOAuthMobileEnabled:         weChatMobileEnabled,
 		BackendModeEnabled:               settings[SettingKeyBackendModeEnabled] == "true",
+		PaymentEnabled:                   settings[SettingPaymentEnabled] == "true",
 		OIDCOAuthEnabled:                 oidcEnabled,
 		OIDCOAuthProviderName:            oidcProviderName,
-		ContactChannels:                  publicContactChannels(settings[SettingKeyContactChannels]),
 		BalanceLowNotifyEnabled:          settings[SettingKeyBalanceLowNotifyEnabled] == "true",
+		AccountQuotaNotifyEnabled:        settings[SettingKeyAccountQuotaNotifyEnabled] == "true",
 		BalanceLowNotifyThreshold:        balanceLowNotifyThreshold,
 		BalanceLowNotifyRechargeURL:      settings[SettingKeyBalanceLowNotifyRechargeURL],
-		AccountQuotaNotifyEnabled:        settings[SettingKeyAccountQuotaNotifyEnabled] == "true",
 	}, nil
 }
 
@@ -447,45 +556,43 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 
 	// Return a struct that matches the frontend's expected format
 	return &struct {
-		RegistrationEnabled              bool             `json:"registration_enabled"`
-		EmailVerifyEnabled               bool             `json:"email_verify_enabled"`
-		RegistrationEmailSuffixWhitelist []string         `json:"registration_email_suffix_whitelist"`
-		PromoCodeEnabled                 bool             `json:"promo_code_enabled"`
-		PasswordResetEnabled             bool             `json:"password_reset_enabled"`
-		InvitationCodeEnabled            bool             `json:"invitation_code_enabled"`
-		TotpEnabled                      bool             `json:"totp_enabled"`
-		TurnstileEnabled                 bool             `json:"turnstile_enabled"`
-		TurnstileSiteKey                 string           `json:"turnstile_site_key,omitempty"`
-		SiteName                         string           `json:"site_name"`
-		SiteLogo                         string           `json:"site_logo,omitempty"`
-		SiteSubtitle                     string           `json:"site_subtitle,omitempty"`
-		APIBaseURL                       string           `json:"api_base_url,omitempty"`
-		ContactInfo                      string           `json:"contact_info,omitempty"`
-		DocURL                           string           `json:"doc_url,omitempty"`
-		HomeContent                      string           `json:"home_content,omitempty"`
-		HideCcsImportButton              bool             `json:"hide_ccs_import_button"`
-		PurchaseSubscriptionEnabled      bool             `json:"purchase_subscription_enabled"`
-		PurchaseSubscriptionURL          string           `json:"purchase_subscription_url,omitempty"`
-		TableDefaultPageSize             int              `json:"table_default_page_size"`
-		TablePageSizeOptions             []int            `json:"table_page_size_options"`
-		CustomMenuItems                  json.RawMessage  `json:"custom_menu_items"`
-		CustomEndpoints                  json.RawMessage  `json:"custom_endpoints"`
-		LinuxDoOAuthEnabled              bool             `json:"linuxdo_oauth_enabled"`
-		WeChatOAuthEnabled               bool             `json:"wechat_oauth_enabled"`
-		WeChatOAuthOpenEnabled           bool             `json:"wechat_oauth_open_enabled"`
-		WeChatOAuthMPEnabled             bool             `json:"wechat_oauth_mp_enabled"`
-		WeChatOAuthMobileEnabled         bool             `json:"wechat_oauth_mobile_enabled"`
-		BackendModeEnabled               bool             `json:"backend_mode_enabled"`
-		PaymentEnabled                   bool             `json:"payment_enabled"`
-		ReferralEnabled                  bool             `json:"referral_enabled"`
-		OIDCOAuthEnabled                 bool             `json:"oidc_oauth_enabled"`
-		OIDCOAuthProviderName            string           `json:"oidc_oauth_provider_name"`
-		ContactChannels                  []ContactChannel `json:"contact_channels"`
-		Version                          string           `json:"version,omitempty"`
-		BalanceLowNotifyEnabled          bool             `json:"balance_low_notify_enabled"`
-		AccountQuotaNotifyEnabled        bool             `json:"account_quota_notify_enabled"`
-		BalanceLowNotifyThreshold        float64          `json:"balance_low_notify_threshold"`
-		BalanceLowNotifyRechargeURL      string           `json:"balance_low_notify_recharge_url"`
+		RegistrationEnabled              bool            `json:"registration_enabled"`
+		EmailVerifyEnabled               bool            `json:"email_verify_enabled"`
+		RegistrationEmailSuffixWhitelist []string        `json:"registration_email_suffix_whitelist"`
+		PromoCodeEnabled                 bool            `json:"promo_code_enabled"`
+		PasswordResetEnabled             bool            `json:"password_reset_enabled"`
+		InvitationCodeEnabled            bool            `json:"invitation_code_enabled"`
+		TotpEnabled                      bool            `json:"totp_enabled"`
+		TurnstileEnabled                 bool            `json:"turnstile_enabled"`
+		TurnstileSiteKey                 string          `json:"turnstile_site_key,omitempty"`
+		SiteName                         string          `json:"site_name"`
+		SiteLogo                         string          `json:"site_logo,omitempty"`
+		SiteSubtitle                     string          `json:"site_subtitle,omitempty"`
+		APIBaseURL                       string          `json:"api_base_url,omitempty"`
+		ContactInfo                      string          `json:"contact_info,omitempty"`
+		DocURL                           string          `json:"doc_url,omitempty"`
+		HomeContent                      string          `json:"home_content,omitempty"`
+		HideCcsImportButton              bool            `json:"hide_ccs_import_button"`
+		PurchaseSubscriptionEnabled      bool            `json:"purchase_subscription_enabled"`
+		PurchaseSubscriptionURL          string          `json:"purchase_subscription_url,omitempty"`
+		TableDefaultPageSize             int             `json:"table_default_page_size"`
+		TablePageSizeOptions             []int           `json:"table_page_size_options"`
+		CustomMenuItems                  json.RawMessage `json:"custom_menu_items"`
+		CustomEndpoints                  json.RawMessage `json:"custom_endpoints"`
+		LinuxDoOAuthEnabled              bool            `json:"linuxdo_oauth_enabled"`
+		WeChatOAuthEnabled               bool            `json:"wechat_oauth_enabled"`
+		WeChatOAuthOpenEnabled           bool            `json:"wechat_oauth_open_enabled"`
+		WeChatOAuthMPEnabled             bool            `json:"wechat_oauth_mp_enabled"`
+		WeChatOAuthMobileEnabled         bool            `json:"wechat_oauth_mobile_enabled"`
+		BackendModeEnabled               bool            `json:"backend_mode_enabled"`
+		PaymentEnabled                   bool            `json:"payment_enabled"`
+		OIDCOAuthEnabled                 bool            `json:"oidc_oauth_enabled"`
+		OIDCOAuthProviderName            string          `json:"oidc_oauth_provider_name"`
+		Version                          string          `json:"version,omitempty"`
+		BalanceLowNotifyEnabled          bool            `json:"balance_low_notify_enabled"`
+		AccountQuotaNotifyEnabled        bool            `json:"account_quota_notify_enabled"`
+		BalanceLowNotifyThreshold        float64         `json:"balance_low_notify_threshold"`
+		BalanceLowNotifyRechargeURL      string          `json:"balance_low_notify_recharge_url"`
 	}{
 		RegistrationEnabled:              settings.RegistrationEnabled,
 		EmailVerifyEnabled:               settings.EmailVerifyEnabled,
@@ -517,10 +624,8 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		WeChatOAuthMobileEnabled:         settings.WeChatOAuthMobileEnabled,
 		BackendModeEnabled:               settings.BackendModeEnabled,
 		PaymentEnabled:                   settings.PaymentEnabled,
-		ReferralEnabled:                  settings.ReferralEnabled,
 		OIDCOAuthEnabled:                 settings.OIDCOAuthEnabled,
 		OIDCOAuthProviderName:            settings.OIDCOAuthProviderName,
-		ContactChannels:                  emptyContactChannelsIfNil(settings.ContactChannels),
 		Version:                          s.version,
 		BalanceLowNotifyEnabled:          settings.BalanceLowNotifyEnabled,
 		AccountQuotaNotifyEnabled:        settings.AccountQuotaNotifyEnabled,
@@ -529,45 +634,12 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 	}, nil
 }
 
-// emptyContactChannelsIfNil 保证 JSON 序列化产出 [] 而非 null（前端可省一处判空）
-func emptyContactChannelsIfNil(in []ContactChannel) []ContactChannel {
-	if in == nil {
-		return []ContactChannel{}
-	}
-	return in
-}
-
 func DefaultWeChatConnectScopesForMode(mode string) string {
 	return defaultWeChatConnectScopeForMode(mode)
 }
 
 func (s *SettingService) parseWeChatConnectOAuthConfig(settings map[string]string) (WeChatConnectOAuthConfig, error) {
-	enabled := settings[SettingKeyWeChatConnectEnabled] == "true"
-	mode := normalizeWeChatConnectModeSetting(settings[SettingKeyWeChatConnectMode])
-	openEnabled, mpEnabled, mobileEnabled := parseWeChatConnectCapabilitySettings(settings, enabled, mode)
-	mode = normalizeWeChatConnectStoredMode(openEnabled, mpEnabled, mobileEnabled, mode)
-
-	cfg := WeChatConnectOAuthConfig{
-		Enabled:             enabled,
-		LegacyAppID:         strings.TrimSpace(settings[SettingKeyWeChatConnectAppID]),
-		LegacyAppSecret:     strings.TrimSpace(settings[SettingKeyWeChatConnectAppSecret]),
-		OpenAppID:           strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectOpenAppID], settings[SettingKeyWeChatConnectAppID])),
-		OpenAppSecret:       strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectOpenAppSecret], settings[SettingKeyWeChatConnectAppSecret])),
-		MPAppID:             strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMPAppID], settings[SettingKeyWeChatConnectAppID])),
-		MPAppSecret:         strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMPAppSecret], settings[SettingKeyWeChatConnectAppSecret])),
-		MobileAppID:         strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMobileAppID], settings[SettingKeyWeChatConnectAppID])),
-		MobileAppSecret:     strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMobileAppSecret], settings[SettingKeyWeChatConnectAppSecret])),
-		OpenEnabled:         openEnabled,
-		MPEnabled:           mpEnabled,
-		MobileEnabled:       mobileEnabled,
-		Mode:                mode,
-		Scopes:              normalizeWeChatConnectScopeSetting(settings[SettingKeyWeChatConnectScopes], mode),
-		RedirectURL:         strings.TrimSpace(settings[SettingKeyWeChatConnectRedirectURL]),
-		FrontendRedirectURL: strings.TrimSpace(settings[SettingKeyWeChatConnectFrontendRedirectURL]),
-	}
-	if cfg.FrontendRedirectURL == "" {
-		cfg.FrontendRedirectURL = defaultWeChatConnectFrontend
-	}
+	cfg := s.effectiveWeChatConnectOAuthConfig(settings)
 
 	if !cfg.Enabled || (!cfg.OpenEnabled && !cfg.MPEnabled) {
 		return WeChatConnectOAuthConfig{}, infraerrors.NotFound("OAUTH_DISABLED", "wechat oauth is disabled")
@@ -596,14 +668,10 @@ func (s *SettingService) parseWeChatConnectOAuthConfig(settings map[string]strin
 			return WeChatConnectOAuthConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "wechat oauth mobile app secret not configured")
 		}
 	}
-	if cfg.RedirectURL == "" {
-		return WeChatConnectOAuthConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "wechat oauth redirect url not configured")
-	}
-	if cfg.FrontendRedirectURL == "" {
-		return WeChatConnectOAuthConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "wechat oauth frontend redirect url not configured")
-	}
-	if err := config.ValidateAbsoluteHTTPURL(cfg.RedirectURL); err != nil {
-		return WeChatConnectOAuthConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "wechat oauth redirect url invalid")
+	if v := strings.TrimSpace(cfg.RedirectURL); v != "" {
+		if err := config.ValidateAbsoluteHTTPURL(v); err != nil {
+			return WeChatConnectOAuthConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "wechat oauth redirect url invalid")
+		}
 	}
 	if err := config.ValidateFrontendRedirectURL(cfg.FrontendRedirectURL); err != nil {
 		return WeChatConnectOAuthConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "wechat oauth frontend redirect url invalid")
@@ -612,33 +680,16 @@ func (s *SettingService) parseWeChatConnectOAuthConfig(settings map[string]strin
 }
 
 func (s *SettingService) weChatOAuthCapabilitiesFromSettings(settings map[string]string) (bool, bool, bool, bool) {
-	if settings[SettingKeyWeChatConnectEnabled] != "true" {
+	cfg := s.effectiveWeChatConnectOAuthConfig(settings)
+	if !cfg.Enabled {
 		return false, false, false, false
 	}
 
-	mode := normalizeWeChatConnectModeSetting(settings[SettingKeyWeChatConnectMode])
-	openEnabled, mpEnabled, mobileEnabled := parseWeChatConnectCapabilitySettings(settings, true, mode)
-	redirectURL := strings.TrimSpace(settings[SettingKeyWeChatConnectRedirectURL])
-	frontendRedirectURL := strings.TrimSpace(settings[SettingKeyWeChatConnectFrontendRedirectURL])
-	if frontendRedirectURL == "" {
-		frontendRedirectURL = defaultWeChatConnectFrontend
-	}
+	openReady := cfg.OpenEnabled && cfg.AppIDForMode("open") != "" && cfg.AppSecretForMode("open") != ""
+	mpReady := cfg.MPEnabled && cfg.AppIDForMode("mp") != "" && cfg.AppSecretForMode("mp") != ""
+	mobileReady := cfg.MobileEnabled && cfg.AppIDForMode("mobile") != "" && cfg.AppSecretForMode("mobile") != ""
 
-	legacyAppID := strings.TrimSpace(settings[SettingKeyWeChatConnectAppID])
-	legacyAppSecret := strings.TrimSpace(settings[SettingKeyWeChatConnectAppSecret])
-	openAppID := strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectOpenAppID], legacyAppID))
-	openAppSecret := strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectOpenAppSecret], legacyAppSecret))
-	mpAppID := strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMPAppID], legacyAppID))
-	mpAppSecret := strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMPAppSecret], legacyAppSecret))
-	mobileAppID := strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMobileAppID], legacyAppID))
-	mobileAppSecret := strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMobileAppSecret], legacyAppSecret))
-
-	webRedirectReady := redirectURL != "" && frontendRedirectURL != ""
-	openReady := openEnabled && webRedirectReady && openAppID != "" && openAppSecret != ""
-	mpReady := mpEnabled && webRedirectReady && mpAppID != "" && mpAppSecret != ""
-	mobileReady := mobileEnabled && mobileAppID != "" && mobileAppSecret != ""
-
-	return openReady || mpReady || mobileReady, openReady, mpReady, mobileReady
+	return openReady || mpReady, openReady, mpReady, mobileReady
 }
 
 // filterUserVisibleMenuItems filters out admin-only menu items from a raw JSON
@@ -763,6 +814,30 @@ func parseCustomMenuItemURLs(raw string) []string {
 	return urls
 }
 
+func oidcUsePKCECompatibilityDefault(base config.OIDCConnectConfig) bool {
+	if base.UsePKCEExplicit {
+		return base.UsePKCE
+	}
+	return true
+}
+
+func oidcValidateIDTokenCompatibilityDefault(base config.OIDCConnectConfig) bool {
+	if base.ValidateIDTokenExplicit {
+		return base.ValidateIDToken
+	}
+	return true
+}
+
+func oidcCompatibilityWriteDefault(base config.OIDCConnectConfig, configured bool, raw string, explicit bool, explicitValue bool) bool {
+	if configured {
+		return strings.TrimSpace(raw) == "true"
+	}
+	if explicit {
+		return explicitValue
+	}
+	return false
+}
+
 // UpdateSettings 更新系统设置
 func (s *SettingService) UpdateSettings(ctx context.Context, settings *SystemSettings) error {
 	updates, err := s.buildSystemSettingsUpdates(ctx, settings)
@@ -775,6 +850,28 @@ func (s *SettingService) UpdateSettings(ctx context.Context, settings *SystemSet
 		s.refreshCachedSettings(settings)
 	}
 	return err
+}
+
+func (s *SettingService) OIDCSecurityWriteDefaults(ctx context.Context) (bool, bool, error) {
+	rawSettings, err := s.settingRepo.GetMultiple(ctx, []string{
+		SettingKeyOIDCConnectUsePKCE,
+		SettingKeyOIDCConnectValidateIDToken,
+	})
+	if err != nil {
+		return false, false, fmt.Errorf("get oidc security write defaults: %w", err)
+	}
+
+	base := config.OIDCConnectConfig{}
+	if s != nil && s.cfg != nil {
+		base = s.cfg.OIDC
+	}
+
+	rawUsePKCE, hasUsePKCE := rawSettings[SettingKeyOIDCConnectUsePKCE]
+	rawValidateIDToken, hasValidateIDToken := rawSettings[SettingKeyOIDCConnectValidateIDToken]
+
+	return oidcCompatibilityWriteDefault(base, hasUsePKCE, rawUsePKCE, base.UsePKCEExplicit, base.UsePKCE),
+		oidcCompatibilityWriteDefault(base, hasValidateIDToken, rawValidateIDToken, base.ValidateIDTokenExplicit, base.ValidateIDToken),
+		nil
 }
 
 // UpdateSettingsWithAuthSourceDefaults persists system settings and auth-source defaults in a single write.
@@ -868,11 +965,6 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 	updates[SettingKeySMTPFrom] = settings.SMTPFrom
 	updates[SettingKeySMTPFromName] = settings.SMTPFromName
 	updates[SettingKeySMTPUseTLS] = strconv.FormatBool(settings.SMTPUseTLS)
-	updates[SettingKeyBalanceLowNotifyEnabled] = strconv.FormatBool(settings.BalanceLowNotifyEnabled)
-	updates[SettingKeyBalanceLowNotifyThreshold] = strconv.FormatFloat(settings.BalanceLowNotifyThreshold, 'f', 8, 64)
-	updates[SettingKeyBalanceLowNotifyRechargeURL] = strings.TrimSpace(settings.BalanceLowNotifyRechargeURL)
-	updates[SettingKeyAccountQuotaNotifyEnabled] = strconv.FormatBool(settings.AccountQuotaNotifyEnabled)
-	updates[SettingKeyAccountQuotaNotifyEmails] = MarshalNotifyEmails(settings.AccountQuotaNotifyEmails)
 
 	// Cloudflare Turnstile 设置（只有非空才更新密钥）
 	updates[SettingKeyTurnstileEnabled] = strconv.FormatBool(settings.TurnstileEnabled)
@@ -968,6 +1060,7 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 	// 默认配置
 	updates[SettingKeyDefaultConcurrency] = strconv.Itoa(settings.DefaultConcurrency)
 	updates[SettingKeyDefaultBalance] = strconv.FormatFloat(settings.DefaultBalance, 'f', 8, 64)
+	updates[SettingKeyDefaultUserRPMLimit] = strconv.Itoa(settings.DefaultUserRPMLimit)
 	defaultSubsJSON, err := json.Marshal(settings.DefaultSubscriptions)
 	if err != nil {
 		return nil, fmt.Errorf("marshal default subscriptions: %w", err)
@@ -1003,32 +1096,22 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 	// Backend Mode
 	updates[SettingKeyBackendModeEnabled] = strconv.FormatBool(settings.BackendModeEnabled)
 
-	// 推荐码
-	updates[SettingKeyReferralEnabled] = strconv.FormatBool(settings.ReferralEnabled)
-	updates[SettingKeyReferralInviterAmount] = strconv.FormatFloat(settings.ReferralInviterAmount, 'f', 8, 64)
-	updates[SettingKeyReferralInviteeAmount] = strconv.FormatFloat(settings.ReferralInviteeAmount, 'f', 8, 64)
-
 	// Gateway forwarding behavior
 	updates[SettingKeyEnableFingerprintUnification] = strconv.FormatBool(settings.EnableFingerprintUnification)
 	updates[SettingKeyEnableMetadataPassthrough] = strconv.FormatBool(settings.EnableMetadataPassthrough)
 	updates[SettingKeyEnableCCHSigning] = strconv.FormatBool(settings.EnableCCHSigning)
-	if settings.PaymentVisibleMethodAlipaySource != "" {
-		normalized, err := normalizeVisibleMethodSettingSource("alipay", settings.PaymentVisibleMethodAlipaySource, false)
-		if err != nil {
-			return nil, err
-		}
-		updates[SettingPaymentVisibleMethodAlipaySource] = normalized
-	}
-	if settings.PaymentVisibleMethodWxpaySource != "" {
-		normalized, err := normalizeVisibleMethodSettingSource("wxpay", settings.PaymentVisibleMethodWxpaySource, false)
-		if err != nil {
-			return nil, err
-		}
-		updates[SettingPaymentVisibleMethodWxpaySource] = normalized
-	}
+	updates[SettingPaymentVisibleMethodAlipaySource] = settings.PaymentVisibleMethodAlipaySource
+	updates[SettingPaymentVisibleMethodWxpaySource] = settings.PaymentVisibleMethodWxpaySource
 	updates[SettingPaymentVisibleMethodAlipayEnabled] = strconv.FormatBool(settings.PaymentVisibleMethodAlipayEnabled)
 	updates[SettingPaymentVisibleMethodWxpayEnabled] = strconv.FormatBool(settings.PaymentVisibleMethodWxpayEnabled)
 	updates[openAIAdvancedSchedulerSettingKey] = strconv.FormatBool(settings.OpenAIAdvancedSchedulerEnabled)
+
+	// Balance low notification
+	updates[SettingKeyBalanceLowNotifyEnabled] = strconv.FormatBool(settings.BalanceLowNotifyEnabled)
+	updates[SettingKeyBalanceLowNotifyThreshold] = strconv.FormatFloat(settings.BalanceLowNotifyThreshold, 'f', 8, 64)
+	updates[SettingKeyBalanceLowNotifyRechargeURL] = settings.BalanceLowNotifyRechargeURL
+	updates[SettingKeyAccountQuotaNotifyEnabled] = strconv.FormatBool(settings.AccountQuotaNotifyEnabled)
+	updates[SettingKeyAccountQuotaNotifyEmails] = MarshalNotifyEmails(settings.AccountQuotaNotifyEmails)
 
 	return updates, nil
 }
@@ -1340,34 +1423,13 @@ func (s *SettingService) GetDefaultBalance(ctx context.Context) float64 {
 	return s.cfg.Default.UserBalance
 }
 
-// IsReferralEnabled 检查是否启用推荐码功能
-func (s *SettingService) IsReferralEnabled(ctx context.Context) bool {
-	value, err := s.settingRepo.GetValue(ctx, SettingKeyReferralEnabled)
-	if err != nil {
-		return false // 默认关闭
-	}
-	return value == "true"
-}
-
-// GetReferralInviterAmount 获取邀请人奖励金额
-func (s *SettingService) GetReferralInviterAmount(ctx context.Context) float64 {
-	value, err := s.settingRepo.GetValue(ctx, SettingKeyReferralInviterAmount)
-	if err != nil {
+// GetDefaultUserRPMLimit 获取新用户默认 RPM 限制（0 = 不限制）。未配置则返回 0。
+func (s *SettingService) GetDefaultUserRPMLimit(ctx context.Context) int {
+	value, err := s.settingRepo.GetValue(ctx, SettingKeyDefaultUserRPMLimit)
+	if err != nil || value == "" {
 		return 0
 	}
-	if v, err := strconv.ParseFloat(value, 64); err == nil && v >= 0 {
-		return v
-	}
-	return 0
-}
-
-// GetReferralInviteeAmount 获取被邀请人额外奖励金额
-func (s *SettingService) GetReferralInviteeAmount(ctx context.Context) float64 {
-	value, err := s.settingRepo.GetValue(ctx, SettingKeyReferralInviteeAmount)
-	if err != nil {
-		return 0
-	}
-	if v, err := strconv.ParseFloat(value, 64); err == nil && v >= 0 {
+	if v, err := strconv.Atoi(value); err == nil && v >= 0 {
 		return v
 	}
 	return 0
@@ -1476,6 +1538,17 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		return fmt.Errorf("check existing settings: %w", err)
 	}
 
+	oidcUsePKCEDefault := true
+	oidcValidateIDTokenDefault := true
+	if s != nil && s.cfg != nil {
+		if s.cfg.OIDC.UsePKCEExplicit {
+			oidcUsePKCEDefault = s.cfg.OIDC.UsePKCE
+		}
+		if s.cfg.OIDC.ValidateIDTokenExplicit {
+			oidcValidateIDTokenDefault = s.cfg.OIDC.ValidateIDToken
+		}
+	}
+
 	// 初始化默认设置
 	defaults := map[string]string{
 		SettingKeyRegistrationEnabled:                      "true",
@@ -1491,6 +1564,8 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyCustomMenuItems:                          "[]",
 		SettingKeyCustomEndpoints:                          "[]",
 		SettingKeyWeChatConnectEnabled:                     "false",
+		SettingKeyWeChatConnectAppID:                       "",
+		SettingKeyWeChatConnectAppSecret:                   "",
 		SettingKeyWeChatConnectOpenAppID:                   "",
 		SettingKeyWeChatConnectOpenAppSecret:               "",
 		SettingKeyWeChatConnectMPAppID:                     "",
@@ -1502,11 +1577,33 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyWeChatConnectMobileEnabled:               "false",
 		SettingKeyWeChatConnectMode:                        "open",
 		SettingKeyWeChatConnectScopes:                      "snsapi_login",
+		SettingKeyWeChatConnectRedirectURL:                 "",
 		SettingKeyWeChatConnectFrontendRedirectURL:         defaultWeChatConnectFrontend,
 		SettingKeyOIDCConnectEnabled:                       "false",
 		SettingKeyOIDCConnectProviderName:                  "OIDC",
+		SettingKeyOIDCConnectClientID:                      "",
+		SettingKeyOIDCConnectClientSecret:                  "",
+		SettingKeyOIDCConnectIssuerURL:                     "",
+		SettingKeyOIDCConnectDiscoveryURL:                  "",
+		SettingKeyOIDCConnectAuthorizeURL:                  "",
+		SettingKeyOIDCConnectTokenURL:                      "",
+		SettingKeyOIDCConnectUserInfoURL:                   "",
+		SettingKeyOIDCConnectJWKSURL:                       "",
+		SettingKeyOIDCConnectScopes:                        "openid email profile",
+		SettingKeyOIDCConnectRedirectURL:                   "",
+		SettingKeyOIDCConnectFrontendRedirectURL:           "/auth/oidc/callback",
+		SettingKeyOIDCConnectTokenAuthMethod:               "client_secret_post",
+		SettingKeyOIDCConnectUsePKCE:                       strconv.FormatBool(oidcUsePKCEDefault),
+		SettingKeyOIDCConnectValidateIDToken:               strconv.FormatBool(oidcValidateIDTokenDefault),
+		SettingKeyOIDCConnectAllowedSigningAlgs:            "RS256,ES256,PS256",
+		SettingKeyOIDCConnectClockSkewSeconds:              "120",
+		SettingKeyOIDCConnectRequireEmailVerified:          "false",
+		SettingKeyOIDCConnectUserInfoEmailPath:             "",
+		SettingKeyOIDCConnectUserInfoIDPath:                "",
+		SettingKeyOIDCConnectUserInfoUsernamePath:          "",
 		SettingKeyDefaultConcurrency:                       strconv.Itoa(s.cfg.Default.UserConcurrency),
 		SettingKeyDefaultBalance:                           strconv.FormatFloat(s.cfg.Default.UserBalance, 'f', 8, 64),
+		SettingKeyDefaultUserRPMLimit:                      "0",
 		SettingKeyDefaultSubscriptions:                     "[]",
 		SettingKeyAuthSourceDefaultEmailBalance:            "0",
 		SettingKeyAuthSourceDefaultEmailConcurrency:        "5",
@@ -1531,11 +1628,6 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyForceEmailOnThirdPartySignup:             "false",
 		SettingKeySMTPPort:                                 "587",
 		SettingKeySMTPUseTLS:                               "false",
-		SettingKeyBalanceLowNotifyEnabled:                  "false",
-		SettingKeyBalanceLowNotifyThreshold:                "0",
-		SettingKeyBalanceLowNotifyRechargeURL:              "",
-		SettingKeyAccountQuotaNotifyEnabled:                "false",
-		SettingKeyAccountQuotaNotifyEmails:                 "[]",
 		// Model fallback defaults
 		SettingKeyEnableModelFallback:      "false",
 		SettingKeyFallbackModelAnthropic:   "claude-3-5-sonnet-20241022",
@@ -1557,12 +1649,12 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyMaxClaudeCodeVersion: "",
 
 		// 分组隔离（默认不允许未分组 Key 调度）
-		SettingKeyAllowUngroupedKeyScheduling: "false",
-
-		// 推荐码（默认关闭）
-		SettingKeyReferralEnabled:       "false",
-		SettingKeyReferralInviterAmount: "0",
-		SettingKeyReferralInviteeAmount: "0",
+		SettingKeyAllowUngroupedKeyScheduling:    "false",
+		SettingPaymentVisibleMethodAlipaySource:  "",
+		SettingPaymentVisibleMethodWxpaySource:   "",
+		SettingPaymentVisibleMethodAlipayEnabled: "false",
+		SettingPaymentVisibleMethodWxpayEnabled:  "false",
+		openAIAdvancedSchedulerSettingKey:        "false",
 	}
 
 	return s.settingRepo.SetMultiple(ctx, defaults)
@@ -1579,7 +1671,6 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 		PasswordResetEnabled:             emailVerifyEnabled && settings[SettingKeyPasswordResetEnabled] == "true",
 		FrontendURL:                      settings[SettingKeyFrontendURL],
 		InvitationCodeEnabled:            settings[SettingKeyInvitationCodeEnabled] == "true",
-		ReferralEnabled:                  settings[SettingKeyReferralEnabled] == "true",
 		TotpEnabled:                      settings[SettingKeyTotpEnabled] == "true",
 		SMTPHost:                         settings[SettingKeySMTPHost],
 		SMTPUsername:                     settings[SettingKeySMTPUsername],
@@ -1587,10 +1678,6 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 		SMTPFromName:                     settings[SettingKeySMTPFromName],
 		SMTPUseTLS:                       settings[SettingKeySMTPUseTLS] == "true",
 		SMTPPasswordConfigured:           settings[SettingKeySMTPPassword] != "",
-		BalanceLowNotifyEnabled:          settings[SettingKeyBalanceLowNotifyEnabled] == "true",
-		BalanceLowNotifyRechargeURL:      settings[SettingKeyBalanceLowNotifyRechargeURL],
-		AccountQuotaNotifyEnabled:        settings[SettingKeyAccountQuotaNotifyEnabled] == "true",
-		AccountQuotaNotifyEmails:         ParseNotifyEmails(settings[SettingKeyAccountQuotaNotifyEmails]),
 		TurnstileEnabled:                 settings[SettingKeyTurnstileEnabled] == "true",
 		TurnstileSiteKey:                 settings[SettingKeyTurnstileSiteKey],
 		TurnstileSecretKeyConfigured:     settings[SettingKeyTurnstileSecretKey] != "",
@@ -1626,24 +1713,17 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 		result.DefaultConcurrency = s.cfg.Default.UserConcurrency
 	}
 
+	if rpm, err := strconv.Atoi(settings[SettingKeyDefaultUserRPMLimit]); err == nil && rpm >= 0 {
+		result.DefaultUserRPMLimit = rpm
+	}
+
 	// 解析浮点数类型
 	if balance, err := strconv.ParseFloat(settings[SettingKeyDefaultBalance], 64); err == nil {
 		result.DefaultBalance = balance
 	} else {
 		result.DefaultBalance = s.cfg.Default.UserBalance
 	}
-	if threshold, err := strconv.ParseFloat(settings[SettingKeyBalanceLowNotifyThreshold], 64); err == nil && threshold >= 0 {
-		result.BalanceLowNotifyThreshold = threshold
-	}
 	result.DefaultSubscriptions = parseDefaultSubscriptions(settings[SettingKeyDefaultSubscriptions])
-
-	// 推荐码奖励金额
-	if v, err := strconv.ParseFloat(settings[SettingKeyReferralInviterAmount], 64); err == nil {
-		result.ReferralInviterAmount = v
-	}
-	if v, err := strconv.ParseFloat(settings[SettingKeyReferralInviteeAmount], 64); err == nil {
-		result.ReferralInviteeAmount = v
-	}
 
 	// 敏感信息直接返回，方便测试连接时使用
 	result.SMTPPassword = settings[SettingKeySMTPPassword]
@@ -1762,12 +1842,12 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	if raw, ok := settings[SettingKeyOIDCConnectUsePKCE]; ok {
 		result.OIDCConnectUsePKCE = raw == "true"
 	} else {
-		result.OIDCConnectUsePKCE = oidcBase.UsePKCE
+		result.OIDCConnectUsePKCE = oidcUsePKCECompatibilityDefault(oidcBase)
 	}
 	if raw, ok := settings[SettingKeyOIDCConnectValidateIDToken]; ok {
 		result.OIDCConnectValidateIDToken = raw == "true"
 	} else {
-		result.OIDCConnectValidateIDToken = oidcBase.ValidateIDToken
+		result.OIDCConnectValidateIDToken = oidcValidateIDTokenCompatibilityDefault(oidcBase)
 	}
 	if v, ok := settings[SettingKeyOIDCConnectAllowedSigningAlgs]; ok && strings.TrimSpace(v) != "" {
 		result.OIDCConnectAllowedSigningAlgs = strings.TrimSpace(v)
@@ -1813,37 +1893,30 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	}
 	result.OIDCConnectClientSecretConfigured = result.OIDCConnectClientSecret != ""
 
-	// WeChat Connect 设置：完全以 DB 系统设置为准。
-	result.WeChatConnectEnabled = settings[SettingKeyWeChatConnectEnabled] == "true"
-	result.WeChatConnectAppID = strings.TrimSpace(settings[SettingKeyWeChatConnectAppID])
-	result.WeChatConnectAppSecret = strings.TrimSpace(settings[SettingKeyWeChatConnectAppSecret])
-	result.WeChatConnectAppSecretConfigured = result.WeChatConnectAppSecret != ""
-	result.WeChatConnectOpenAppID = strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectOpenAppID], result.WeChatConnectAppID))
-	result.WeChatConnectOpenAppSecret = strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectOpenAppSecret], result.WeChatConnectAppSecret))
-	result.WeChatConnectOpenAppSecretConfigured = result.WeChatConnectOpenAppSecret != ""
-	result.WeChatConnectMPAppID = strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMPAppID], result.WeChatConnectAppID))
-	result.WeChatConnectMPAppSecret = strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMPAppSecret], result.WeChatConnectAppSecret))
-	result.WeChatConnectMPAppSecretConfigured = result.WeChatConnectMPAppSecret != ""
-	result.WeChatConnectMobileAppID = strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMobileAppID], result.WeChatConnectAppID))
-	result.WeChatConnectMobileAppSecret = strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectMobileAppSecret], result.WeChatConnectAppSecret))
-	result.WeChatConnectMobileAppSecretConfigured = result.WeChatConnectMobileAppSecret != ""
-	result.WeChatConnectOpenEnabled, result.WeChatConnectMPEnabled, result.WeChatConnectMobileEnabled = parseWeChatConnectCapabilitySettings(
-		settings,
-		result.WeChatConnectEnabled,
-		settings[SettingKeyWeChatConnectMode],
-	)
-	result.WeChatConnectMode = normalizeWeChatConnectStoredMode(
-		result.WeChatConnectOpenEnabled,
-		result.WeChatConnectMPEnabled,
-		result.WeChatConnectMobileEnabled,
-		settings[SettingKeyWeChatConnectMode],
-	)
-	result.WeChatConnectScopes = normalizeWeChatConnectScopeSetting(settings[SettingKeyWeChatConnectScopes], result.WeChatConnectMode)
-	result.WeChatConnectRedirectURL = strings.TrimSpace(settings[SettingKeyWeChatConnectRedirectURL])
-	result.WeChatConnectFrontendRedirectURL = strings.TrimSpace(settings[SettingKeyWeChatConnectFrontendRedirectURL])
-	if result.WeChatConnectFrontendRedirectURL == "" {
-		result.WeChatConnectFrontendRedirectURL = defaultWeChatConnectFrontend
-	}
+	// WeChat Connect 设置：
+	// - 优先读取 DB 系统设置
+	// - 缺失时回退到 config/env，保持升级兼容
+	weChatEffective := s.effectiveWeChatConnectOAuthConfig(settings)
+	result.WeChatConnectEnabled = weChatEffective.Enabled
+	result.WeChatConnectAppID = weChatEffective.LegacyAppID
+	result.WeChatConnectAppSecret = weChatEffective.LegacyAppSecret
+	result.WeChatConnectAppSecretConfigured = weChatEffective.LegacyAppSecret != ""
+	result.WeChatConnectOpenAppID = weChatEffective.OpenAppID
+	result.WeChatConnectOpenAppSecret = weChatEffective.OpenAppSecret
+	result.WeChatConnectOpenAppSecretConfigured = weChatEffective.OpenAppSecret != ""
+	result.WeChatConnectMPAppID = weChatEffective.MPAppID
+	result.WeChatConnectMPAppSecret = weChatEffective.MPAppSecret
+	result.WeChatConnectMPAppSecretConfigured = weChatEffective.MPAppSecret != ""
+	result.WeChatConnectMobileAppID = weChatEffective.MobileAppID
+	result.WeChatConnectMobileAppSecret = weChatEffective.MobileAppSecret
+	result.WeChatConnectMobileAppSecretConfigured = weChatEffective.MobileAppSecret != ""
+	result.WeChatConnectOpenEnabled = weChatEffective.OpenEnabled
+	result.WeChatConnectMPEnabled = weChatEffective.MPEnabled
+	result.WeChatConnectMobileEnabled = weChatEffective.MobileEnabled
+	result.WeChatConnectMode = weChatEffective.Mode
+	result.WeChatConnectScopes = weChatEffective.Scopes
+	result.WeChatConnectRedirectURL = weChatEffective.RedirectURL
+	result.WeChatConnectFrontendRedirectURL = weChatEffective.FrontendRedirectURL
 
 	// Model fallback settings
 	result.EnableModelFallback = settings[SettingKeyEnableModelFallback] == "true"
@@ -1892,11 +1965,6 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	}
 	result.EnableMetadataPassthrough = settings[SettingKeyEnableMetadataPassthrough] == "true"
 	result.EnableCCHSigning = settings[SettingKeyEnableCCHSigning] == "true"
-	result.PaymentVisibleMethodAlipaySource = settings[SettingPaymentVisibleMethodAlipaySource]
-	result.PaymentVisibleMethodWxpaySource = settings[SettingPaymentVisibleMethodWxpaySource]
-	result.PaymentVisibleMethodAlipayEnabled = settings[SettingPaymentVisibleMethodAlipayEnabled] == "true"
-	result.PaymentVisibleMethodWxpayEnabled = settings[SettingPaymentVisibleMethodWxpayEnabled] == "true"
-	result.OpenAIAdvancedSchedulerEnabled = settings[openAIAdvancedSchedulerSettingKey] == "true"
 
 	// Web search emulation: quick enabled check from the JSON config
 	if raw := settings[SettingKeyWebSearchEmulationConfig]; raw != "" {
@@ -1905,6 +1973,28 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 			result.WebSearchEmulationEnabled = wsCfg.Enabled && len(wsCfg.Providers) > 0
 		}
 	}
+	result.PaymentVisibleMethodAlipaySource = NormalizeVisibleMethodSource("alipay", settings[SettingPaymentVisibleMethodAlipaySource])
+	result.PaymentVisibleMethodWxpaySource = NormalizeVisibleMethodSource("wxpay", settings[SettingPaymentVisibleMethodWxpaySource])
+	result.PaymentVisibleMethodAlipayEnabled = settings[SettingPaymentVisibleMethodAlipayEnabled] == "true"
+	result.PaymentVisibleMethodWxpayEnabled = settings[SettingPaymentVisibleMethodWxpayEnabled] == "true"
+	result.OpenAIAdvancedSchedulerEnabled = settings[openAIAdvancedSchedulerSettingKey] == "true"
+
+	// Balance low notification
+	result.BalanceLowNotifyEnabled = settings[SettingKeyBalanceLowNotifyEnabled] == "true"
+	if v, err := strconv.ParseFloat(settings[SettingKeyBalanceLowNotifyThreshold], 64); err == nil && v >= 0 {
+		result.BalanceLowNotifyThreshold = v
+	}
+	result.BalanceLowNotifyRechargeURL = settings[SettingKeyBalanceLowNotifyRechargeURL]
+
+	// Account quota notification
+	result.AccountQuotaNotifyEnabled = settings[SettingKeyAccountQuotaNotifyEnabled] == "true"
+	if raw := strings.TrimSpace(settings[SettingKeyAccountQuotaNotifyEmails]); raw != "" {
+		result.AccountQuotaNotifyEmails = ParseNotifyEmails(raw)
+	}
+	if result.AccountQuotaNotifyEmails == nil {
+		result.AccountQuotaNotifyEmails = []NotifyEmailEntry{}
+	}
+
 	return result
 }
 
@@ -1915,6 +2005,23 @@ func isFalseSettingValue(value string) bool {
 	default:
 		return false
 	}
+}
+
+func normalizeVisibleMethodSettingSource(method, source string, enabled bool) (string, error) {
+	_ = enabled
+	source = strings.TrimSpace(source)
+	if source == "" {
+		return "", nil
+	}
+
+	normalized := NormalizeVisibleMethodSource(method, source)
+	if normalized == "" {
+		return "", infraerrors.BadRequest(
+			"INVALID_PAYMENT_VISIBLE_METHOD_SOURCE",
+			fmt.Sprintf("%s source must be one of the supported payment providers", method),
+		)
+	}
+	return normalized, nil
 }
 
 func parseDefaultSubscriptions(raw string) []DefaultSubscriptionSetting {
@@ -2017,9 +2124,7 @@ func parseTablePreferences(defaultPageSizeRaw, optionsRaw string) (int, []int) {
 
 	var options []int
 	if strings.TrimSpace(optionsRaw) != "" {
-		if err := json.Unmarshal([]byte(optionsRaw), &options); err != nil {
-			slog.Warn("invalid table page size options setting", "error", err)
-		}
+		_ = json.Unmarshal([]byte(optionsRaw), &options)
 	}
 
 	return normalizeTablePreferences(defaultPageSize, options)
@@ -2049,11 +2154,7 @@ func normalizeTablePreferences(defaultPageSize int, options []int) (int, []int) 
 	}
 
 	if len(normalizedOptions) == 0 {
-		normalizedOptions = []int{10, 20, 50, 100}
-	}
-	if !slices.Contains(normalizedOptions, defaultPageSize) {
-		normalizedOptions = append(normalizedOptions, defaultPageSize)
-		sort.Ints(normalizedOptions)
+		normalizedOptions = []int{10, 20, 50}
 	}
 
 	return defaultPageSize, normalizedOptions
@@ -2237,7 +2338,6 @@ func (s *SettingService) GetLinuxDoConnectOAuthConfig(ctx context.Context) (conf
 	if v, ok := settings[SettingKeyLinuxDoConnectRedirectURL]; ok && strings.TrimSpace(v) != "" {
 		effective.RedirectURL = strings.TrimSpace(v)
 	}
-
 	if !effective.Enabled {
 		return config.LinuxDoConnectConfig{}, infraerrors.NotFound("OAUTH_DISABLED", "oauth login is disabled")
 	}
@@ -2285,9 +2385,6 @@ func (s *SettingService) GetLinuxDoConnectOAuthConfig(ctx context.Context) (conf
 			return config.LinuxDoConnectConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "oauth client secret not configured")
 		}
 	case "none":
-		if !effective.UsePKCE {
-			return config.LinuxDoConnectConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "oauth pkce must be enabled when token_auth_method=none")
-		}
 	default:
 		return config.LinuxDoConnectConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "oauth token_auth_method invalid")
 	}
@@ -2460,9 +2557,13 @@ func (s *SettingService) GetOIDCConnectOAuthConfig(ctx context.Context) (config.
 	}
 	if raw, ok := settings[SettingKeyOIDCConnectUsePKCE]; ok {
 		effective.UsePKCE = raw == "true"
+	} else {
+		effective.UsePKCE = oidcUsePKCECompatibilityDefault(effective)
 	}
 	if raw, ok := settings[SettingKeyOIDCConnectValidateIDToken]; ok {
 		effective.ValidateIDToken = raw == "true"
+	} else {
+		effective.ValidateIDToken = oidcValidateIDTokenCompatibilityDefault(effective)
 	}
 	if v, ok := settings[SettingKeyOIDCConnectAllowedSigningAlgs]; ok && strings.TrimSpace(v) != "" {
 		effective.AllowedSigningAlgs = strings.TrimSpace(v)
@@ -2591,9 +2692,6 @@ func (s *SettingService) GetOIDCConnectOAuthConfig(ctx context.Context) (config.
 			return config.OIDCConnectConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "oauth client secret not configured")
 		}
 	case "none":
-		if !effective.UsePKCE {
-			return config.OIDCConnectConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "oauth pkce must be enabled when token_auth_method=none")
-		}
 	default:
 		return config.OIDCConnectConfig{}, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "oauth token_auth_method invalid")
 	}
@@ -2917,21 +3015,35 @@ func (s *SettingService) SetStreamTimeoutSettings(ctx context.Context, settings 
 	return s.settingRepo.Set(ctx, SettingKeyStreamTimeoutSettings, string(data))
 }
 
-type weChatOAuthEnvStatus struct {
-	Enabled     bool
-	OpenEnabled bool
-	MPEnabled   bool
+// IsReferralEnabled 检查是否启用推荐码功能
+func (s *SettingService) IsReferralEnabled(ctx context.Context) bool {
+	value, err := s.settingRepo.GetValue(ctx, SettingKeyReferralEnabled)
+	if err != nil {
+		return false
+	}
+	return value == "true"
 }
 
-func weChatOAuthEnabledFromEnv() weChatOAuthEnvStatus {
-	openAppID := strings.TrimSpace(os.Getenv("WECHAT_OAUTH_OPEN_APP_ID"))
-	openSecret := strings.TrimSpace(os.Getenv("WECHAT_OAUTH_OPEN_APP_SECRET"))
-	mpAppID := strings.TrimSpace(os.Getenv("WECHAT_OAUTH_MP_APP_ID"))
-	mpSecret := strings.TrimSpace(os.Getenv("WECHAT_OAUTH_MP_APP_SECRET"))
-	status := weChatOAuthEnvStatus{
-		OpenEnabled: openAppID != "" && openSecret != "",
-		MPEnabled:   mpAppID != "" && mpSecret != "",
+// GetReferralInviterAmount 获取邀请人奖励金额
+func (s *SettingService) GetReferralInviterAmount(ctx context.Context) float64 {
+	value, err := s.settingRepo.GetValue(ctx, SettingKeyReferralInviterAmount)
+	if err != nil {
+		return 0
 	}
-	status.Enabled = status.OpenEnabled || status.MPEnabled
-	return status
+	if v, err := strconv.ParseFloat(value, 64); err == nil && v >= 0 {
+		return v
+	}
+	return 0
+}
+
+// GetReferralInviteeAmount 获取被邀请人额外奖励金额
+func (s *SettingService) GetReferralInviteeAmount(ctx context.Context) float64 {
+	value, err := s.settingRepo.GetValue(ctx, SettingKeyReferralInviteeAmount)
+	if err != nil {
+		return 0
+	}
+	if v, err := strconv.ParseFloat(value, 64); err == nil && v >= 0 {
+		return v
+	}
+	return 0
 }

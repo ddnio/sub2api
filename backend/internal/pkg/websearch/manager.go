@@ -24,7 +24,7 @@ type ProviderConfig struct {
 	Type         string `json:"type"`                    // ProviderTypeBrave | ProviderTypeTavily
 	APIKey       string `json:"api_key"`                 // secret
 	QuotaLimit   int64  `json:"quota_limit"`             // 0 = unlimited
-	SubscribedAt *int64 `json:"subscribed_at,omitempty"` // subscription start; quota resets monthly from this date
+	SubscribedAt *int64 `json:"subscribed_at,omitempty"` // subscription start (unix seconds); quota resets monthly from this date
 	ProxyURL     string `json:"-"`                       // resolved proxy URL (not persisted)
 	ProxyID      int64  `json:"-"`                       // resolved proxy ID for unavailability tracking
 	ExpiresAt    *int64 `json:"expires_at,omitempty"`    // optional expiration (unix seconds)
@@ -33,19 +33,10 @@ type ProviderConfig struct {
 // Manager selects providers by quota-weighted load balancing and tracks quota via Redis.
 type Manager struct {
 	configs []ProviderConfig
-	redis   RedisClient
+	redis   *redis.Client
 
 	clientMu    sync.Mutex
 	clientCache map[string]*http.Client
-}
-
-// RedisClient is the subset of go-redis used for web search quota tracking.
-type RedisClient interface {
-	redis.Scripter
-	Decr(ctx context.Context, key string) *redis.IntCmd
-	Get(ctx context.Context, key string) *redis.StringCmd
-	Set(ctx context.Context, key string, value any, expiration time.Duration) *redis.StatusCmd
-	Del(ctx context.Context, keys ...string) *redis.IntCmd
 }
 
 // Timeout constants for proxy and search operations.
@@ -59,7 +50,7 @@ const (
 	proxyUnavailableKey = "websearch:proxy_unavailable:%d"
 	proxyUnavailableTTL = 5 * time.Minute
 	quotaTTLBuffer      = 24 * time.Hour
-	defaultQuotaTTL     = 31*24*time.Hour + quotaTTLBuffer
+	defaultQuotaTTL     = 31*24*time.Hour + quotaTTLBuffer // fallback when no subscription date
 	maxCachedClients    = 100
 )
 
@@ -82,7 +73,8 @@ return val
 `)
 
 // NewManager creates a Manager with the given provider configs and Redis client.
-func NewManager(configs []ProviderConfig, redisClient RedisClient) *Manager {
+// Provider order is preserved as-is; selectByQuotaWeight handles load balancing.
+func NewManager(configs []ProviderConfig, redisClient *redis.Client) *Manager {
 	copied := make([]ProviderConfig, len(configs))
 	copy(copied, configs)
 	return &Manager{
@@ -119,9 +111,18 @@ func (m *Manager) SearchWithBestProvider(ctx context.Context, req SearchRequest)
 			}
 			if isProxyError(err) {
 				m.markProxyUnavailable(ctx, cfg, req.ProxyURL)
-				slog.Warn("websearch: proxy error, marking unavailable",
+				if req.ProxyURL != "" {
+					// Account-level proxy is shared by all providers — no point
+					// trying others with the same broken proxy; signal account switch.
+					slog.Warn("websearch: account proxy error, aborting failover",
+						"provider", cfg.Type, "error", err)
+					return nil, "", fmt.Errorf("%w: %s", ErrProxyUnavailable, err.Error())
+				}
+				// Provider-specific proxy failed — try the next provider which
+				// may use a different (or no) proxy.
+				slog.Warn("websearch: provider proxy error, trying next provider",
 					"provider", cfg.Type, "error", err)
-				return nil, "", fmt.Errorf("%w: %s", ErrProxyUnavailable, err.Error())
+				continue
 			}
 			slog.Warn("websearch: provider search failed",
 				"provider", cfg.Type, "error", err)
@@ -151,13 +152,15 @@ func (m *Manager) filterAvailableProviders(ctx context.Context, accountProxyURL 
 	return out
 }
 
-type weightedProvider struct {
+// weighted is a provider candidate with computed quota weight.
+type weighted struct {
 	cfg    ProviderConfig
 	weight int64
 }
 
 // selectByQuotaWeight orders candidates by remaining quota weight.
-// Providers with quota_limit=0 get weight 0 and are placed last.
+// Providers with quota_limit=0 (no limit set) get weight 0 and are placed last.
+// Among providers with quota, higher remaining quota = higher priority.
 func (m *Manager) selectByQuotaWeight(ctx context.Context, candidates []ProviderConfig) []ProviderConfig {
 	items := m.computeWeights(ctx, candidates)
 	withQuota, withoutQuota := partitionByQuota(items)
@@ -165,8 +168,8 @@ func (m *Manager) selectByQuotaWeight(ctx context.Context, candidates []Provider
 	return mergeWeightedResults(withQuota, withoutQuota, len(candidates))
 }
 
-func (m *Manager) computeWeights(ctx context.Context, candidates []ProviderConfig) []weightedProvider {
-	items := make([]weightedProvider, 0, len(candidates))
+func (m *Manager) computeWeights(ctx context.Context, candidates []ProviderConfig) []weighted {
+	items := make([]weighted, 0, len(candidates))
 	for _, cfg := range candidates {
 		w := int64(0)
 		if cfg.QuotaLimit > 0 {
@@ -175,12 +178,12 @@ func (m *Manager) computeWeights(ctx context.Context, candidates []ProviderConfi
 				w = remaining
 			}
 		}
-		items = append(items, weightedProvider{cfg: cfg, weight: w})
+		items = append(items, weighted{cfg: cfg, weight: w})
 	}
 	return items
 }
 
-func partitionByQuota(items []weightedProvider) (withQuota, withoutQuota []weightedProvider) {
+func partitionByQuota(items []weighted) (withQuota, withoutQuota []weighted) {
 	for _, item := range items {
 		if item.weight > 0 {
 			withQuota = append(withQuota, item)
@@ -188,30 +191,32 @@ func partitionByQuota(items []weightedProvider) (withQuota, withoutQuota []weigh
 			withoutQuota = append(withoutQuota, item)
 		}
 	}
-	return withQuota, withoutQuota
+	return
 }
 
-func sortByStableRandomWeight(items []weightedProvider) {
+// sortByStableRandomWeight assigns a fixed random factor to each item before sorting,
+// ensuring deterministic sort behavior (transitivity) within a single call.
+func sortByStableRandomWeight(items []weighted) {
 	if len(items) <= 1 {
 		return
 	}
-	type weightedEntry struct {
-		item   weightedProvider
+	type entry struct {
+		item   weighted
 		factor float64
 	}
-	entries := make([]weightedEntry, len(items))
+	entries := make([]entry, len(items))
 	for i, item := range items {
-		entries[i] = weightedEntry{item: item, factor: float64(item.weight) * (0.5 + rand.Float64())}
+		entries[i] = entry{item: item, factor: float64(item.weight) * (0.5 + rand.Float64())}
 	}
 	sort.Slice(entries, func(i, j int) bool {
 		return entries[i].factor > entries[j].factor
 	})
-	for i, entry := range entries {
-		items[i] = entry.item
+	for i, e := range entries {
+		items[i] = e.item
 	}
 }
 
-func mergeWeightedResults(withQuota, withoutQuota []weightedProvider, capacity int) []ProviderConfig {
+func mergeWeightedResults(withQuota, withoutQuota []weighted, capacity int) []ProviderConfig {
 	result := make([]ProviderConfig, 0, capacity)
 	for _, item := range withQuota {
 		result = append(result, item.cfg)
@@ -472,6 +477,9 @@ func quotaRedisKey(providerType string) string {
 	return quotaKeyPrefix + providerType
 }
 
+// quotaTTLFromSubscription calculates the TTL for the quota counter based on
+// the provider's subscription start date. Quota resets monthly from that date.
+// When the Redis key expires naturally, the next INCR creates a fresh counter (lazy refresh).
 func quotaTTLFromSubscription(subscribedAt *int64) time.Duration {
 	if subscribedAt == nil || *subscribedAt == 0 {
 		return defaultQuotaTTL
@@ -479,11 +487,15 @@ func quotaTTLFromSubscription(subscribedAt *int64) time.Duration {
 	next := nextMonthlyReset(time.Unix(*subscribedAt, 0).UTC())
 	ttl := time.Until(next) + quotaTTLBuffer
 	if ttl <= quotaTTLBuffer {
-		return defaultQuotaTTL
+		// Already past the reset — next cycle
+		ttl = defaultQuotaTTL
 	}
 	return ttl
 }
 
+// nextMonthlyReset returns the next monthly reset time based on the subscription start date.
+// E.g., subscribed on Jan 15 → resets on Feb 15, Mar 15, etc.
+// Handles day-of-month overflow: Jan 31 → Feb 28 (not Mar 3).
 func nextMonthlyReset(subscribedAt time.Time) time.Time {
 	now := time.Now().UTC()
 	if subscribedAt.IsZero() {
@@ -500,11 +512,14 @@ func nextMonthlyReset(subscribedAt time.Time) time.Time {
 	return addMonthsClamped(subscribedAt, months+1)
 }
 
+// addMonthsClamped adds N months to a date, clamping the day to the last day of the target month.
+// E.g., Jan 31 + 1 month = Feb 28 (not Mar 3).
 func addMonthsClamped(t time.Time, months int) time.Time {
 	y, m, d := t.Date()
 	targetMonth := time.Month(int(m) + months)
 	targetYear := y + int(targetMonth-1)/12
 	targetMonth = (targetMonth-1)%12 + 1
+	// Last day of the target month
 	lastDay := time.Date(targetYear, targetMonth+1, 0, 0, 0, 0, 0, time.UTC).Day()
 	if d > lastDay {
 		d = lastDay

@@ -347,6 +347,7 @@ export const useAppStore = defineStore('app', () => {
         oidc_oauth_provider_name: 'OIDC',
         sora_client_enabled: false,
         backend_mode_enabled: false,
+        payment_enabled: false,
         contact_channels: [],
         version: siteVersion.value,
         balance_low_notify_enabled: false,

@@ -19,7 +19,6 @@ const showInfo = vi.hoisted(() => vi.fn())
 const showWarning = vi.hoisted(() => vi.fn())
 const getCheckoutInfo = vi.hoisted(() => vi.fn())
 const bridgeInvoke = vi.hoisted(() => vi.fn())
-const scrollTo = vi.hoisted(() => vi.fn())
 
 vi.mock('vue-router', async () => {
   const actual = await vi.importActual<typeof import('vue-router')>('vue-router')
@@ -181,21 +180,6 @@ function oauthOrderFixture() {
   }
 }
 
-function qrOrderFixture(overrides: Record<string, unknown> = {}) {
-  return {
-    order_id: 789,
-    amount: 1,
-    pay_amount: 1,
-    fee_rate: 0,
-    expires_at: '2099-01-01T00:10:00.000Z',
-    payment_type: 'wxpay',
-    result_type: 'qr_code' as const,
-    qr_code: 'weixin://wxpay/bizpayurl?pr=test',
-    out_trade_no: 'sub2_qr_789',
-    ...overrides,
-  }
-}
-
 describe('PaymentView WeChat JSAPI flow', () => {
   beforeEach(() => {
     routeState.path = '/purchase'
@@ -214,11 +198,6 @@ describe('PaymentView WeChat JSAPI flow', () => {
     showWarning.mockReset()
     getCheckoutInfo.mockReset().mockResolvedValue(checkoutInfoFixture())
     bridgeInvoke.mockReset()
-    scrollTo.mockReset()
-    Object.defineProperty(window, 'scrollTo', {
-      value: scrollTo,
-      writable: true,
-    })
     window.localStorage.clear()
     ;(window as Window & { WeixinJSBridge?: { invoke: typeof bridgeInvoke } }).WeixinJSBridge = {
       invoke: bridgeInvoke,
@@ -234,7 +213,6 @@ describe('PaymentView WeChat JSAPI flow', () => {
     shallowMount(PaymentView, {
       global: {
         stubs: {
-          AppLayout: { template: '<div><slot /></div>' },
           Teleport: true,
           Transition: false,
         },
@@ -285,7 +263,6 @@ describe('PaymentView WeChat JSAPI flow', () => {
     const wrapper = shallowMount(PaymentView, {
       global: {
         stubs: {
-          AppLayout: { template: '<div><slot /></div>' },
           Teleport: true,
           Transition: false,
         },
@@ -433,232 +410,5 @@ describe('PaymentView WeChat JSAPI flow', () => {
     expect(showWarning).toHaveBeenCalledWith('payment.errors.mobilePaymentFallbackToQr')
     expect(showError).not.toHaveBeenCalled()
     expect(window.localStorage.getItem(PAYMENT_RECOVERY_STORAGE_KEY)).toContain('weixin://wxpay/bizpayurl?pr=fallback-native')
-  })
-
-  it('passes server effective recharge limits to the amount input', async () => {
-    routeState.query = {}
-    getCheckoutInfo.mockResolvedValue({
-      data: {
-        ...checkoutInfoFixture().data,
-        methods: {
-          wxpay: {
-            daily_limit: 0,
-            daily_used: 0,
-            daily_remaining: 0,
-            single_min: 10,
-            single_max: 10000,
-            fee_rate: 0,
-            available: true,
-          },
-        },
-        global_min: 10,
-        global_max: 10000,
-      },
-    })
-
-    const wrapper = shallowMount(PaymentView, {
-      global: {
-        stubs: {
-          AppLayout: { template: '<div><slot /></div>' },
-          AmountInput: {
-            props: ['modelValue', 'amounts', 'min', 'max'],
-            template: '<div data-test="amount-input" :data-min="min" :data-max="max" />',
-          },
-          Teleport: true,
-          Transition: false,
-        },
-      },
-    })
-    await flushPromises()
-    await flushPromises()
-
-    const amountInput = wrapper.find('[data-test="amount-input"]')
-    expect(amountInput.attributes('data-min')).toBe('10')
-    expect(amountInput.attributes('data-max')).toBe('10000')
-  })
-
-  it('creates a balance order when the recharge confirm button is clicked', async () => {
-    routeState.query = {}
-    createOrder.mockResolvedValue(qrOrderFixture())
-
-    const wrapper = shallowMount(PaymentView, {
-      global: {
-        stubs: {
-          AppLayout: { template: '<div><slot /></div>' },
-          AmountInput: {
-            emits: ['update:modelValue'],
-            template: '<button data-test="choose-amount" @click="$emit(\'update:modelValue\', 1)">amount</button>',
-          },
-          PaymentMethodSelector: true,
-          PaymentStatusPanel: true,
-          Teleport: true,
-          Transition: false,
-        },
-      },
-    })
-    await flushPromises()
-    await wrapper.find('[data-test="choose-amount"]').trigger('click')
-    await flushPromises()
-
-    const confirm = wrapper.findAll('button').find(button => button.text().includes('payment.createOrder'))
-    expect(confirm, 'confirm button').toBeTruthy()
-    expect(confirm!.attributes('type')).toBe('button')
-    expect(confirm!.classes()).toContain('btn-wxpay')
-    await confirm!.trigger('click')
-    await flushPromises()
-
-    expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
-      amount: 1,
-      order_type: 'balance',
-      payment_type: 'wxpay',
-    }))
-    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
-  })
-
-  it('uses provider-specific payment button classes after method selection', async () => {
-    routeState.query = {}
-    getCheckoutInfo.mockResolvedValue({
-      data: {
-        ...checkoutInfoFixture().data,
-        methods: {
-          wxpay: checkoutInfoFixture().data.methods.wxpay,
-          alipay: {
-            daily_limit: 0,
-            daily_used: 0,
-            daily_remaining: 0,
-            single_min: 0,
-            single_max: 0,
-            fee_rate: 0,
-            available: true,
-          },
-          stripe: {
-            daily_limit: 0,
-            daily_used: 0,
-            daily_remaining: 0,
-            single_min: 0,
-            single_max: 0,
-            fee_rate: 0,
-            available: true,
-          },
-        },
-      },
-    })
-
-    const wrapper = shallowMount(PaymentView, {
-      global: {
-        stubs: {
-          AppLayout: { template: '<div><slot /></div>' },
-          AmountInput: {
-            emits: ['update:modelValue'],
-            template: '<button data-test="choose-amount" @click="$emit(\'update:modelValue\', 10)">amount</button>',
-          },
-          PaymentMethodSelector: {
-            emits: ['select'],
-            template: `
-              <div>
-                <button data-test="select-alipay" @click="$emit('select', 'alipay')">alipay</button>
-                <button data-test="select-stripe" @click="$emit('select', 'stripe')">stripe</button>
-              </div>
-            `,
-          },
-          PaymentStatusPanel: true,
-          Teleport: true,
-          Transition: false,
-        },
-      },
-    })
-    await flushPromises()
-    await wrapper.find('[data-test="choose-amount"]').trigger('click')
-    await flushPromises()
-
-    await wrapper.find('[data-test="select-alipay"]').trigger('click')
-    await flushPromises()
-    let confirm = wrapper.findAll('button').find(button => button.text().includes('payment.createOrder'))
-    expect(confirm, 'alipay confirm button').toBeTruthy()
-    expect(confirm!.classes()).toContain('btn-alipay')
-
-    await wrapper.find('[data-test="select-stripe"]').trigger('click')
-    await flushPromises()
-    confirm = wrapper.findAll('button').find(button => button.text().includes('payment.createOrder'))
-    expect(confirm, 'stripe confirm button').toBeTruthy()
-    expect(confirm!.classes()).toContain('btn-stripe')
-  })
-
-  it('shows an inline error when recharge order creation fails', async () => {
-    routeState.query = {}
-    createOrder.mockRejectedValue({ reason: 'PAYMENT_GATEWAY_ERROR' })
-
-    const wrapper = shallowMount(PaymentView, {
-      global: {
-        stubs: {
-          AppLayout: { template: '<div><slot /></div>' },
-          AmountInput: {
-            emits: ['update:modelValue'],
-            template: '<button data-test="choose-amount" @click="$emit(\'update:modelValue\', 1)">amount</button>',
-          },
-          PaymentMethodSelector: true,
-          PaymentStatusPanel: true,
-          Teleport: true,
-          Transition: false,
-        },
-      },
-    })
-    await flushPromises()
-    await wrapper.find('[data-test="choose-amount"]').trigger('click')
-    await flushPromises()
-
-    const confirm = wrapper.findAll('button').find(button => button.text().includes('payment.createOrder'))
-    expect(confirm, 'confirm button').toBeTruthy()
-    expect(confirm!.attributes('type')).toBe('button')
-    expect(confirm!.classes()).toContain('btn-wxpay')
-    await confirm!.trigger('click')
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('payment.errors.wechatUnavailable')
-    expect(wrapper.text()).toContain('payment.errors.wechatOpenInWeChatHint')
-  })
-
-  it('creates a subscription order when the subscription confirm button is clicked', async () => {
-    routeState.query = {}
-    getCheckoutInfo.mockResolvedValue(checkoutInfoWithPlansFixture())
-    createOrder.mockResolvedValue(qrOrderFixture({ amount: 128, pay_amount: 128 }))
-
-    const wrapper = shallowMount(PaymentView, {
-      global: {
-        stubs: {
-          AppLayout: { template: '<div><slot /></div>' },
-          SubscriptionPlanCard: {
-            props: ['plan'],
-            emits: ['select'],
-            template: '<button data-test="select-plan" @click="$emit(\'select\', plan)">select plan</button>',
-          },
-          PaymentMethodSelector: true,
-          PaymentStatusPanel: true,
-          Teleport: true,
-          Transition: false,
-        },
-      },
-    })
-    await flushPromises()
-
-    const subscriptionTab = wrapper.findAll('button').find(button => button.text() === 'payment.tabSubscribe')
-    expect(subscriptionTab, 'subscription tab').toBeTruthy()
-    await subscriptionTab!.trigger('click')
-    await flushPromises()
-    await wrapper.find('[data-test="select-plan"]').trigger('click')
-    await flushPromises()
-
-    const confirm = wrapper.findAll('button').find(button => button.text().includes('payment.createOrder'))
-    expect(confirm, 'confirm button').toBeTruthy()
-    await confirm!.trigger('click')
-    await flushPromises()
-
-    expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
-      amount: 128,
-      order_type: 'subscription',
-      plan_id: 7,
-      payment_type: 'wxpay',
-    }))
-    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
   })
 })

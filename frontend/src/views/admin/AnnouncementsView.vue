@@ -140,8 +140,8 @@
 
           <template #empty>
             <EmptyState
-              :title="t('empty.noData')"
-              :description="t('admin.announcements.failedToLoad')"
+              :title="loadError ? t('admin.announcements.failedToLoad') : t('admin.announcements.empty')"
+              :description="loadError ? loadError : t('admin.announcements.emptyDescription')"
               :action-text="t('admin.announcements.createAnnouncement')"
               @action="openCreateDialog"
             />
@@ -271,6 +271,7 @@ const appStore = useAppStore()
 
 const announcements = ref<Announcement[]>([])
 const loading = ref(false)
+const loadError = ref('')
 
 const filters = reactive({
   status: '',
@@ -341,6 +342,7 @@ async function loadAnnouncements() {
 
   try {
     loading.value = true
+    loadError.value = ''
     const res = await adminAPI.announcements.list(pagination.page, pagination.page_size, {
       status: filters.status || undefined,
       search: searchQuery.value || undefined,
@@ -365,7 +367,8 @@ async function loadAnnouncements() {
       return
     }
     console.error('Error loading announcements:', error)
-    appStore.showError(error.response?.data?.detail || t('admin.announcements.failedToLoad'))
+    loadError.value = error.response?.data?.detail || error.message || t('admin.announcements.failedToLoad')
+    appStore.showError(loadError.value)
   } finally {
     if (currentController === requestController) {
       loading.value = false

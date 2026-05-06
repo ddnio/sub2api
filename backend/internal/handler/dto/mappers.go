@@ -13,17 +13,23 @@ func UserFromServiceShallow(u *service.User) *User {
 		return nil
 	}
 	return &User{
-		ID:            u.ID,
-		Email:         u.Email,
-		Username:      u.Username,
-		Role:          u.Role,
-		Balance:       u.Balance,
-		Concurrency:   u.Concurrency,
-		Status:        u.Status,
-		AllowedGroups: u.AllowedGroups,
-		ReferralCode:  u.ReferralCode,
-		CreatedAt:     u.CreatedAt,
-		UpdatedAt:     u.UpdatedAt,
+		ID:                         u.ID,
+		Email:                      u.Email,
+		Username:                   u.Username,
+		Role:                       u.Role,
+		Balance:                    u.Balance,
+		Concurrency:                u.Concurrency,
+		Status:                     u.Status,
+		AllowedGroups:              u.AllowedGroups,
+		LastActiveAt:               u.LastActiveAt,
+		CreatedAt:                  u.CreatedAt,
+		UpdatedAt:                  u.UpdatedAt,
+		BalanceNotifyEnabled:       u.BalanceNotifyEnabled,
+		BalanceNotifyThresholdType: u.BalanceNotifyThresholdType,
+		BalanceNotifyThreshold:     u.BalanceNotifyThreshold,
+		BalanceNotifyExtraEmails:   NotifyEmailEntriesFromService(u.BalanceNotifyExtraEmails),
+		TotalRecharged:             u.TotalRecharged,
+		RPMLimit:                   u.RPMLimit,
 	}
 }
 
@@ -49,24 +55,6 @@ func UserFromService(u *service.User) *User {
 	return out
 }
 
-func UserProfileFromService(u *service.User) *UserProfile {
-	if u == nil {
-		return nil
-	}
-	base := UserFromService(u)
-	if base == nil {
-		return nil
-	}
-	return &UserProfile{
-		User:                       *base,
-		BalanceNotifyEnabled:       u.BalanceNotifyEnabled,
-		BalanceNotifyThreshold:     u.BalanceNotifyThreshold,
-		BalanceNotifyThresholdType: u.BalanceNotifyThresholdType,
-		BalanceNotifyExtraEmails:   NotifyEmailEntriesFromService(u.BalanceNotifyExtraEmails),
-		AuthIdentities:             u.AuthIdentities,
-	}
-}
-
 // UserFromServiceAdmin converts a service User to DTO for admin users.
 // It includes notes - user-facing endpoints must not use this.
 func UserFromServiceAdmin(u *service.User) *AdminUser {
@@ -78,12 +66,10 @@ func UserFromServiceAdmin(u *service.User) *AdminUser {
 		return nil
 	}
 	return &AdminUser{
-		User:         *base,
-		Notes:        u.Notes,
-		LastLoginAt:  u.LastLoginAt,
-		LastActiveAt: u.LastActiveAt,
-		LastUsedAt:   u.LastUsedAt,
-		GroupRates:   u.GroupRates,
+		User:       *base,
+		Notes:      u.Notes,
+		LastUsedAt: u.LastUsedAt,
+		GroupRates: u.GroupRates,
 	}
 }
 
@@ -199,6 +185,7 @@ func groupFromServiceBase(g *service.Group) Group {
 		AllowMessagesDispatch:           g.AllowMessagesDispatch,
 		RequireOAuthOnly:                g.RequireOAuthOnly,
 		RequirePrivacySet:               g.RequirePrivacySet,
+		RPMLimit:                        g.RPMLimit,
 		CreatedAt:                       g.CreatedAt,
 		UpdatedAt:                       g.UpdatedAt,
 	}
@@ -343,6 +330,26 @@ func AccountFromServiceShallow(a *service.Account) *Account {
 			if v, ok := a.Extra["quota_weekly_reset_at"].(string); ok && v != "" {
 				out.QuotaWeeklyResetAt = &v
 			}
+		}
+
+		// 配额通知配置
+		if enabled := a.GetQuotaNotifyDailyEnabled(); enabled {
+			out.QuotaNotifyDailyEnabled = &enabled
+		}
+		if threshold := a.GetQuotaNotifyDailyThreshold(); threshold > 0 {
+			out.QuotaNotifyDailyThreshold = &threshold
+		}
+		if enabled := a.GetQuotaNotifyWeeklyEnabled(); enabled {
+			out.QuotaNotifyWeeklyEnabled = &enabled
+		}
+		if threshold := a.GetQuotaNotifyWeeklyThreshold(); threshold > 0 {
+			out.QuotaNotifyWeeklyThreshold = &threshold
+		}
+		if enabled := a.GetQuotaNotifyTotalEnabled(); enabled {
+			out.QuotaNotifyTotalEnabled = &enabled
+		}
+		if threshold := a.GetQuotaNotifyTotalThreshold(); threshold > 0 {
+			out.QuotaNotifyTotalThreshold = &threshold
 		}
 	}
 
@@ -618,14 +625,6 @@ func UsageLogFromServiceAdmin(l *service.UsageLog) *AdminUsageLog {
 	if l == nil {
 		return nil
 	}
-	accountBaseCost := l.TotalCost
-	if l.AccountStatsCost != nil {
-		accountBaseCost = *l.AccountStatsCost
-	}
-	accountRateMultiplier := 1.0
-	if l.AccountRateMultiplier != nil {
-		accountRateMultiplier = *l.AccountRateMultiplier
-	}
 	return &AdminUsageLog{
 		UsageLog:              usageLogFromServiceUser(l),
 		UpstreamModel:         l.UpstreamModel,
@@ -634,7 +633,6 @@ func UsageLogFromServiceAdmin(l *service.UsageLog) *AdminUsageLog {
 		BillingTier:           l.BillingTier,
 		AccountRateMultiplier: l.AccountRateMultiplier,
 		AccountStatsCost:      l.AccountStatsCost,
-		AccountCost:           accountBaseCost * accountRateMultiplier,
 		IPAddress:             l.IPAddress,
 		Account:               AccountSummaryFromService(l.Account),
 	}
@@ -789,6 +787,3 @@ func PromoCodeUsageFromService(u *service.PromoCodeUsage) *PromoCodeUsage {
 		User:        UserFromServiceShallow(u.User),
 	}
 }
-
-// Payment mapper functions removed — upstream payment v2 uses ent types directly.
-// New payment handlers (handler/payment_handler.go) build their own response DTOs.

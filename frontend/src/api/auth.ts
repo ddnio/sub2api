@@ -186,26 +186,6 @@ export interface RefreshTokenResponse {
   token_type: string
 }
 
-export interface PendingOAuthExchangeResponse {
-  access_token?: string
-  refresh_token?: string
-  expires_in?: number
-  token_type?: string
-  auth_result?: string
-  provider?: string
-  intent?: string
-  step?: string
-  email?: string
-  redirect?: string
-  error?: string
-  adoption_required?: boolean
-  suggested_display_name?: string
-  suggested_avatar_url?: string
-  requires_2fa?: boolean
-  temp_token?: string
-  user_email_masked?: string
-}
-
 export interface OAuthTokenResponse {
   access_token: string
   refresh_token?: string
@@ -213,43 +193,42 @@ export interface OAuthTokenResponse {
   token_type?: string
 }
 
+export interface PendingOAuthBindLoginResponse extends Partial<OAuthTokenResponse> {
+  auth_result?: string
+  redirect?: string
+  error?: string
+  requires_2fa?: boolean
+  temp_token?: string
+  user_email_masked?: string
+  adoption_required?: boolean
+  suggested_display_name?: string
+  suggested_avatar_url?: string
+  intent?: string
+}
+
+export type PendingOAuthExchangeResponse = PendingOAuthBindLoginResponse
+
+export interface PendingOAuthCreateAccountResponse extends OAuthTokenResponse {
+  auth_result?: string
+}
+
+export interface PendingOAuthSendVerifyCodeResponse extends SendVerifyCodeResponse {
+  auth_result?: string
+  provider?: string
+  redirect?: string
+}
+
+export type OAuthCompletionKind = 'login' | 'bind'
+
 export interface OAuthAdoptionDecision {
   adoptDisplayName?: boolean
   adoptAvatar?: boolean
 }
 
-export interface PendingOAuthAdoptionDecision {
-  adopt_display_name?: boolean
-  adopt_avatar?: boolean
-}
-
-export type OAuthCompletionKind = 'login' | 'bind'
-
-export type PendingOAuthBindLoginResponse = PendingOAuthExchangeResponse
-
-export interface PendingOAuthCreateAccountRequest extends PendingOAuthAdoptionDecision {
-  email: string
-  verify_code?: string
-  password: string
-  invitation_code?: string
-}
-
-export interface PendingOAuthBindLoginRequest extends PendingOAuthAdoptionDecision {
-  email: string
-  password: string
-}
-
-export interface PendingOAuthTokenPairResponse {
-  access_token: string
-  refresh_token: string
-  expires_in: number
-  token_type: string
-}
-
 function serializeOAuthAdoptionDecision(
   decision?: OAuthAdoptionDecision
-): PendingOAuthAdoptionDecision {
-  const payload: PendingOAuthAdoptionDecision = {}
+): Record<string, boolean> {
+  const payload: Record<string, boolean> = {}
 
   if (typeof decision?.adoptDisplayName === 'boolean') {
     payload.adopt_display_name = decision.adoptDisplayName
@@ -263,7 +242,7 @@ function serializeOAuthAdoptionDecision(
 
 export function isOAuthLoginCompletion(
   completion: Partial<OAuthTokenResponse>
-): completion is OAuthTokenResponse & { access_token: string } {
+): completion is OAuthTokenResponse {
   return typeof completion.access_token === 'string' && completion.access_token.trim().length > 0
 }
 
@@ -303,30 +282,11 @@ export function persistOAuthTokenContext(tokens: Partial<OAuthTokenResponse>): v
   }
 }
 
-export function prepareOAuthBindAccessTokenCookie(): void {
-  if (typeof document === 'undefined' || typeof window === 'undefined') {
+export async function prepareOAuthBindAccessTokenCookie(): Promise<void> {
+  if (!getAuthToken()) {
     return
   }
-
-  const token = getAuthToken()
-  if (!token) {
-    return
-  }
-
-  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
-  const path = resolveOAuthBindCookiePath()
-  document.cookie =
-    `oauth_bind_access_token=${encodeURIComponent(token)}; Path=${path}/auth/oauth; Max-Age=600; SameSite=Lax${secure}`
-}
-
-function resolveOAuthBindCookiePath(): string {
-  const apiBase = ((import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1').replace(/\/$/, '')
-
-  try {
-    return new URL(apiBase, window.location.origin).pathname.replace(/\/$/, '') || '/api/v1'
-  } catch {
-    return apiBase.startsWith('/') ? apiBase : '/api/v1'
-  }
+  await apiClient.post('/auth/oauth/bind-token')
 }
 
 /**
@@ -402,7 +362,7 @@ export type WeChatOAuthPublicSettings = {
 }
 
 export function isWeChatWebOAuthEnabled(
-  settings: WeChatOAuthPublicSettings | null | undefined
+  settings: WeChatOAuthPublicSettings | null | undefined,
 ): boolean {
   const legacyEnabled = settings?.wechat_oauth_enabled ?? false
   const hasExplicitCapabilities =
@@ -417,97 +377,60 @@ export function isWeChatWebOAuthEnabled(
 }
 
 export function hasExplicitWeChatOAuthCapabilities(
-  settings: WeChatOAuthPublicSettings | null | undefined
+  settings: WeChatOAuthPublicSettings | null | undefined,
 ): settings is WeChatOAuthPublicSettings & {
   wechat_oauth_open_enabled: boolean
   wechat_oauth_mp_enabled: boolean
 } {
-  return (
-    typeof settings?.wechat_oauth_open_enabled === 'boolean' &&
-    typeof settings?.wechat_oauth_mp_enabled === 'boolean'
-  )
+  return typeof settings?.wechat_oauth_open_enabled === 'boolean'
+    && typeof settings?.wechat_oauth_mp_enabled === 'boolean'
 }
 
 export function resolveWeChatOAuthStart(
   settings: WeChatOAuthPublicSettings | null | undefined,
   userAgent?: string
 ): ResolvedWeChatOAuthStart {
-  const normalizedUserAgent = (
-    userAgent ??
-    (typeof navigator !== 'undefined' ? navigator.userAgent : '') ??
-    ''
-  ).trim()
+  const normalizedUserAgent = (userAgent
+    ?? (typeof navigator !== 'undefined' ? navigator.userAgent : '')
+    ?? '').trim()
   const isWeChatBrowser = /MicroMessenger/i.test(normalizedUserAgent)
   const legacyEnabled = settings?.wechat_oauth_enabled ?? false
-  const openEnabled =
-    typeof settings?.wechat_oauth_open_enabled === 'boolean'
-      ? settings.wechat_oauth_open_enabled
-      : legacyEnabled
-  const mpEnabled =
-    typeof settings?.wechat_oauth_mp_enabled === 'boolean'
-      ? settings.wechat_oauth_mp_enabled
-      : legacyEnabled
-  const mobileEnabled =
-    typeof settings?.wechat_oauth_mobile_enabled === 'boolean'
-      ? settings.wechat_oauth_mobile_enabled
-      : false
+  const openEnabled = typeof settings?.wechat_oauth_open_enabled === 'boolean'
+    ? settings.wechat_oauth_open_enabled
+    : legacyEnabled
+  const mpEnabled = typeof settings?.wechat_oauth_mp_enabled === 'boolean'
+    ? settings.wechat_oauth_mp_enabled
+    : legacyEnabled
+  const mobileEnabled = typeof settings?.wechat_oauth_mobile_enabled === 'boolean'
+    ? settings.wechat_oauth_mobile_enabled
+    : false
 
   if (isWeChatBrowser) {
     if (mpEnabled) {
       return { mode: 'mp', openEnabled, mpEnabled, mobileEnabled, isWeChatBrowser, unavailableReason: null }
     }
     if (openEnabled) {
-      return {
-        mode: null,
-        openEnabled,
-        mpEnabled,
-        mobileEnabled,
-        isWeChatBrowser,
-        unavailableReason: 'external_browser_required'
-      }
+      return { mode: null, openEnabled, mpEnabled, mobileEnabled, isWeChatBrowser, unavailableReason: 'external_browser_required' }
     }
-    return {
-      mode: null,
-      openEnabled,
-      mpEnabled,
-      mobileEnabled,
-      isWeChatBrowser,
-      unavailableReason: mobileEnabled ? 'native_app_required' : 'not_configured'
-    }
+    return { mode: null, openEnabled, mpEnabled, mobileEnabled, isWeChatBrowser, unavailableReason: 'not_configured' }
   }
 
   if (openEnabled) {
     return { mode: 'open', openEnabled, mpEnabled, mobileEnabled, isWeChatBrowser, unavailableReason: null }
   }
   if (mpEnabled) {
-    return {
-      mode: null,
-      openEnabled,
-      mpEnabled,
-      mobileEnabled,
-      isWeChatBrowser,
-      unavailableReason: 'wechat_browser_required'
-    }
+    return { mode: null, openEnabled, mpEnabled, mobileEnabled, isWeChatBrowser, unavailableReason: 'wechat_browser_required' }
   }
-  return {
-    mode: null,
-    openEnabled,
-    mpEnabled,
-    mobileEnabled,
-    isWeChatBrowser,
-    unavailableReason: mobileEnabled ? 'native_app_required' : 'not_configured'
-  }
+  return { mode: null, openEnabled, mpEnabled, mobileEnabled, isWeChatBrowser, unavailableReason: 'not_configured' }
 }
 
 export function resolveWeChatOAuthStartStrict(
   settings: WeChatOAuthPublicSettings | null | undefined,
-  userAgent?: string
+  userAgent?: string,
 ): ResolvedWeChatOAuthStart {
-  const normalizedUserAgent = (
-    userAgent ??
-    (typeof navigator !== 'undefined' ? navigator.userAgent : '') ??
-    ''
-  ).trim()
+  const normalizedUserAgent = (userAgent
+    ?? (typeof navigator !== 'undefined' ? navigator.userAgent : '')
+    ?? '').trim()
   const isWeChatBrowser = /MicroMessenger/i.test(normalizedUserAgent)
 
   if (!hasExplicitWeChatOAuthCapabilities(settings)) {
@@ -517,7 +440,7 @@ export function resolveWeChatOAuthStartStrict(
       mpEnabled: false,
       mobileEnabled: false,
       isWeChatBrowser,
-      unavailableReason: 'capability_unknown'
+      unavailableReason: 'capability_unknown',
     }
   }
 
@@ -533,6 +456,16 @@ export async function sendVerifyCode(
   request: SendVerifyCodeRequest
 ): Promise<SendVerifyCodeResponse> {
   const { data } = await apiClient.post<SendVerifyCodeResponse>('/auth/send-verify-code', request)
+  return data
+}
+
+export async function sendPendingOAuthVerifyCode(
+  request: SendVerifyCodeRequest
+): Promise<PendingOAuthSendVerifyCodeResponse> {
+  const { data } = await apiClient.post<PendingOAuthSendVerifyCodeResponse>(
+    '/auth/oauth/pending/send-verify-code',
+    request
+  )
   return data
 }
 
@@ -627,54 +560,42 @@ export async function resetPassword(request: ResetPasswordRequest): Promise<Rese
 
 /**
  * Complete LinuxDo OAuth registration by supplying an invitation code
- * @param pendingOAuthToken - Short-lived JWT from the OAuth callback
  * @param invitationCode - Invitation code entered by the user
  * @returns Token pair on success
  */
 export async function completeLinuxDoOAuthRegistration(
-  pendingOAuthToken: string,
-  invitationCode: string
-): Promise<{ access_token: string; refresh_token: string; expires_in: number; token_type: string }> {
-  const { data } = await apiClient.post<{
-    access_token: string
-    refresh_token: string
-    expires_in: number
-    token_type: string
-  }>('/auth/oauth/linuxdo/complete-registration', {
-    pending_oauth_token: pendingOAuthToken,
-    invitation_code: invitationCode
-  })
-  return data
+  invitationCode: string,
+  decision?: OAuthAdoptionDecision
+): Promise<OAuthTokenResponse> {
+  return createPendingLinuxDoOAuthAccount(invitationCode, decision)
 }
 
 /**
  * Complete OIDC OAuth registration by supplying an invitation code
- * @param pendingOAuthToken - Short-lived JWT from the OAuth callback
  * @param invitationCode - Invitation code entered by the user
  * @returns Token pair on success
  */
 export async function completeOIDCOAuthRegistration(
-  pendingOAuthToken: string,
-  invitationCode: string
-): Promise<{ access_token: string; refresh_token: string; expires_in: number; token_type: string }> {
-  const { data } = await apiClient.post<{
-    access_token: string
-    refresh_token: string
-    expires_in: number
-    token_type: string
-  }>('/auth/oauth/oidc/complete-registration', {
-    pending_oauth_token: pendingOAuthToken,
-    invitation_code: invitationCode
-  })
-  return data
+  invitationCode: string,
+  decision?: OAuthAdoptionDecision
+): Promise<OAuthTokenResponse> {
+  return createPendingOIDCOAuthAccount(invitationCode, decision)
 }
 
 export async function completeWeChatOAuthRegistration(
   invitationCode: string,
   decision?: OAuthAdoptionDecision
 ): Promise<OAuthTokenResponse> {
-  const { data } = await apiClient.post<OAuthTokenResponse>(
-    '/auth/oauth/wechat/complete-registration',
+  return createPendingWeChatOAuthAccount(invitationCode, decision)
+}
+
+async function createPendingOAuthAccount(
+  provider: 'linuxdo' | 'oidc' | 'wechat',
+  invitationCode: string,
+  decision?: OAuthAdoptionDecision
+): Promise<PendingOAuthCreateAccountResponse> {
+  const { data } = await apiClient.post<PendingOAuthCreateAccountResponse>(
+    `/auth/oauth/${provider}/complete-registration`,
     {
       invitation_code: invitationCode,
       ...serializeOAuthAdoptionDecision(decision)
@@ -683,56 +604,41 @@ export async function completeWeChatOAuthRegistration(
   return data
 }
 
-/**
- * Exchange a browser-bound pending OAuth session for frontend-safe callback payload.
- */
-export async function exchangePendingOAuthCompletion(
+export async function createPendingLinuxDoOAuthAccount(
+  invitationCode: string,
   decision?: OAuthAdoptionDecision
-): Promise<PendingOAuthExchangeResponse> {
-  const { data } = await apiClient.post<PendingOAuthExchangeResponse>(
+): Promise<PendingOAuthCreateAccountResponse> {
+  return createPendingOAuthAccount('linuxdo', invitationCode, decision)
+}
+
+export async function createPendingOIDCOAuthAccount(
+  invitationCode: string,
+  decision?: OAuthAdoptionDecision
+): Promise<PendingOAuthCreateAccountResponse> {
+  return createPendingOAuthAccount('oidc', invitationCode, decision)
+}
+
+export async function createPendingWeChatOAuthAccount(
+  invitationCode: string,
+  decision?: OAuthAdoptionDecision
+): Promise<PendingOAuthCreateAccountResponse> {
+  return createPendingOAuthAccount('wechat', invitationCode, decision)
+}
+
+export async function completePendingOAuthBindLogin(
+  decision?: OAuthAdoptionDecision
+): Promise<PendingOAuthBindLoginResponse> {
+  const { data } = await apiClient.post<PendingOAuthBindLoginResponse>(
     '/auth/oauth/pending/exchange',
     serializeOAuthAdoptionDecision(decision)
   )
   return data
 }
 
-export async function completePendingOAuthBindLogin(
+export async function exchangePendingOAuthCompletion(
   decision?: OAuthAdoptionDecision
-): Promise<PendingOAuthBindLoginResponse> {
-  return exchangePendingOAuthCompletion(decision)
-}
-
-/**
- * Complete a browser-bound pending OAuth session by creating a local email account.
- */
-export async function createPendingOAuthAccount(
-  request: PendingOAuthCreateAccountRequest
-): Promise<PendingOAuthExchangeResponse | PendingOAuthTokenPairResponse> {
-  const { data } = await apiClient.post<PendingOAuthExchangeResponse | PendingOAuthTokenPairResponse>(
-    '/auth/oauth/pending/create-account',
-    request
-  )
-  return data
-}
-
-/**
- * Complete a browser-bound pending OAuth session by binding an existing local account.
- */
-export async function bindPendingOAuthLogin(
-  request: PendingOAuthBindLoginRequest
-): Promise<PendingOAuthTokenPairResponse> {
-  const { data } = await apiClient.post<PendingOAuthTokenPairResponse>(
-    '/auth/oauth/pending/bind-login',
-    request
-  )
-  return data
-}
-
-export async function createPendingWeChatOAuthAccount(
-  invitationCode: string,
-  decision?: OAuthAdoptionDecision
-): Promise<OAuthTokenResponse> {
-  return completeWeChatOAuthRegistration(invitationCode, decision)
+): Promise<PendingOAuthExchangeResponse> {
+  return completePendingOAuthBindLogin(decision)
 }
 
 export const authAPI = {
@@ -752,24 +658,24 @@ export const authAPI = {
   clearAuthToken,
   getPublicSettings,
   sendVerifyCode,
+  sendPendingOAuthVerifyCode,
   validatePromoCode,
   validateInvitationCode,
   forgotPassword,
   resetPassword,
   refreshToken,
   revokeAllSessions,
-  prepareOAuthBindAccessTokenCookie,
   getPendingOAuthBindLoginKind,
   isPendingOAuthCreateAccountRequired,
   hasPendingOAuthSuggestedProfile,
   completePendingOAuthBindLogin,
+  createPendingLinuxDoOAuthAccount,
+  createPendingOIDCOAuthAccount,
+  createPendingWeChatOAuthAccount,
+  exchangePendingOAuthCompletion,
   completeLinuxDoOAuthRegistration,
   completeOIDCOAuthRegistration,
-  completeWeChatOAuthRegistration,
-  exchangePendingOAuthCompletion,
-  createPendingOAuthAccount,
-  createPendingWeChatOAuthAccount,
-  bindPendingOAuthLogin
+  completeWeChatOAuthRegistration
 }
 
 export default authAPI

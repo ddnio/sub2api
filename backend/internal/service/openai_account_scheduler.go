@@ -768,14 +768,13 @@ func (s *defaultOpenAIAccountScheduler) selectByLoadBalance(
 }
 
 func (s *defaultOpenAIAccountScheduler) isAccountTransportCompatible(account *Account, requiredTransport OpenAIUpstreamTransport) bool {
-	// HTTP 入站可回退到 HTTP 线路，不需要在账号选择阶段做传输协议强过滤。
 	if requiredTransport == OpenAIUpstreamTransportAny || requiredTransport == OpenAIUpstreamTransportHTTPSSE {
 		return true
 	}
-	if s == nil || s.service == nil || account == nil {
+	if s == nil || s.service == nil {
 		return false
 	}
-	return s.service.getOpenAIWSProtocolResolver().Resolve(account).Transport == requiredTransport
+	return s.service.isOpenAIAccountTransportCompatible(account, requiredTransport)
 }
 
 func (s *defaultOpenAIAccountScheduler) isAccountRequestCompatible(account *Account, req OpenAIAccountScheduleRequest) bool {
@@ -943,16 +942,6 @@ func (s *OpenAIGatewayService) selectAccountWithScheduler(
 	scheduler := s.getOpenAIAccountScheduler(ctx)
 	if scheduler == nil {
 		decision.Layer = openAIAccountScheduleLayerLoadBalance
-		isTransportCompatible := func(account *Account) bool {
-			if requiredTransport == OpenAIUpstreamTransportAny || requiredTransport == OpenAIUpstreamTransportHTTPSSE {
-				return true
-			}
-			if s == nil || account == nil {
-				return false
-			}
-			return s.getOpenAIWSProtocolResolver().Resolve(account).Transport == requiredTransport
-		}
-
 		if requiredTransport == OpenAIUpstreamTransportAny || requiredTransport == OpenAIUpstreamTransportHTTPSSE {
 			effectiveExcludedIDs := cloneExcludedAccountIDs(excludedIDs)
 			for {
@@ -988,7 +977,7 @@ func (s *OpenAIGatewayService) selectAccountWithScheduler(
 			if selection == nil || selection.Account == nil {
 				return selection, decision, nil
 			}
-			if isTransportCompatible(selection.Account) {
+			if s.isOpenAIAccountTransportCompatible(selection.Account, requiredTransport) {
 				return selection, decision, nil
 			}
 			if selection.ReleaseFunc != nil {
@@ -1023,15 +1012,25 @@ func (s *OpenAIGatewayService) selectAccountWithScheduler(
 	})
 }
 
-func cloneExcludedAccountIDs(ids map[int64]struct{}) map[int64]struct{} {
-	if len(ids) == 0 {
+func cloneExcludedAccountIDs(excludedIDs map[int64]struct{}) map[int64]struct{} {
+	if len(excludedIDs) == 0 {
 		return nil
 	}
-	clone := make(map[int64]struct{}, len(ids))
-	for id := range ids {
-		clone[id] = struct{}{}
+	cloned := make(map[int64]struct{}, len(excludedIDs))
+	for id := range excludedIDs {
+		cloned[id] = struct{}{}
 	}
-	return clone
+	return cloned
+}
+
+func (s *OpenAIGatewayService) isOpenAIAccountTransportCompatible(account *Account, requiredTransport OpenAIUpstreamTransport) bool {
+	if requiredTransport == OpenAIUpstreamTransportAny || requiredTransport == OpenAIUpstreamTransportHTTPSSE {
+		return true
+	}
+	if s == nil || account == nil {
+		return false
+	}
+	return s.getOpenAIWSProtocolResolver().Resolve(account).Transport == requiredTransport
 }
 
 func (s *OpenAIGatewayService) ReportOpenAIAccountScheduleResult(accountID int64, success bool, firstTokenMs *int) {

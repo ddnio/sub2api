@@ -79,8 +79,13 @@ export interface User {
   concurrency: number // Allowed concurrent requests
   status: 'active' | 'disabled' // Account status
   allowed_groups: number[] | null // Allowed group IDs (null = all non-exclusive groups)
+  rpm_limit?: number // User-level RPM cap (0 = unlimited); effective as fallback when group has no rpm_limit
   subscriptions?: UserSubscription[] // User's active subscriptions
   referral_code?: string // 推荐码
+  balance_notify_enabled?: boolean
+  balance_notify_threshold?: number | null
+  balance_notify_threshold_type?: 'fixed' | 'percentage' | string
+  balance_notify_extra_emails?: NotifyEmailEntry[]
   created_at: string
   updated_at: string
 }
@@ -198,6 +203,7 @@ export interface PublicSettings {
   oidc_oauth_provider_name: string
   sora_client_enabled: boolean
   backend_mode_enabled: boolean
+  payment_enabled: boolean
   contact_channels: ContactChannel[]
   version: string
   balance_low_notify_enabled: boolean
@@ -471,6 +477,7 @@ export interface Group {
   description: string | null
   platform: GroupPlatform
   rate_multiplier: number
+  rpm_limit?: number // Group-level RPM cap (0 = unlimited); overrides user-level rpm_limit when set
   is_exclusive: boolean
   status: 'active' | 'inactive'
   subscription_type: SubscriptionType

@@ -17,6 +17,8 @@ type stubAdminService struct {
 	proxies              []service.Proxy
 	proxyCounts          []service.ProxyWithAccountCount
 	redeems              []service.RedeemCode
+	boundAuthIdentity    *service.AdminBindAuthIdentityInput
+	boundAuthIdentityFor int64
 	createdAccounts      []*service.CreateAccountInput
 	createdProxies       []*service.CreateProxyInput
 	updatedProxyIDs      []int64
@@ -181,6 +183,63 @@ func (s *stubAdminService) GetUserUsageStats(ctx context.Context, userID int64, 
 	return map[string]any{"user_id": userID}, nil
 }
 
+func (s *stubAdminService) GetUserRPMStatus(ctx context.Context, userID int64) (*service.UserRPMStatus, error) {
+	user, err := s.GetUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return &service.UserRPMStatus{
+		UserRPMUsed:  0,
+		UserRPMLimit: user.RPMLimit,
+	}, nil
+}
+
+func (s *stubAdminService) BindUserAuthIdentity(ctx context.Context, userID int64, input service.AdminBindAuthIdentityInput) (*service.AdminBoundAuthIdentity, error) {
+	s.boundAuthIdentityFor = userID
+	copied := input
+	if input.Metadata != nil {
+		copied.Metadata = map[string]any{}
+		for key, value := range input.Metadata {
+			copied.Metadata[key] = value
+		}
+	}
+	if input.Channel != nil {
+		channel := *input.Channel
+		if input.Channel.Metadata != nil {
+			channel.Metadata = map[string]any{}
+			for key, value := range input.Channel.Metadata {
+				channel.Metadata[key] = value
+			}
+		}
+		copied.Channel = &channel
+	}
+	s.boundAuthIdentity = &copied
+
+	now := time.Now().UTC()
+	result := &service.AdminBoundAuthIdentity{
+		UserID:          userID,
+		ProviderType:    input.ProviderType,
+		ProviderKey:     input.ProviderKey,
+		ProviderSubject: input.ProviderSubject,
+		VerifiedAt:      &now,
+		Issuer:          input.Issuer,
+		Metadata:        input.Metadata,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+	if input.Channel != nil {
+		result.Channel = &service.AdminBoundAuthIdentityChannel{
+			Channel:        input.Channel.Channel,
+			ChannelAppID:   input.Channel.ChannelAppID,
+			ChannelSubject: input.Channel.ChannelSubject,
+			Metadata:       input.Channel.Metadata,
+			CreatedAt:      now,
+			UpdatedAt:      now,
+		}
+	}
+	return result, nil
+}
+
 func (s *stubAdminService) ListGroups(ctx context.Context, page, pageSize int, platform, status, search string, isExclusive *bool, sortBy, sortOrder string) ([]service.Group, int64, error) {
 	return s.groups, int64(len(s.groups)), nil
 }
@@ -228,6 +287,14 @@ func (s *stubAdminService) BatchSetGroupRateMultipliers(_ context.Context, _ int
 	return nil
 }
 
+func (s *stubAdminService) ClearGroupRPMOverrides(_ context.Context, _ int64) error {
+	return nil
+}
+
+func (s *stubAdminService) BatchSetGroupRPMOverrides(_ context.Context, _ int64, _ []service.GroupRPMOverrideInput) error {
+	return nil
+}
+
 func (s *stubAdminService) ListAccounts(ctx context.Context, page, pageSize int, platform, accountType, status, search string, groupID int64, privacyMode string, sortBy, sortOrder string) ([]service.Account, int64, error) {
 	s.lastListAccounts.platform = platform
 	s.lastListAccounts.accountType = accountType
@@ -238,47 +305,7 @@ func (s *stubAdminService) ListAccounts(ctx context.Context, page, pageSize int,
 	s.lastListAccounts.sortBy = sortBy
 	s.lastListAccounts.sortOrder = sortOrder
 	s.lastListAccounts.calls++
-	search = strings.TrimSpace(strings.ToLower(search))
-	filtered := make([]service.Account, 0, len(s.accounts))
-	for _, account := range s.accounts {
-		if platform != "" && account.Platform != platform {
-			continue
-		}
-		if accountType != "" && account.Type != accountType {
-			continue
-		}
-		if status != "" && account.Status != status {
-			continue
-		}
-		if groupID != 0 && !accountHasGroup(account, groupID) {
-			continue
-		}
-		if privacyMode != "" && account.Extra["privacy_mode"] != privacyMode {
-			continue
-		}
-		if search != "" && !strings.Contains(strings.ToLower(account.Name), search) {
-			continue
-		}
-		filtered = append(filtered, account)
-	}
-	return filtered, int64(len(filtered)), nil
-}
-
-func accountHasGroup(account service.Account, groupID int64) bool {
-	if groupID == service.AccountListGroupUngrouped {
-		return len(account.GroupIDs) == 0 && len(account.AccountGroups) == 0
-	}
-	for _, id := range account.GroupIDs {
-		if id == groupID {
-			return true
-		}
-	}
-	for _, group := range account.AccountGroups {
-		if group.GroupID == groupID {
-			return true
-		}
-	}
-	return false
+	return s.accounts, int64(len(s.accounts)), nil
 }
 
 func (s *stubAdminService) GetAccount(ctx context.Context, id int64) (*service.Account, error) {
@@ -488,18 +515,19 @@ func (s *stubAdminService) ListRedeemCodes(ctx context.Context, page, pageSize i
 	s.lastListRedeemCodes.sortOrder = sortOrder
 	s.lastListRedeemCodes.calls++
 	search = strings.TrimSpace(strings.ToLower(search))
+	if search == "" {
+		return s.redeems, int64(len(s.redeems)), nil
+	}
 	filtered := make([]service.RedeemCode, 0, len(s.redeems))
-	for _, code := range s.redeems {
-		if codeType != "" && code.Type != codeType {
-			continue
+	for _, redeem := range s.redeems {
+		code := strings.ToLower(redeem.Code)
+		email := ""
+		if redeem.User != nil {
+			email = strings.ToLower(redeem.User.Email)
 		}
-		if status != "" && code.Status != status {
-			continue
+		if strings.Contains(code, search) || strings.Contains(email, search) {
+			filtered = append(filtered, redeem)
 		}
-		if search != "" && !strings.Contains(strings.ToLower(code.Code), search) {
-			continue
-		}
-		filtered = append(filtered, code)
 	}
 	return filtered, int64(len(filtered)), nil
 }

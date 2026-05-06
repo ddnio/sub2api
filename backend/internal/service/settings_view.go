@@ -30,12 +30,6 @@ type SystemSettings struct {
 	SMTPFromName           string
 	SMTPUseTLS             bool
 
-	BalanceLowNotifyEnabled     bool
-	BalanceLowNotifyThreshold   float64
-	BalanceLowNotifyRechargeURL string
-	AccountQuotaNotifyEnabled   bool
-	AccountQuotaNotifyEmails    []NotifyEmailEntry
-
 	TurnstileEnabled             bool
 	TurnstileSiteKey             string
 	TurnstileSecretKey           string
@@ -112,6 +106,7 @@ type SystemSettings struct {
 
 	DefaultConcurrency   int
 	DefaultBalance       float64
+	DefaultUserRPMLimit  int
 	DefaultSubscriptions []DefaultSubscriptionSetting
 
 	// Model fallback configuration
@@ -141,24 +136,31 @@ type SystemSettings struct {
 	// Backend 模式：禁用用户注册和自助服务，仅管理员可登录
 	BackendModeEnabled bool
 
-	// 推荐码
-	ReferralEnabled       bool    `json:"referral_enabled"`
-	ReferralInviterAmount float64 `json:"referral_inviter_amount"`
-	ReferralInviteeAmount float64 `json:"referral_invitee_amount"`
-
 	// Gateway forwarding behavior
 	EnableFingerprintUnification bool // 是否统一 OAuth 账号的指纹头（默认 true）
 	EnableMetadataPassthrough    bool // 是否透传客户端原始 metadata（默认 false）
 	EnableCCHSigning             bool // 是否对 billing header cch 进行签名（默认 false）
 
-	// Web Search Emulation (read-only quick check; full config via dedicated API)
-	WebSearchEmulationEnabled bool
+	// Web Search Emulation
+	WebSearchEmulationEnabled bool // 是否启用 web search 模拟
 
+	// Payment visible method routing
 	PaymentVisibleMethodAlipaySource  string
 	PaymentVisibleMethodWxpaySource   string
 	PaymentVisibleMethodAlipayEnabled bool
 	PaymentVisibleMethodWxpayEnabled  bool
-	OpenAIAdvancedSchedulerEnabled    bool
+
+	// OpenAI account scheduling
+	OpenAIAdvancedSchedulerEnabled bool
+
+	// Balance low notification
+	BalanceLowNotifyEnabled     bool
+	BalanceLowNotifyThreshold   float64
+	BalanceLowNotifyRechargeURL string
+
+	// Account quota notification
+	AccountQuotaNotifyEnabled bool
+	AccountQuotaNotifyEmails  []NotifyEmailEntry
 }
 
 type DefaultSubscriptionSetting struct {
@@ -200,18 +202,14 @@ type PublicSettings struct {
 	WeChatOAuthMobileEnabled bool
 	BackendModeEnabled       bool
 	PaymentEnabled           bool
-	ReferralEnabled          bool
 	OIDCOAuthEnabled         bool
 	OIDCOAuthProviderName    string
 	Version                  string
 
-	// 悬浮联系按钮：仅 enabled 渠道，按 priority 升序
-	ContactChannels []ContactChannel
-
 	BalanceLowNotifyEnabled     bool
+	AccountQuotaNotifyEnabled   bool
 	BalanceLowNotifyThreshold   float64
 	BalanceLowNotifyRechargeURL string
-	AccountQuotaNotifyEnabled   bool
 }
 
 type WeChatConnectOAuthConfig struct {

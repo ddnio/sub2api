@@ -28,12 +28,11 @@ const (
 
 // Account type constants
 const (
-	AccountTypeOAuth          = domain.AccountTypeOAuth      // OAuth类型账号（full scope: profile + inference）
-	AccountTypeSetupToken     = domain.AccountTypeSetupToken // Setup Token类型账号（inference only scope）
-	AccountTypeAPIKey         = domain.AccountTypeAPIKey     // API Key类型账号
-	AccountTypeUpstream       = domain.AccountTypeUpstream   // 上游透传类型账号（通过 Base URL + API Key 连接上游）
-	AccountTypeBedrock        = domain.AccountTypeBedrock    // AWS Bedrock 类型账号（通过 SigV4 签名或 API Key 连接 Bedrock，由 credentials.auth_mode 区分）
-	AccountTypeServiceAccount = "service_account"            // Service Account 类型账号
+	AccountTypeOAuth      = domain.AccountTypeOAuth      // OAuth类型账号（full scope: profile + inference）
+	AccountTypeSetupToken = domain.AccountTypeSetupToken // Setup Token类型账号（inference only scope）
+	AccountTypeAPIKey     = domain.AccountTypeAPIKey     // API Key类型账号
+	AccountTypeUpstream   = domain.AccountTypeUpstream   // 上游透传类型账号（通过 Base URL + API Key 连接上游）
+	AccountTypeBedrock    = domain.AccountTypeBedrock    // AWS Bedrock 类型账号（通过 SigV4 签名或 API Key 连接 Bedrock，由 credentials.auth_mode 区分）
 )
 
 // Redeem type constants
@@ -99,13 +98,6 @@ const (
 	SettingKeySMTPFrom     = "smtp_from"      // 发件人地址
 	SettingKeySMTPFromName = "smtp_from_name" // 发件人名称
 	SettingKeySMTPUseTLS   = "smtp_use_tls"   // 是否使用TLS
-
-	// 余额/账号配额通知设置
-	SettingKeyBalanceLowNotifyEnabled     = "balance_low_notify_enabled"
-	SettingKeyBalanceLowNotifyThreshold   = "balance_low_notify_threshold"
-	SettingKeyBalanceLowNotifyRechargeURL = "balance_low_notify_recharge_url"
-	SettingKeyAccountQuotaNotifyEnabled   = "account_quota_notify_enabled"
-	SettingKeyAccountQuotaNotifyEmails    = "account_quota_notify_emails"
 
 	// Cloudflare Turnstile 设置
 	SettingKeyTurnstileEnabled   = "turnstile_enabled"    // 是否启用 Turnstile 验证
@@ -175,15 +167,16 @@ const (
 	SettingKeyPurchaseSubscriptionEnabled = "purchase_subscription_enabled" // 是否展示"购买订阅"页面入口
 	SettingKeyPurchaseSubscriptionURL     = "purchase_subscription_url"     // "购买订阅"页面 URL（作为 iframe src）
 	SettingKeyTableDefaultPageSize        = "table_default_page_size"       // 表格默认每页条数
-	SettingKeyTablePageSizeOptions        = "table_page_size_options"       // 表格每页条数选项（JSON 数组）
+	SettingKeyTablePageSizeOptions        = "table_page_size_options"       // 表格可选每页条数（JSON 数组）
 	SettingKeyCustomMenuItems             = "custom_menu_items"             // 自定义菜单项（JSON 数组）
 	SettingKeyCustomEndpoints             = "custom_endpoints"              // 自定义端点列表（JSON 数组）
 	SettingKeyContactChannels             = "contact_channels"              // 悬浮联系按钮渠道列表（JSON 数组）
 
 	// 默认配置
-	SettingKeyDefaultConcurrency   = "default_concurrency"   // 新用户默认并发量
-	SettingKeyDefaultBalance       = "default_balance"       // 新用户默认余额
-	SettingKeyDefaultSubscriptions = "default_subscriptions" // 新用户默认订阅列表（JSON）
+	SettingKeyDefaultConcurrency   = "default_concurrency"    // 新用户默认并发量
+	SettingKeyDefaultBalance       = "default_balance"        // 新用户默认余额
+	SettingKeyDefaultSubscriptions = "default_subscriptions"  // 新用户默认订阅列表（JSON）
+	SettingKeyDefaultUserRPMLimit  = "default_user_rpm_limit" // 新用户默认 RPM 限制（0 = 不限制）
 
 	// 第三方认证来源默认授予配置
 	SettingKeyAuthSourceDefaultEmailBalance            = "auth_source_default_email_balance"
@@ -310,9 +303,17 @@ const (
 	// SettingKeyEnableCCHSigning 是否对 billing header 中的 cch 进行 xxHash64 签名（默认 false）
 	SettingKeyEnableCCHSigning = "enable_cch_signing"
 
+	// Balance Low Notification
+	SettingKeyBalanceLowNotifyEnabled     = "balance_low_notify_enabled"      // 全局开关
+	SettingKeyBalanceLowNotifyThreshold   = "balance_low_notify_threshold"    // 默认阈值（USD）
+	SettingKeyBalanceLowNotifyRechargeURL = "balance_low_notify_recharge_url" // 充值页面 URL
+
+	// Account Quota Notification
+	SettingKeyAccountQuotaNotifyEnabled = "account_quota_notify_enabled" // 全局开关
+	SettingKeyAccountQuotaNotifyEmails  = "account_quota_notify_emails"  // 管理员通知邮箱列表（JSON 数组）
+
 	// Web Search Emulation
-	// SettingKeyWebSearchEmulationConfig 全局 web search 模拟配置（JSON）
-	SettingKeyWebSearchEmulationConfig = "web_search_emulation_config"
+	SettingKeyWebSearchEmulationConfig = "web_search_emulation_config" // JSON 配置
 )
 
 // AdminAPIKeyPrefix is the prefix for admin API keys (distinct from user "sk-" keys).

@@ -437,10 +437,6 @@
             />
           </template>
 
-          <template #cell-referral_code="{ value }">
-            <span class="font-mono text-xs text-gray-600 dark:text-gray-400">{{ value || '-' }}</span>
-          </template>
-
           <template #cell-status="{ value }">
             <div class="flex items-center gap-1.5">
               <span
@@ -457,12 +453,6 @@
 
           <template #cell-created_at="{ value }">
             <span class="text-sm text-gray-500 dark:text-dark-400">{{ formatDateTime(value) }}</span>
-          </template>
-
-          <template #cell-last_login_at="{ value }">
-            <span class="text-sm text-gray-500 dark:text-dark-400">
-              {{ value ? formatDateTime(value) : '-' }}
-            </span>
           </template>
 
           <template #cell-last_used_at="{ value }">
@@ -599,15 +589,6 @@
                 {{ t('admin.users.balanceHistory') }}
               </button>
 
-              <!-- Referral Info -->
-              <button
-                @click="handleReferralInfo(user); closeActionMenu()"
-                class="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-700"
-              >
-                <Icon name="users" size="sm" class="text-gray-400" :stroke-width="2" />
-                {{ t('admin.users.referralInfoBtn') }}
-              </button>
-
               <div class="my-1 border-t border-gray-100 dark:border-dark-700"></div>
 
               <!-- Delete (not for admin) -->
@@ -633,7 +614,6 @@
     <UserBalanceModal :show="showBalanceModal" :user="balanceUser" :operation="balanceOperation" @close="closeBalanceModal" @success="loadUsers" />
     <UserBalanceHistoryModal :show="showBalanceHistoryModal" :user="balanceHistoryUser" @close="closeBalanceHistoryModal" @deposit="handleDepositFromHistory" @withdraw="handleWithdrawFromHistory" />
     <GroupReplaceModal :show="showGroupReplaceModal" :user="groupReplaceUser" :old-group="groupReplaceOldGroup" :all-groups="allGroups" @close="closeGroupReplaceModal" @success="loadUsers" />
-    <UserReferralModal :show="showReferralModal" :user="referralUser" @close="closeReferralModal" />
     <UserAttributesConfigModal :show="showAttributesModal" @close="handleAttributesModalClose" />
   </AppLayout>
 </template>
@@ -663,7 +643,6 @@ import UserAttributesConfigModal from '@/components/user/UserAttributesConfigMod
 import UserConcurrencyCell from '@/components/user/UserConcurrencyCell.vue'
 import UserCreateModal from '@/components/admin/user/UserCreateModal.vue'
 import UserEditModal from '@/components/admin/user/UserEditModal.vue'
-import UserReferralModal from '@/components/admin/user/UserReferralModal.vue'
 import UserApiKeysModal from '@/components/admin/user/UserApiKeysModal.vue'
 import UserAllowedGroupsModal from '@/components/admin/user/UserAllowedGroupsModal.vue'
 import UserBalanceModal from '@/components/admin/user/UserBalanceModal.vue'
@@ -721,7 +700,7 @@ const getAttributeValue = (userId: number, attrId: number): string => {
 // All possible columns (for column settings)
 const allColumns = computed<Column[]>(() => [
   { key: 'email', label: t('admin.users.columns.user'), sortable: true },
-  { key: 'id', label: 'ID', sortable: true },
+  { key: 'id', label: t('admin.users.columns.id'), sortable: true },
   { key: 'username', label: t('admin.users.columns.username'), sortable: true },
   { key: 'notes', label: t('admin.users.columns.notes'), sortable: false },
   // Dynamic attribute columns
@@ -732,11 +711,9 @@ const allColumns = computed<Column[]>(() => [
   { key: 'balance', label: t('admin.users.columns.balance'), sortable: true },
   { key: 'usage', label: t('admin.users.columns.usage'), sortable: false },
   { key: 'concurrency', label: t('admin.users.columns.concurrency'), sortable: true },
-  { key: 'referral_code', label: t('admin.users.columns.referralCode'), sortable: false },
   { key: 'status', label: t('admin.users.columns.status'), sortable: true },
-  { key: 'last_login_at', label: t('admin.users.columns.lastLogin'), sortable: true },
-  { key: 'last_used_at', label: t('admin.users.columns.lastUsed'), sortable: true },
   { key: 'last_active_at', label: t('admin.users.columns.lastActive'), sortable: true },
+  { key: 'last_used_at', label: t('admin.users.columns.lastUsed'), sortable: true },
   { key: 'created_at', label: t('admin.users.columns.created'), sortable: true },
   { key: 'actions', label: t('admin.users.columns.actions'), sortable: false }
 ])
@@ -752,6 +729,8 @@ const hiddenColumns = reactive<Set<string>>(new Set())
 
 // Default hidden columns (columns hidden by default on first load)
 const DEFAULT_HIDDEN_COLUMNS = ['notes', 'groups', 'subscriptions', 'usage', 'concurrency']
+const REMOVED_COLUMNS = new Set(['last_login_at'])
+const FORCED_VISIBLE_COLUMNS = new Set(['last_active_at'])
 
 // localStorage key for column settings
 const HIDDEN_COLUMNS_KEY = 'user-hidden-columns'
@@ -762,7 +741,9 @@ const loadSavedColumns = () => {
     const saved = localStorage.getItem(HIDDEN_COLUMNS_KEY)
     if (saved) {
       const parsed = JSON.parse(saved) as string[]
-      parsed.forEach(key => hiddenColumns.add(key))
+      parsed
+        .filter(key => !REMOVED_COLUMNS.has(key) && !FORCED_VISIBLE_COLUMNS.has(key))
+        .forEach(key => hiddenColumns.add(key))
     } else {
       // Use default hidden columns on first load
       DEFAULT_HIDDEN_COLUMNS.forEach(key => hiddenColumns.add(key))
@@ -824,7 +805,7 @@ const searchQuery = ref('')
 const USER_SORT_STORAGE_KEY = 'admin-users-table-sort'
 const loadInitialSortState = (): { sort_by: string; sort_order: 'asc' | 'desc' } => {
   const fallback = { sort_by: 'created_at', sort_order: 'desc' as 'asc' | 'desc' }
-  const sortable = new Set(['email', 'id', 'username', 'role', 'balance', 'concurrency', 'status', 'last_login_at', 'last_used_at', 'last_active_at', 'created_at'])
+  const sortable = new Set(['email', 'id', 'username', 'role', 'balance', 'concurrency', 'status', 'last_used_at', 'last_active_at', 'created_at'])
   try {
     const raw = localStorage.getItem(USER_SORT_STORAGE_KEY)
     if (!raw) return fallback
@@ -1143,18 +1124,6 @@ const balanceOperation = ref<'add' | 'subtract'>('add')
 // Balance History modal state
 const showBalanceHistoryModal = ref(false)
 const balanceHistoryUser = ref<AdminUser | null>(null)
-
-// Referral info modal
-const showReferralModal = ref(false)
-const referralUser = ref<AdminUser | null>(null)
-const handleReferralInfo = (user: AdminUser) => {
-  referralUser.value = user
-  showReferralModal.value = true
-}
-const closeReferralModal = () => {
-  showReferralModal.value = false
-  referralUser.value = null
-}
 
 // 计算剩余天数
 const getDaysRemaining = (expiresAt: string): number => {

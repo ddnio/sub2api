@@ -15,7 +15,6 @@ import (
 type userRepoStub struct {
 	user          *User
 	getErr        error
-	getByEmailErr error
 	createErr     error
 	deleteErr     error
 	exists        bool
@@ -25,6 +24,7 @@ type userRepoStub struct {
 	updated       []*User
 	deletedIDs    []int64
 	usersByEmail  map[string]*User
+	getByEmailErr error
 }
 
 func (s *userRepoStub) Create(ctx context.Context, user *User) error {
@@ -88,15 +88,15 @@ func (s *userRepoStub) Delete(ctx context.Context, id int64) error {
 }
 
 func (s *userRepoStub) GetUserAvatar(ctx context.Context, userID int64) (*UserAvatar, error) {
-	return nil, nil
+	panic("unexpected GetUserAvatar call")
 }
 
 func (s *userRepoStub) UpsertUserAvatar(ctx context.Context, userID int64, input UpsertUserAvatarInput) (*UserAvatar, error) {
-	return nil, nil
+	panic("unexpected UpsertUserAvatar call")
 }
 
 func (s *userRepoStub) DeleteUserAvatar(ctx context.Context, userID int64) error {
-	return nil
+	panic("unexpected DeleteUserAvatar call")
 }
 
 func (s *userRepoStub) List(ctx context.Context, params pagination.PaginationParams) ([]User, *pagination.PaginationResult, error) {
@@ -108,11 +108,15 @@ func (s *userRepoStub) ListWithFilters(ctx context.Context, params pagination.Pa
 }
 
 func (s *userRepoStub) GetLatestUsedAtByUserIDs(ctx context.Context, userIDs []int64) (map[int64]*time.Time, error) {
-	return map[int64]*time.Time{}, nil
+	panic("unexpected GetLatestUsedAtByUserIDs call")
 }
 
 func (s *userRepoStub) GetLatestUsedAtByUserID(ctx context.Context, userID int64) (*time.Time, error) {
-	return nil, nil
+	panic("unexpected GetLatestUsedAtByUserID call")
+}
+
+func (s *userRepoStub) UpdateUserLastActiveAt(ctx context.Context, userID int64, activeAt time.Time) error {
+	panic("unexpected UpdateUserLastActiveAt call")
 }
 
 func (s *userRepoStub) UpdateBalance(ctx context.Context, id int64, amount float64) error {
@@ -147,7 +151,7 @@ func (s *userRepoStub) AddGroupToAllowedGroups(ctx context.Context, userID int64
 }
 
 func (s *userRepoStub) ListUserAuthIdentities(ctx context.Context, userID int64) ([]UserAuthIdentityRecord, error) {
-	return nil, nil
+	panic("unexpected ListUserAuthIdentities call")
 }
 
 func (s *userRepoStub) UnbindUserAuthProvider(context.Context, int64, string) error {

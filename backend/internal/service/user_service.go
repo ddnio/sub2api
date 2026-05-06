@@ -8,6 +8,8 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"image"
 	"image/color"
 	stddraw "image/draw"
@@ -17,13 +19,13 @@ import (
 	"log/slog"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
-	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
-	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	xdraw "golang.org/x/image/draw"
-	_ "golang.org/x/image/webp"
+	"golang.org/x/sync/singleflight"
 )
 
 var (
@@ -43,12 +45,17 @@ var (
 )
 
 const (
-	maxNotifyEmails             = 3
-	maxInlineAvatarBytes        = 100 * 1024
-	targetAvatarBytes           = 20 * 1024
-	notifyCodeUserRateLimit     = 5
-	notifyCodeUserRateWindow    = 10 * time.Minute
-	defaultUserIdentityRedirect = "/profile"
+	maxNotifyEmails      = 3 // Maximum number of notification emails per user
+	maxInlineAvatarBytes = 100 * 1024
+	targetAvatarBytes    = 20 * 1024
+
+	// User-level rate limiting for notify email verification codes
+	notifyCodeUserRateLimit  = 5
+	notifyCodeUserRateWindow = 10 * time.Minute
+
+	defaultUserIdentityRedirect = "/settings/profile"
+	userLastActiveMinTouch      = 10 * time.Minute
+	userLastActiveFailBackoff   = 30 * time.Second
 )
 
 var (
@@ -84,6 +91,7 @@ type UserRepository interface {
 	ListWithFilters(ctx context.Context, params pagination.PaginationParams, filters UserListFilters) ([]User, *pagination.PaginationResult, error)
 	GetLatestUsedAtByUserIDs(ctx context.Context, userIDs []int64) (map[int64]*time.Time, error)
 	GetLatestUsedAtByUserID(ctx context.Context, userID int64) (*time.Time, error)
+	UpdateUserLastActiveAt(ctx context.Context, userID int64, activeAt time.Time) error
 
 	UpdateBalance(ctx context.Context, id int64, amount float64) error
 	DeductBalance(ctx context.Context, id int64, amount float64) error
@@ -119,6 +127,7 @@ type UserIdentitySummary struct {
 	Bound         bool       `json:"bound"`
 	BoundCount    int        `json:"bound_count"`
 	DisplayName   string     `json:"display_name,omitempty"`
+	AvatarURL     string     `json:"-"`
 	SubjectHint   string     `json:"subject_hint,omitempty"`
 	ProviderKey   string     `json:"provider_key,omitempty"`
 	VerifiedAt    *time.Time `json:"verified_at,omitempty"`
@@ -182,33 +191,6 @@ type UpsertUserAvatarInput struct {
 	SHA256          string
 }
 
-type emailAuthIdentitySynchronizer interface {
-	EnsureEmailAuthIdentity(ctx context.Context, userID int64, email string) error
-	ReplaceEmailAuthIdentity(ctx context.Context, userID int64, oldEmail, newEmail string) error
-}
-
-func ensureEmailAuthIdentitySync(ctx context.Context, repo UserRepository, userID int64, email string) error {
-	syncer, ok := repo.(emailAuthIdentitySynchronizer)
-	if !ok {
-		return nil
-	}
-	return syncer.EnsureEmailAuthIdentity(ctx, userID, email)
-}
-
-func replaceEmailAuthIdentitySync(ctx context.Context, repo UserRepository, userID int64, oldEmail, newEmail string) error {
-	oldNormalized := strings.ToLower(strings.TrimSpace(oldEmail))
-	newNormalized := strings.ToLower(strings.TrimSpace(newEmail))
-	if oldNormalized == newNormalized {
-		return nil
-	}
-
-	syncer, ok := repo.(emailAuthIdentitySynchronizer)
-	if !ok {
-		return nil
-	}
-	return syncer.ReplaceEmailAuthIdentity(ctx, userID, oldEmail, newEmail)
-}
-
 type userProfileIdentityTxRunner interface {
 	WithUserProfileIdentityTx(ctx context.Context, fn func(txCtx context.Context) error) error
 }
@@ -225,19 +207,18 @@ type UserService struct {
 	settingRepo          SettingRepository
 	authCacheInvalidator APIKeyAuthCacheInvalidator
 	billingCache         BillingCache
+	lastActiveTouchL1    sync.Map
+	lastActiveTouchSF    singleflight.Group
 }
 
 // NewUserService 创建用户服务实例
-func NewUserService(userRepo UserRepository, authCacheInvalidator APIKeyAuthCacheInvalidator, billingCache BillingCache) *UserService {
+func NewUserService(userRepo UserRepository, settingRepo SettingRepository, authCacheInvalidator APIKeyAuthCacheInvalidator, billingCache BillingCache) *UserService {
 	return &UserService{
 		userRepo:             userRepo,
+		settingRepo:          settingRepo,
 		authCacheInvalidator: authCacheInvalidator,
 		billingCache:         billingCache,
 	}
-}
-
-func (s *UserService) SetSettingRepository(settingRepo SettingRepository) {
-	s.settingRepo = settingRepo
 }
 
 // GetFirstAdmin 获取首个管理员用户（用于 Admin API Key 认证）
@@ -255,14 +236,10 @@ func (s *UserService) GetProfile(ctx context.Context, userID int64) (*User, erro
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
 	}
+	normalizeLoadedUserTokenVersion(user)
 	if err := s.hydrateUserAvatar(ctx, user); err != nil {
 		return nil, fmt.Errorf("get user avatar: %w", err)
 	}
-	identities, err := s.GetProfileIdentitySummaries(ctx, userID, user)
-	if err != nil {
-		return nil, err
-	}
-	user.AuthIdentities = identities
 	return user, nil
 }
 
@@ -275,22 +252,69 @@ func (s *UserService) GetProfileIdentitySummaries(ctx context.Context, userID in
 		}
 	}
 
-	records, err := s.userRepo.ListUserAuthIdentities(ctx, userID)
+	records, err := s.listUserAuthIdentities(ctx, userID)
 	if err != nil {
-		return UserIdentitySummarySet{}, fmt.Errorf("list auth identities: %w", err)
+		return UserIdentitySummarySet{}, err
 	}
 
-	return UserIdentitySummarySet{
-		Email:   buildEmailIdentitySummary(user),
+	summaries := UserIdentitySummarySet{
+		Email:   s.buildEmailIdentitySummary(user, records),
 		LinuxDo: s.buildProviderIdentitySummary("linuxdo", user, records),
 		OIDC:    s.buildProviderIdentitySummary("oidc", user, records),
 		WeChat:  s.buildProviderIdentitySummary("wechat", user, records),
-	}, nil
+	}
+
+	s.applyExplicitProviderAvailability(ctx, &summaries)
+	return summaries, nil
+}
+
+func (s *UserService) applyExplicitProviderAvailability(ctx context.Context, summaries *UserIdentitySummarySet) {
+	if s == nil || summaries == nil || s.settingRepo == nil {
+		return
+	}
+
+	settings, err := s.settingRepo.GetMultiple(ctx, []string{
+		SettingKeyLinuxDoConnectEnabled,
+		SettingKeyOIDCConnectEnabled,
+		SettingKeyWeChatConnectEnabled,
+		SettingKeyWeChatConnectOpenEnabled,
+		SettingKeyWeChatConnectMPEnabled,
+		SettingKeyWeChatConnectMobileEnabled,
+		SettingKeyWeChatConnectMode,
+	})
+	if err != nil {
+		return
+	}
+
+	if raw, ok := settings[SettingKeyLinuxDoConnectEnabled]; ok && strings.TrimSpace(raw) != "" && raw != "true" {
+		disableIdentityBindAction(&summaries.LinuxDo)
+	}
+	if raw, ok := settings[SettingKeyOIDCConnectEnabled]; ok && strings.TrimSpace(raw) != "" && raw != "true" {
+		disableIdentityBindAction(&summaries.OIDC)
+	}
+	if raw, ok := settings[SettingKeyWeChatConnectEnabled]; ok && strings.TrimSpace(raw) != "" {
+		if raw != "true" {
+			disableIdentityBindAction(&summaries.WeChat)
+			return
+		}
+		openEnabled, mpEnabled, _ := parseWeChatConnectCapabilitySettings(settings, true, settings[SettingKeyWeChatConnectMode])
+		if !openEnabled && !mpEnabled {
+			disableIdentityBindAction(&summaries.WeChat)
+		}
+	}
+}
+
+func disableIdentityBindAction(summary *UserIdentitySummary) {
+	if summary == nil || summary.Bound {
+		return
+	}
+	summary.CanBind = false
+	summary.BindStartPath = ""
 }
 
 func (s *UserService) PrepareIdentityBindingStart(_ context.Context, req StartUserIdentityBindingRequest) (*StartUserIdentityBindingResult, error) {
 	provider := normalizeUserIdentityProvider(req.Provider)
-	if provider == "" || provider == "email" {
+	if provider == "" {
 		return nil, ErrIdentityProviderInvalid
 	}
 
@@ -308,29 +332,34 @@ func (s *UserService) PrepareIdentityBindingStart(_ context.Context, req StartUs
 }
 
 func (s *UserService) UnbindUserAuthProvider(ctx context.Context, userID int64, provider string) (*User, error) {
+	user, _, err := s.UnbindUserAuthProviderWithResult(ctx, userID, provider)
+	return user, err
+}
+
+func (s *UserService) UnbindUserAuthProviderWithResult(ctx context.Context, userID int64, provider string) (*User, bool, error) {
 	provider = normalizeUserIdentityProvider(provider)
 	if provider == "" || provider == "email" {
-		return nil, ErrIdentityProviderInvalid
+		return nil, false, ErrIdentityProviderInvalid
 	}
 
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("get user: %w", err)
+		return nil, false, fmt.Errorf("get user: %w", err)
 	}
 
 	records, err := s.listUserAuthIdentities(ctx, userID)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if len(filterUserAuthIdentities(records, provider)) == 0 {
-		return user, nil
+		return user, false, nil
 	}
 	if !s.canUnbindProvider(provider, user, records) {
-		return nil, ErrIdentityUnbindLastMethod
+		return nil, false, ErrIdentityUnbindLastMethod
 	}
 
 	if err := s.userRepo.UnbindUserAuthProvider(ctx, userID, provider); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if s.authCacheInvalidator != nil {
 		s.authCacheInvalidator.InvalidateAuthCacheByUserID(ctx, userID)
@@ -338,9 +367,9 @@ func (s *UserService) UnbindUserAuthProvider(ctx context.Context, userID int64, 
 
 	updatedUser, err := s.GetProfile(ctx, userID)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return updatedUser, nil
+	return updatedUser, true, nil
 }
 
 // UpdateProfile 更新用户资料
@@ -379,7 +408,6 @@ func (s *UserService) updateProfile(ctx context.Context, userID int64, req Updat
 		return nil, 0, fmt.Errorf("get user: %w", err)
 	}
 	oldConcurrency := user.Concurrency
-	oldEmail := user.Email
 
 	// 更新字段
 	if req.Email != nil {
@@ -415,7 +443,7 @@ func (s *UserService) updateProfile(ctx context.Context, userID int64, req Updat
 	}
 	if req.BalanceNotifyThreshold != nil {
 		if *req.BalanceNotifyThreshold <= 0 {
-			user.BalanceNotifyThreshold = nil
+			user.BalanceNotifyThreshold = nil // clear to system default
 		} else {
 			user.BalanceNotifyThreshold = req.BalanceNotifyThreshold
 		}
@@ -424,14 +452,6 @@ func (s *UserService) updateProfile(ctx context.Context, userID int64, req Updat
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		return nil, oldConcurrency, fmt.Errorf("update user: %w", err)
 	}
-	if err := replaceEmailAuthIdentitySync(ctx, s.userRepo, user.ID, oldEmail, user.Email); err != nil {
-		return nil, oldConcurrency, fmt.Errorf("sync email auth identity: %w", err)
-	}
-	identities, err := s.GetProfileIdentitySummaries(ctx, userID, user)
-	if err != nil {
-		return nil, oldConcurrency, err
-	}
-	user.AuthIdentities = identities
 
 	return user, oldConcurrency, nil
 }
@@ -503,6 +523,11 @@ func normalizeUserAvatarInput(raw string) (UpsertUserAvatarInput, error) {
 	}, nil
 }
 
+func ValidateUserAvatar(raw string) error {
+	_, err := normalizeUserAvatarInput(raw)
+	return err
+}
+
 func normalizeInlineUserAvatarInput(raw string) (UpsertUserAvatarInput, error) {
 	body := strings.TrimPrefix(raw, "data:")
 	meta, encoded, ok := strings.Cut(body, ",")
@@ -527,10 +552,6 @@ func normalizeInlineUserAvatarInput(raw string) (UpsertUserAvatarInput, error) {
 	if len(decoded) > maxInlineAvatarBytes {
 		return UpsertUserAvatarInput{}, ErrAvatarTooLarge
 	}
-	if detected := detectInlineAvatarContentType(decoded); detected != "" {
-		contentType = detected
-		raw = "data:" + contentType + ";base64," + base64.StdEncoding.EncodeToString(decoded)
-	}
 
 	if len(decoded) > targetAvatarBytes {
 		decoded, contentType, err = compressInlineAvatar(decoded)
@@ -553,7 +574,6 @@ func normalizeInlineUserAvatarInput(raw string) (UpsertUserAvatarInput, error) {
 func compressInlineAvatar(decoded []byte) ([]byte, string, error) {
 	src, _, err := image.Decode(bytes.NewReader(decoded))
 	if err != nil {
-		slog.Warn("avatar_decode_failed", "error", err)
 		return nil, "", ErrAvatarInvalid
 	}
 
@@ -583,23 +603,7 @@ func compressInlineAvatar(decoded []byte) ([]byte, string, error) {
 	return nil, "", ErrAvatarTooLarge
 }
 
-func detectInlineAvatarContentType(decoded []byte) string {
-	if len(decoded) >= 8 && bytes.Equal(decoded[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}) {
-		return "image/png"
-	}
-	if len(decoded) >= 3 && bytes.Equal(decoded[:3], []byte{0xff, 0xd8, 0xff}) {
-		return "image/jpeg"
-	}
-	if len(decoded) >= 6 && (bytes.Equal(decoded[:6], []byte("GIF87a")) || bytes.Equal(decoded[:6], []byte("GIF89a"))) {
-		return "image/gif"
-	}
-	if len(decoded) >= 12 && bytes.Equal(decoded[:4], []byte("RIFF")) && bytes.Equal(decoded[8:12], []byte("WEBP")) {
-		return "image/webp"
-	}
-	return ""
-}
-
-func buildEmailIdentitySummary(user *User, records ...[]UserAuthIdentityRecord) UserIdentitySummary {
+func (s *UserService) buildEmailIdentitySummary(user *User, records []UserAuthIdentityRecord) UserIdentitySummary {
 	summary := UserIdentitySummary{
 		Provider:  "email",
 		CanBind:   false,
@@ -610,33 +614,31 @@ func buildEmailIdentitySummary(user *User, records ...[]UserAuthIdentityRecord) 
 	if user == nil {
 		return summary
 	}
-	if len(records) > 0 {
-		filtered := filterUserAuthIdentities(records[0], "email")
-		if len(filtered) > 0 {
-			primary := selectPrimaryUserAuthIdentity(filtered)
-			email := strings.TrimSpace(firstStringIdentityValue(primary.Metadata, "email"))
-			if email == "" {
-				email = strings.TrimSpace(primary.ProviderSubject)
-			}
-			if email == "" || isReservedEmail(email) {
-				email = strings.TrimSpace(user.Email)
-			}
-			if email == "" || isReservedEmail(email) {
-				email = strings.TrimSpace(primary.ProviderKey)
-			}
-			if email == "" || isReservedEmail(email) {
-				return summary
-			}
 
-			summary.Bound = true
-			summary.BoundCount = len(filtered)
-			summary.DisplayName = email
-			summary.SubjectHint = maskEmailIdentity(email)
-			summary.ProviderKey = strings.TrimSpace(primary.ProviderKey)
-			summary.VerifiedAt = primary.VerifiedAt
-			return summary
+	filtered := filterUserAuthIdentities(records, "email")
+	if len(filtered) > 0 {
+		primary := selectPrimaryUserAuthIdentity(filtered)
+		email := strings.TrimSpace(firstStringIdentityValue(primary.Metadata, "email"))
+		if email == "" {
+			email = strings.TrimSpace(primary.ProviderSubject)
 		}
+		if email == "" || isReservedEmail(email) {
+			email = strings.TrimSpace(user.Email)
+		}
+		if email == "" || isReservedEmail(email) {
+			email = strings.TrimSpace(primary.ProviderKey)
+		}
+
+		summary.Bound = true
+		summary.BoundCount = len(filtered)
+		summary.DisplayName = email
+		summary.SubjectHint = maskEmailIdentity(email)
+		summary.ProviderKey = strings.TrimSpace(primary.ProviderKey)
+		summary.VerifiedAt = primary.VerifiedAt
+		return summary
 	}
+
+	// Compatibility fallback for legacy normal-email users that predate auth_identities backfill.
 	email := strings.TrimSpace(user.Email)
 	if email == "" || isReservedEmail(email) {
 		return summary
@@ -656,9 +658,10 @@ func (s *UserService) buildProviderIdentitySummary(provider string, user *User, 
 	}
 	filtered := filterUserAuthIdentities(records, provider)
 	if len(filtered) == 0 {
-		if path, err := buildUserIdentityBindAuthorizeURL(provider, ""); err == nil {
-			summary.CanBind = true
-			summary.BindStartPath = path
+		summary.CanBind = true
+		bindStartPath, err := buildUserIdentityBindAuthorizeURL(provider, "")
+		if err == nil {
+			summary.BindStartPath = bindStartPath
 		}
 		return summary
 	}
@@ -667,6 +670,7 @@ func (s *UserService) buildProviderIdentitySummary(provider string, user *User, 
 	summary.Bound = true
 	summary.BoundCount = len(filtered)
 	summary.DisplayName = userAuthIdentityDisplayName(primary)
+	summary.AvatarURL = strings.TrimSpace(firstStringIdentityValue(primary.Metadata, "avatar_url", "suggested_avatar_url", "headimgurl"))
 	summary.SubjectHint = maskOpaqueIdentity(primary.ProviderSubject)
 	summary.ProviderKey = strings.TrimSpace(primary.ProviderKey)
 	summary.VerifiedAt = primary.VerifiedAt
@@ -686,7 +690,7 @@ func (s *UserService) canUnbindProvider(provider string, user *User, records []U
 		return false
 	}
 
-	if buildEmailIdentitySummary(user, records).Bound {
+	if s.canUseEmailAsSignInMethod(user, records) {
 		return true
 	}
 
@@ -702,6 +706,44 @@ func (s *UserService) canUnbindProvider(provider string, user *User, records []U
 	return false
 }
 
+func (s *UserService) canUseEmailAsSignInMethod(user *User, records []UserAuthIdentityRecord) bool {
+	if user == nil {
+		return false
+	}
+
+	email := strings.ToLower(strings.TrimSpace(user.Email))
+	if email == "" || isReservedEmail(email) {
+		return false
+	}
+
+	if emailSignupSourceAllowsLogin(user.SignupSource) {
+		return true
+	}
+
+	for _, record := range filterUserAuthIdentities(records, "email") {
+		if emailIdentitySupportsSignIn(record) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func emailSignupSourceAllowsLogin(signupSource string) bool {
+	signupSource = strings.ToLower(strings.TrimSpace(signupSource))
+	return signupSource == "" || signupSource == "email"
+}
+
+func emailIdentitySupportsSignIn(record UserAuthIdentityRecord) bool {
+	source := strings.TrimSpace(firstStringIdentityValue(record.Metadata, "source"))
+	switch source {
+	case "auth_service_email_bind", "auth_service_login_backfill", "auth_service_dual_write":
+		return true
+	default:
+		return false
+	}
+}
+
 func (s *UserService) listUserAuthIdentities(ctx context.Context, userID int64) ([]UserAuthIdentityRecord, error) {
 	if userID <= 0 || s == nil || s.userRepo == nil {
 		return nil, nil
@@ -714,21 +756,24 @@ func buildUserIdentityBindAuthorizeURL(provider, redirectTo string) (string, err
 	if provider == "" || provider == "email" {
 		return "", ErrIdentityProviderInvalid
 	}
+
 	redirectTo, err := normalizeUserIdentityRedirect(redirectTo)
 	if err != nil {
 		return "", err
 	}
+
 	path := ""
 	switch provider {
 	case "linuxdo":
-		path = "/api/v1/auth/oauth/linuxdo/start"
+		path = "/api/v1/auth/oauth/linuxdo/bind/start"
 	case "oidc":
-		path = "/api/v1/auth/oauth/oidc/start"
+		path = "/api/v1/auth/oauth/oidc/bind/start"
 	case "wechat":
-		path = "/api/v1/auth/oauth/wechat/start"
+		path = "/api/v1/auth/oauth/wechat/bind/start"
 	default:
 		return "", ErrIdentityProviderInvalid
 	}
+
 	query := url.Values{}
 	query.Set("redirect", redirectTo)
 	query.Set("intent", "bind_current_user")
@@ -737,14 +782,14 @@ func buildUserIdentityBindAuthorizeURL(provider, redirectTo string) (string, err
 
 func normalizeUserIdentityProvider(provider string) string {
 	switch strings.ToLower(strings.TrimSpace(provider)) {
-	case "email":
-		return "email"
 	case "linuxdo":
 		return "linuxdo"
 	case "oidc":
 		return "oidc"
 	case "wechat":
 		return "wechat"
+	case "email":
+		return "email"
 	default:
 		return ""
 	}
@@ -755,7 +800,7 @@ func normalizeUserIdentityRedirect(raw string) (string, error) {
 	if redirect == "" {
 		return defaultUserIdentityRedirect, nil
 	}
-	if len(redirect) > 2048 || !strings.HasPrefix(redirect, "/") || strings.HasPrefix(redirect, "//") || strings.ContainsAny(redirect, "\r\n") || strings.Contains(redirect, "://") {
+	if len(redirect) > 2048 || !strings.HasPrefix(redirect, "/") || strings.HasPrefix(redirect, "//") {
 		return "", ErrIdentityRedirectInvalid
 	}
 	return redirect, nil
@@ -803,7 +848,14 @@ func userAuthIdentitySortTime(record UserAuthIdentityRecord) time.Time {
 }
 
 func userAuthIdentityDisplayName(record UserAuthIdentityRecord) string {
-	if displayName := firstStringIdentityValue(record.Metadata, "display_name", "suggested_display_name", "username", "name", "nickname", "email"); displayName != "" {
+	if displayName := firstStringIdentityValue(record.Metadata,
+		"display_name",
+		"suggested_display_name",
+		"username",
+		"name",
+		"nickname",
+		"email",
+	); displayName != "" {
 		return displayName
 	}
 	if subject := strings.TrimSpace(record.ProviderSubject); subject != "" {
@@ -893,10 +945,79 @@ func (s *UserService) GetByID(ctx context.Context, id int64) (*User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
 	}
+	normalizeLoadedUserTokenVersion(user)
 	if err := s.hydrateUserAvatar(ctx, user); err != nil {
 		return nil, fmt.Errorf("get user avatar: %w", err)
 	}
 	return user, nil
+}
+
+func normalizeLoadedUserTokenVersion(user *User) {
+	if user == nil || user.TokenVersionResolved {
+		return
+	}
+	user.TokenVersion = resolvedTokenVersion(user)
+	user.TokenVersionResolved = true
+}
+
+// TouchLastActive 通过防抖更新 users.last_active_at，减少鉴权热路径写放大。
+// 该操作为尽力而为，不应中断正常请求。
+func (s *UserService) TouchLastActive(ctx context.Context, userID int64) {
+	if s == nil || s.userRepo == nil || userID <= 0 {
+		return
+	}
+
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		slog.Debug("skip touch user last active after load failure", "user_id", userID, "error", err)
+		return
+	}
+	s.TouchLastActiveForUser(ctx, user)
+}
+
+// TouchLastActiveForUser 使用已加载的用户信息更新 last_active_at，避免重复读取数据库。
+func (s *UserService) TouchLastActiveForUser(ctx context.Context, user *User) {
+	if s == nil || s.userRepo == nil || user == nil || user.ID <= 0 {
+		return
+	}
+
+	now := time.Now()
+	if userLastActiveFresh(user.LastActiveAt, now) {
+		return
+	}
+	if v, ok := s.lastActiveTouchL1.Load(user.ID); ok {
+		if nextAllowedAt, ok := v.(time.Time); ok && now.Before(nextAllowedAt) {
+			return
+		}
+	}
+
+	_, err, _ := s.lastActiveTouchSF.Do(strconv.FormatInt(user.ID, 10), func() (any, error) {
+		latest := time.Now()
+		if v, ok := s.lastActiveTouchL1.Load(user.ID); ok {
+			if nextAllowedAt, ok := v.(time.Time); ok && latest.Before(nextAllowedAt) {
+				return nil, nil
+			}
+		}
+		if userLastActiveFresh(user.LastActiveAt, latest) {
+			return nil, nil
+		}
+		if err := s.userRepo.UpdateUserLastActiveAt(ctx, user.ID, latest); err != nil {
+			s.lastActiveTouchL1.Store(user.ID, latest.Add(userLastActiveFailBackoff))
+			return nil, fmt.Errorf("touch user last active: %w", err)
+		}
+		s.lastActiveTouchL1.Store(user.ID, latest.Add(userLastActiveMinTouch))
+		return nil, nil
+	})
+	if err != nil {
+		slog.Warn("touch user last active failed", "user_id", user.ID, "error", err)
+	}
+}
+
+func userLastActiveFresh(lastActiveAt *time.Time, now time.Time) bool {
+	if lastActiveAt == nil {
+		return false
+	}
+	return now.Before(lastActiveAt.Add(userLastActiveMinTouch))
 }
 
 func (s *UserService) hydrateUserAvatar(ctx context.Context, user *User) error {
@@ -931,6 +1052,11 @@ func (s *UserService) UpdateBalance(ctx context.Context, userID int64, amount fl
 	}
 	if s.billingCache != nil {
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("panic in balance cache invalidation", "user_id", userID, "recover", r)
+				}
+			}()
 			cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			if err := s.billingCache.InvalidateUserBalance(cacheCtx, userID); err != nil {
@@ -982,11 +1108,8 @@ func (s *UserService) Delete(ctx context.Context, userID int64) error {
 	return nil
 }
 
-// SendNotifyEmailCode sends a verification code to an extra notification email.
+// SendNotifyEmailCode sends a verification code to the extra notification email.
 func (s *UserService) SendNotifyEmailCode(ctx context.Context, userID int64, email string, emailService *EmailService, cache EmailCache) error {
-	if emailService == nil || cache == nil {
-		return ErrEmailNotConfigured
-	}
 	if err := checkNotifyCodeRateLimit(ctx, cache, userID, email); err != nil {
 		return err
 	}
@@ -995,22 +1118,32 @@ func (s *UserService) SendNotifyEmailCode(ctx context.Context, userID int64, ema
 	if err != nil {
 		return fmt.Errorf("generate code: %w", err)
 	}
+
+	// Send email first — if SMTP fails, don't write cache or increment counters,
+	// so the user is not locked out by cooldown/rate-limit for a code they never received.
 	if err := s.sendNotifyVerifyEmail(ctx, emailService, email, code); err != nil {
 		return err
 	}
+
 	if err := saveNotifyVerifyCode(ctx, cache, email, code); err != nil {
 		return err
 	}
+
+	// Increment user-level counter after successful save
 	if _, err := cache.IncrNotifyCodeUserRate(ctx, userID, notifyCodeUserRateWindow); err != nil {
 		slog.Error("failed to increment notify code user rate", "user_id", userID, "error", err)
 	}
+
 	return nil
 }
 
+// checkNotifyCodeRateLimit checks both email cooldown and user-level rate limit.
 func checkNotifyCodeRateLimit(ctx context.Context, cache EmailCache, userID int64, email string) error {
 	existing, err := cache.GetNotifyVerifyCode(ctx, email)
-	if err == nil && existing != nil && time.Since(existing.CreatedAt) < verifyCodeCooldown {
-		return ErrVerifyCodeTooFrequent
+	if err == nil && existing != nil {
+		if time.Since(existing.CreatedAt) < verifyCodeCooldown {
+			return ErrVerifyCodeTooFrequent
+		}
 	}
 	count, err := cache.GetNotifyCodeUserRate(ctx, userID)
 	if err == nil && count >= notifyCodeUserRateLimit {
@@ -1019,13 +1152,13 @@ func checkNotifyCodeRateLimit(ctx context.Context, cache EmailCache, userID int6
 	return nil
 }
 
+// saveNotifyVerifyCode saves the verification code to cache.
 func saveNotifyVerifyCode(ctx context.Context, cache EmailCache, email, code string) error {
-	now := time.Now()
 	data := &VerificationCodeData{
 		Code:      code,
 		Attempts:  0,
-		CreatedAt: now,
-		ExpiresAt: now.Add(verifyCodeTTL),
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(verifyCodeTTL),
 	}
 	if err := cache.SetNotifyVerifyCode(ctx, email, data, verifyCodeTTL); err != nil {
 		return fmt.Errorf("save verify code: %w", err)
@@ -1033,9 +1166,10 @@ func saveNotifyVerifyCode(ctx context.Context, cache EmailCache, email, code str
 	return nil
 }
 
+// sendNotifyVerifyEmail builds and sends the verification email.
 func (s *UserService) sendNotifyVerifyEmail(ctx context.Context, emailService *EmailService, email, code string) error {
 	siteName := "Sub2API"
-	if s != nil && s.settingRepo != nil {
+	if s.settingRepo != nil {
 		if name, err := s.settingRepo.GetValue(ctx, SettingKeySiteName); err == nil && name != "" {
 			siteName = name
 		}
@@ -1045,11 +1179,8 @@ func (s *UserService) sendNotifyVerifyEmail(ctx context.Context, emailService *E
 	return emailService.SendEmail(ctx, email, subject, body)
 }
 
-// VerifyAndAddNotifyEmail verifies the code and adds the email to the user's extra notification emails.
+// VerifyAndAddNotifyEmail verifies the code and adds the email to user's extra emails.
 func (s *UserService) VerifyAndAddNotifyEmail(ctx context.Context, userID int64, email, code string, cache EmailCache) error {
-	if cache == nil {
-		return ErrEmailNotConfigured
-	}
 	if err := verifyNotifyCode(ctx, cache, email, code); err != nil {
 		return err
 	}
@@ -1057,6 +1188,7 @@ func (s *UserService) VerifyAndAddNotifyEmail(ctx context.Context, userID int64,
 	return s.addOrVerifyNotifyEmail(ctx, userID, email)
 }
 
+// verifyNotifyCode validates the verification code against the cached data.
 func verifyNotifyCode(ctx context.Context, cache EmailCache, email, code string) error {
 	data, err := cache.GetNotifyVerifyCode(ctx, email)
 	if err != nil || data == nil {
@@ -1082,18 +1214,22 @@ func verifyNotifyCode(ctx context.Context, cache EmailCache, email, code string)
 	return nil
 }
 
+// addOrVerifyNotifyEmail adds the email to user's extra notification emails or marks it as verified.
+// Note: concurrent calls for the same user could race on the read-modify-write of
+// BalanceNotifyExtraEmails. The window is small (requires two verify flows completing
+// simultaneously), and the worst case is a duplicate entry which is harmless.
 func (s *UserService) addOrVerifyNotifyEmail(ctx context.Context, userID int64, email string) error {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return err
 	}
-	for i, entry := range user.BalanceNotifyExtraEmails {
-		if strings.EqualFold(entry.Email, email) {
-			if !entry.Verified {
+	for i, e := range user.BalanceNotifyExtraEmails {
+		if strings.EqualFold(e.Email, email) {
+			if !e.Verified {
 				user.BalanceNotifyExtraEmails[i].Verified = true
 				return s.userRepo.Update(ctx, user)
 			}
-			return nil
+			return nil // Already verified
 		}
 	}
 	if len(user.BalanceNotifyExtraEmails) >= maxNotifyEmails {
@@ -1107,6 +1243,7 @@ func (s *UserService) addOrVerifyNotifyEmail(ctx context.Context, userID int64, 
 	return s.userRepo.Update(ctx, user)
 }
 
+// RemoveNotifyEmail removes an email from user's extra notification emails.
 func (s *UserService) RemoveNotifyEmail(ctx context.Context, userID int64, email string) error {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
@@ -1115,12 +1252,12 @@ func (s *UserService) RemoveNotifyEmail(ctx context.Context, userID int64, email
 
 	filtered := make([]NotifyEmailEntry, 0, len(user.BalanceNotifyExtraEmails))
 	found := false
-	for _, entry := range user.BalanceNotifyExtraEmails {
-		if strings.EqualFold(entry.Email, email) {
+	for _, e := range user.BalanceNotifyExtraEmails {
+		if strings.EqualFold(e.Email, email) {
 			found = true
-			continue
+		} else {
+			filtered = append(filtered, e)
 		}
-		filtered = append(filtered, entry)
 	}
 	if !found {
 		return infraerrors.BadRequest("EMAIL_NOT_FOUND", "notification email not found")
@@ -1129,6 +1266,7 @@ func (s *UserService) RemoveNotifyEmail(ctx context.Context, userID int64, email
 	return s.userRepo.Update(ctx, user)
 }
 
+// ToggleNotifyEmail toggles the disabled state of a notification email entry.
 func (s *UserService) ToggleNotifyEmail(ctx context.Context, userID int64, email string, disabled bool) error {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
@@ -1136,8 +1274,8 @@ func (s *UserService) ToggleNotifyEmail(ctx context.Context, userID int64, email
 	}
 
 	found := false
-	for i, entry := range user.BalanceNotifyExtraEmails {
-		if strings.EqualFold(entry.Email, email) {
+	for i, e := range user.BalanceNotifyExtraEmails {
+		if strings.EqualFold(e.Email, email) {
 			user.BalanceNotifyExtraEmails[i].Disabled = disabled
 			found = true
 			break
@@ -1146,9 +1284,12 @@ func (s *UserService) ToggleNotifyEmail(ctx context.Context, userID int64, email
 	if !found {
 		return infraerrors.BadRequest("EMAIL_NOT_FOUND", "notification email not found")
 	}
+
 	return s.userRepo.Update(ctx, user)
 }
 
+// notifyVerifyEmailTemplate is the HTML template for notify email verification.
+// Format args: siteName, code.
 const notifyVerifyEmailTemplate = `<!DOCTYPE html>
 <html>
 <head>
@@ -1166,7 +1307,9 @@ const notifyVerifyEmailTemplate = `<!DOCTYPE html>
 </head>
 <body>
     <div class="container">
-        <div class="header"><h1>%s</h1></div>
+        <div class="header">
+            <h1>%s</h1>
+        </div>
         <div class="content">
             <p style="font-size: 18px; color: #333;">通知邮箱验证码 / Notification Email Verification</p>
             <div class="code">%s</div>
@@ -1179,11 +1322,14 @@ const notifyVerifyEmailTemplate = `<!DOCTYPE html>
                 <p>If you did not request this code, please ignore this email.</p>
             </div>
         </div>
-        <div class="footer"><p>此邮件由系统自动发送，请勿回复。/ This is an automated message, please do not reply.</p></div>
+        <div class="footer">
+            <p>此邮件由系统自动发送，请勿回复。/ This is an automated message, please do not reply.</p>
+        </div>
     </div>
 </body>
 </html>`
 
+// buildNotifyVerifyEmailBody builds the HTML email body for notify email verification.
 func buildNotifyVerifyEmailBody(code, siteName string) string {
 	return fmt.Sprintf(notifyVerifyEmailTemplate, siteName, code)
 }

@@ -107,7 +107,7 @@ func TestUsageLogFromService_IncludesServiceTierForUserAndAdmin(t *testing.T) {
 	require.InDelta(t, 1.5, *adminDTO.AccountRateMultiplier, 1e-12)
 }
 
-func TestUsageLogFromServiceAdmin_UsesAccountStatsCostForAccountCost(t *testing.T) {
+func TestUsageLogFromServiceAdmin_IncludesAccountStatsCostAdminOnly(t *testing.T) {
 	t.Parallel()
 
 	accountStatsCost := 0.75
@@ -131,7 +131,12 @@ func TestUsageLogFromServiceAdmin_UsesAccountStatsCostForAccountCost(t *testing.
 
 	require.NotNil(t, adminDTO.AccountStatsCost)
 	require.InDelta(t, 0.75, *adminDTO.AccountStatsCost, 1e-12)
-	require.InDelta(t, 0.9, adminDTO.AccountCost, 1e-12)
+	adminJSON, err := json.Marshal(adminDTO)
+	require.NoError(t, err)
+	var adminPayload map[string]any
+	require.NoError(t, json.Unmarshal(adminJSON, &adminPayload))
+	require.Equal(t, 0.75, adminPayload["account_stats_cost"])
+	require.NotContains(t, adminPayload, "account_cost")
 }
 
 func TestUsageLogFromService_UsesRequestedModelAndKeepsUpstreamAdminOnly(t *testing.T) {

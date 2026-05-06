@@ -42,7 +42,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  updated: [user: import('@/types').UserProfile]
+  updated: [user: import('@/types').User]
 }>()
 
 const { t } = useI18n()

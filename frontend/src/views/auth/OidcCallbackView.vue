@@ -16,7 +16,14 @@
 
       <transition name="fade">
         <div
-          v-if="needsInvitation || needsAdoptionConfirmation || needsCreateAccount || needsBindLogin || needsTotpChallenge"
+          v-if="
+            needsInvitation ||
+            needsAdoptionConfirmation ||
+            needsChooser ||
+            needsCreateAccount ||
+            needsBindLogin ||
+            needsTotpChallenge
+          "
           class="space-y-4"
         >
           <div
@@ -26,10 +33,10 @@
             <div class="space-y-3">
               <div class="space-y-1">
                 <p class="text-sm font-medium text-gray-900 dark:text-white">
-                  Use {{ providerName }} profile details
+                  {{ t('auth.oauthFlow.profileDetailsTitle', { providerName }) }}
                 </p>
                 <p class="text-xs text-gray-500 dark:text-dark-400">
-                  Choose whether to apply the nickname or avatar from {{ providerName }} to this account.
+                  {{ t('auth.oauthFlow.profileDetailsDescription', { providerName }) }}
                 </p>
               </div>
 
@@ -40,7 +47,7 @@
                 <input v-model="adoptDisplayName" type="checkbox" class="mt-1 h-4 w-4" />
                 <span class="space-y-1">
                   <span class="block font-medium text-gray-900 dark:text-white">
-                    Use display name
+                    {{ t('auth.oauthFlow.useDisplayName') }}
                   </span>
                   <span class="block text-gray-500 dark:text-dark-400">
                     {{ suggestedDisplayName }}
@@ -55,12 +62,12 @@
                 <input v-model="adoptAvatar" type="checkbox" class="mt-1 h-4 w-4" />
                 <img
                   :src="suggestedAvatarUrl"
-                  :alt="`${providerName} avatar`"
+                  :alt="t('auth.oauthFlow.avatarAlt', { providerName })"
                   class="h-10 w-10 rounded-full border border-gray-200 object-cover dark:border-dark-600"
                 />
                 <span class="space-y-1">
                   <span class="block font-medium text-gray-900 dark:text-white">
-                    Use avatar
+                    {{ t('auth.oauthFlow.useAvatar') }}
                   </span>
                   <span class="block break-all text-gray-500 dark:text-dark-400">
                     {{ suggestedAvatarUrl }}
@@ -84,11 +91,6 @@
                 @keyup.enter="handleSubmitInvitation"
               />
             </div>
-            <transition name="fade">
-              <p v-if="invitationError" class="text-sm text-red-600 dark:text-red-400">
-                {{ invitationError }}
-              </p>
-            </transition>
             <button
               class="btn btn-primary w-full"
               :disabled="isSubmitting || !invitationCode.trim()"
@@ -104,23 +106,58 @@
 
           <template v-else-if="needsAdoptionConfirmation">
             <p class="text-sm text-gray-700 dark:text-gray-300">
-              Review the {{ providerName }} profile details before continuing.
+              {{ t('auth.oauthFlow.reviewProfileBeforeContinue', { providerName }) }}
             </p>
             <button class="btn btn-primary w-full" :disabled="isSubmitting" @click="handleContinueLogin">
-              {{ isSubmitting ? t('common.processing') : 'Continue' }}
+              {{ isSubmitting ? t('common.processing') : t('auth.continue') }}
             </button>
           </template>
 
+          <template v-else-if="needsChooser">
+            <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-dark-600 dark:bg-dark-800/60">
+              <div class="space-y-4">
+                <div class="space-y-1">
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">
+                    {{ t('auth.oauthFlow.chooseHowToContinue') }}
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-dark-400">
+                    {{
+                      pendingAccountEmail
+                        ? t('auth.oauthFlow.suggestedEmail', { email: pendingAccountEmail })
+                        : t('auth.oauthFlow.chooseAccountActionHint')
+                    }}
+                  </p>
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <button
+                    class="btn btn-secondary w-full"
+                    :disabled="isSubmitting"
+                    @click="switchToBindLoginMode()"
+                  >
+                    {{ t('auth.oauthFlow.bindExistingAccount') }}
+                  </button>
+                  <button
+                    class="btn btn-primary w-full"
+                    :disabled="isSubmitting"
+                    @click="switchToCreateAccountMode"
+                  >
+                    {{ t('auth.oauthFlow.createNewAccount') }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+
           <template v-else-if="needsCreateAccount">
-            <p v-if="pendingAccountRequiresInvitation" class="text-sm text-gray-700 dark:text-gray-300">
-              {{ t('auth.oidc.invitationRequired', { providerName }) }}
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              {{ t('auth.oauthFlow.createAccountHint') }}
             </p>
             <PendingOAuthCreateAccountForm
               test-id-prefix="oidc"
               :initial-email="pendingAccountEmail"
               :is-submitting="isSubmitting"
               :error-message="accountActionError"
-              :show-invitation-code="pendingAccountRequiresInvitation"
               @submit="handleCreateAccount"
               @switch-to-bind="switchToBindLoginMode"
             />
@@ -128,7 +165,7 @@
 
           <template v-else-if="needsBindLogin">
             <p class="text-sm text-gray-700 dark:text-gray-300">
-              {{ t('auth.oidc.bindLoginRequired', { providerName }) }}
+              {{ t('auth.oauthFlow.bindLoginHint', { providerName }) }}
             </p>
             <div class="space-y-3">
               <input
@@ -136,7 +173,7 @@
                 data-testid="oidc-bind-login-email"
                 type="email"
                 class="input w-full"
-                placeholder="you@example.com"
+                :placeholder="t('auth.emailPlaceholder')"
                 :disabled="isSubmitting"
                 @keyup.enter="handleBindLogin"
               />
@@ -145,7 +182,7 @@
                 data-testid="oidc-bind-login-password"
                 type="password"
                 class="input w-full"
-                placeholder="Password"
+                :placeholder="t('auth.passwordPlaceholder')"
                 :disabled="isSubmitting"
                 @keyup.enter="handleBindLogin"
               />
@@ -155,26 +192,27 @@
                 :disabled="isSubmitting || !bindLoginEmail.trim() || !bindLoginPassword"
                 @click="handleBindLogin"
               >
-                {{ isSubmitting ? t('common.processing') : t('auth.oidc.bindLoginSubmit') }}
+                {{ isSubmitting ? t('common.processing') : t('auth.oauthFlow.logInAndBind') }}
               </button>
               <button
+                v-if="canReturnToCreateAccount"
                 class="btn btn-secondary w-full"
                 :disabled="isSubmitting"
                 @click="switchToCreateAccountMode"
               >
-                {{ t('auth.oidc.useDifferentEmail') }}
+                {{ t('auth.oauthFlow.useDifferentEmail') }}
               </button>
             </div>
-            <transition name="fade">
-              <p v-if="accountActionError" class="text-sm text-red-600 dark:text-red-400">
-                {{ accountActionError }}
-              </p>
-            </transition>
           </template>
 
           <template v-else-if="needsTotpChallenge">
             <p class="text-sm text-gray-700 dark:text-gray-300">
-              {{ t('auth.oidc.totpRequired', { providerName, email: totpUserEmailMasked || t('profile.totp.yourAccount') }) }}
+              {{
+                t('auth.oauthFlow.totpHint', {
+                  providerName,
+                  account: totpUserEmailMasked || t('auth.oauthFlow.yourAccount')
+                })
+              }}
             </p>
             <div class="space-y-3">
               <input
@@ -184,7 +222,7 @@
                 inputmode="numeric"
                 maxlength="6"
                 class="input w-full"
-                :placeholder="t('profile.totp.enterCode')"
+                placeholder="123456"
                 :disabled="isSubmitting"
                 @keyup.enter="handleSubmitTotpChallenge"
               />
@@ -194,36 +232,10 @@
                 :disabled="isSubmitting || totpCode.trim().length !== 6"
                 @click="handleSubmitTotpChallenge"
               >
-                {{ isSubmitting ? t('common.processing') : t('profile.totp.verify') }}
+                {{ isSubmitting ? t('common.processing') : t('auth.oauthFlow.verifyAndContinue') }}
               </button>
             </div>
-            <transition name="fade">
-              <p v-if="totpError" class="text-sm text-red-600 dark:text-red-400">
-                {{ totpError }}
-              </p>
-            </transition>
           </template>
-        </div>
-      </transition>
-
-      <transition name="fade">
-        <div
-          v-if="errorMessage"
-          class="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800/50 dark:bg-red-900/20"
-        >
-          <div class="flex items-start gap-3">
-            <div class="flex-shrink-0">
-              <Icon name="exclamationCircle" size="md" class="text-red-500" />
-            </div>
-            <div class="space-y-2">
-              <p class="text-sm text-red-700 dark:text-red-400">
-                {{ errorMessage }}
-              </p>
-              <router-link to="/login" class="btn btn-primary">
-                {{ t('auth.oidc.backToLogin') }}
-              </router-link>
-            </div>
-          </div>
         </div>
       </transition>
     </div>
@@ -231,35 +243,27 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { AuthLayout } from '@/components/layout'
 import PendingOAuthCreateAccountForm, {
   type PendingOAuthCreateAccountPayload
 } from '@/components/auth/PendingOAuthCreateAccountForm.vue'
-import Icon from '@/components/icons/Icon.vue'
+import { apiClient } from '@/api/client'
 import { useAuthStore, useAppStore } from '@/stores'
 import {
-  bindPendingOAuthLogin,
   completeOIDCOAuthRegistration,
-  createPendingOAuthAccount,
   exchangePendingOAuthCompletion,
+  getOAuthCompletionKind,
   getPublicSettings,
+  isOAuthLoginCompletion,
   login2FA,
-  type PendingOAuthAdoptionDecision,
-  type PendingOAuthExchangeResponse,
-  type PendingOAuthTokenPairResponse,
+  persistOAuthTokenContext,
+  type OAuthAdoptionDecision,
+  type OAuthTokenResponse,
+  type PendingOAuthExchangeResponse
 } from '@/api/auth'
-import {
-  hasAuthTokenPayload,
-  isOAuthBindCompletion,
-  isInvitationRequired,
-  legacyPendingOAuthTokenFromFragment,
-  parseFragmentParams,
-  resolvePendingOAuthPayload,
-  sanitizeRedirectPath,
-} from './oauthPendingCallback'
 
 const route = useRoute()
 const router = useRouter()
@@ -270,173 +274,124 @@ const appStore = useAppStore()
 
 const isProcessing = ref(true)
 const errorMessage = ref('')
-
 const needsInvitation = ref(false)
-const pendingOAuthToken = ref('')
 const invitationCode = ref('')
 const isSubmitting = ref(false)
 const invitationError = ref('')
 const redirectTo = ref('/dashboard')
 const providerName = ref('OIDC')
-const pendingAccountAction = ref<'none' | 'create_account' | 'bind_login'>('none')
-const pendingAccountEmail = ref('')
-const pendingAccountRequiresInvitation = ref(false)
-const bindLoginEmail = ref('')
-const bindLoginPassword = ref('')
-const accountActionError = ref('')
-const needsTotpChallenge = ref(false)
-const totpTempToken = ref('')
-const totpCode = ref('')
-const totpError = ref('')
-const totpUserEmailMasked = ref('')
 const adoptionRequired = ref(false)
 const suggestedDisplayName = ref('')
 const suggestedAvatarUrl = ref('')
 const adoptDisplayName = ref(true)
 const adoptAvatar = ref(true)
 const needsAdoptionConfirmation = ref(false)
+const pendingAccountAction = ref<'none' | 'choose_account_action' | 'create_account' | 'bind_login'>('none')
+const pendingAccountEmail = ref('')
+const bindLoginEmail = ref('')
+const bindLoginPassword = ref('')
+const legacyPendingOAuthToken = ref('')
+const accountActionError = ref('')
+const canReturnToCreateAccount = ref(false)
+const bindSuccessMessage = t('profile.authBindings.bindSuccess')
+const needsTotpChallenge = ref(false)
+const totpTempToken = ref('')
+const totpCode = ref('')
+const totpError = ref('')
+const totpUserEmailMasked = ref('')
 
 const needsCreateAccount = computed(() => pendingAccountAction.value === 'create_account')
+const needsChooser = computed(() => pendingAccountAction.value === 'choose_account_action')
 const needsBindLogin = computed(() => pendingAccountAction.value === 'bind_login')
 
-type PendingAccountResponse = PendingOAuthExchangeResponse | PendingOAuthTokenPairResponse
+watch(invitationError, value => {
+  if (value) {
+    appStore.showError(value)
+  }
+})
 
-function getPendingAccountEmail(payload: PendingOAuthExchangeResponse): string {
-  return (payload.email || '').trim()
+watch(accountActionError, value => {
+  if (value) {
+    appStore.showError(value)
+  }
+})
+
+watch(totpError, value => {
+  if (value) {
+    appStore.showError(value)
+  }
+})
+
+watch(errorMessage, value => {
+  if (value) {
+    appStore.showError(value)
+  }
+})
+
+type PendingOidcCompletion = PendingOAuthExchangeResponse & {
+  step?: string
+  pending_email?: string
+  resolved_email?: string
+  existing_account_email?: string
+  email?: string
+  suggested_email?: string
+  provider_fallback?: string
+  intent?: string
+  requires_2fa?: boolean
+  temp_token?: string
+  user_email_masked?: string
 }
 
-function resolvePendingAccountAction(payload: PendingOAuthExchangeResponse): 'none' | 'create_account' | 'bind_login' {
-  const raw = (payload.step || payload.error || '').trim().toLowerCase()
-  if (raw === 'invitation_required' || raw === 'email_required' || raw === 'create_account_required' || raw === 'create_account') {
-    return 'create_account'
-  }
-  if (raw === 'bind_login_required' || raw === 'bind_login') {
-    return 'bind_login'
-  }
-  return 'none'
+function persistPendingAuthSession(redirect?: string) {
+  authStore.setPendingAuthSession({
+    token: '',
+    token_field: 'pending_oauth_token',
+    provider: 'oidc',
+    redirect: sanitizeRedirectPath(redirect || redirectTo.value)
+  })
 }
 
-function applyPendingAccountAction(payload: PendingOAuthExchangeResponse) {
-  const action = resolvePendingAccountAction(payload)
-  pendingAccountAction.value = action
-  pendingAccountRequiresInvitation.value = payload.error === 'invitation_required'
-  accountActionError.value = ''
-  needsTotpChallenge.value = false
-  totpTempToken.value = ''
-  totpCode.value = ''
-  totpError.value = ''
-  totpUserEmailMasked.value = ''
-
-  const email = getPendingAccountEmail(payload)
-  if (action === 'create_account') {
-    pendingAccountEmail.value = email
-    bindLoginEmail.value = email
-    return
-  }
-  if (action === 'bind_login') {
-    bindLoginEmail.value = email
-    bindLoginPassword.value = ''
-  }
+function clearPendingAuthSession() {
+  authStore.clearPendingAuthSession()
 }
 
-function applyTotpChallenge(payload: PendingOAuthExchangeResponse): boolean {
-  if (payload.requires_2fa !== true || !payload.temp_token) {
-    return false
-  }
-
-  pendingAccountAction.value = 'none'
-  needsInvitation.value = false
-  needsTotpChallenge.value = true
-  totpTempToken.value = payload.temp_token
-  totpCode.value = ''
-  totpError.value = ''
-  totpUserEmailMasked.value = payload.user_email_masked || ''
-  isProcessing.value = false
-  return true
+function parseFragmentParams(): URLSearchParams {
+  const raw = typeof window !== 'undefined' ? window.location.hash : ''
+  const hash = raw.startsWith('#') ? raw.slice(1) : raw
+  return new URLSearchParams(hash)
 }
 
-function getRequestErrorMessage(error: unknown, fallback: string): string {
-  const err = error as { message?: string; response?: { data?: { detail?: string; message?: string } } }
-  return err.response?.data?.detail || err.response?.data?.message || err.message || fallback
+function readLegacyFragmentLogin(params: URLSearchParams): OAuthTokenResponse | null {
+  const accessToken = params.get('access_token')?.trim() || ''
+  if (!accessToken) {
+    return null
+  }
+
+  const completion: OAuthTokenResponse = {
+    access_token: accessToken
+  }
+  const refreshToken = params.get('refresh_token')?.trim() || ''
+  if (refreshToken) {
+    completion.refresh_token = refreshToken
+  }
+  const expiresIn = Number.parseInt(params.get('expires_in')?.trim() || '', 10)
+  if (Number.isFinite(expiresIn) && expiresIn > 0) {
+    completion.expires_in = expiresIn
+  }
+  const tokenType = params.get('token_type')?.trim() || ''
+  if (tokenType) {
+    completion.token_type = tokenType
+  }
+  return completion
 }
 
-function currentAdoptionDecision(): PendingOAuthAdoptionDecision {
-  return {
-    adopt_display_name: adoptDisplayName.value,
-    adopt_avatar: adoptAvatar.value,
-  }
-}
-
-function applyAdoptionSuggestionState(payload: PendingOAuthExchangeResponse) {
-  adoptionRequired.value = payload.adoption_required === true
-  suggestedDisplayName.value = payload.suggested_display_name || ''
-  suggestedAvatarUrl.value = payload.suggested_avatar_url || ''
-
-  if (!suggestedDisplayName.value) {
-    adoptDisplayName.value = false
-  }
-  if (!suggestedAvatarUrl.value) {
-    adoptAvatar.value = false
-  }
-}
-
-function hasSuggestedProfile(payload: PendingOAuthExchangeResponse): boolean {
-  return Boolean(payload.suggested_display_name || payload.suggested_avatar_url)
-}
-
-function persistTokenContext(tokenData: PendingOAuthTokenPairResponse) {
-  if (tokenData.refresh_token) {
-    localStorage.setItem('refresh_token', tokenData.refresh_token)
-  }
-  if (tokenData.expires_in) {
-    localStorage.setItem('token_expires_at', String(Date.now() + tokenData.expires_in * 1000))
-  }
-}
-
-function isTokenPair(payload: PendingAccountResponse): payload is PendingOAuthTokenPairResponse {
-  return typeof payload.access_token === 'string' && payload.access_token.trim().length > 0
-}
-
-function getCompletionRedirect(payload: PendingAccountResponse): string {
-  return 'redirect' in payload && typeof payload.redirect === 'string' ? payload.redirect : ''
-}
-
-async function finalizePendingAccountResponse(payload: PendingAccountResponse) {
-  if (applyTotpChallenge(payload)) {
-    return
-  }
-
-  if (isTokenPair(payload)) {
-    persistTokenContext(payload)
-    await authStore.setToken(payload.access_token)
-    appStore.showSuccess(t('auth.loginSuccess'))
-    await router.replace(sanitizeRedirectPath(getCompletionRedirect(payload) || redirectTo.value))
-    return
-  }
-
-  applyPendingAccountAction(payload)
-}
-
-async function finalizeAdoptionCompletion(payload: PendingAccountResponse) {
-  if (applyTotpChallenge(payload)) {
-    return
-  }
-
-  if (isTokenPair(payload)) {
-    persistTokenContext(payload)
-    await authStore.setToken(payload.access_token)
-    appStore.showSuccess(t('auth.loginSuccess'))
-    await router.replace(sanitizeRedirectPath(getCompletionRedirect(payload) || redirectTo.value))
-    return
-  }
-
-  if (isOAuthBindCompletion(payload) || payload.redirect) {
-    appStore.showSuccess(t('profile.authBindings.bindSuccess'))
-    await router.replace(sanitizeRedirectPath(payload.redirect || '/profile'))
-    return
-  }
-
-  applyPendingAccountAction(payload)
+function sanitizeRedirectPath(path: string | null | undefined): string {
+  if (!path) return '/dashboard'
+  if (!path.startsWith('/')) return '/dashboard'
+  if (path.startsWith('//')) return '/dashboard'
+  if (path.includes('://')) return '/dashboard'
+  if (path.includes('\n') || path.includes('\r')) return '/dashboard'
+  return path
 }
 
 async function loadProviderName() {
@@ -451,25 +406,262 @@ async function loadProviderName() {
   }
 }
 
+function currentAdoptionDecision(): OAuthAdoptionDecision {
+  return {
+    adoptDisplayName: adoptDisplayName.value,
+    adoptAvatar: adoptAvatar.value
+  }
+}
+
+function serializeAdoptionDecision(decision: OAuthAdoptionDecision): Record<string, boolean> {
+  const payload: Record<string, boolean> = {}
+  if (typeof decision.adoptDisplayName === 'boolean') {
+    payload.adopt_display_name = decision.adoptDisplayName
+  }
+  if (typeof decision.adoptAvatar === 'boolean') {
+    payload.adopt_avatar = decision.adoptAvatar
+  }
+  return payload
+}
+
+function applyAdoptionSuggestionState(completion: {
+  adoption_required?: boolean
+  suggested_display_name?: string
+  suggested_avatar_url?: string
+}) {
+  adoptionRequired.value = completion.adoption_required === true
+  suggestedDisplayName.value = completion.suggested_display_name || ''
+  suggestedAvatarUrl.value = completion.suggested_avatar_url || ''
+
+  if (!suggestedDisplayName.value) {
+    adoptDisplayName.value = false
+  }
+  if (!suggestedAvatarUrl.value) {
+    adoptAvatar.value = false
+  }
+}
+
+function hasSuggestedProfile(completion: {
+  suggested_display_name?: string
+  suggested_avatar_url?: string
+}): boolean {
+  return Boolean(completion.suggested_display_name || completion.suggested_avatar_url)
+}
+
+function normalizedPendingState(value: string | null | undefined): string {
+  return value?.trim().toLowerCase() || ''
+}
+
+function extractPendingAccountEmail(completion: PendingOidcCompletion): string {
+  return (
+    completion.pending_email ||
+    completion.existing_account_email ||
+    completion.resolved_email ||
+    completion.email ||
+    completion.suggested_email ||
+    ''
+  ).trim()
+}
+
+function resolvePendingAccountAction(
+  completion: PendingOidcCompletion
+): 'none' | 'choose_account_action' | 'create_account' | 'bind_login' {
+  const raw = normalizedPendingState(completion.step || completion.error || completion.intent)
+  if (
+    raw === 'choice' ||
+    raw === 'choose_account_action_required' ||
+    raw === 'choose_account_action' ||
+    raw === 'choose_account' ||
+    raw === 'choose'
+  ) {
+    return 'choose_account_action'
+  }
+  if (raw === 'email_required' || raw === 'create_account_required' || raw === 'create_account') {
+    return 'create_account'
+  }
+  if (
+    raw === 'bind_login_required' ||
+    raw === 'bind_login' ||
+    raw === 'existing_account_binding_required' ||
+    raw === 'existing_account_required' ||
+    raw === 'adopt_existing_user_by_email'
+  ) {
+    return 'bind_login'
+  }
+  return 'none'
+}
+
+function applyPendingAccountAction(completion: PendingOidcCompletion) {
+  const action = resolvePendingAccountAction(completion)
+  pendingAccountAction.value = action
+  accountActionError.value = ''
+  needsTotpChallenge.value = false
+  totpTempToken.value = ''
+  totpCode.value = ''
+  totpError.value = ''
+  totpUserEmailMasked.value = ''
+
+  const email = extractPendingAccountEmail(completion)
+  if (action === 'choose_account_action') {
+    pendingAccountEmail.value = email
+    bindLoginEmail.value = email
+    bindLoginPassword.value = ''
+    canReturnToCreateAccount.value = false
+    return
+  }
+
+  if (action === 'create_account') {
+    pendingAccountEmail.value = email
+    canReturnToCreateAccount.value = true
+    return
+  }
+
+  if (action === 'bind_login') {
+    bindLoginEmail.value = email
+    bindLoginPassword.value = ''
+    canReturnToCreateAccount.value = false
+    return
+  }
+
+  canReturnToCreateAccount.value = false
+}
+
+function applyTotpChallenge(completion: PendingOidcCompletion): boolean {
+  if (completion.requires_2fa !== true || !completion.temp_token) {
+    return false
+  }
+
+  pendingAccountAction.value = 'none'
+  needsInvitation.value = false
+  needsAdoptionConfirmation.value = false
+  needsTotpChallenge.value = true
+  totpTempToken.value = completion.temp_token
+  totpCode.value = ''
+  totpError.value = ''
+  totpUserEmailMasked.value = completion.user_email_masked || ''
+  isProcessing.value = false
+  return true
+}
+
+function switchToBindLoginMode(nextEmail?: string) {
+  pendingAccountAction.value = 'bind_login'
+  bindLoginEmail.value = bindLoginEmail.value.trim() || nextEmail?.trim() || pendingAccountEmail.value.trim()
+  bindLoginPassword.value = ''
+  accountActionError.value = ''
+  canReturnToCreateAccount.value = true
+}
+
+function switchToCreateAccountMode() {
+  pendingAccountAction.value = 'create_account'
+  pendingAccountEmail.value = pendingAccountEmail.value.trim() || bindLoginEmail.value.trim()
+  accountActionError.value = ''
+}
+
+function getRequestErrorMessage(error: unknown, fallback: string): string {
+  const err = error as { message?: string; response?: { data?: { detail?: string; message?: string } } }
+  return err.response?.data?.detail || err.response?.data?.message || err.message || fallback
+}
+
+function isCreateAccountRecoveryError(error: unknown): boolean {
+  const data = (error as {
+    response?: {
+      data?: {
+        reason?: string
+        error?: string
+        code?: string
+        step?: string
+        intent?: string
+      }
+    }
+  }).response?.data
+  const states = [data?.reason, data?.error, data?.code, data?.step, data?.intent]
+    .map(value => value?.trim().toLowerCase())
+    .filter((value): value is string => Boolean(value))
+
+  return states.includes('email_exists') ||
+    states.includes('bind_login_required') ||
+    states.includes('bind_login') ||
+    states.includes('adopt_existing_user_by_email') ||
+    states.includes('existing_account_required') ||
+    states.includes('existing_account_binding_required')
+}
+
+async function finalizeCompletion(completion: PendingOAuthExchangeResponse, redirect: string) {
+  if (getOAuthCompletionKind(completion) === 'bind') {
+    const bindRedirect = sanitizeRedirectPath(completion.redirect || '/profile')
+    clearPendingAuthSession()
+    appStore.showSuccess(bindSuccessMessage)
+    await router.replace(bindRedirect)
+    return
+  }
+
+  if (!isOAuthLoginCompletion(completion)) {
+    throw new Error(t('auth.oidc.callbackMissingToken'))
+  }
+
+  persistOAuthTokenContext(completion)
+  await authStore.setToken(completion.access_token)
+  appStore.showSuccess(t('auth.loginSuccess'))
+  await router.replace(redirect)
+}
+
+async function finalizePendingAccountResponse(completion: PendingOidcCompletion) {
+  applyAdoptionSuggestionState(completion)
+  const redirect = sanitizeRedirectPath(completion.redirect || redirectTo.value)
+
+  if (completion.error === 'invitation_required') {
+    pendingAccountAction.value = 'none'
+    needsInvitation.value = true
+    needsAdoptionConfirmation.value = false
+    isProcessing.value = false
+    persistPendingAuthSession(redirect)
+    return
+  }
+
+  if (applyTotpChallenge(completion)) {
+    persistPendingAuthSession(redirect)
+    return
+  }
+
+  applyPendingAccountAction(completion)
+  if (pendingAccountAction.value !== 'none') {
+    needsInvitation.value = false
+    needsAdoptionConfirmation.value = false
+    isProcessing.value = false
+    persistPendingAuthSession(redirect)
+    return
+  }
+
+  if (completion.auth_result === 'pending_session') {
+    needsInvitation.value = false
+    needsAdoptionConfirmation.value = false
+    isProcessing.value = false
+    persistPendingAuthSession(redirect)
+    return
+  }
+
+  await finalizeCompletion(completion, redirect)
+}
+
 async function handleSubmitInvitation() {
   invitationError.value = ''
   if (!invitationCode.value.trim()) return
 
   isSubmitting.value = true
   try {
-    const tokenData = await completeOIDCOAuthRegistration(
-      pendingOAuthToken.value,
-      invitationCode.value.trim()
-    )
-    if (tokenData.refresh_token) {
-      localStorage.setItem('refresh_token', tokenData.refresh_token)
-    }
-    if (tokenData.expires_in) {
-      localStorage.setItem('token_expires_at', String(Date.now() + tokenData.expires_in * 1000))
-    }
-    await authStore.setToken(tokenData.access_token)
-    appStore.showSuccess(t('auth.loginSuccess'))
-    await router.replace(redirectTo.value)
+    const completion: PendingOidcCompletion = legacyPendingOAuthToken.value
+      ? (
+          await apiClient.post<PendingOidcCompletion>('/auth/oauth/oidc/complete-registration', {
+            pending_oauth_token: legacyPendingOAuthToken.value,
+            invitation_code: invitationCode.value.trim(),
+            ...serializeAdoptionDecision(currentAdoptionDecision())
+          })
+        ).data
+      : await completeOIDCOAuthRegistration(
+          invitationCode.value.trim(),
+          currentAdoptionDecision()
+        )
+    await finalizePendingAccountResponse(completion)
   } catch (e: unknown) {
     const err = e as { message?: string; response?: { data?: { message?: string } } }
     invitationError.value =
@@ -479,38 +671,39 @@ async function handleSubmitInvitation() {
   }
 }
 
-async function handleCreateAccount(payload: PendingOAuthCreateAccountPayload) {
-  accountActionError.value = ''
+async function handleContinueLogin() {
   isSubmitting.value = true
   try {
-    const completion = await createPendingOAuthAccount({
-      email: payload.email,
-      password: payload.password,
-      verify_code: payload.verifyCode || undefined,
-      invitation_code: payload.invitationCode || undefined,
-      ...currentAdoptionDecision(),
-    })
+    const completion = await exchangePendingOAuthCompletion(currentAdoptionDecision()) as PendingOidcCompletion
     await finalizePendingAccountResponse(completion)
   } catch (e: unknown) {
-    accountActionError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
+    errorMessage.value = getRequestErrorMessage(e, t('auth.loginFailed'))
+    needsAdoptionConfirmation.value = false
   } finally {
     isSubmitting.value = false
   }
 }
 
-async function handleContinueLogin() {
+async function handleCreateAccount(payload: PendingOAuthCreateAccountPayload) {
+  accountActionError.value = ''
+  if (!payload.email || !payload.password) return
+
   isSubmitting.value = true
   try {
-    const completion = await exchangePendingOAuthCompletion({
-      adoptDisplayName: adoptDisplayName.value,
-      adoptAvatar: adoptAvatar.value,
+    const { data } = await apiClient.post<PendingOidcCompletion>('/auth/oauth/pending/create-account', {
+      email: payload.email,
+      password: payload.password,
+      verify_code: payload.verifyCode || undefined,
+      invitation_code: payload.invitationCode || undefined,
+      ...serializeAdoptionDecision(currentAdoptionDecision())
     })
-    needsAdoptionConfirmation.value = false
-    await finalizeAdoptionCompletion(completion)
+    await finalizePendingAccountResponse(data)
   } catch (e: unknown) {
-    errorMessage.value = getRequestErrorMessage(e, t('auth.loginFailed'))
-    appStore.showError(errorMessage.value)
-    needsAdoptionConfirmation.value = false
+    if (isCreateAccountRecoveryError(e)) {
+      switchToBindLoginMode(payload.email.trim())
+      return
+    }
+    accountActionError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
   } finally {
     isSubmitting.value = false
   }
@@ -524,8 +717,12 @@ async function handleBindLogin() {
 
   isSubmitting.value = true
   try {
-    const completion = await bindPendingOAuthLogin({ email, password, ...currentAdoptionDecision() })
-    await finalizePendingAccountResponse(completion)
+    const { data } = await apiClient.post<PendingOidcCompletion>('/auth/oauth/pending/bind-login', {
+      email,
+      password,
+      ...serializeAdoptionDecision(currentAdoptionDecision())
+    })
+    await finalizePendingAccountResponse(data)
   } catch (e: unknown) {
     accountActionError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
   } finally {
@@ -540,101 +737,92 @@ async function handleSubmitTotpChallenge() {
 
   isSubmitting.value = true
   try {
-    const tokenData = await login2FA({
+    const completion = await login2FA({
       temp_token: totpTempToken.value,
-      totp_code: code,
+      totp_code: code
     })
-    await authStore.setToken(tokenData.access_token)
+    await authStore.setToken(completion.access_token)
     appStore.showSuccess(t('auth.loginSuccess'))
     await router.replace(redirectTo.value)
   } catch (e: unknown) {
-    totpError.value = getRequestErrorMessage(e, t('profile.totp.loginFailed'))
+    totpError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
   } finally {
     isSubmitting.value = false
   }
 }
 
-function switchToBindLoginMode(nextEmail?: string) {
-  pendingAccountAction.value = 'bind_login'
-  bindLoginEmail.value = nextEmail?.trim() || pendingAccountEmail.value.trim()
-  bindLoginPassword.value = ''
-  accountActionError.value = ''
-}
-
-function switchToCreateAccountMode() {
-  pendingAccountAction.value = 'create_account'
-  pendingAccountEmail.value = pendingAccountEmail.value.trim() || bindLoginEmail.value.trim()
-  accountActionError.value = ''
-}
-
 onMounted(async () => {
   void loadProviderName()
 
-  const rawHash = typeof window !== 'undefined' ? window.location.hash : ''
-  const params = parseFragmentParams(rawHash)
-  const pendingPayload = await resolvePendingOAuthPayload(params)
-  applyAdoptionSuggestionState(pendingPayload)
-  const token = pendingPayload.access_token || ''
-  const refreshToken = pendingPayload.refresh_token || ''
-  const expiresIn = pendingPayload.expires_in
-  const redirect = sanitizeRedirectPath(
-    pendingPayload.redirect || params.get('redirect') || (route.query.redirect as string | undefined) || '/dashboard'
-  )
-  const error = pendingPayload.error
+  const params = parseFragmentParams()
+  const legacyLogin = readLegacyFragmentLogin(params)
+  const legacyPendingToken = params.get('pending_oauth_token')?.trim() || ''
+  const error = params.get('error')
   const errorDesc = params.get('error_description') || params.get('error_message') || ''
+  const redirect = sanitizeRedirectPath(
+    params.get('redirect') || (route.query.redirect as string | undefined) || '/dashboard'
+  )
 
-  if (error) {
-    if (isInvitationRequired(pendingPayload)) {
-      pendingOAuthToken.value = legacyPendingOAuthTokenFromFragment(params)
+  try {
+    if (legacyLogin) {
+      persistOAuthTokenContext(legacyLogin)
+      await authStore.setToken(legacyLogin.access_token)
+      appStore.showSuccess(t('auth.loginSuccess'))
+      await router.replace(redirect)
+      return
+    }
+
+    if (error === 'invitation_required' && legacyPendingToken) {
+      legacyPendingOAuthToken.value = legacyPendingToken
       redirectTo.value = redirect
-      if (!pendingOAuthToken.value) {
-        applyPendingAccountAction(pendingPayload)
-        isProcessing.value = false
-        return
-      }
       needsInvitation.value = true
       isProcessing.value = false
       return
     }
-    errorMessage.value = errorDesc || error
-    appStore.showError(errorMessage.value)
-    isProcessing.value = false
-    return
-  }
 
-  if (!hasAuthTokenPayload(pendingPayload)) {
-    if (isOAuthBindCompletion(pendingPayload)) {
-      appStore.showSuccess(t('profile.authBindings.bindSuccess'))
-      await router.replace(redirect)
-      return
-    }
-    if (adoptionRequired.value && hasSuggestedProfile(pendingPayload)) {
-      redirectTo.value = redirect
-      needsAdoptionConfirmation.value = true
+    if (error) {
+      errorMessage.value = errorDesc || error
       isProcessing.value = false
       return
     }
-    errorMessage.value = t('auth.oidc.callbackMissingToken')
-    appStore.showError(errorMessage.value)
-    isProcessing.value = false
-    return
-  }
 
-  try {
-    persistTokenContext({
-      access_token: token,
-      refresh_token: refreshToken,
-      expires_in: expiresIn || 0,
-      token_type: pendingPayload.token_type || 'Bearer',
-    })
+    const completion = await exchangePendingOAuthCompletion() as PendingOidcCompletion
+    const completionRedirect = sanitizeRedirectPath(
+      completion.redirect || (route.query.redirect as string | undefined) || '/dashboard'
+    )
+    applyAdoptionSuggestionState(completion)
+    redirectTo.value = completionRedirect
 
-    await authStore.setToken(token)
-    appStore.showSuccess(t('auth.loginSuccess'))
-    await router.replace(redirect)
+    if (completion.error === 'invitation_required') {
+      needsInvitation.value = true
+      isProcessing.value = false
+      persistPendingAuthSession(completionRedirect)
+      return
+    }
+
+    if (applyTotpChallenge(completion)) {
+      persistPendingAuthSession(completionRedirect)
+      return
+    }
+
+    applyPendingAccountAction(completion)
+    if (pendingAccountAction.value !== 'none') {
+      isProcessing.value = false
+      persistPendingAuthSession(completionRedirect)
+      return
+    }
+
+    if (adoptionRequired.value && hasSuggestedProfile(completion)) {
+      needsAdoptionConfirmation.value = true
+      isProcessing.value = false
+      persistPendingAuthSession(completionRedirect)
+      return
+    }
+
+    await finalizeCompletion(completion, completionRedirect)
   } catch (e: unknown) {
-    const err = e as { message?: string; response?: { data?: { detail?: string } } }
-    errorMessage.value = err.response?.data?.detail || err.message || t('auth.loginFailed')
-    appStore.showError(errorMessage.value)
+    clearPendingAuthSession()
+    errorMessage.value = getRequestErrorMessage(e, t('auth.loginFailed'))
     isProcessing.value = false
   }
 })

@@ -22,17 +22,6 @@ type CustomEndpoint struct {
 	Description string `json:"description"`
 }
 
-// ContactChannel represents a single floating-contact-button channel (WeChat group, customer service, official account).
-type ContactChannel struct {
-	Type        string `json:"type"`
-	Label       string `json:"label"`
-	QRImage     string `json:"qr_image"`
-	Description string `json:"description"`
-	ExtraInfo   string `json:"extra_info"`
-	Enabled     bool   `json:"enabled"`
-	Priority    int    `json:"priority"`
-}
-
 // SystemSettings represents the admin settings API response payload.
 type SystemSettings struct {
 	RegistrationEnabled              bool     `json:"registration_enabled"`
@@ -42,9 +31,6 @@ type SystemSettings struct {
 	PasswordResetEnabled             bool     `json:"password_reset_enabled"`
 	FrontendURL                      string   `json:"frontend_url"`
 	InvitationCodeEnabled            bool     `json:"invitation_code_enabled"`
-	ReferralEnabled                  bool     `json:"referral_enabled"`
-	ReferralInviterAmount            float64  `json:"referral_inviter_amount"`
-	ReferralInviteeAmount            float64  `json:"referral_invitee_amount"`
 	TotpEnabled                      bool     `json:"totp_enabled"`                   // TOTP 双因素认证
 	TotpEncryptionKeyConfigured      bool     `json:"totp_encryption_key_configured"` // TOTP 加密密钥是否已配置
 
@@ -55,12 +41,6 @@ type SystemSettings struct {
 	SMTPFrom               string `json:"smtp_from_email"`
 	SMTPFromName           string `json:"smtp_from_name"`
 	SMTPUseTLS             bool   `json:"smtp_use_tls"`
-
-	BalanceLowNotifyEnabled     bool               `json:"balance_low_notify_enabled"`
-	BalanceLowNotifyThreshold   float64            `json:"balance_low_notify_threshold"`
-	BalanceLowNotifyRechargeURL string             `json:"balance_low_notify_recharge_url"`
-	AccountQuotaNotifyEnabled   bool               `json:"account_quota_notify_enabled"`
-	AccountQuotaNotifyEmails    []NotifyEmailEntry `json:"account_quota_notify_emails"`
 
 	TurnstileEnabled             bool   `json:"turnstile_enabled"`
 	TurnstileSiteKey             string `json:"turnstile_site_key"`
@@ -128,6 +108,7 @@ type SystemSettings struct {
 
 	DefaultConcurrency   int                          `json:"default_concurrency"`
 	DefaultBalance       float64                      `json:"default_balance"`
+	DefaultUserRPMLimit  int                          `json:"default_user_rpm_limit"`
 	DefaultSubscriptions []DefaultSubscriptionSetting `json:"default_subscriptions"`
 
 	// Model fallback configuration
@@ -164,6 +145,7 @@ type SystemSettings struct {
 	// Web Search Emulation
 	WebSearchEmulationEnabled bool `json:"web_search_emulation_enabled"`
 
+	// Payment visible method routing
 	PaymentVisibleMethodAlipaySource  string `json:"payment_visible_method_alipay_source"`
 	PaymentVisibleMethodWxpaySource   string `json:"payment_visible_method_wxpay_source"`
 	PaymentVisibleMethodAlipayEnabled bool   `json:"payment_visible_method_alipay_enabled"`
@@ -189,11 +171,19 @@ type SystemSettings struct {
 	PaymentHelpImageURL              string   `json:"payment_help_image_url"`
 	PaymentHelpText                  string   `json:"payment_help_text"`
 
+	// Cancel rate limit
 	PaymentCancelRateLimitEnabled bool   `json:"payment_cancel_rate_limit_enabled"`
 	PaymentCancelRateLimitMax     int    `json:"payment_cancel_rate_limit_max"`
 	PaymentCancelRateLimitWindow  int    `json:"payment_cancel_rate_limit_window"`
 	PaymentCancelRateLimitUnit    string `json:"payment_cancel_rate_limit_unit"`
 	PaymentCancelRateLimitMode    string `json:"payment_cancel_rate_limit_window_mode"`
+
+	// Balance low notification
+	BalanceLowNotifyEnabled     bool               `json:"balance_low_notify_enabled"`
+	BalanceLowNotifyThreshold   float64            `json:"balance_low_notify_threshold"`
+	BalanceLowNotifyRechargeURL string             `json:"balance_low_notify_recharge_url"`
+	AccountQuotaNotifyEnabled   bool               `json:"account_quota_notify_enabled"`
+	AccountQuotaNotifyEmails    []NotifyEmailEntry `json:"account_quota_notify_emails"`
 }
 
 type DefaultSubscriptionSetting struct {
@@ -235,14 +225,12 @@ type PublicSettings struct {
 	OIDCOAuthProviderName            string           `json:"oidc_oauth_provider_name"`
 	SoraClientEnabled                bool             `json:"sora_client_enabled"`
 	BackendModeEnabled               bool             `json:"backend_mode_enabled"`
-	ReferralEnabled                  bool             `json:"referral_enabled"`
-	ContactChannels                  []ContactChannel `json:"contact_channels"`
+	PaymentEnabled                   bool             `json:"payment_enabled"`
 	Version                          string           `json:"version"`
-
-	BalanceLowNotifyEnabled     bool    `json:"balance_low_notify_enabled"`
-	BalanceLowNotifyThreshold   float64 `json:"balance_low_notify_threshold"`
-	BalanceLowNotifyRechargeURL string  `json:"balance_low_notify_recharge_url"`
-	AccountQuotaNotifyEnabled   bool    `json:"account_quota_notify_enabled"`
+	BalanceLowNotifyEnabled          bool             `json:"balance_low_notify_enabled"`
+	AccountQuotaNotifyEnabled        bool             `json:"account_quota_notify_enabled"`
+	BalanceLowNotifyThreshold        float64          `json:"balance_low_notify_threshold"`
+	BalanceLowNotifyRechargeURL      string           `json:"balance_low_notify_recharge_url"`
 }
 
 // OverloadCooldownSettings 529过载冷却配置 DTO

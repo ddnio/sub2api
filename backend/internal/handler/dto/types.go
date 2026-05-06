@@ -7,30 +7,30 @@ import (
 )
 
 type User struct {
-	ID            int64     `json:"id"`
-	Email         string    `json:"email"`
-	Username      string    `json:"username"`
-	Role          string    `json:"role"`
-	Balance       float64   `json:"balance"`
-	Concurrency   int       `json:"concurrency"`
-	Status        string    `json:"status"`
-	AllowedGroups []int64   `json:"allowed_groups"`
-	ReferralCode  *string   `json:"referral_code,omitempty"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID            int64      `json:"id"`
+	Email         string     `json:"email"`
+	Username      string     `json:"username"`
+	Role          string     `json:"role"`
+	Balance       float64    `json:"balance"`
+	Concurrency   int        `json:"concurrency"`
+	Status        string     `json:"status"`
+	AllowedGroups []int64    `json:"allowed_groups"`
+	LastActiveAt  *time.Time `json:"last_active_at,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+
+	// 余额不足通知
+	BalanceNotifyEnabled       bool               `json:"balance_notify_enabled"`
+	BalanceNotifyThresholdType string             `json:"balance_notify_threshold_type"`
+	BalanceNotifyThreshold     *float64           `json:"balance_notify_threshold"`
+	BalanceNotifyExtraEmails   []NotifyEmailEntry `json:"balance_notify_extra_emails"`
+	TotalRecharged             float64            `json:"total_recharged"`
+
+	// RPMLimit 用户级每分钟请求数上限（0 = 不限制），仅在所用分组未设置 rpm_limit 时作为兜底生效。
+	RPMLimit int `json:"rpm_limit"`
 
 	APIKeys       []APIKey           `json:"api_keys,omitempty"`
 	Subscriptions []UserSubscription `json:"subscriptions,omitempty"`
-}
-
-type UserProfile struct {
-	User
-
-	BalanceNotifyEnabled       bool               `json:"balance_notify_enabled"`
-	BalanceNotifyThreshold     *float64           `json:"balance_notify_threshold"`
-	BalanceNotifyThresholdType string             `json:"balance_notify_threshold_type"`
-	BalanceNotifyExtraEmails   []NotifyEmailEntry `json:"balance_notify_extra_emails"`
-	AuthIdentities             any                `json:"identities,omitempty"`
 }
 
 // AdminUser 是管理员接口使用的 user DTO（包含敏感/内部字段）。
@@ -38,10 +38,8 @@ type UserProfile struct {
 type AdminUser struct {
 	User
 
-	Notes        string     `json:"notes"`
-	LastLoginAt  *time.Time `json:"last_login_at"`
-	LastActiveAt *time.Time `json:"last_active_at"`
-	LastUsedAt   *time.Time `json:"last_used_at"`
+	Notes      string     `json:"notes"`
+	LastUsedAt *time.Time `json:"last_used_at"`
 	// GroupRates 用户专属分组倍率配置
 	// map[groupID]rateMultiplier
 	GroupRates map[int64]float64 `json:"group_rates,omitempty"`
@@ -112,6 +110,9 @@ type Group struct {
 	// 账号过滤控制（仅 OpenAI/Antigravity 平台有效）
 	RequireOAuthOnly  bool `json:"require_oauth_only"`
 	RequirePrivacySet bool `json:"require_privacy_set"`
+
+	// RPMLimit 分组级每分钟请求数上限（0 = 不限制），设置后覆盖用户级 rpm_limit。
+	RPMLimit int `json:"rpm_limit"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -231,6 +232,14 @@ type Account struct {
 	QuotaResetTimezone   *string `json:"quota_reset_timezone,omitempty"`
 	QuotaDailyResetAt    *string `json:"quota_daily_reset_at,omitempty"`
 	QuotaWeeklyResetAt   *string `json:"quota_weekly_reset_at,omitempty"`
+
+	// 配额通知配置
+	QuotaNotifyDailyEnabled    *bool    `json:"quota_notify_daily_enabled,omitempty"`
+	QuotaNotifyDailyThreshold  *float64 `json:"quota_notify_daily_threshold,omitempty"`
+	QuotaNotifyWeeklyEnabled   *bool    `json:"quota_notify_weekly_enabled,omitempty"`
+	QuotaNotifyWeeklyThreshold *float64 `json:"quota_notify_weekly_threshold,omitempty"`
+	QuotaNotifyTotalEnabled    *bool    `json:"quota_notify_total_enabled,omitempty"`
+	QuotaNotifyTotalThreshold  *float64 `json:"quota_notify_total_threshold,omitempty"`
 
 	Proxy         *Proxy         `json:"proxy,omitempty"`
 	AccountGroups []AccountGroup `json:"account_groups,omitempty"`
@@ -426,10 +435,8 @@ type AdminUsageLog struct {
 
 	// AccountRateMultiplier 账号计费倍率快照（nil 表示按 1.0 处理）
 	AccountRateMultiplier *float64 `json:"account_rate_multiplier"`
-	// AccountStatsCost 是账号统计自定义定价成本（nil 表示使用 total_cost）
+	// AccountStatsCost 自定义定价规则计算的账号统计费用（nil 表示使用默认公式）
 	AccountStatsCost *float64 `json:"account_stats_cost,omitempty"`
-	// AccountCost 是管理员账号口径费用：COALESCE(account_stats_cost,total_cost) * account_rate_multiplier
-	AccountCost float64 `json:"account_cost"`
 
 	// IPAddress 用户请求 IP（仅管理员可见）
 	IPAddress *string `json:"ip_address,omitempty"`
@@ -549,53 +556,4 @@ type PromoCodeUsage struct {
 	UsedAt      time.Time `json:"used_at"`
 
 	User *User `json:"user,omitempty"`
-}
-
-// --- Payment DTOs ---
-
-type PaymentPlanDTO struct {
-	ID              int64    `json:"id"`
-	Name            string   `json:"name"`
-	Description     string   `json:"description"`
-	Badge           *string  `json:"badge,omitempty"`
-	GroupName       string   `json:"group_name"`
-	DurationDays    int      `json:"duration_days"`
-	Price           float64  `json:"price"`
-	OriginalPrice   *float64 `json:"original_price,omitempty"`
-	DailyLimitUSD   float64  `json:"daily_limit_usd"`
-	WeeklyLimitUSD  float64  `json:"weekly_limit_usd"`
-	MonthlyLimitUSD float64  `json:"monthly_limit_usd"`
-}
-
-type AdminPaymentPlanDTO struct {
-	PaymentPlanDTO
-	GroupID   int64 `json:"group_id"`
-	SortOrder int   `json:"sort_order"`
-	IsActive  bool  `json:"is_active"`
-}
-
-type PaymentOrderDTO struct {
-	ID          int64   `json:"id"`
-	OrderNo     string  `json:"order_no"`
-	Type        string  `json:"type"`
-	Amount      float64 `json:"amount"`
-	Currency    string  `json:"currency"`
-	Status      string  `json:"status"`
-	Provider    *string `json:"provider,omitempty"`
-	CreatedAt   string  `json:"created_at"`
-	ExpiredAt   string  `json:"expired_at"`
-	PaidAt      *string `json:"paid_at,omitempty"`
-	CompletedAt *string `json:"completed_at,omitempty"`
-	PlanName    *string `json:"plan_name,omitempty"`
-}
-
-type AdminPaymentOrderDTO struct {
-	PaymentOrderDTO
-	UserID          int64    `json:"user_id"`
-	Email           string   `json:"email"`
-	PlanID          *int64   `json:"plan_id,omitempty"`
-	CreditAmount    *float64 `json:"credit_amount,omitempty"`
-	ProviderOrderNo *string  `json:"provider_order_no,omitempty"`
-	RefundedAt      *string  `json:"refunded_at,omitempty"`
-	AdminNote       *string  `json:"admin_note,omitempty"`
 }

@@ -7,16 +7,16 @@ import { apiClient } from './client'
 import {
   resolveWeChatOAuthStartStrict,
   prepareOAuthBindAccessTokenCookie,
-  type WeChatOAuthPublicSettings
+  type WeChatOAuthPublicSettings,
 } from './auth'
-import type { UserProfile, ChangePasswordRequest, UserAuthProvider } from '@/types'
+import type { User, ChangePasswordRequest, NotifyEmailEntry, UserAuthProvider } from '@/types'
 
 /**
  * Get current user profile
  * @returns User profile data
  */
-export async function getProfile(): Promise<UserProfile> {
-  const { data } = await apiClient.get<UserProfile>('/user/profile')
+export async function getProfile(): Promise<User> {
+  const { data } = await apiClient.get<User>('/user/profile')
   return data
 }
 
@@ -30,8 +30,9 @@ export async function updateProfile(profile: {
   avatar_url?: string | null
   balance_notify_enabled?: boolean
   balance_notify_threshold?: number | null
-}): Promise<UserProfile> {
-  const { data } = await apiClient.put<UserProfile>('/user', profile)
+  balance_notify_extra_emails?: NotifyEmailEntry[]
+}): Promise<User> {
+  const { data } = await apiClient.put<User>('/user', profile)
   return data
 }
 
@@ -53,33 +54,60 @@ export async function changePassword(
   return data
 }
 
+/**
+ * Send verification code for adding a notify email
+ * @param email - Email address to verify
+ */
 export async function sendNotifyEmailCode(email: string): Promise<void> {
   await apiClient.post('/user/notify-email/send-code', { email })
 }
 
-export async function verifyNotifyEmail(email: string, code: string): Promise<UserProfile> {
-  const { data } = await apiClient.post<UserProfile>('/user/notify-email/verify', { email, code })
+/**
+ * Verify and add a notify email
+ * @param email - Email address to add
+ * @param code - Verification code
+ */
+export async function verifyNotifyEmail(email: string, code: string): Promise<void> {
+  await apiClient.post('/user/notify-email/verify', { email, code })
+}
+
+/**
+ * Remove a notify email
+ * @param email - Email address to remove
+ */
+export async function removeNotifyEmail(email: string): Promise<void> {
+  await apiClient.delete('/user/notify-email', { data: { email } })
+}
+
+/**
+ * Toggle a notify email's disabled state
+ * @param email - Email address (empty string for primary email placeholder)
+ * @param disabled - Whether to disable the email
+ */
+export async function toggleNotifyEmail(email: string, disabled: boolean): Promise<User> {
+  const { data } = await apiClient.put<User>('/user/notify-email/toggle', { email, disabled })
   return data
 }
 
-export async function removeNotifyEmail(email: string): Promise<UserProfile> {
-  const { data } = await apiClient.delete<UserProfile>('/user/notify-email', { data: { email } })
+export async function sendEmailBindingCode(email: string): Promise<void> {
+  await apiClient.post('/user/account-bindings/email/send-code', { email })
+}
+
+export async function bindEmailIdentity(payload: {
+  email: string
+  verify_code: string
+  password: string
+}): Promise<User> {
+  const { data } = await apiClient.post<User>('/user/account-bindings/email', payload)
   return data
 }
 
-export async function toggleNotifyEmail(email: string, disabled: boolean): Promise<UserProfile> {
-  const { data } = await apiClient.put<UserProfile>('/user/notify-email/toggle', { email, disabled })
+export async function unbindAuthIdentity(provider: BindableOAuthProvider): Promise<User> {
+  const { data } = await apiClient.delete<User>(`/user/account-bindings/${provider}`)
   return data
 }
 
 export type BindableOAuthProvider = Exclude<UserAuthProvider, 'email'>
-
-export interface StartOAuthBindingResponse {
-  provider: BindableOAuthProvider
-  authorize_url: string
-  method: string
-  use_browser_redirect: boolean
-}
 
 interface BuildOAuthBindingStartURLOptions {
   redirectTo?: string
@@ -107,9 +135,6 @@ export function buildOAuthBindingStartURL(
   options: BuildOAuthBindingStartURLOptions = {}
 ): string | null {
   const redirectTo = options.redirectTo?.trim() || '/profile'
-  if (provider !== 'wechat') {
-    return null
-  }
   const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
   const normalized = apiBase.replace(/\/$/, '')
   const params = new URLSearchParams({
@@ -117,47 +142,30 @@ export function buildOAuthBindingStartURL(
     intent: 'bind_current_user'
   })
 
-  const mode = resolveWeChatOAuthBindingMode(options.wechatOAuthSettings)
-  if (!mode) {
-    return null
+  if (provider === 'wechat') {
+    const mode = resolveWeChatOAuthBindingMode(options.wechatOAuthSettings)
+    if (!mode) {
+      return null
+    }
+    params.set('mode', mode)
   }
-  params.set('mode', mode)
 
-  return `${normalized}/auth/oauth/${provider}/start?${params.toString()}`
+  return `${normalized}/auth/oauth/${provider}/bind/start?${params.toString()}`
 }
 
 export async function startOAuthBinding(
   provider: BindableOAuthProvider,
-  options: BuildOAuthBindingStartURLOptions | string = {}
+  options: BuildOAuthBindingStartURLOptions = {}
 ): Promise<void> {
   if (typeof window === 'undefined') {
     return
   }
-
-  const normalizedOptions =
-    typeof options === 'string' ? { redirectTo: options } : options
-  const redirectTo = normalizedOptions.redirectTo?.trim() || '/profile'
-
-  prepareOAuthBindAccessTokenCookie()
-  if (provider === 'wechat') {
-    const startURL = buildOAuthBindingStartURL(provider, normalizedOptions)
-    if (!startURL) {
-      return
-    }
-    window.location.href = startURL
+  const startURL = buildOAuthBindingStartURL(provider, options)
+  if (!startURL) {
     return
   }
-
-  const { data } = await apiClient.post<StartOAuthBindingResponse>('/user/auth-identities/bind/start', {
-    provider,
-    redirect_to: redirectTo,
-  })
-  window.location.href = data.authorize_url
-}
-
-export async function unbindAuthProvider(provider: Exclude<UserAuthProvider, 'email'>): Promise<UserProfile> {
-  const { data } = await apiClient.delete<UserProfile>(`/user/account-bindings/${provider}`)
-  return data
+  await prepareOAuthBindAccessTokenCookie()
+  window.location.href = startURL
 }
 
 export const userAPI = {
@@ -168,8 +176,11 @@ export const userAPI = {
   verifyNotifyEmail,
   removeNotifyEmail,
   toggleNotifyEmail,
-  startOAuthBinding,
-  unbindAuthProvider
+  sendEmailBindingCode,
+  bindEmailIdentity,
+  unbindAuthIdentity,
+  buildOAuthBindingStartURL,
+  startOAuthBinding
 }
 
 export default userAPI
