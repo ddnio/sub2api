@@ -462,11 +462,11 @@ func normalizeAnthropicInputSchema(schema json.RawMessage) json.RawMessage {
 // convertResponsesToAnthropicToolChoice maps Responses tool_choice to Anthropic format.
 // Reverse of convertAnthropicToolChoiceToResponses.
 //
-//	"auto"                               → {"type":"auto"}
-//	"required"                           → {"type":"any"}
-//	"none"                               → {"type":"none"}
-//	{"type":"function","name":"X"}       → {"type":"tool","name":"X"}   (Responses native)
-//	{"type":"function","function":{...}} → {"type":"tool","name":"X"}   (legacy nested, defensive)
+//	"auto"                                     → {"type":"auto"}
+//	"required"                                 → {"type":"any"}
+//	"none"                                     → {"type":"none"}
+//	{"type":"function","name":"X"}                 → {"type":"tool","name":"X"}
+//	{"type":"function","function":{"name":"X"}}     → {"type":"tool","name":"X"} // legacy
 func convertResponsesToAnthropicToolChoice(raw json.RawMessage) (json.RawMessage, error) {
 	// Try as string first
 	var s string
@@ -483,25 +483,26 @@ func convertResponsesToAnthropicToolChoice(raw json.RawMessage) (json.RawMessage
 		}
 	}
 
-	// Try as object. Accept both flat (Responses native) and nested (legacy) shapes.
+	// Try as object with type=function
 	var tc struct {
 		Type     string `json:"type"`
 		Name     string `json:"name"`
-		Function *struct {
+		Function struct {
 			Name string `json:"name"`
 		} `json:"function"`
 	}
 	if err := json.Unmarshal(raw, &tc); err == nil && tc.Type == "function" {
-		name := tc.Name
-		if name == "" && tc.Function != nil {
-			name = tc.Function.Name
+		name := strings.TrimSpace(tc.Name)
+		if name == "" {
+			name = strings.TrimSpace(tc.Function.Name)
 		}
-		if name != "" {
-			return json.Marshal(map[string]string{
-				"type": "tool",
-				"name": name,
-			})
+		if name == "" {
+			return raw, nil
 		}
+		return json.Marshal(map[string]string{
+			"type": "tool",
+			"name": name,
+		})
 	}
 
 	// Pass through unknown

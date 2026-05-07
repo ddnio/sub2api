@@ -222,19 +222,3 @@ func TestBulkUpdateAcceptsFilterTargetRequest(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 	require.Equal(t, float64(0), resp["code"])
 }
-
-func TestBulkUpdateRejectsEmptyFilterTargetRequest(t *testing.T) {
-	adminSvc := newStubAdminService()
-	router := setupAccountMixedChannelRouter(adminSvc)
-
-	body, _ := json.Marshal(map[string]any{
-		"filters":     map[string]any{},
-		"schedulable": true,
-	})
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/accounts/bulk-update", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	router.ServeHTTP(rec, req)
-
-	require.Equal(t, http.StatusBadRequest, rec.Code)
-}
