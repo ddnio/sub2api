@@ -262,23 +262,6 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		}
 	}
 
-	// 生成推荐码（无条件，每个新用户都有）
-	if s.referralService != nil {
-		if _, err := s.referralService.GenerateReferralCode(ctx, user.ID); err != nil {
-			logger.LegacyPrintf("service.auth", "[Auth] Failed to generate referral code for user %d: %v", user.ID, err)
-		}
-	}
-
-	// 处理推荐码归因（当准入码模式关闭时，invitationCode 字段作为推荐码）
-	// 仅记录归因关系，奖励在被邀请人首次消费时由 usage_billing_repo 触发发放
-	if s.referralService != nil && s.settingService != nil &&
-		!s.settingService.IsInvitationCodeEnabled(ctx) && s.settingService.IsReferralEnabled(ctx) &&
-		invitationCode != "" {
-		if err := s.referralService.ProcessRegistrationReferral(ctx, user.ID, invitationCode); err != nil {
-			logger.LegacyPrintf("service.auth", "[Auth] Failed to process referral for user %d: %v", user.ID, err)
-		}
-	}
-
 	// 生成token
 	token, err := s.GenerateToken(user)
 	if err != nil {

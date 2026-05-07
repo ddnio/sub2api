@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -385,13 +384,6 @@ func (s *RedeemService) Redeem(ctx context.Context, userID int64, code string) (
 
 	// 事务提交成功后失效缓存
 	s.invalidateRedeemCaches(ctx, userID, redeemCode)
-
-	// 首次充值触发邀请奖励（事务提交后，自建事务，失败不影响兑换，下次充值重试）
-	if s.referralService != nil && redeemCode.Type == RedeemTypeBalance {
-		if err := s.referralService.GrantFirstRechargeReward(ctx, userID); err != nil {
-			log.Printf("[Redeem] Failed to grant referral reward for user %d: %v", userID, err)
-		}
-	}
 
 	// 余额类正数兑换码触发邀请返利（best-effort，失败不影响兑换结果）
 	if redeemCode.Type == RedeemTypeBalance && redeemCode.Value > 0 {
