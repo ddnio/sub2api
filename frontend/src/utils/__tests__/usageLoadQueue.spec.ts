@@ -25,9 +25,9 @@ function makeAccount(
 }
 
 describe('usageLoadQueue', () => {
-  // Anthropic accounts: serialize by proxy exit.
+  // All platforms execute immediately; backend passive sampling handles rate-limit risk.
 
-  it('serializes Anthropic requests sharing a proxy exit with >=1s spacing', async () => {
+  it('runs Anthropic requests sharing a proxy exit immediately', async () => {
     const timestamps: number[] = []
     const makeFn = () => async () => {
       timestamps.push(Date.now())
@@ -43,10 +43,8 @@ describe('usageLoadQueue', () => {
     await Promise.all([p1, p2, p3])
 
     expect(timestamps).toHaveLength(3)
-    expect(timestamps[1] - timestamps[0]).toBeGreaterThanOrEqual(950)
-    expect(timestamps[1] - timestamps[0]).toBeLessThan(2100)
-    expect(timestamps[2] - timestamps[1]).toBeGreaterThanOrEqual(950)
-    expect(timestamps[2] - timestamps[1]).toBeLessThan(2100)
+    expect(Math.abs(timestamps[1] - timestamps[0])).toBeLessThan(50)
+    expect(Math.abs(timestamps[2] - timestamps[1])).toBeLessThan(50)
   })
 
   it('runs Anthropic requests with different proxy exits in parallel', async () => {
@@ -68,7 +66,7 @@ describe('usageLoadQueue', () => {
     expect(spread).toBeLessThan(50)
   })
 
-  it('groups different Anthropic accounts with identical proxy connection info', async () => {
+  it('runs different Anthropic accounts with identical proxy connection info immediately', async () => {
     const timestamps: number[] = []
     const makeFn = () => async () => {
       timestamps.push(Date.now())
@@ -84,10 +82,10 @@ describe('usageLoadQueue', () => {
     await Promise.all([p1, p2])
 
     expect(timestamps).toHaveLength(2)
-    expect(timestamps[1] - timestamps[0]).toBeGreaterThanOrEqual(950)
+    expect(Math.abs(timestamps[1] - timestamps[0])).toBeLessThan(50)
   })
 
-  it('groups direct Anthropic accounts into one queue', async () => {
+  it('runs direct Anthropic accounts immediately', async () => {
     const order: number[] = []
     const makeFn = (n: number) => async () => {
       order.push(n)
@@ -105,7 +103,7 @@ describe('usageLoadQueue', () => {
     expect(order).toEqual([1, 2])
   })
 
-  it('rejects failed Anthropic tasks and continues the queue', async () => {
+  it('rejects failed Anthropic tasks without blocking later tasks', async () => {
     const results: string[] = []
     const acc = makeAccount('anthropic', 'oauth', { host: '99.99.99.99', port: 1234 })
 

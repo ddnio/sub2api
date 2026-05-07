@@ -149,7 +149,8 @@ func TestAccrueInviteRebate_AppliesPerInviteeCapAndFreezeHours(t *testing.T) {
 	})
 	svc := NewAffiliateService(repo, settings, nil, nil)
 
-	rebate, err := svc.AccrueInviteRebate(context.Background(), inviteeID, 100)
+	sourceOrderID := int64(123)
+	rebate, err := svc.AccrueInviteRebateForOrder(context.Background(), inviteeID, 100, &sourceOrderID)
 	require.NoError(t, err)
 	require.InDelta(t, 1.0, rebate, 1e-9)
 	require.Len(t, repo.accrueCalls, 1)
@@ -157,6 +158,8 @@ func TestAccrueInviteRebate_AppliesPerInviteeCapAndFreezeHours(t *testing.T) {
 	require.Equal(t, inviteeID, repo.accrueCalls[0].inviteeID)
 	require.InDelta(t, 1.0, repo.accrueCalls[0].amount, 1e-9)
 	require.Equal(t, 24, repo.accrueCalls[0].freezeHours)
+	require.NotNil(t, repo.accrueCalls[0].sourceOrderID)
+	require.Equal(t, sourceOrderID, *repo.accrueCalls[0].sourceOrderID)
 }
 
 func TestMaskEmail(t *testing.T) {
@@ -228,10 +231,11 @@ type fakeAffiliateRepository struct {
 }
 
 type fakeAffiliateAccrueCall struct {
-	inviterID   int64
-	inviteeID   int64
-	amount      float64
-	freezeHours int
+	inviterID     int64
+	inviteeID     int64
+	amount        float64
+	freezeHours   int
+	sourceOrderID *int64
 }
 
 func (r *fakeAffiliateRepository) EnsureUserAffiliate(_ context.Context, userID int64) (*AffiliateSummary, error) {
@@ -251,12 +255,18 @@ func (r *fakeAffiliateRepository) BindInviter(context.Context, int64, int64) (bo
 	return false, nil
 }
 
-func (r *fakeAffiliateRepository) AccrueQuota(_ context.Context, inviterID, inviteeUserID int64, amount float64, freezeHours int) (bool, error) {
+func (r *fakeAffiliateRepository) AccrueQuota(_ context.Context, inviterID, inviteeUserID int64, amount float64, freezeHours int, sourceOrderID *int64) (bool, error) {
+	var copiedSourceOrderID *int64
+	if sourceOrderID != nil {
+		v := *sourceOrderID
+		copiedSourceOrderID = &v
+	}
 	r.accrueCalls = append(r.accrueCalls, fakeAffiliateAccrueCall{
-		inviterID:   inviterID,
-		inviteeID:   inviteeUserID,
-		amount:      amount,
-		freezeHours: freezeHours,
+		inviterID:     inviterID,
+		inviteeID:     inviteeUserID,
+		amount:        amount,
+		freezeHours:   freezeHours,
+		sourceOrderID: copiedSourceOrderID,
 	})
 	return true, nil
 }
@@ -295,4 +305,20 @@ func (r *fakeAffiliateRepository) BatchSetUserRebateRate(context.Context, []int6
 
 func (r *fakeAffiliateRepository) ListUsersWithCustomSettings(context.Context, AffiliateAdminFilter) ([]AffiliateAdminEntry, int64, error) {
 	return nil, 0, nil
+}
+
+func (r *fakeAffiliateRepository) ListAffiliateInviteRecords(context.Context, AffiliateRecordFilter) ([]AffiliateInviteRecord, int64, error) {
+	return nil, 0, nil
+}
+
+func (r *fakeAffiliateRepository) ListAffiliateRebateRecords(context.Context, AffiliateRecordFilter) ([]AffiliateRebateRecord, int64, error) {
+	return nil, 0, nil
+}
+
+func (r *fakeAffiliateRepository) ListAffiliateTransferRecords(context.Context, AffiliateRecordFilter) ([]AffiliateTransferRecord, int64, error) {
+	return nil, 0, nil
+}
+
+func (r *fakeAffiliateRepository) GetAffiliateUserOverview(context.Context, int64) (*AffiliateUserOverview, error) {
+	return nil, nil
 }

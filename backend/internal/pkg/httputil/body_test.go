@@ -54,7 +54,7 @@ func TestReadRequestBodyWithPrealloc_DecodesZstd(t *testing.T) {
 		t.Fatalf("body mismatch: got %q", got)
 	}
 	if req.Header.Get("Content-Encoding") != "" {
-		t.Fatal("Content-Encoding should be cleared after decoding")
+		t.Fatalf("Content-Encoding should be cleared after decoding")
 	}
 	if req.ContentLength != int64(len(samplePayload)) {
 		t.Fatalf("ContentLength not updated: %d", req.ContentLength)

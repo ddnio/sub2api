@@ -16,11 +16,14 @@ import (
 const (
 	requestBodyReadInitCap    = 512
 	requestBodyReadMaxInitCap = 1 << 20
-	maxDecompressedBodySize   = 64 << 20
+	// maxDecompressedBodySize limits the decompressed request body to 64 MB
+	// to prevent decompression bomb attacks.
+	maxDecompressedBodySize = 64 << 20
 )
 
-// ReadRequestBodyWithPrealloc reads request body with preallocated buffer based on content length.
-// It also decodes supported Content-Encoding values and updates request headers after decoding.
+// ReadRequestBodyWithPrealloc reads request body with preallocated buffer based
+// on content length, transparently decoding any Content-Encoding the upstream
+// client used to compress the body (zstd, gzip, deflate).
 func ReadRequestBodyWithPrealloc(req *http.Request) ([]byte, error) {
 	if req == nil || req.Body == nil {
 		return nil, nil

@@ -466,7 +466,7 @@ func convertChatFunctionCallToToolChoice(raw json.RawMessage) (json.RawMessage, 
 	if err := json.Unmarshal(raw, &obj); err != nil {
 		return nil, err
 	}
-	return json.Marshal(map[string]string{
+	return json.Marshal(map[string]any{
 		"type": "function",
 		"name": obj.Name,
 	})

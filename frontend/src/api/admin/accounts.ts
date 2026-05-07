@@ -380,7 +380,10 @@ export async function bulkUpdate(
   results: Array<{ account_id: number; success: boolean; error?: string }>
   }> {
   const payload = Array.isArray(accountIdsOrPayload)
-    ? { account_ids: accountIdsOrPayload, ...updates }
+    ? {
+        account_ids: accountIdsOrPayload,
+        ...(updates ?? {})
+      }
     : accountIdsOrPayload
   const { data } = await apiClient.post<{
     success: number

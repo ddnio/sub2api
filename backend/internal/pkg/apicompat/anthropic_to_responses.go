@@ -93,7 +93,7 @@ func convertAnthropicToolChoiceToResponses(raw json.RawMessage) (json.RawMessage
 	case "none":
 		return json.Marshal("none")
 	case "tool":
-		return json.Marshal(map[string]string{
+		return json.Marshal(map[string]any{
 			"type": "function",
 			"name": tc.Name,
 		})
