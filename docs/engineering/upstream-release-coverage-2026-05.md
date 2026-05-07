@@ -98,7 +98,7 @@ Current gate:
 | `v0.1.116..v0.1.117` | Deployed / closeout pending | Direct merge model used; `origin/release/v0.1.117` at `01c8e36e` records test and production deployment evidence. `main` merge and `fork/v0.1.117` marker closeout remain required before final historical marker closeout. |
 | `v0.1.117..v0.1.118` | Final / deployed | Direct merge model used; `origin/release/v0.1.118` at `71b85c55` records production deployment evidence and `main` promotion landed at `d97be0b7`. |
 | `v0.1.118..v0.1.119` | Final / deployed | Direct merge model used; `origin/release/v0.1.119` at `b7d95eca` records production deployment evidence. Promotion to `main` landed at `5d71ad2b`, then main was redeployed and smoke-verified on shared test, ToC production, and ToB/FX production. |
-| `v0.1.119..v0.1.123` | Test deployed | `origin/release/v0.1.123` at `1f973ffd` directly merged upstream through `v0.1.123`, passed the local release gate, took the required test DB backup, and is deployed/smoke-verified on shared test. Production deployment, `main` redeploy, and marker closeout are proceeding after explicit release approval. |
+| `v0.1.119..v0.1.123` | Final / deployed | `origin/release/v0.1.123` at `1f973ffd` directly merged upstream through `v0.1.123`, passed the local release gate, was promoted to `main` at `8fde6dfc`, and is deployed/smoke-verified on shared test, ToC production, and ToB/FX production. Marker tag `fork/v0.1.123` points at the deployed main merge commit. |
 
 Existing `fork/v0.1.111` through `fork/v0.1.114` tags must not be moved or deleted. They are historical fork sync markers. Any correctness gap found during recheck is fixed forward on latest `main`.
 
@@ -1050,7 +1050,7 @@ Range: `v0.1.122..v0.1.123`.
 Direct-merge candidate:
 
 - Scratch merge commit: `f499c563` (`Merge upstream v0.1.123 into release evaluation`) with first parent `f2fdf6be` and second parent upstream `v0.1.123` (`df722c9a`).
-- Release branch pushed for testing: `origin/release/v0.1.123` at `317c9d3d` (`Prepare v0.1.123 for shared test deployment`).
+- Release branch pushed for testing: `origin/release/v0.1.123` at `317c9d3d` (`Prepare v0.1.123 for shared test deployment`); final release head is `1f973ffd` (`Record why v0.1.123 can advance past shared test`).
 - `backend/cmd/server/VERSION` is set to `0.1.123` for shared-test smoke identification.
 - No direct push to `upstream`; deployment branch must be pushed to `origin`.
 
@@ -1107,13 +1107,27 @@ Shared test deployment evidence:
 - Migration smoke: test DB records `134_affiliate_ledger_audit_snapshots.sql` in `schema_migrations.filename` with checksum `80fb2e9033d58cc611412c97301e0c66a86a8bfcd178abfe7877b93519cd2d8a`; columns `source_order_id`, `balance_after`, `aff_quota_after`, `aff_frozen_quota_after`, and `aff_history_quota_after` exist on `user_affiliate_ledger`.
 - Post-deploy severe-log scan for `panic|fatal|error|migration|failed|traceback|异常` returned no matches. Startup logs still include existing configuration warnings for disabled URL allowlist, empty trusted proxies, and missing CORS origins.
 
-Gate status: `v0.1.123` is pushed to `origin/release/v0.1.123` and deployed/smoke-verified on shared test. Production deployment and `main`/`fork/v0.1.123` closeout remain out of scope until explicit release approval.
+Main promotion and production deployment evidence:
+
+- `release/v0.1.123` was merged to `main` as `8fde6dfc` (`Promote v0.1.123 after shared test verification`) and pushed to `origin/main`.
+- Post-merge tree check: compared with `origin/release/v0.1.123`, the main merge differs only in `docs/engineering/upstream-release-coverage-2026-05.md`; runtime code matches the shared-test release tree. `git diff --check HEAD^..HEAD` passed before deployment.
+- ToC production preflight: database `sub2api` had not applied `134_affiliate_ledger_audit_snapshots.sql`, the five new `user_affiliate_ledger` columns were absent, and `user_affiliate_ledger` had 0 rows.
+- ToC production backup: `/home/nio/backups/sub2api-prod/sub2api_prod_pre_v0.1.123_20260507_042637.dump`, size `280676072` bytes (`268M`), mode `600`.
+- ToC production deployment: deployed `main` at `8fde6dfc` to `sub2api-prod` on `108.160.133.141`; container `b2af905e1a1015856afca8dffdf0f287ea4d860d610c137942d2433752e874d4` started at `2026-05-07T04:27:41Z`; `backend/cmd/server/VERSION` is `0.1.123`.
+- ToC production smoke: local and public `/health` returned `{"status":"ok"}`, unauthenticated local and public `/v1/models` returned `401`, public settings returned version `0.1.123`, `schema_migrations` recorded `134_affiliate_ledger_audit_snapshots.sql` with checksum `80fb2e9033d58cc611412c97301e0c66a86a8bfcd178abfe7877b93519cd2d8a`, and the five audit snapshot columns exist.
+- ToC production post-deploy strict log scan over the deployment window found no `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常` matches.
+- ToB/FX preflight: database `sub2api_tob` had not applied `134_affiliate_ledger_audit_snapshots.sql`, the five new `user_affiliate_ledger` columns were absent, and `user_affiliate_ledger` had 0 rows.
+- ToB/FX backup: `/home/nio/backups/sub2api-fx/sub2api_tob_pre_v0.1.123_20260507_122638.dump`, size `81467961` bytes (`78M`), mode `600`.
+- ToB/FX deployment: deployed `main` at `8fde6dfc` to `sub2api-prod` on `43.106.8.109`; container `141394a8dab073d404cfdf4952ac12b3c3f9f2232656e406f6e0202273b0e53f` started at `2026-05-07T04:39:00Z`; `backend/cmd/server/VERSION` is `0.1.123`.
+- ToB/FX smoke: local and public `/health` returned `{"status":"ok"}`, unauthenticated local and public `/v1/models` returned `401`, public settings returned version `0.1.123`, `schema_migrations` recorded `134_affiliate_ledger_audit_snapshots.sql` with checksum `80fb2e9033d58cc611412c97301e0c66a86a8bfcd178abfe7877b93519cd2d8a`, and the five audit snapshot columns exist.
+- ToB/FX post-deploy strict log scan over the deployment window found no `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常` matches.
+- Rollback note: revert the `8fde6dfc` main merge and redeploy; because migration `134` is additive and the production/fx ledgers had 0 rows before deploy, runtime rollback should not require restoring data unless a later incident requires full database rollback from the pre-deploy dumps above.
+
+Gate status: `v0.1.123` is promoted to `main`, deployed/smoke-verified on shared test, ToC production, and ToB/FX production, and marked with `fork/v0.1.123`. No release-local `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` item remains for `v0.1.119..v0.1.123`.
 
 ## Remaining Decision List
 
-- Decide production rollout timing only after test smoke and any operator-driven payment/affiliate UI checks pass.
-- Merge `release/v0.1.123` to `main` and create `fork/v0.1.123` only after production verification.
-- Full repository test suite was not run for the final repair pass; targeted backend/frontend regressions, lint, typecheck, diff checks, and independent review are the current test-deploy gate evidence.
+- Full repository test suite was not run for the final repair pass; targeted backend/frontend regressions, lint, typecheck, diff checks, independent review, and live shared-test/prod/fx smoke checks are the release gate evidence.
 
 ## Current Next Action
 
@@ -1124,4 +1138,4 @@ Gate status: `v0.1.123` is pushed to `origin/release/v0.1.123` and deployed/smok
 5. `v0.1.113..v0.1.114` is final under the stricter rule; PR #44 runtime changes were already deployed and this final recheck is docs-only.
 6. `v0.1.114..v0.1.115` is final under the stricter rule; merged to `main`, deployed/verified for ToC test, ToC production, and ToB production, and tagged as `fork/v0.1.115`.
 7. `v0.1.115..v0.1.116`, `v0.1.116..v0.1.117`, `v0.1.117..v0.1.118`, and `v0.1.118..v0.1.119` already have release evidence above; production/main closeout status differs by release and remains recorded in each section.
-8. `v0.1.123` is committed on `release/v0.1.123`, pushed to `origin`, backed up, deployed to shared test, and verified with the generic smoke checks plus the `134_affiliate_ledger_audit_snapshots.sql` migration check. Next release action is production rollout approval, then `main` merge and `fork/v0.1.123` marker closeout after production verification.
+8. `v0.1.123` is committed on `release/v0.1.123`, pushed to `origin`, promoted to `main` at `8fde6dfc`, backed up, deployed to shared test, ToC production, and ToB/FX production, and verified with generic smoke checks plus the `134_affiliate_ledger_audit_snapshots.sql` migration check. Marker tag `fork/v0.1.123` points at the deployed main merge commit.
