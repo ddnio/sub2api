@@ -117,12 +117,66 @@ const wechatOAuthSettings = computed<WeChatOAuthPublicSettings | null>(() => {
 
 const resolvedWeChatBinding = computed(() => resolveWeChatOAuthStartStrict(wechatOAuthSettings.value))
 
+type BindingLike = boolean | UserAuthBindingStatus | undefined
+
 const emit = defineEmits<{
   updated: [user: User]
 }>()
 
+function normalizeBindingStatus(
+  provider: UserAuthProvider,
+  binding: BindingLike
+): UserAuthBindingStatus | undefined {
+  if (typeof binding === 'boolean') {
+    return {
+      provider,
+      bound: binding
+    }
+  }
+  return binding
+}
+
 function getStatus(provider: UserAuthProvider): UserAuthBindingStatus | undefined {
-  return props.user?.identities?.[provider]
+  return (
+    props.user?.identities?.[provider] ??
+    normalizeBindingStatus(provider, props.user?.auth_bindings?.[provider]) ??
+    normalizeBindingStatus(provider, props.user?.identity_bindings?.[provider])
+  )
+}
+
+const emailStatus = computed(() => getStatus('email'))
+
+const emailBound = computed(() => {
+  if (typeof props.user?.email_bound === 'boolean') {
+    return props.user.email_bound
+  }
+  const status = emailStatus.value
+  if (typeof status?.bound === 'boolean') {
+    return status.bound
+  }
+  const email = props.user?.email?.trim() || ''
+  return Boolean(email && !email.endsWith('.invalid'))
+})
+
+const boundEmail = computed(() => {
+  const email = props.user?.email?.trim() || ''
+  if (!email) return ''
+  if (email.endsWith('.invalid') && !emailBound.value) return ''
+  return email
+})
+
+function getEmailStatus(): UserAuthBindingStatus | undefined {
+  const status = emailStatus.value
+  if (status) {
+    return {
+      ...status,
+      bound: emailBound.value
+    }
+  }
+  return {
+    provider: 'email',
+    bound: emailBound.value
+  }
 }
 
 function providerHint(status: UserAuthBindingStatus | undefined): string {
@@ -133,10 +187,10 @@ const providerItems = computed(() => [
   {
     provider: 'email' as const,
     label: t('profile.authBindings.providers.email'),
-    bound: Boolean(getStatus('email')?.bound || props.user?.email),
+    bound: emailBound.value,
     canBind: false,
     canUnbind: false,
-    hint: providerHint(getStatus('email')) || props.user?.email || '',
+    hint: providerHint(getEmailStatus()) || boundEmail.value,
   },
   {
     provider: 'linuxdo' as const,
