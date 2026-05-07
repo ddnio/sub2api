@@ -346,6 +346,8 @@ export const useAppStore = defineStore('app', () => {
         oidc_oauth_enabled: false,
         oidc_oauth_provider_name: 'OIDC',
         sora_client_enabled: false,
+        github_oauth_enabled: false,
+        google_oauth_enabled: false,
         backend_mode_enabled: false,
         payment_enabled: false,
         contact_channels: [],
@@ -356,6 +358,7 @@ export const useAppStore = defineStore('app', () => {
         channel_monitor_enabled: true,
         channel_monitor_default_interval_seconds: 60,
         available_channels_enabled: false,
+        risk_control_enabled: false,
         affiliate_enabled: false,
       }
     }

@@ -78,6 +78,31 @@ func TestMigration119DefersPaymentIndexRolloutToOnlineFollowup(t *testing.T) {
 	require.Contains(t, alignmentSQL, "RENAME TO paymentorder_out_trade_no")
 }
 
+func TestMigration136BackfillsReferralRelationshipsWithoutMoneyState(t *testing.T) {
+	content, err := FS.ReadFile("136_migrate_referrals_to_affiliates.sql")
+	require.NoError(t, err)
+
+	sql := string(content)
+	require.Contains(t, sql, "duplicate referral_code")
+	require.Contains(t, sql, "invalid referral_code")
+	require.Contains(t, sql, "conflicts with existing aff_code")
+	require.Contains(t, sql, "existing affiliate inviter conflicts")
+	require.Contains(t, sql, "referral participants without affiliate rows or referral_code")
+	require.Contains(t, sql, "INSERT INTO user_affiliates")
+	require.Contains(t, sql, "UPDATE user_affiliates ua")
+	require.Contains(t, sql, "SET inviter_id = r.inviter_id")
+	require.Contains(t, sql, "SET aff_count = COALESCE(counts.cnt, 0)")
+
+	require.NotContains(t, sql, "INSERT INTO user_affiliate_ledger")
+	require.NotContains(t, sql, "UPDATE user_affiliate_ledger")
+	require.NotContains(t, sql, "aff_quota =")
+	require.NotContains(t, sql, "aff_history_quota =")
+	require.NotContains(t, sql, "aff_frozen_quota =")
+	require.NotContains(t, sql, "UPDATE users")
+	require.NotContains(t, sql, "UPDATE redeem_codes")
+	require.NotContains(t, sql, "UPDATE user_referrals")
+}
+
 func TestMigration110SeedsAuthSourceSignupGrantsDisabledByDefault(t *testing.T) {
 	content, err := FS.ReadFile("110_pending_auth_and_provider_default_grants.sql")
 	require.NoError(t, err)
@@ -175,4 +200,17 @@ func TestMigration134AddsAffiliateLedgerAuditFieldsWithoutJSONCast(t *testing.T)
 	require.Contains(t, sql, "COUNT(*) OVER (PARTITION BY ra.order_id) AS order_match_count")
 	require.Contains(t, sql, "COUNT(*) OVER (PARTITION BY ual.id) AS ledger_match_count")
 	require.NotContains(t, sql, "detail::jsonb")
+}
+
+func TestMigration135AllowsGitHubAndGoogleAuthProviders(t *testing.T) {
+	content, err := FS.ReadFile("135_allow_email_oauth_provider_types.sql")
+	require.NoError(t, err)
+
+	sql := string(content)
+	require.Contains(t, sql, "users_signup_source_check")
+	require.Contains(t, sql, "auth_identities_provider_type_check")
+	require.Contains(t, sql, "auth_identity_channels_provider_type_check")
+	require.Contains(t, sql, "pending_auth_sessions_provider_type_check")
+	require.Contains(t, sql, "'github'")
+	require.Contains(t, sql, "'google'")
 }

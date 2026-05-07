@@ -1125,6 +1125,45 @@ Main promotion and production deployment evidence:
 
 Gate status: `v0.1.123` is promoted to `main`, deployed/smoke-verified on shared test, ToC production, and ToB/FX production, and marked with `fork/v0.1.123`. No release-local `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` item remains for `v0.1.119..v0.1.123`.
 
+## v0.1.124 Affiliate Relationship Migration
+
+Implementation commit:
+
+- `release/v0.1.124` commit `b4e29f33` (`Align referral attribution with upstream affiliate`) disables the fork-local registration/recharge referral hooks and adds `136_migrate_referrals_to_affiliates.sql`.
+- Migration scope is relationship-only: copy legacy `user_referrals.inviter_id/invitee_id` into upstream `user_affiliates.inviter_id`, recompute `aff_count`, and leave legacy referral rows plus all ledger/quota/balance/redeem state untouched.
+
+Local verification before shared test deployment:
+
+- `go test -count=1 -tags unit ./internal/service` passed.
+- `go test -count=1 ./migrations` passed.
+- `pnpm typecheck` passed.
+- `git diff --check` passed.
+- Independent architect review approved the final diff with no findings.
+
+Shared test deployment evidence:
+
+- Branch deployed: `origin/release/v0.1.124` at `b4e29f33`; remote checkout `/data/service/sub2api` is on `release/v0.1.124`.
+- Test database backup: `/home/nio/backups/sub2api-test/sub2api_test_pre_v0.1.124_affiliate_migration_20260507_101622.dump`, size `7.4M`, mode `600`.
+- Deploy command: on `108.160.133.141`, ran `bash deploy/deploy-server.sh test`; container `sub2api-test` restarted healthy on `127.0.0.1:8081` with container id prefix `027cb80f1985`.
+- Smoke: local `/health` returned `{"status":"ok"}`, public `https://router-test.nanafox.com/health` returned `{"status":"ok"}`, and unauthenticated local/public `/v1/models` returned `401`.
+- Migration smoke: test DB records `136_migrate_referrals_to_affiliates.sql` in `schema_migrations.filename`; `user_referrals` count is `12`; old referral relationships missing from `user_affiliates` is `0`; `user_affiliates` has `13` non-null `inviter_id` rows, with `1` extra row from an existing upstream affiliate relationship; `aff_count` recompute mismatch count is `0`.
+- Post-deploy severe-log scan for `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常` returned no matches.
+
+Gate status: `v0.1.124` is committed to `release/v0.1.124`, pushed to `origin`, backed up, deployed to shared test, and smoke/migration verified. Production and FX deployment remain pending after manual affiliate-flow validation on shared test.
+
+Production and FX deployment evidence:
+
+- ToC production backup: `/home/nio/backups/sub2api-prod/sub2api_prod_pre_v0.1.124_affiliate_migration_20260507_102524.dump`, size `269M`, mode `600`.
+- ToC production deployment: deployed `origin/release/v0.1.124` at `4016b24e` to `sub2api-prod` on `108.160.133.141`; container `ba5c99328016` restarted healthy on `127.0.0.1:8080`; `backend/cmd/server/VERSION` is `0.1.124`.
+- ToC production smoke: local and public `/health` returned `{"status":"ok"}`, unauthenticated local and public `/v1/models` returned `401`, `schema_migrations` recorded `136_migrate_referrals_to_affiliates.sql`, `user_referrals` count is `11`, affiliate non-null inviter rows count is `11`, old referral relationships missing from `user_affiliates` is `0`, extra affiliate relationships is `0`, and `aff_count` recompute mismatch count is `0`.
+- ToC production post-deploy severe-log scan for `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常` returned no matches.
+- ToB/FX backup: `/home/nio/backups/sub2api-fx/sub2api_tob_pre_v0.1.124_affiliate_migration_20260507_182524.dump`, size `78M`, mode `600`.
+- ToB/FX deployment: deployed `origin/release/v0.1.124` at `4016b24e` to `sub2api-prod` on `43.106.8.109`; container `b464ec7e01d1` restarted healthy on `127.0.0.1:8080`; `backend/cmd/server/VERSION` is `0.1.124`.
+- ToB/FX smoke: local and public `/health` returned `{"status":"ok"}`, unauthenticated local and public `/v1/models` returned `401`, `schema_migrations` recorded `136_migrate_referrals_to_affiliates.sql`, `user_referrals` count is `0`, affiliate non-null inviter rows count is `0`, old referral relationships missing from `user_affiliates` is `0`, extra affiliate relationships is `0`, and `aff_count` recompute mismatch count is `0`.
+- ToB/FX post-deploy severe-log scan for `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常` returned no matches.
+
+Gate status: `v0.1.124` is committed to `release/v0.1.124`, pushed to `origin`, backed up, deployed to shared test, ToC production, and ToB/FX production, and smoke/migration verified in all three environments. Main promotion and fork marker remain pending.
+
 ## Remaining Decision List
 
 - Full repository test suite was not run for the final repair pass; targeted backend/frontend regressions, lint, typecheck, diff checks, independent review, and live shared-test/prod/fx smoke checks are the release gate evidence.
@@ -1139,3 +1178,4 @@ Gate status: `v0.1.123` is promoted to `main`, deployed/smoke-verified on shared
 6. `v0.1.114..v0.1.115` is final under the stricter rule; merged to `main`, deployed/verified for ToC test, ToC production, and ToB production, and tagged as `fork/v0.1.115`.
 7. `v0.1.115..v0.1.116`, `v0.1.116..v0.1.117`, `v0.1.117..v0.1.118`, and `v0.1.118..v0.1.119` already have release evidence above; production/main closeout status differs by release and remains recorded in each section.
 8. `v0.1.123` is committed on `release/v0.1.123`, pushed to `origin`, promoted to `main` at `8fde6dfc`, backed up, deployed to shared test, ToC production, and ToB/FX production, and verified with generic smoke checks plus the `134_affiliate_ledger_audit_snapshots.sql` migration check. Marker tag `fork/v0.1.123` points at the deployed main merge commit.
+9. `v0.1.124` is committed on `release/v0.1.124`, pushed to `origin`, backed up, deployed to shared test at `b4e29f33`, and deployed to ToC production plus ToB/FX at `4016b24e`. All three environments were verified with generic smoke checks plus the `136_migrate_referrals_to_affiliates.sql` migration relationship check. Main promotion and fork marker remain pending.
