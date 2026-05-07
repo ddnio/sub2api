@@ -1129,13 +1129,6 @@ func normalizeClaudeOAuthRequestBody(body []byte, modelID string, opts claudeOAu
 		}
 	}
 
-	if gjson.GetBytes(out, "tool_choice").Exists() {
-		if next, ok := deleteJSONPathBytes(out, "tool_choice"); ok {
-			out = next
-			modified = true
-		}
-	}
-
 	// context_management：thinking.type 为 enabled/adaptive 时，真实 CLI 会自动
 	// 附带 {"edits":[{"type":"clear_thinking_20251015","keep":"all"}]}。
 	// 客户端显式传了就透传；否则按 CLI 行为补齐。

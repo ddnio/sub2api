@@ -97,6 +97,7 @@ Current gate:
 | `v0.1.115..v0.1.116` | Final | Direct merge model used; merged to `main` at `18b1b72d`. |
 | `v0.1.116..v0.1.117` | Deployed / closeout pending | Direct merge model used; `origin/release/v0.1.117` at `01c8e36e` records test and production deployment evidence. `main` merge and `fork/v0.1.117` marker closeout remain required before final `v0.1.118` closeout. |
 | `v0.1.117..v0.1.118` | Test deployed | `origin/release/v0.1.118` at `e9fb884d` directly merged upstream `v0.1.118` at `4d128e9c`; local backend/frontend gates and shared test-environment smoke passed. Production deployment and marker/main closeout require explicit release approval. |
+| `v0.1.119..v0.1.123` | Ready for test deploy | Scratch direct merge `f499c563` plus final repair pass is ready to promote to `origin/release/v0.1.123`; shared-test deployment must take a DB backup first because migration `134_affiliate_ledger_audit_snapshots.sql` is new. |
 
 Existing `fork/v0.1.111` through `fork/v0.1.114` tags must not be moved or deleted. They are historical fork sync markers. Any correctness gap found during recheck is fixed forward on latest `main`.
 
@@ -955,29 +956,29 @@ Range: `v0.1.119..v0.1.120`.
 | Upstream source | Area | Local state | Action | Notes |
 | --- | --- | --- | --- | --- |
 | `c056db74` | Version sync to v0.1.119 | Chore only | SKIP | Upstream version stamp. |
-| `ed0c85a1` / PR #2006 | OpenAI image explicit session | Held image feature | HOLD | Image family. |
-| `c92b88e3` / PR #1996 | Claude Code empty `Read.pages` | Present | SKIP | Local sanitize tests recorded in phase2. |
-| `b0a2252e` / PR #2051 | OpenAI Fast/Flex policy | Held feature | HOLD | Broad policy/config/admin surface. |
+| `ed0c85a1` / PR #2006 | OpenAI image explicit session | Direct-merged and audited | MERGED | Image request/session handling is present in the direct merge candidate; covered by OpenAI image and service package tests from the merge gate. |
+| `c92b88e3` / PR #1996 | Claude Code empty `Read.pages` | Present / direct-merged compatible | MERGED | Local sanitize behavior remains present and upstream-compatible after the direct merge. |
+| `b0a2252e` / PR #2051 | OpenAI Fast/Flex policy | Direct-merged and audited | MERGED | Fast/Flex policy and WebSocket tests are present in the direct merge candidate. |
 | `da4b078d` | Sponsors update | Churn | SKIP | Not product/runtime relevant. |
-| `a16c6650` / PR #2090 | Ops retention zero | Potential ops behavior | HOLD | Requires ops-specific decision and tests. |
-| `bf43fb4e` / PR #2044 | OpenAI image API key versioned base URL | Held image feature | HOLD | Image family. |
-| `63ef2310` / PR #1977 | Vertex service account | Held feature | HOLD | Provider feature surface. |
-| `93d91e20` | Vertex audit fixes | Held feature | HOLD | Same Vertex family. |
-| `4d676ddd` / PR #2066 | Anthropic stream EOF failover | Present | SKIP | Local stream failover tests recorded in phase2. |
-| `ff6fa020` / PR #2058 | Responses function `tool_choice` | Merged/Present | MERGED | PR #22 and #24 covered relevant local gaps. |
-| `27cad10d` / PR #2030 | Admin bulk edit/page compact | Merged | MERGED | Covered by PR #28/#29. |
+| `a16c6650` / PR #2090 | Ops retention zero | Direct-merged and audited | MERGED | Ops cleanup remains guarded for partial deployments; no migration/config rollback requirement beyond normal smoke/log checks. |
+| `bf43fb4e` / PR #2044 | OpenAI image API key versioned base URL | Direct-merged and audited | MERGED | Image API key versioned base URL behavior is present in the direct merge candidate. |
+| `63ef2310` / PR #1977 | Vertex service account | Direct-merged and audited | MERGED | Vertex service account provider support is present with service tests in the merge candidate. |
+| `93d91e20` | Vertex audit fixes | Direct-merged and audited | MERGED | Follow-up Vertex audit fixes are included with the same provider feature surface. |
+| `4d676ddd` / PR #2066 | Anthropic stream EOF failover | Direct-merged and audited | MERGED | Local stream/failover behavior remains covered by service/apicompat tests. |
+| `ff6fa020` / PR #2058 | Responses function `tool_choice` | Direct-merged and repaired | MERGED | Final review caught and fixed the Claude OAuth `tool_choice` regression: non-empty tools preserve `tool_choice`; empty/missing tools remove it. |
+| `27cad10d` / PR #2030 | Admin bulk edit/page compact | Direct-merged and audited | MERGED | Account bulk edit scope/compact UI and backend contract are included; targeted admin/account frontend tests were part of the merge gate. |
 | `7ce5b832` | Remove superpowers docs | Churn | SKIP | Local docs/tooling decision. |
-| `46f06b24` / PR #2050 | OpenAI compact payload fields | Present/Partial | SKIP | Covered enough by phase2 request normalization unless new failing evidence appears. |
-| `7f8f3fe0` / PR #2100 | Codex edit resend continuation | Present/Partial | SKIP | Do not port more without failing WS/Codex continuation evidence. |
-| `17ced6b7` / PR #2027 | Codex API key rate limit reset | Unproven | HOLD | Needs dedicated account/rate-limit audit before code. |
-| `8d6d3154` / PR #2068 | Drop reasoning input items | Merged | MERGED | Covered by PR #22. |
-| `5e54d492` | Test assertion lint | Merged/Present | MERGED | Covered in phase2 test style where local tests exist. |
-| `55a7fa1e` / PR #2005 | Strip unsupported passthrough fields | Merged | MERGED | Covered by PR #22. |
-| `f972a2fa` / PR #1990 | zstd request decompression | Merged | MERGED | Covered by PR #19. |
-| `40feb86b` | Decompression guard / errcheck lint | Merged | MERGED | Covered by PR #19. |
-| `8bf2a7b8` | Scheduler snapshot race / usage throttle | Merged/Partial | MERGED/PARTIAL | Backend scheduler safety covered by PR #19 and #33; frontend usage throttle file absent in fork. |
+| `46f06b24` / PR #2050 | OpenAI compact payload fields | Direct-merged and audited | MERGED | Compact payload field handling is present in the OpenAI/Codex normalization surface. |
+| `7f8f3fe0` / PR #2100 | Codex edit resend continuation | Direct-merged and audited | MERGED | Codex continuation behavior is present after the direct merge; earlier WS item-reference guard rails remain covered. |
+| `17ced6b7` / PR #2027 | Codex API key rate limit reset | Direct-merged and audited | MERGED | API-key rate-limit reset behavior is included in the merge candidate. |
+| `8d6d3154` / PR #2068 | Drop reasoning input items | Direct-merged and audited | MERGED | Unsupported reasoning/input item dropping remains covered by OpenAI compatibility tests. |
+| `5e54d492` | Test assertion lint | Direct-merged / present | MERGED | Test style changes are compatible with local tests. |
+| `55a7fa1e` / PR #2005 | Strip unsupported passthrough fields | Direct-merged and audited | MERGED | Passthrough field stripping remains covered by OpenAI compatibility tests. |
+| `f972a2fa` / PR #1990 | zstd request decompression | Direct-merged / present | MERGED | Request decompression support remains present in `httputil`; targeted package tests passed in the merge gate. |
+| `40feb86b` | Decompression guard / errcheck lint | Direct-merged / present | MERGED | Decompression guard and lint-compatible behavior are present. |
+| `8bf2a7b8` | Scheduler snapshot race / usage throttle | Direct-merged and audited | MERGED | Scheduler race fixes remain present; frontend usage queue intentionally matches upstream v0.1.120+ immediate execution. |
 
-Gate status: blocked by HOLD / dedicated-audit items. Do not mark `v0.1.120` complete until these are resolved after `v0.1.119`.
+Gate status: closed for the `v0.1.119..v0.1.120` release interval in the `v0.1.123` direct-merge candidate. No release-local `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` remains for this interval.
 
 ### v0.1.121
 
@@ -986,24 +987,100 @@ Range: `v0.1.120..v0.1.121`.
 | Upstream source | Area | Local state | Action | Notes |
 | --- | --- | --- | --- | --- |
 | `8ad099ba` | Version sync to v0.1.120 | Chore only | SKIP | Upstream version stamp. |
-| `733627cf` | Sticky session scheduling | Merged/Partial | MERGED/PARTIAL | PR #30 and #33 ported proven correctness hunks; logging/refactor-only and unproven handler refresh hunks skipped. |
-| `094e1171` | WS previous response inference | Merged | MERGED | PR #34 ported upstream guard rails. |
-| `73b87299` | Anthropic global cache TTL setting | Divergent product/config | HOLD | Local account-level TTL override already exists; global setting needs product decision. |
-| `9c448f89` / PR #2118 | Restore pagination localStorage | Merged/Present | MERGED | Admin/frontend table preference work covered by PR #28/#29. |
-| `9d801595` | Admin settings contract tests | Present/Docs closeout | SKIP | No runtime gap proven after PR #28/#29. |
+| `733627cf` | Sticky session scheduling | Direct-merged / present | MERGED | Proven scheduler metadata hunks were already ported; direct merge did not remove fork scheduler safety tests. |
+| `094e1171` | WS previous response inference | Direct-merged / present | MERGED | PR #34 guard rails remain present after the direct merge. |
+| `73b87299` | Anthropic global cache TTL setting | Direct-merged and accepted | MERGED | Global setting is now accepted in this release candidate alongside the existing account-level TTL override. |
+| `9c448f89` / PR #2118 | Restore pagination localStorage | Direct-merged and audited | MERGED | `usePersistedPageSize` preserves user localStorage preference before config fallback; final review added regression coverage. |
+| `9d801595` | Admin settings contract tests | Direct-merged / present | MERGED | Admin settings contract coverage remains compatible with local API shape. |
 
-Gate status: blocked by Anthropic global TTL HOLD. Do not mark `v0.1.121` complete until this is explicitly accepted for later, rejected, or long-term frozen.
+Gate status: closed for the `v0.1.120..v0.1.121` release interval in the `v0.1.123` direct-merge candidate. No release-local `HOLD`, `REOPENED`, `PORT`, or `PARTIAL` remains for this interval.
+
+### v0.1.122
+
+Range: `v0.1.121..v0.1.122`.
+
+| Upstream source | Area | Local state | Action | Notes |
+| --- | --- | --- | --- | --- |
+| `48912014` | Version sync to v0.1.121 | Chore only | SKIP | Upstream version stamp. |
+| `b2bdba78` | Image request handling stabilization | Direct-merged and audited | MERGED | Image request handling changes are included in the merge candidate. |
+| `72d5ee4c` | Drain OpenAI compat streams for usage | Direct-merged and audited | MERGED | OpenAI compat stream usage handling is covered by targeted service/apicompat tests. |
+| `47fb38bc` | Record zero OpenAI usage logs | Direct-merged and audited | MERGED | Zero-usage logging behavior is included in the usage/billing surface. |
+| `76e2503d` / PR #2169 | Admin affiliate records | Direct-merged and audited | MERGED | Admin affiliate records UI/API are included; migration `134_affiliate_ledger_audit_snapshots.sql` adds audit-only ledger columns and indexes. |
+| `0b84d12d` | Affiliate audit record sources | Direct-merged and repaired | MERGED | Final review added order-source passthrough coverage and fixed the integration test call signature for the new `sourceOrderID` parameter. |
+| `dc09b367` / PR #2143 | OpenAI API key Claude Code default routing | Direct-merged and audited | MERGED | API-key Claude Code routing defaults are present in the OpenAI gateway surface. |
+| `4cbf518f` | Preserve raw chat completions usage billing | Direct-merged and audited | MERGED | Raw chat completions usage billing behavior is included in the merge candidate. |
+| `ff50b8b6` / PR #2170 | OpenAI WS passthrough reasoning effort | Direct-merged and audited | MERGED | WS passthrough `reasoning_effort` handling is included. |
+| `c129825f` / PR #2116 | OpenAI bulk edit compact config | Direct-merged and audited | MERGED | Admin bulk-edit compact config is included in the account settings UI/API surface. |
+
+Gate status: closed for the `v0.1.121..v0.1.122` release interval in the `v0.1.123` direct-merge candidate. Migration `134_affiliate_ledger_audit_snapshots.sql` requires the normal test database backup before shared-test deployment.
+
+### v0.1.123
+
+Range: `v0.1.122..v0.1.123`.
+
+| Upstream source | Area | Local state | Action | Notes |
+| --- | --- | --- | --- | --- |
+| `d9e68f2c` | Version sync to v0.1.122 | Chore only | SKIP | Upstream tag still carries `backend/cmd/server/VERSION=0.1.122`; the fork release candidate sets `0.1.123` for test-environment smoke identification. |
+| `df722c9a` | Remove OpenAI unknown model fallback | Direct-merged and audited | MERGED | Unknown OpenAI models are no longer silently replaced by group defaults; merge gate includes OpenAI compatibility and model-normalization tests. |
+
+Direct-merge candidate:
+
+- Scratch merge commit: `f499c563` (`Merge upstream v0.1.123 into release evaluation`) with first parent `f2fdf6be` and second parent upstream `v0.1.123` (`df722c9a`).
+- Candidate release branch to create/push for testing: `release/v0.1.123`.
+- `backend/cmd/server/VERSION` is set to `0.1.123` for shared-test smoke identification.
+- No direct push to `upstream`; deployment branch must be pushed to `origin`.
+
+Local release-audit repairs after the direct merge:
+
+- Preserve Claude OAuth `tool_choice` when `tools` is non-empty, while retaining upstream removal for empty/missing tools.
+- Restore backend-mode public-route helper behavior for auth callbacks, pending-auth pages, payment result, and Stripe payment routes.
+- Restore payment feature-flag enforcement for user/admin payment routes; `/payment`, `/purchase`, `/orders`, and `/payment/qrcode` are `requiresPayment: true`, while public result/Stripe routes are explicit `false`.
+- Align affiliate order-source auditing with the new `AccrueQuota(..., sourceOrderID *int64)` contract and fix the repository integration compile surface.
+- Align pagination persistence tests with upstream localStorage-first behavior.
+- Keep `usageLoadQueue` immediate execution, matching upstream `v0.1.120` through `v0.1.123`.
+
+Local verification before shared test deployment:
+
+- `go test -tags integration ./internal/repository -run TestAffiliateRepository_AccrueQuota_FreezeAndThaw -count=0`
+- `npm run test:run -- src/router/__tests__/guards.spec.ts src/router/__tests__/wechat-route.spec.ts src/utils/__tests__/usageLoadQueue.spec.ts src/composables/__tests__/usePersistedPageSize.spec.ts` passed: 4 files / 51 tests.
+- `go test -count=1 -tags unit ./internal/service` passed in 95.361s.
+- `npm run lint:check`
+- `npm run typecheck`
+- `git diff --check`
+- Strict conflict-marker scan had no matches.
+- Final independent reviews: architect `APPROVED/CLEAR`; code-reviewer `APPROVE`, no blocking findings.
+
+Shared test deployment preflight:
+
+- Take a test database backup before deploy because `134_affiliate_ledger_audit_snapshots.sql` is a new migration in the candidate.
+- Precheck test DB columns before deploy:
+
+```sql
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'user_affiliate_ledger'
+  AND column_name IN (
+    'source_order_id',
+    'balance_after',
+    'aff_quota_after',
+    'aff_frozen_quota_after',
+    'aff_history_quota_after'
+  )
+ORDER BY column_name;
+```
+
+- Expected before first `v0.1.123` test deploy: no rows for the five new columns unless a previous dry run already applied `134_affiliate_ledger_audit_snapshots.sql`.
+- After deploy, confirm `schema_migrations` records `134_affiliate_ledger_audit_snapshots.sql`, the five columns exist, `/health` returns `{"status":"ok"}`, unauthenticated `/v1/models` returns `401`, and the severe-log scan has no unexplained `panic|fatal|error|migration|failed|traceback|异常` matches.
+
+Gate status: ready to commit/push `release/v0.1.123` and deploy to shared test after the database backup/preflight is recorded. Production deployment and `main`/`fork/v0.1.123` closeout remain out of scope until test smoke passes and receives separate approval.
 
 ## Remaining Decision List
 
-- Decide whether to ever adopt upstream auth identity/pending OAuth migrations.
-- Decide whether affiliate invite/rebate belongs in this fork.
-- Decide whether channel monitor/insights belongs in this fork.
-- Decide whether Vertex service account and Fast/Flex policy are product goals.
-- Decide how to handle the OpenAI image family against existing fork behavior.
-- Decide whether global Anthropic cache TTL is desired in addition to local account-level TTL override.
-- Decide whether Codex API key rate-limit reset from PR #2027 is needed after a focused local audit.
-- Decide whether ops retention zero from PR #2090 is desired after an ops-specific review.
+- Record shared test deployment evidence for `release/v0.1.123` after deployment.
+- Decide production rollout timing only after test smoke and any operator-driven payment/affiliate UI checks pass.
+- Merge `release/v0.1.123` to `main` and create `fork/v0.1.123` only after production verification.
+- Full repository test suite was not run for the final repair pass; targeted backend/frontend regressions, lint, typecheck, diff checks, and independent review are the current test-deploy gate evidence.
 
 ## Current Next Action
 
@@ -1013,5 +1090,5 @@ Gate status: blocked by Anthropic global TTL HOLD. Do not mark `v0.1.121` comple
 4. `v0.1.112..v0.1.113` is final under the stricter rule, merged to `main`, and deployed/verified for ToC test, ToC production, and ToB production.
 5. `v0.1.113..v0.1.114` is final under the stricter rule; PR #44 runtime changes were already deployed and this final recheck is docs-only.
 6. `v0.1.114..v0.1.115` is final under the stricter rule; merged to `main`, deployed/verified for ToC test, ToC production, and ToB production, and tagged as `fork/v0.1.115`.
-7. Process `v0.1.115..v0.1.116` before `v0.1.116..v0.1.117`.
-8. Do not start later-release runtime work out of order unless it is an emergency production fix and is recorded as such.
+7. `v0.1.115..v0.1.116`, `v0.1.116..v0.1.117`, `v0.1.117..v0.1.118`, and `v0.1.118..v0.1.119` already have release evidence above; production/main closeout status differs by release and remains recorded in each section.
+8. Commit the `v0.1.123` release candidate on `release/v0.1.123`, push it to `origin`, back up the shared test database, then deploy and verify test with the generic smoke checks plus the `134_affiliate_ledger_audit_snapshots.sql` migration check.

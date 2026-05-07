@@ -53,6 +53,7 @@ interface MockAuthState {
   isSimpleMode: boolean
   backendModeEnabled: boolean
   hasPendingAuthSession: boolean
+  paymentEnabled?: boolean
 }
 
 /**
@@ -78,7 +79,14 @@ function simulateGuard(
       return authState.isAdmin ? '/admin/dashboard' : '/dashboard'
     }
     if (authState.backendModeEnabled && !authState.isAuthenticated) {
-      const allowed = ['/login', '/key-usage', '/setup', '/payment/result']
+      const allowed = [
+        '/login',
+        '/key-usage',
+        '/setup',
+        '/payment/result',
+        '/payment/stripe',
+        '/payment/stripe-popup',
+      ]
       const callbackPaths = [
         '/auth/callback',
         '/auth/linuxdo/callback',
@@ -108,6 +116,10 @@ function simulateGuard(
     return '/dashboard'
   }
 
+  if (toMeta.requiresPayment && authState.paymentEnabled === false) {
+    return authState.isAdmin ? '/admin/dashboard' : '/dashboard'
+  }
+
   // 简易模式限制
   if (authState.isSimpleMode) {
     const restrictedPaths = [
@@ -127,7 +139,14 @@ function simulateGuard(
     if (authState.isAuthenticated && authState.isAdmin) {
       return null
     }
-    const allowed = ['/login', '/key-usage', '/setup', '/payment/result']
+    const allowed = [
+      '/login',
+      '/key-usage',
+      '/setup',
+      '/payment/result',
+      '/payment/stripe',
+      '/payment/stripe-popup',
+    ]
     const callbackPaths = [
       '/auth/callback',
       '/auth/linuxdo/callback',
@@ -474,6 +493,23 @@ describe('路由守卫逻辑', () => {
       expect(redirect).toBeNull()
     })
 
+    it('unauthenticated: Stripe payment public routes are allowed', () => {
+      const authState: MockAuthState = {
+        isAuthenticated: false,
+        isAdmin: false,
+        isSimpleMode: false,
+        backendModeEnabled: true,
+        hasPendingAuthSession: false,
+      }
+
+      expect(
+        simulateGuard('/payment/stripe', { requiresAuth: false }, authState)
+      ).toBeNull()
+      expect(
+        simulateGuard('/payment/stripe-popup', { requiresAuth: false }, authState)
+      ).toBeNull()
+    })
+
     it('unauthenticated: /register is allowed when a pending auth session exists', () => {
       const authState: MockAuthState = {
         isAuthenticated: false,
@@ -496,6 +532,90 @@ describe('路由守卫逻辑', () => {
       }
       const redirect = simulateGuard('/email-verify', { requiresAuth: false }, authState)
       expect(redirect).toBe('/login')
+    })
+  })
+
+  describe('Payment requirement', () => {
+    it('marks user payment routes as payment-required', async () => {
+      const { default: router } = await import('../index')
+      const metaFor = (path: string) => router.getRoutes().find((route) => route.path === path)?.meta
+
+      for (const path of ['/payment', '/purchase', '/orders', '/payment/qrcode']) {
+        expect(metaFor(path)?.requiresPayment).toBe(true)
+      }
+
+      for (const path of ['/payment/result', '/payment/stripe', '/payment/stripe-popup']) {
+        expect(metaFor(path)?.requiresPayment).toBe(false)
+      }
+    })
+
+    it('redirects user payment pages when internal payment is disabled', () => {
+      const authState: MockAuthState = {
+        isAuthenticated: true,
+        isAdmin: false,
+        isSimpleMode: false,
+        backendModeEnabled: false,
+        hasPendingAuthSession: false,
+        paymentEnabled: false,
+      }
+
+      for (const path of ['/payment', '/purchase', '/orders', '/payment/qrcode']) {
+        const redirect = simulateGuard(path, { requiresPayment: true }, authState)
+        expect(redirect).toBe('/dashboard')
+      }
+    })
+
+    it('redirects admin payment pages when internal payment is disabled', () => {
+      const authState: MockAuthState = {
+        isAuthenticated: true,
+        isAdmin: true,
+        isSimpleMode: false,
+        backendModeEnabled: false,
+        hasPendingAuthSession: false,
+        paymentEnabled: false,
+      }
+
+      const redirect = simulateGuard(
+        '/admin/orders',
+        { requiresAdmin: true, requiresPayment: true },
+        authState
+      )
+      expect(redirect).toBe('/admin/dashboard')
+    })
+
+    it('allows admin payment pages when internal payment is enabled', () => {
+      const authState: MockAuthState = {
+        isAuthenticated: true,
+        isAdmin: true,
+        isSimpleMode: false,
+        backendModeEnabled: false,
+        hasPendingAuthSession: false,
+        paymentEnabled: true,
+      }
+
+      const redirect = simulateGuard(
+        '/admin/orders',
+        { requiresAdmin: true, requiresPayment: true },
+        authState
+      )
+      expect(redirect).toBeNull()
+    })
+
+    it('allows admin payment pages while public settings are not loaded', () => {
+      const authState: MockAuthState = {
+        isAuthenticated: true,
+        isAdmin: true,
+        isSimpleMode: false,
+        backendModeEnabled: false,
+        hasPendingAuthSession: false,
+      }
+
+      const redirect = simulateGuard(
+        '/admin/orders',
+        { requiresAdmin: true, requiresPayment: true },
+        authState
+      )
+      expect(redirect).toBeNull()
     })
   })
 })

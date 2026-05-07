@@ -202,7 +202,7 @@ func TestAffiliateRepository_AccrueQuota_FreezeAndThaw(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, bound)
 
-	applied, err := repo.AccrueQuota(txCtx, inviter.ID, invitee.ID, 4.25, 24)
+	applied, err := repo.AccrueQuota(txCtx, inviter.ID, invitee.ID, 4.25, 24, nil)
 	require.NoError(t, err)
 	require.True(t, applied)
 

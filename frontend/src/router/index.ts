@@ -9,6 +9,7 @@ import { useAppStore } from '@/stores/app'
 import { useAdminSettingsStore } from '@/stores/adminSettings'
 import { useNavigationLoadingState } from '@/composables/useNavigationLoading'
 import { useRoutePrefetch } from '@/composables/useRoutePrefetch'
+import { FeatureFlags, isFeatureFlagEnabled } from '@/utils/featureFlags'
 import { resolveDocumentTitle } from './title'
 
 /**
@@ -213,7 +214,8 @@ const routes: RouteRecordRaw[] = [
       requiresAdmin: false,
       title: 'Recharge / Plans',
       titleKey: 'payment.title',
-      descriptionKey: 'payment.description'
+      descriptionKey: 'payment.description',
+      requiresPayment: true
     }
   },
   {
@@ -297,7 +299,8 @@ const routes: RouteRecordRaw[] = [
       requiresAdmin: false,
       title: 'Purchase Subscription',
       titleKey: 'nav.buySubscription',
-      descriptionKey: 'purchase.description'
+      descriptionKey: 'purchase.description',
+      requiresPayment: true
     }
   },
   {
@@ -308,7 +311,8 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       requiresAdmin: false,
       title: 'My Orders',
-      titleKey: 'nav.myOrders'
+      titleKey: 'nav.myOrders',
+      requiresPayment: true
     }
   },
   {
@@ -319,7 +323,8 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       requiresAdmin: false,
       title: 'Payment',
-      titleKey: 'payment.qr.scanToPay'
+      titleKey: 'payment.qr.scanToPay',
+      requiresPayment: true
     }
   },
   {
@@ -330,7 +335,8 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: false,
       requiresAdmin: false,
       title: 'Payment Result',
-      titleKey: 'payment.result.success'
+      titleKey: 'payment.result.success',
+      requiresPayment: false
     }
   },
   {
@@ -669,7 +675,38 @@ let authInitialized = false
 const navigationLoading = useNavigationLoadingState()
 // 延迟初始化预加载，传入 router 实例
 let routePrefetch: ReturnType<typeof useRoutePrefetch> | null = null
-const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result', '/payment/stripe', '/payment/stripe-popup', '/auth/wechat/callback', '/auth/wechat/payment/callback']
+const BACKEND_MODE_ALLOWED_PATHS = [
+  '/login',
+  '/key-usage',
+  '/setup',
+  '/payment/result',
+  '/payment/stripe',
+  '/payment/stripe-popup'
+]
+const BACKEND_MODE_CALLBACK_PATHS = [
+  '/auth/callback',
+  '/auth/linuxdo/callback',
+  '/auth/oidc/callback',
+  '/auth/wechat/callback',
+  '/auth/wechat/payment/callback'
+]
+const BACKEND_MODE_PENDING_AUTH_PATHS = ['/register', '/email-verify']
+
+function isBackendModePublicRouteAllowed(path: string, hasPendingAuthSession: boolean): boolean {
+  if (BACKEND_MODE_ALLOWED_PATHS.some((allowedPath) => path === allowedPath || path.startsWith(allowedPath))) {
+    return true
+  }
+
+  if (BACKEND_MODE_CALLBACK_PATHS.some((callbackPath) => path === callbackPath)) {
+    return true
+  }
+
+  if (hasPendingAuthSession && BACKEND_MODE_PENDING_AUTH_PATHS.some((allowedPath) => path === allowedPath)) {
+    return true
+  }
+
+  return false
+}
 
 router.beforeEach((to, _from, next) => {
   // 开始导航加载状态
@@ -720,9 +757,9 @@ router.beforeEach((to, _from, next) => {
       next(authStore.isAdmin ? '/admin/dashboard' : '/dashboard')
       return
     }
-    // Backend mode: block public pages for unauthenticated users (except login, key-usage, setup)
+    // Backend mode: block public pages except explicitly allowed public/auth routes.
     if (appStore.backendModeEnabled && !authStore.isAuthenticated) {
-      const isAllowed = BACKEND_MODE_ALLOWED_PATHS.some((p) => to.path === p || to.path.startsWith(p))
+      const isAllowed = isBackendModePublicRouteAllowed(to.path, authStore.hasPendingAuthSession)
       if (!isAllowed) {
         next('/login')
         return
@@ -749,6 +786,14 @@ router.beforeEach((to, _from, next) => {
     return
   }
 
+  // Check payment requirement (internal payment system only)
+  if (to.meta.requiresPayment) {
+    if (!isFeatureFlagEnabled(FeatureFlags.payment)) {
+      next(authStore.isAdmin ? '/admin/dashboard' : '/dashboard')
+      return
+    }
+  }
+
   // 简易模式下限制访问某些页面
   if (authStore.isSimpleMode) {
     const restrictedPaths = [
@@ -772,7 +817,7 @@ router.beforeEach((to, _from, next) => {
       next()
       return
     }
-    const isAllowed = BACKEND_MODE_ALLOWED_PATHS.some((p) => to.path === p || to.path.startsWith(p))
+    const isAllowed = isBackendModePublicRouteAllowed(to.path, authStore.hasPendingAuthSession)
     if (!isAllowed) {
       next('/login')
       return

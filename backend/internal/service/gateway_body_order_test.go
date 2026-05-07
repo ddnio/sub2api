@@ -128,6 +128,16 @@ func TestNormalizeClaudeOAuthRequestBody_PreservesTopLevelFieldOrder(t *testing.
 	require.Contains(t, resultStr, `"max_tokens":128000`)
 }
 
+func TestNormalizeClaudeOAuthRequestBody_PreservesToolChoiceWhenToolsPresent(t *testing.T) {
+	body := []byte(`{"model":"claude-3-5-sonnet-latest","messages":[],"tools":[{"name":"sessions_list","input_schema":{}}],"tool_choice":{"type":"tool","name":"sessions_list"}}`)
+
+	result, _ := normalizeClaudeOAuthRequestBody(body, "claude-3-5-sonnet-latest", claudeOAuthNormalizeOptions{})
+
+	require.Len(t, gjson.GetBytes(result, "tools").Array(), 1)
+	require.Equal(t, "tool", gjson.GetBytes(result, "tool_choice.type").String())
+	require.Equal(t, "sessions_list", gjson.GetBytes(result, "tool_choice.name").String())
+}
+
 func TestInjectClaudeCodePrompt_PreservesFieldOrder(t *testing.T) {
 	body := []byte(`{"alpha":1,"system":[{"id":"block-1","type":"text","text":"Custom"}],"messages":[],"omega":2}`)
 
