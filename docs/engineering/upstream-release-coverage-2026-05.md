@@ -15,9 +15,9 @@ Implementation still moves by upstream PR/merge commit or smaller reviewed hunks
 ## Baseline
 
 - Local base: `origin/main` at `eb968255 docs(upstream-sync): reset release gate plan (#46)`.
-- Upstream published-tag scope: latest local upstream tag `v0.1.121` at `9d801595 test: 更新管理员设置契约字段`.
-- Upstream main observed locally: `b2bdba78 stabilize image request handling`; this is not in the published tag scope yet.
-- Latest upstream tag in scope: `v0.1.121`.
+- Upstream published-tag scope: latest local upstream tag `v0.1.123` at `df722c9a fix(openai): remove fallback to group default for unknown models`.
+- Upstream main observed locally: `d52da453 Merge pull request #2202 from Michael-Jetson/main`; this is not in the published tag scope yet.
+- Latest upstream tag in scope: `v0.1.123`.
 - Work branch: `sync/release-v0.1.111-completion`.
 - Worktree: `.claude/worktrees/release-gate-recheck-v0.1.111-v0.1.114`.
 - Plan: `docs/plans/2026-05-03-upstream-release-sync-reset.md`.
@@ -97,7 +97,7 @@ Current gate:
 | `v0.1.115..v0.1.116` | Final | Direct merge model used; merged to `main` at `18b1b72d`. |
 | `v0.1.116..v0.1.117` | Deployed / closeout pending | Direct merge model used; `origin/release/v0.1.117` at `01c8e36e` records test and production deployment evidence. `main` merge and `fork/v0.1.117` marker closeout remain required before final `v0.1.118` closeout. |
 | `v0.1.117..v0.1.118` | Test deployed | `origin/release/v0.1.118` at `e9fb884d` directly merged upstream `v0.1.118` at `4d128e9c`; local backend/frontend gates and shared test-environment smoke passed. Production deployment and marker/main closeout require explicit release approval. |
-| `v0.1.119..v0.1.123` | Ready for test deploy | Scratch direct merge `f499c563` plus final repair pass is ready to promote to `origin/release/v0.1.123`; shared-test deployment must take a DB backup first because migration `134_affiliate_ledger_audit_snapshots.sql` is new. |
+| `v0.1.119..v0.1.123` | Test deployed | `origin/release/v0.1.123` at `317c9d3d` directly merged upstream through `v0.1.123`, passed the local release gate, took the required test DB backup, and is deployed/smoke-verified on shared test. Production deployment and marker/main closeout require separate approval. |
 
 Existing `fork/v0.1.111` through `fork/v0.1.114` tags must not be moved or deleted. They are historical fork sync markers. Any correctness gap found during recheck is fixed forward on latest `main`.
 
@@ -1026,7 +1026,7 @@ Range: `v0.1.122..v0.1.123`.
 Direct-merge candidate:
 
 - Scratch merge commit: `f499c563` (`Merge upstream v0.1.123 into release evaluation`) with first parent `f2fdf6be` and second parent upstream `v0.1.123` (`df722c9a`).
-- Candidate release branch to create/push for testing: `release/v0.1.123`.
+- Release branch pushed for testing: `origin/release/v0.1.123` at `317c9d3d` (`Prepare v0.1.123 for shared test deployment`).
 - `backend/cmd/server/VERSION` is set to `0.1.123` for shared-test smoke identification.
 - No direct push to `upstream`; deployment branch must be pushed to `origin`.
 
@@ -1073,11 +1073,20 @@ ORDER BY column_name;
 - Expected before first `v0.1.123` test deploy: no rows for the five new columns unless a previous dry run already applied `134_affiliate_ledger_audit_snapshots.sql`.
 - After deploy, confirm `schema_migrations` records `134_affiliate_ledger_audit_snapshots.sql`, the five columns exist, `/health` returns `{"status":"ok"}`, unauthenticated `/v1/models` returns `401`, and the severe-log scan has no unexplained `panic|fatal|error|migration|failed|traceback|异常` matches.
 
-Gate status: ready to commit/push `release/v0.1.123` and deploy to shared test after the database backup/preflight is recorded. Production deployment and `main`/`fork/v0.1.123` closeout remain out of scope until test smoke passes and receives separate approval.
+Shared test deployment evidence:
+
+- Branch deployed: `origin/release/v0.1.123` at `317c9d3d`; remote checkout `/data/service/sub2api` is on `release/v0.1.123` tracking `origin/release/v0.1.123`.
+- Test database backup: `/home/nio/backups/sub2api-test/sub2api_test_pre_v0.1.123_20260507_025651.dump`, size `7.3M` (`7586989` bytes), mode `600`.
+- Preflight: before deploy, the five new `user_affiliate_ledger` columns from `134_affiliate_ledger_audit_snapshots.sql` were absent.
+- Deploy command: on `108.160.133.141`, ran `bash deploy/deploy-server.sh test`; container `sub2api-test` restarted healthy on `127.0.0.1:8081` at `2026-05-07T10:59:55+08`.
+- Smoke: local `/health` returned `{"status":"ok"}`, public `https://router-test.nanafox.com/health` returned `{"status":"ok"}`, and unauthenticated local/public `/v1/models` returned `401`.
+- Migration smoke: test DB records `134_affiliate_ledger_audit_snapshots.sql` in `schema_migrations.filename` with checksum `80fb2e9033d58cc611412c97301e0c66a86a8bfcd178abfe7877b93519cd2d8a`; columns `source_order_id`, `balance_after`, `aff_quota_after`, `aff_frozen_quota_after`, and `aff_history_quota_after` exist on `user_affiliate_ledger`.
+- Post-deploy severe-log scan for `panic|fatal|error|migration|failed|traceback|异常` returned no matches. Startup logs still include existing configuration warnings for disabled URL allowlist, empty trusted proxies, and missing CORS origins.
+
+Gate status: `v0.1.123` is pushed to `origin/release/v0.1.123` and deployed/smoke-verified on shared test. Production deployment and `main`/`fork/v0.1.123` closeout remain out of scope until explicit release approval.
 
 ## Remaining Decision List
 
-- Record shared test deployment evidence for `release/v0.1.123` after deployment.
 - Decide production rollout timing only after test smoke and any operator-driven payment/affiliate UI checks pass.
 - Merge `release/v0.1.123` to `main` and create `fork/v0.1.123` only after production verification.
 - Full repository test suite was not run for the final repair pass; targeted backend/frontend regressions, lint, typecheck, diff checks, and independent review are the current test-deploy gate evidence.
@@ -1091,4 +1100,4 @@ Gate status: ready to commit/push `release/v0.1.123` and deploy to shared test a
 5. `v0.1.113..v0.1.114` is final under the stricter rule; PR #44 runtime changes were already deployed and this final recheck is docs-only.
 6. `v0.1.114..v0.1.115` is final under the stricter rule; merged to `main`, deployed/verified for ToC test, ToC production, and ToB production, and tagged as `fork/v0.1.115`.
 7. `v0.1.115..v0.1.116`, `v0.1.116..v0.1.117`, `v0.1.117..v0.1.118`, and `v0.1.118..v0.1.119` already have release evidence above; production/main closeout status differs by release and remains recorded in each section.
-8. Commit the `v0.1.123` release candidate on `release/v0.1.123`, push it to `origin`, back up the shared test database, then deploy and verify test with the generic smoke checks plus the `134_affiliate_ledger_audit_snapshots.sql` migration check.
+8. `v0.1.123` is committed on `release/v0.1.123`, pushed to `origin`, backed up, deployed to shared test, and verified with the generic smoke checks plus the `134_affiliate_ledger_audit_snapshots.sql` migration check. Next release action is production rollout approval, then `main` merge and `fork/v0.1.123` marker closeout after production verification.
