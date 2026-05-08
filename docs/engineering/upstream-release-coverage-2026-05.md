@@ -1222,10 +1222,18 @@ Kimi pre-commit review:
 - Full-diff Kimi wire probe `vtask-mowmx4xa-9849966f` was inconclusive: the runtime reported `kimi-wire-thinking-only` after 90 seconds with no review text. This is not counted as approval.
 - Smaller evidence Kimi wire probe `vtask-mowmzs97-7658cb8b` returned machine-verifiable `GO`; review status `passed`; no merge-resolution, release-gate, runtime/data, or API/frontend contract blocker was reported.
 
+PR CI follow-up:
+
+- Initial PR #59 `backend-security` failed because `govulncheck` reported Go 1.26.2 standard-library vulnerabilities and `golang.org/x/net@v0.52.0`.
+- Follow-up cherry-picked the CI/security subset of upstream `33db04fb` onto the release branch: Go/toolchain checks move to `1.26.3`, Docker Go images move to `golang:1.26.3-alpine`, and `golang.org/x/net` moves to `v0.53.0` with related `x/crypto`, `x/term`, and `x/sys` updates.
+- The upstream hunk for `backend/internal/handler/admin/account_codex_import.go` was intentionally not restored because the `v0.1.125` release merge already deleted that file; it is not required for the CI/security repair.
+- Local follow-up verification: `go version` reports `go1.26.3`; `cd backend && go test ./...` passed; `GOTOOLCHAIN=go1.26.3 go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...` reported `No vulnerabilities found`; frontend `lint:check` and `typecheck` passed; `git diff --check` passed.
+- PR #59 `cla-check` failed because the CLA Assistant could not find branch `cla-signatures` and requires committers to sign the CLA. This is a repository/CLA gate, not a code correctness failure.
+
 Pending release gates:
 
-- Push `origin/release/v0.1.125` and open a PR to `main`.
-- Run PR-level Kimi review and require GitHub CI green.
+- Push the CI/security follow-up to `origin/release/v0.1.125` and let PR #59 rerun checks.
+- Run PR-level Kimi review and require GitHub CI green; CLA Assistant currently requires repository/committer action before it can pass.
 - Deploy and smoke-test the release branch on shared test, ToC production, and ToB/FX production before main promotion, or record an explicit owner/reason for any skipped environment.
 - Promote to `main` only after release-branch smoke passes, then create annotated tag `fork/v0.1.125` on the promoted main merge commit.
 
@@ -1244,4 +1252,4 @@ Pending release gates:
 7. `v0.1.115..v0.1.116`, `v0.1.116..v0.1.117`, `v0.1.117..v0.1.118`, and `v0.1.118..v0.1.119` already have release evidence above; production/main closeout status differs by release and remains recorded in each section.
 8. `v0.1.123` is committed on `release/v0.1.123`, pushed to `origin`, promoted to `main` at `8fde6dfc`, backed up, deployed to shared test, ToC production, and ToB/FX production, and verified with generic smoke checks plus the `134_affiliate_ledger_audit_snapshots.sql` migration check. Marker tag `fork/v0.1.123` points at the deployed main merge commit.
 9. `v0.1.124` is committed on `release/v0.1.124`, pushed to `origin`, backed up, deployed to shared test at `b4e29f33`, and deployed to ToC production plus ToB/FX at `4016b24e`. All three environments were verified with generic smoke checks plus the `136_migrate_referrals_to_affiliates.sql` migration relationship check. Main promotion landed at `279ce1e9`, and `fork/v0.1.124` points at that merge commit.
-10. `v0.1.125` is staged on `release/v0.1.125` as a direct-merge candidate. Push, PR review/CI, release-branch deployment smoke, main promotion, and `fork/v0.1.125` marker remain pending.
+10. `v0.1.125` is staged on `release/v0.1.125` as a direct-merge candidate and PR #59 is open. The CI/security follow-up still needs to be pushed; PR review/CI, release-branch deployment smoke, main promotion, and `fork/v0.1.125` marker remain pending.
