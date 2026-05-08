@@ -86,6 +86,7 @@ function simulateGuard(
         '/payment/result',
         '/payment/stripe',
         '/payment/stripe-popup',
+        '/legal',
       ]
       const callbackPaths = [
         '/auth/callback',
@@ -146,6 +147,7 @@ function simulateGuard(
       '/payment/result',
       '/payment/stripe',
       '/payment/stripe-popup',
+      '/legal',
     ]
     const callbackPaths = [
       '/auth/callback',
@@ -508,6 +510,19 @@ describe('路由守卫逻辑', () => {
       expect(
         simulateGuard('/payment/stripe-popup', { requiresAuth: false }, authState)
       ).toBeNull()
+    })
+
+    it('unauthenticated: /legal is allowed', () => {
+      const authState: MockAuthState = {
+        isAuthenticated: false,
+        isAdmin: false,
+        isSimpleMode: false,
+        backendModeEnabled: true,
+        hasPendingAuthSession: false,
+      }
+
+      const redirect = simulateGuard('/legal', { requiresAuth: false }, authState)
+      expect(redirect).toBeNull()
     })
 
     it('unauthenticated: /register is allowed when a pending auth session exists', () => {

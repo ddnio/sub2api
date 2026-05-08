@@ -15,6 +15,14 @@ describe('useModelWhitelist', () => {
     expect(models).toContain('gpt-5.4-2026-03-05')
     expect(models).toContain('gpt-5.5')
     expect(models).not.toContain('gpt-5.4-nano')
+    expect(models).toContain('codex-auto-review')
+  })
+
+  it('openai 模型列表不再暴露已下线的 ChatGPT 登录 Codex 模型', () => {
+    const models = getModelsByPlatform('openai')
+
+    expect(models).not.toContain('gpt-5')
+    expect(models).not.toContain('gpt-5.1')
     expect(models).not.toContain('gpt-5.1-codex')
   })
 

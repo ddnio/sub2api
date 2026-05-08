@@ -99,6 +99,8 @@ Current gate:
 | `v0.1.117..v0.1.118` | Final / deployed | Direct merge model used; `origin/release/v0.1.118` at `71b85c55` records production deployment evidence and `main` promotion landed at `d97be0b7`. |
 | `v0.1.118..v0.1.119` | Final / deployed | Direct merge model used; `origin/release/v0.1.119` at `b7d95eca` records production deployment evidence. Promotion to `main` landed at `5d71ad2b`, then main was redeployed and smoke-verified on shared test, ToC production, and ToB/FX production. |
 | `v0.1.119..v0.1.123` | Final / deployed | `origin/release/v0.1.123` at `1f973ffd` directly merged upstream through `v0.1.123`, passed the local release gate, was promoted to `main` at `8fde6dfc`, and is deployed/smoke-verified on shared test, ToC production, and ToB/FX production. Marker tag `fork/v0.1.123` points at the deployed main merge commit. |
+| `v0.1.123..v0.1.124` | Final / deployed | `release/v0.1.124` was deployed and verified on shared test, ToC production, and ToB/FX production, then promoted to `main` at `279ce1e9`. Marker tag `fork/v0.1.124` points at that main merge commit. |
+| `v0.1.124..v0.1.125` | Candidate | Direct merge candidate is staged on `release/v0.1.125`; local tests pass. Push, PR-level Kimi review, GitHub CI, release-branch deployment smoke, main promotion, and `fork/v0.1.125` marker remain required. |
 
 Existing `fork/v0.1.111` through `fork/v0.1.114` tags must not be moved or deleted. They are historical fork sync markers. Any correctness gap found during recheck is fixed forward on latest `main`.
 
@@ -1162,7 +1164,70 @@ Production and FX deployment evidence:
 - ToB/FX smoke: local and public `/health` returned `{"status":"ok"}`, unauthenticated local and public `/v1/models` returned `401`, `schema_migrations` recorded `136_migrate_referrals_to_affiliates.sql`, `user_referrals` count is `0`, affiliate non-null inviter rows count is `0`, old referral relationships missing from `user_affiliates` is `0`, extra affiliate relationships is `0`, and `aff_count` recompute mismatch count is `0`.
 - ToB/FX post-deploy severe-log scan for `panic|fatal|migration failed|preflight failed|postcheck failed|traceback|异常` returned no matches.
 
-Gate status: `v0.1.124` is committed to `release/v0.1.124`, pushed to `origin`, backed up, deployed to shared test, ToC production, and ToB/FX production, and smoke/migration verified in all three environments. Main promotion and fork marker remain pending.
+Main promotion and marker evidence:
+
+- `release/v0.1.124` was promoted to `main` at `279ce1e9` (`Promote v0.1.124 after production verification`).
+- Annotated tag `fork/v0.1.124` points at `279ce1e9`; the tag message records that shared test, ToC production, and ToB/FX production were deployed and verified before main promotion.
+
+Gate status: `v0.1.124` is committed to `release/v0.1.124`, pushed to `origin`, backed up, deployed to shared test, ToC production, and ToB/FX production, smoke/migration verified in all three environments, promoted to `main`, and marked with `fork/v0.1.124`.
+
+## v0.1.125 Direct Merge Candidate
+
+Range: `v0.1.124..v0.1.125`.
+
+Source commands:
+
+```bash
+git log --oneline --first-parent --reverse v0.1.124..v0.1.125
+git log --oneline --reverse v0.1.124..v0.1.125
+```
+
+Upstream first-parent entries:
+
+| Upstream source | Area | Local state | Outcome | Evidence / decision |
+| --- | --- | --- | --- | --- |
+| `f3577bc6` | Version sync to `0.1.124` | Chore only | SKIP | Upstream tag still carries `backend/cmd/server/VERSION=0.1.124`; the fork release candidate sets `0.1.125` for smoke identification. |
+| `0eca600f` | Moderation key handling and admin key UI | Direct-merged and audited | MERGED | Settings DTO/service/handler and risk-control UI changes are included in the candidate. |
+| `6681aee9` | Account model whitelist update | Direct-merged with fork conflict repair | MERGED | Candidate keeps fork `gpt-5.5`, imports upstream `codex-auto-review`, and preserves upstream removal of obsolete ChatGPT-login Codex models. Targeted whitelist tests cover this merge resolution. |
+| `e872cbec` | Login/register agreement and public legal documents | Direct-merged with fork route/type repair | MERGED | Candidate adds login/register agreement prompts, legal document public route, admin settings fields, i18n, and public settings types while preserving fork `ContactChannel` and `referral_enabled` fields. Router guard tests cover unauthenticated `/legal`. |
+| `57fd7998` | Gateway beta injection fix | Direct-merged and audited | MERGED | Candidate removes the default redact-thinking beta injection behavior and includes gateway beta regression coverage. |
+| `8a835b22` | Lint/test follow-up | Direct-merged and audited | MERGED | API contract and settings-service test repairs are included; local backend and frontend checks pass on the candidate. |
+
+Merge evidence:
+
+- Base: `origin/main` at `279ce1e9` (`fork/v0.1.124`).
+- Upstream tag: `v0.1.125^{commit}` at `8a835b22bb9d629126127e8d2a42d9fc60928ff2`.
+- Branch/worktree: `release/v0.1.125` in `/Users/nio/project/nanafox/sub2api-v0.1.125-release`.
+- Merge command: `git merge --no-ff v0.1.125`.
+- Conflict files: `frontend/src/composables/__tests__/useModelWhitelist.spec.ts`, `frontend/src/router/index.ts`, and `frontend/src/types/index.ts`.
+- Conflict decisions: kept fork `gpt-5.5`; imported upstream `codex-auto-review` and obsolete-model removals; added `/legal` while preserving fork payment routes; preserved `ContactChannel` and `referral_enabled`; added `LoginAgreementDocument` and login-agreement public settings fields.
+- Protected drift audit: no unmerged paths, no staged deletions, and no `backend/migrations/**` or `backend/ent/**` drift.
+- Version marker: `backend/cmd/server/VERSION` is set to `0.1.125` for release-branch smoke identification.
+
+Local verification:
+
+```bash
+pnpm --dir frontend exec vitest run src/composables/__tests__/useModelWhitelist.spec.ts src/router/__tests__/guards.spec.ts
+pnpm --dir frontend run lint:check
+pnpm --dir frontend run typecheck
+pnpm --dir frontend run build
+cd backend && go test ./...
+git diff --check
+```
+
+Observed result: all commands above passed locally; the frontend build emitted only existing Vite chunk/dynamic-import warnings.
+
+Kimi pre-commit review:
+
+- Full-diff Kimi wire probe `vtask-mowmx4xa-9849966f` was inconclusive: the runtime reported `kimi-wire-thinking-only` after 90 seconds with no review text. This is not counted as approval.
+- Smaller evidence Kimi wire probe `vtask-mowmzs97-7658cb8b` returned machine-verifiable `GO`; review status `passed`; no merge-resolution, release-gate, runtime/data, or API/frontend contract blocker was reported.
+
+Pending release gates:
+
+- Push `origin/release/v0.1.125` and open a PR to `main`.
+- Run PR-level Kimi review and require GitHub CI green.
+- Deploy and smoke-test the release branch on shared test, ToC production, and ToB/FX production before main promotion, or record an explicit owner/reason for any skipped environment.
+- Promote to `main` only after release-branch smoke passes, then create annotated tag `fork/v0.1.125` on the promoted main merge commit.
 
 ## Remaining Decision List
 
@@ -1178,4 +1243,5 @@ Gate status: `v0.1.124` is committed to `release/v0.1.124`, pushed to `origin`, 
 6. `v0.1.114..v0.1.115` is final under the stricter rule; merged to `main`, deployed/verified for ToC test, ToC production, and ToB production, and tagged as `fork/v0.1.115`.
 7. `v0.1.115..v0.1.116`, `v0.1.116..v0.1.117`, `v0.1.117..v0.1.118`, and `v0.1.118..v0.1.119` already have release evidence above; production/main closeout status differs by release and remains recorded in each section.
 8. `v0.1.123` is committed on `release/v0.1.123`, pushed to `origin`, promoted to `main` at `8fde6dfc`, backed up, deployed to shared test, ToC production, and ToB/FX production, and verified with generic smoke checks plus the `134_affiliate_ledger_audit_snapshots.sql` migration check. Marker tag `fork/v0.1.123` points at the deployed main merge commit.
-9. `v0.1.124` is committed on `release/v0.1.124`, pushed to `origin`, backed up, deployed to shared test at `b4e29f33`, and deployed to ToC production plus ToB/FX at `4016b24e`. All three environments were verified with generic smoke checks plus the `136_migrate_referrals_to_affiliates.sql` migration relationship check. Main promotion and fork marker remain pending.
+9. `v0.1.124` is committed on `release/v0.1.124`, pushed to `origin`, backed up, deployed to shared test at `b4e29f33`, and deployed to ToC production plus ToB/FX at `4016b24e`. All three environments were verified with generic smoke checks plus the `136_migrate_referrals_to_affiliates.sql` migration relationship check. Main promotion landed at `279ce1e9`, and `fork/v0.1.124` points at that merge commit.
+10. `v0.1.125` is staged on `release/v0.1.125` as a direct-merge candidate. Push, PR review/CI, release-branch deployment smoke, main promotion, and `fork/v0.1.125` marker remain pending.
