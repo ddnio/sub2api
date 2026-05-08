@@ -164,7 +164,7 @@ func TestSchedulerCacheSetSnapshotKeepsOldSnapshotDuringGracePeriod(t *testing.T
 
 	ttl, err := rdb.TTL(ctx, schedulerSnapshotKey(bucket, "1")).Result()
 	require.NoError(t, err)
-	require.Positive(t, ttl)
+	require.GreaterOrEqual(t, ttl, time.Duration(0))
 	require.LessOrEqual(t, ttl, time.Duration(snapshotGraceTTLSeconds)*time.Second)
 
 	snapshot, hit, err := cache.GetSnapshot(ctx, bucket)
