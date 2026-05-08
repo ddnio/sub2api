@@ -7,6 +7,14 @@
 # Sub2API 测试环境
 # =============================================================================
 router-test.nanafox.com {
+	redir /tools/image-studio /tools/image-studio/ 308
+
+	handle_path /tools/image-studio/* {
+		root * /home/nio/sub2api-tools/image-studio
+		try_files {path} /index.html
+		file_server
+	}
+
 	@static {
 		path /assets/*
 		path /logo.png
@@ -83,6 +91,14 @@ router-test.nanafox.com {
 # Sub2API 生产环境
 # =============================================================================
 router.nanafox.com {
+	redir /tools/image-studio /tools/image-studio/ 308
+
+	handle_path /tools/image-studio/* {
+		root * /home/nio/sub2api-tools/image-studio-prod
+		try_files {path} /index.html
+		file_server
+	}
+
 	@static {
 		path /assets/*
 		path /logo.png
