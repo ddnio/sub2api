@@ -152,6 +152,15 @@ const routes: RouteRecordRaw[] = [
       title: 'Key Usage',
     }
   },
+  {
+    path: '/legal/:documentId',
+    name: 'LegalDocument',
+    component: () => import('@/views/public/LegalDocumentView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'Legal Document'
+    }
+  },
 
   // ==================== User Routes ====================
   {
@@ -687,7 +696,8 @@ const BACKEND_MODE_ALLOWED_PATHS = [
   '/setup',
   '/payment/result',
   '/payment/stripe',
-  '/payment/stripe-popup'
+  '/payment/stripe-popup',
+  '/legal'
 ]
 const BACKEND_MODE_CALLBACK_PATHS = [
   '/auth/callback',

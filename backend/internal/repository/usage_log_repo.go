@@ -1301,7 +1301,7 @@ func prepareUsageLogInsert(log *service.UsageLog) usageLogInsertPrepared {
 }
 
 func usageLogBatchKey(requestID string, apiKeyID int64) string {
-	return requestID + "" + strconv.FormatInt(apiKeyID, 10)
+	return requestID + "\x1f" + strconv.FormatInt(apiKeyID, 10)
 }
 
 func sendUsageLogCreateResult(ch chan usageLogCreateResult, res usageLogCreateResult) {

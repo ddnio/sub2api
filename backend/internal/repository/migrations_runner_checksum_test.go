@@ -106,6 +106,15 @@ func TestIsMigrationChecksumCompatible(t *testing.T) {
 		require.True(t, ok)
 	})
 
+	t.Run("115测试环境已部署checksum可兼容修复后的legacy external backfill", func(t *testing.T) {
+		ok := isMigrationChecksumCompatible(
+			"115_auth_identity_legacy_external_backfill.sql",
+			"72f32dec60e352e652006b0a09ed8720b4c88e4afc177ecde22266a9803d7203",
+			"022aadd97bb53e755f0cf7a3a957e0cb1a1353b0c39ec4de3234acd2871fd04f",
+		)
+		require.True(t, ok)
+	})
+
 	t.Run("116历史checksum可兼容修复后的legacy external safety reports", func(t *testing.T) {
 		ok := isMigrationChecksumCompatible(
 			"116_auth_identity_legacy_external_safety_reports.sql",
