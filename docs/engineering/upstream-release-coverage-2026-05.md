@@ -1228,6 +1228,7 @@ PR CI follow-up:
 - Follow-up cherry-picked the CI/security subset of upstream `33db04fb` onto the release branch: Go/toolchain checks move to `1.26.3`, Docker Go images move to `golang:1.26.3-alpine`, and `golang.org/x/net` moves to `v0.53.0` with related `x/crypto`, `x/term`, and `x/sys` updates.
 - The upstream hunk for `backend/internal/handler/admin/account_codex_import.go` was intentionally not restored because the `v0.1.125` release merge already deleted that file; it is not required for the CI/security repair.
 - Local follow-up verification: `go version` reports `go1.26.3`; `cd backend && go test ./...` passed; `GOTOOLCHAIN=go1.26.3 go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...` reported `No vulnerabilities found`; frontend `lint:check` and `typecheck` passed; `git diff --check` passed.
+- PR #59 `golangci-lint` then failed on a pre-existing raw U+001F separator literal in `backend/internal/repository/usage_log_repo.go`; the release branch now uses the equivalent `\x1f` escape. Local `golangci-lint run ./... --timeout=30m` with v2.9.0 reports `0 issues`, and `cd backend && go test ./...` still passes.
 - PR #59 `cla-check` failed because the CLA Assistant could not find branch `cla-signatures` and requires committers to sign the CLA. This is a repository/CLA gate, not a code correctness failure.
 
 Pending release gates:
