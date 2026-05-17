@@ -84,12 +84,15 @@ describe('HomeView', () => {
     const text = wrapper.text()
 
     expect(wrapper.find('a[href="/key-usage"]').exists()).toBe(true)
+    expect(text).toContain('用量查询')
     expect(text).toContain('Sub2API')
     expect(text).toContain('统一接入你的 AI 上游')
     expect(text).toContain('立即开始')
     expect(text).toContain('查看文档')
     expect(text).toContain('替换基础 URL 即可接入')
     expect(text).toContain('OPENAI_BASE_URL')
+    expect(text).not.toContain('home.nav.keyUsage')
+    expect(text).not.toContain('home.hero.baseUrlHint')
   })
 
   it('renders iframe override when home_content is a URL', async () => {
@@ -147,7 +150,7 @@ describe('HomeView', () => {
 
     const wrapper = await mountView()
 
-    expect(wrapper.text()).toContain('专为开发者打造的 API 中转服务')
+    expect(wrapper.text()).toContain('一个密钥，畅用多个 AI 模型')
     expect(wrapper.text()).not.toContain('Subscription to API Conversion Platform')
   })
 })

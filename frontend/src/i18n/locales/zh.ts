@@ -10,6 +10,28 @@ export default {
     login: '登录',
     getStarted: '立即开始',
     goToDashboard: '进入控制台',
+    badge: '统一 AI API 网关',
+    nav: {
+      docs: '文档',
+      keyUsage: '用量查询',
+      support: '支持'
+    },
+    hero: {
+      viewDocs: '查看文档',
+      baseUrlHint: '替换基础 URL 即可接入',
+      copyBaseUrl: '复制地址',
+      copiedBaseUrl: '已复制',
+      snippetTitle: '配置你的客户端',
+      runLabel: '运行你的应用'
+    },
+    metrics: {
+      compatibilityTitle: '兼容接口',
+      compatibilityValue: 'OpenAI / Claude / Gemini',
+      routingTitle: '智能路由',
+      routingValue: '多账号自动调度',
+      billingTitle: '按量计费',
+      billingValue: '用量透明可控'
+    },
     // 新增：面向用户的价值主张
     heroSubtitle: '一个密钥，畅用多个 AI 模型',
     heroDescription: '无需管理多个订阅账号，一站式接入 Claude、GPT、Gemini 等主流 AI 服务',

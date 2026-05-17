@@ -10,6 +10,28 @@ export default {
     login: 'Login',
     getStarted: 'Get Started',
     goToDashboard: 'Go to Dashboard',
+    badge: 'Unified AI API Gateway',
+    nav: {
+      docs: 'Docs',
+      keyUsage: 'Usage Lookup',
+      support: 'Support'
+    },
+    hero: {
+      viewDocs: 'View Docs',
+      baseUrlHint: 'Replace the base URL to connect',
+      copyBaseUrl: 'Copy URL',
+      copiedBaseUrl: 'Copied',
+      snippetTitle: 'Configure your client',
+      runLabel: 'Run your app'
+    },
+    metrics: {
+      compatibilityTitle: 'Compatible APIs',
+      compatibilityValue: 'OpenAI / Claude / Gemini',
+      routingTitle: 'Smart Routing',
+      routingValue: 'Automatic multi-account scheduling',
+      billingTitle: 'Usage Billing',
+      billingValue: 'Transparent and controllable usage'
+    },
     // User-focused value proposition
     heroSubtitle: 'One Key, All AI Models',
     heroDescription: 'No need to manage multiple subscriptions. Access Claude, GPT, Gemini and more with a single API key',

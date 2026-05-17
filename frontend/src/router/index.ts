@@ -699,6 +699,7 @@ const BACKEND_MODE_ALLOWED_PATHS = [
   '/payment/stripe-popup',
   '/legal'
 ]
+const BACKEND_MODE_ALLOWED_PATH_PREFIXES = ['/legal/']
 const BACKEND_MODE_CALLBACK_PATHS = [
   '/auth/callback',
   '/auth/linuxdo/callback',
@@ -709,15 +710,19 @@ const BACKEND_MODE_CALLBACK_PATHS = [
 const BACKEND_MODE_PENDING_AUTH_PATHS = ['/register', '/email-verify']
 
 function isBackendModePublicRouteAllowed(path: string, hasPendingAuthSession: boolean): boolean {
-  if (BACKEND_MODE_ALLOWED_PATHS.some((allowedPath) => path === allowedPath || path.startsWith(allowedPath))) {
+  if (BACKEND_MODE_ALLOWED_PATHS.includes(path)) {
     return true
   }
 
-  if (BACKEND_MODE_CALLBACK_PATHS.some((callbackPath) => path === callbackPath)) {
+  if (BACKEND_MODE_ALLOWED_PATH_PREFIXES.some((allowedPathPrefix) => path.startsWith(allowedPathPrefix))) {
     return true
   }
 
-  if (hasPendingAuthSession && BACKEND_MODE_PENDING_AUTH_PATHS.some((allowedPath) => path === allowedPath)) {
+  if (BACKEND_MODE_CALLBACK_PATHS.includes(path)) {
+    return true
+  }
+
+  if (hasPendingAuthSession && BACKEND_MODE_PENDING_AUTH_PATHS.includes(path)) {
     return true
   }
 

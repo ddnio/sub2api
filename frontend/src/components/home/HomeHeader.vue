@@ -9,6 +9,12 @@
       </router-link>
 
       <div class="flex items-center gap-2">
+        <router-link
+          to="/key-usage"
+          class="hidden text-sm text-gray-500 transition-colors hover:text-gray-900 dark:text-dark-300 dark:hover:text-white md:block"
+        >
+          {{ t('home.nav.keyUsage') }}
+        </router-link>
         <a
           :href="effectiveDocUrl"
           :target="hasExternalDocUrl ? '_blank' : '_self'"

@@ -56,6 +56,45 @@ interface MockAuthState {
   paymentEnabled?: boolean
 }
 
+const BACKEND_MODE_ALLOWED_PATHS = [
+  '/login',
+  '/key-usage',
+  '/setup',
+  '/payment/result',
+  '/payment/stripe',
+  '/payment/stripe-popup',
+  '/legal',
+]
+const BACKEND_MODE_ALLOWED_PATH_PREFIXES = ['/legal/']
+const BACKEND_MODE_CALLBACK_PATHS = [
+  '/auth/callback',
+  '/auth/linuxdo/callback',
+  '/auth/oidc/callback',
+  '/auth/wechat/callback',
+  '/auth/wechat/payment/callback',
+]
+const BACKEND_MODE_PENDING_AUTH_PATHS = ['/register', '/email-verify']
+
+function isBackendModePublicRouteAllowed(path: string, hasPendingAuthSession: boolean): boolean {
+  if (BACKEND_MODE_ALLOWED_PATHS.includes(path)) {
+    return true
+  }
+
+  if (BACKEND_MODE_ALLOWED_PATH_PREFIXES.some((pathPrefix) => path.startsWith(pathPrefix))) {
+    return true
+  }
+
+  if (BACKEND_MODE_CALLBACK_PATHS.includes(path)) {
+    return true
+  }
+
+  if (hasPendingAuthSession && BACKEND_MODE_PENDING_AUTH_PATHS.includes(path)) {
+    return true
+  }
+
+  return false
+}
+
 /**
  * 将 router/index.ts 中 beforeEach 守卫的核心逻辑提取为可测试的函数
  */
@@ -79,28 +118,7 @@ function simulateGuard(
       return authState.isAdmin ? '/admin/dashboard' : '/dashboard'
     }
     if (authState.backendModeEnabled && !authState.isAuthenticated) {
-      const allowed = [
-        '/login',
-        '/key-usage',
-        '/setup',
-        '/payment/result',
-        '/payment/stripe',
-        '/payment/stripe-popup',
-        '/legal',
-      ]
-      const callbackPaths = [
-        '/auth/callback',
-        '/auth/linuxdo/callback',
-        '/auth/oidc/callback',
-        '/auth/wechat/callback',
-        '/auth/wechat/payment/callback',
-      ]
-      const pendingAuthPaths = ['/register', '/email-verify']
-      const isAllowed =
-        allowed.some((path) => toPath === path || toPath.startsWith(path)) ||
-        callbackPaths.includes(toPath) ||
-        (authState.hasPendingAuthSession && pendingAuthPaths.includes(toPath))
-      if (!isAllowed) {
+      if (!isBackendModePublicRouteAllowed(toPath, authState.hasPendingAuthSession)) {
         return '/login'
       }
     }
@@ -140,28 +158,7 @@ function simulateGuard(
     if (authState.isAuthenticated && authState.isAdmin) {
       return null
     }
-    const allowed = [
-      '/login',
-      '/key-usage',
-      '/setup',
-      '/payment/result',
-      '/payment/stripe',
-      '/payment/stripe-popup',
-      '/legal',
-    ]
-    const callbackPaths = [
-      '/auth/callback',
-      '/auth/linuxdo/callback',
-      '/auth/oidc/callback',
-      '/auth/wechat/callback',
-      '/auth/wechat/payment/callback',
-    ]
-    const pendingAuthPaths = ['/register', '/email-verify']
-    const isAllowed =
-      allowed.some((path) => toPath === path || toPath.startsWith(path)) ||
-      callbackPaths.includes(toPath) ||
-      (authState.hasPendingAuthSession && pendingAuthPaths.includes(toPath))
-    if (!isAllowed) {
+    if (!isBackendModePublicRouteAllowed(toPath, authState.hasPendingAuthSession)) {
       return '/login'
     }
   }
@@ -387,6 +384,19 @@ describe('路由守卫逻辑', () => {
       expect(redirect).toBeNull()
     })
 
+    it('unauthenticated: backend mode only allows the exact /key-usage route', () => {
+      const authState: MockAuthState = {
+        isAuthenticated: false,
+        isAdmin: false,
+        isSimpleMode: false,
+        backendModeEnabled: true,
+        hasPendingAuthSession: false,
+      }
+
+      const redirect = simulateGuard('/key-usage-extra', { requiresAuth: false }, authState)
+      expect(redirect).toBe('/login')
+    })
+
     it('unauthenticated: /setup is allowed', () => {
       const authState: MockAuthState = {
         isAuthenticated: false,
@@ -459,6 +469,18 @@ describe('路由守卫逻辑', () => {
       expect(redirect).toBeNull()
     })
 
+    it('non-admin authenticated: backend mode only allows the exact /key-usage route', () => {
+      const authState: MockAuthState = {
+        isAuthenticated: true,
+        isAdmin: false,
+        isSimpleMode: false,
+        backendModeEnabled: true,
+        hasPendingAuthSession: false,
+      }
+      const redirect = simulateGuard('/key-usage-extra', {}, authState)
+      expect(redirect).toBe('/login')
+    })
+
     it('unauthenticated: callback routes are allowed', () => {
       const authState: MockAuthState = {
         isAuthenticated: false,
@@ -522,6 +544,19 @@ describe('路由守卫逻辑', () => {
       }
 
       const redirect = simulateGuard('/legal', { requiresAuth: false }, authState)
+      expect(redirect).toBeNull()
+    })
+
+    it('unauthenticated: /legal document routes are allowed', () => {
+      const authState: MockAuthState = {
+        isAuthenticated: false,
+        isAdmin: false,
+        isSimpleMode: false,
+        backendModeEnabled: true,
+        hasPendingAuthSession: false,
+      }
+
+      const redirect = simulateGuard('/legal/terms', { requiresAuth: false }, authState)
       expect(redirect).toBeNull()
     })
 
