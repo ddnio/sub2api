@@ -71,8 +71,8 @@ bash deploy/deploy-server.sh prod   # 部署生产环境
 
 - 已合并 main（2026-03-23）
 - 支付服务商：**微信支付 Native Pay v3**（官方直连）
-- Provider 实现：`backend/internal/repository/wxpay_provider.go`
-- 备用 Provider：`backend/internal/repository/easypay_provider.go`（易支付，可切换）
+- Provider 实现：`backend/internal/payment/provider/wxpay.go`
+- 备用 Provider：`backend/internal/payment/provider/easypay.go`（易支付，可切换）
 - 通过 `payment.provider` 配置项切换（`wxpay` 或 `easypay`）
 - 微信支付公钥模式（2024年后新商户默认），需配置 `wxpay_public_key_id`（带 `PUB_KEY_ID_` 前缀）
 - Migration：`backend/migrations/077_add_payment_tables.sql`
@@ -108,6 +108,7 @@ cd backend && go generate ./ent/...
 | `docs/engineering/git-workflow.md` | Git 工作流 |
 | `backend/config.yaml` | 本地配置（不提交） |
 | `backend/cmd/server/wire_gen.go` | 手动维护的 Wire 注入文件 |
-| `backend/internal/repository/wxpay_provider.go` | 微信支付 Native Pay v3 Provider |
+| `backend/internal/payment/provider/wxpay.go` | 微信支付 Native Pay v3 Provider |
+| `backend/internal/payment/provider/easypay.go` | 易支付备用 Provider |
 | `backend/internal/service/payment_service.go` | 支付业务逻辑（创单、回调、发放权益） |
 | `backend/migrations/077_add_payment_tables.sql` | 支付模块 DB migration |
