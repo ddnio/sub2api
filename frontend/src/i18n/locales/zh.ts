@@ -27,8 +27,8 @@ export default {
     metrics: {
       compatibilityTitle: '兼容接口',
       compatibilityValue: 'OpenAI / Claude / Gemini',
-      routingTitle: '智能路由',
-      routingValue: '多账号自动调度',
+      routingTitle: '稳定可靠',
+      routingValue: '多节点负载均衡',
       billingTitle: '按量计费',
       billingValue: '用量透明可控'
     },

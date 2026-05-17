@@ -27,8 +27,8 @@ export default {
     metrics: {
       compatibilityTitle: 'Compatible APIs',
       compatibilityValue: 'OpenAI / Claude / Gemini',
-      routingTitle: 'Smart Routing',
-      routingValue: 'Automatic multi-account scheduling',
+      routingTitle: 'Stable Reliability',
+      routingValue: 'Multi-node load balancing',
       billingTitle: 'Usage Billing',
       billingValue: 'Transparent and controllable usage'
     },
