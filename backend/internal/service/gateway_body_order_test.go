@@ -128,6 +128,33 @@ func TestNormalizeClaudeOAuthRequestBody_PreservesTopLevelFieldOrder(t *testing.
 	require.Contains(t, resultStr, `"max_tokens":128000`)
 }
 
+func TestNormalizeClaudeOAuthRequestBody_DoesNotInjectTemperatureWhenTopPProvided(t *testing.T) {
+	body := []byte(`{"model":"claude-opus-4-6","top_p":1,"messages":[]}`)
+
+	result, _ := normalizeClaudeOAuthRequestBody(body, "claude-opus-4-6", claudeOAuthNormalizeOptions{})
+
+	require.False(t, gjson.GetBytes(result, "temperature").Exists())
+	require.Equal(t, 1.0, gjson.GetBytes(result, "top_p").Float())
+}
+
+func TestNormalizeClaudeOAuthRequestBody_DefaultsTemperatureWhenSamplingMissing(t *testing.T) {
+	body := []byte(`{"model":"claude-opus-4-6","messages":[]}`)
+
+	result, _ := normalizeClaudeOAuthRequestBody(body, "claude-opus-4-6", claudeOAuthNormalizeOptions{})
+
+	require.Equal(t, 1.0, gjson.GetBytes(result, "temperature").Float())
+}
+
+func TestNormalizeClaudeOAuthRequestBody_StripsSamplingParametersForOpus47(t *testing.T) {
+	body := []byte(`{"model":"claude-opus-4-7","temperature":0.6,"top_p":0.8,"top_k":10,"messages":[]}`)
+
+	result, _ := normalizeClaudeOAuthRequestBody(body, "claude-opus-4-7", claudeOAuthNormalizeOptions{})
+
+	require.False(t, gjson.GetBytes(result, "temperature").Exists())
+	require.False(t, gjson.GetBytes(result, "top_p").Exists())
+	require.False(t, gjson.GetBytes(result, "top_k").Exists())
+}
+
 func TestNormalizeClaudeOAuthRequestBody_PreservesToolChoiceWhenToolsPresent(t *testing.T) {
 	body := []byte(`{"model":"claude-3-5-sonnet-latest","messages":[],"tools":[{"name":"sessions_list","input_schema":{}}],"tool_choice":{"type":"tool","name":"sessions_list"}}`)
 

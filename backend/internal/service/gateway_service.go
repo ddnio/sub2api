@@ -991,6 +991,26 @@ func deleteJSONPathBytes(body []byte, path string) ([]byte, bool) {
 	return next, true
 }
 
+func claudeOAuthModelOmitsSamplingParameters(modelID string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(claude.NormalizeModelID(modelID)))
+	return strings.HasPrefix(normalized, "claude-opus-4-7")
+}
+
+func stripClaudeOAuthSamplingParameters(body []byte) ([]byte, bool) {
+	out := body
+	modified := false
+	for _, path := range []string{"temperature", "top_p", "top_k"} {
+		if !gjson.GetBytes(out, path).Exists() {
+			continue
+		}
+		if next, ok := deleteJSONPathBytes(out, path); ok {
+			out = next
+			modified = true
+		}
+	}
+	return out, modified
+}
+
 func normalizeClaudeOAuthSystemBody(body []byte, opts claudeOAuthNormalizeOptions) ([]byte, bool) {
 	sys := gjson.GetBytes(body, "system")
 	if !sys.Exists() {
@@ -1078,6 +1098,7 @@ func normalizeClaudeOAuthRequestBody(body []byte, modelID string, opts claudeOAu
 
 	out := body
 	modified := false
+	effectiveModelID := modelID
 
 	if next, changed := normalizeClaudeOAuthSystemBody(out, opts); changed {
 		out = next
@@ -1087,6 +1108,7 @@ func normalizeClaudeOAuthRequestBody(body []byte, modelID string, opts claudeOAu
 	rawModel := gjson.GetBytes(out, "model")
 	if rawModel.Exists() && rawModel.Type == gjson.String {
 		normalized := claude.NormalizeModelID(rawModel.String())
+		effectiveModelID = normalized
 		if normalized != rawModel.String() {
 			if next, ok := setJSONValueBytes(out, "model", normalized); ok {
 				out = next
@@ -1111,10 +1133,15 @@ func normalizeClaudeOAuthRequestBody(body []byte, modelID string, opts claudeOAu
 		}
 	}
 
-	// temperature：真实 Claude Code CLI 总是发送 temperature（默认 1，客户端可覆盖）。
-	// 之前的实现直接 delete 会导致 payload 缺字段，与真实 CLI 字节级不一致。
-	// 策略：客户端传了什么就透传；没传则补默认 1。
-	if !gjson.GetBytes(out, "temperature").Exists() {
+	if claudeOAuthModelOmitsSamplingParameters(effectiveModelID) {
+		// Claude Opus 4.7 拒绝采样参数，OAuth mimicry 也不能再补默认 temperature。
+		if next, changed := stripClaudeOAuthSamplingParameters(out); changed {
+			out = next
+			modified = true
+		}
+	} else if !gjson.GetBytes(out, "temperature").Exists() && !gjson.GetBytes(out, "top_p").Exists() {
+		// temperature：真实 Claude Code CLI 通常会发送默认 1；但客户端显式选择
+		// top_p 时不能再补 temperature，否则新模型会因两个采样参数同时存在返回 400。
 		if next, ok := setJSONValueBytes(out, "temperature", 1); ok {
 			out = next
 			modified = true
