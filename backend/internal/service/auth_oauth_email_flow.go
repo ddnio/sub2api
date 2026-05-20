@@ -246,6 +246,7 @@ func (s *AuthService) RegisterVerifiedOAuthEmailAccount(
 		Status:       StatusActive,
 		SignupSource: signupSource,
 	}
+	applyUserNotifyDefaults(user)
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		if errors.Is(err, ErrEmailExists) {

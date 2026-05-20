@@ -10,7 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/ent/pendingauthsession"
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/service"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,6 +22,77 @@ import (
 // TODO(task-1.10): newTestAuthHandlerWithDingTalk helper が追加されたら t.Skip を外す。
 func TestDingTalkOAuthStart_Disabled(t *testing.T) {
 	t.Skip("helper newTestAuthHandlerWithDingTalk added in Task 1.10; sentinel only")
+}
+
+func TestDingTalkOAuthStartPersistsAffiliateCodeInHttpOnlyCookie(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := &AuthHandler{
+		cfg: &config.Config{
+			DingTalk: config.DingTalkConnectConfig{
+				Enabled:      true,
+				ClientID:     "ding-client",
+				AuthorizeURL: "https://login.dingtalk.example/oauth2/auth",
+				RedirectURL:  "https://app.example.com/api/v1/auth/oauth/dingtalk/callback",
+			},
+		},
+	}
+	router := gin.New()
+	router.GET("/api/v1/auth/oauth/dingtalk/start", handler.DingTalkOAuthStart)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/dingtalk/start?aff_code=%20AFF-123%20&redirect=/dashboard", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusFound, rec.Code)
+	var affiliateCookie *http.Cookie
+	for _, cookie := range rec.Result().Cookies() {
+		if cookie.Name == dingTalkOAuthAffiliateCookieName {
+			affiliateCookie = cookie
+			break
+		}
+	}
+	require.NotNil(t, affiliateCookie)
+	require.True(t, affiliateCookie.HttpOnly)
+	require.Equal(t, dingTalkOAuthCookiePath, affiliateCookie.Path)
+	require.Equal(t, "AFF-123", decodeCookieValueForTest(t, affiliateCookie.Value))
+}
+
+func TestCreateDingTalkOAuthChoicePendingSessionStoresAffiliateCode(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler, client := newOAuthPendingFlowTestHandler(t, false)
+	rec := httptest.NewRecorder()
+	ginCtx, _ := gin.CreateTestContext(rec)
+	ginCtx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/dingtalk/callback", nil)
+
+	err := handler.createDingTalkOAuthChoicePendingSession(
+		ginCtx,
+		service.PendingAuthIdentityKey{ProviderType: "dingtalk", ProviderKey: "dingtalk", ProviderSubject: "union-1"},
+		"corp@example.com",
+		"corp@example.com",
+		"/dashboard",
+		"browser-session",
+		map[string]any{"subject": "union-1"},
+		"corp@example.com",
+		nil,
+		false,
+		false,
+		"AFF-123",
+	)
+
+	require.NoError(t, err)
+	sessionToken := ""
+	for _, cookie := range rec.Result().Cookies() {
+		if cookie.Name == oauthPendingSessionCookieName {
+			sessionToken = decodeCookieValueForTest(t, cookie.Value)
+			break
+		}
+	}
+	require.NotEmpty(t, sessionToken)
+	session, err := client.PendingAuthSession.Query().
+		Where(pendingauthsession.SessionTokenEQ(sessionToken)).
+		Only(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, "AFF-123", pendingOAuthAffiliateCode(session))
 }
 
 // TestBuildDingTalkSyntheticEmail_UsesUnionID 验证合成邮箱种子使用 unionID。

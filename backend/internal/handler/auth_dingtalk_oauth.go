@@ -53,14 +53,15 @@ func dingTalkUpstreamRedirect(c *gin.Context, frontendCallback, step string, err
 // ─── 常量 ──────────────────────────────────────────────────────────────────
 
 const (
-	dingTalkOAuthCookiePath         = "/api/v1/auth/oauth/dingtalk"
-	dingTalkOAuthStateCookieName    = "dingtalk_oauth_state"
-	dingTalkOAuthRedirectCookie     = "dingtalk_oauth_redirect"
-	dingTalkOAuthIntentCookieName   = "dingtalk_oauth_intent"
-	dingTalkOAuthBindUserCookieName = "dingtalk_oauth_bind_user"
-	dingTalkOAuthCookieMaxAgeSec    = 600 // 10 分钟
-	dingTalkOAuthDefaultRedirectTo  = "/dashboard"
-	dingTalkOAuthDefaultFrontendCB  = "/auth/dingtalk/callback"
+	dingTalkOAuthCookiePath          = "/api/v1/auth/oauth/dingtalk"
+	dingTalkOAuthStateCookieName     = "dingtalk_oauth_state"
+	dingTalkOAuthRedirectCookie      = "dingtalk_oauth_redirect"
+	dingTalkOAuthIntentCookieName    = "dingtalk_oauth_intent"
+	dingTalkOAuthBindUserCookieName  = "dingtalk_oauth_bind_user"
+	dingTalkOAuthAffiliateCookieName = "dingtalk_oauth_affiliate"
+	dingTalkOAuthCookieMaxAgeSec     = 600 // 10 分钟
+	dingTalkOAuthDefaultRedirectTo   = "/dashboard"
+	dingTalkOAuthDefaultFrontendCB   = "/auth/dingtalk/callback"
 
 	dingTalkLevelThreeEnabled = true
 )
@@ -143,6 +144,15 @@ func (h *AuthHandler) DingTalkOAuthStart(c *gin.Context) {
 
 	intent := normalizeOAuthIntent(c.Query("intent"))
 	setDingTalkCookie(c, dingTalkOAuthIntentCookieName, encodeCookieValue(intent), dingTalkOAuthCookieMaxAgeSec, secureCookie)
+	affiliateCode := ""
+	if intent == oauthIntentLogin {
+		affiliateCode = oauthAffiliateCodeFromRequest(c)
+	}
+	if affiliateCode != "" {
+		setDingTalkCookie(c, dingTalkOAuthAffiliateCookieName, encodeCookieValue(affiliateCode), dingTalkOAuthCookieMaxAgeSec, secureCookie)
+	} else {
+		clearDingTalkCookie(c, dingTalkOAuthAffiliateCookieName, secureCookie)
+	}
 
 	setOAuthPendingBrowserCookie(c, browserSessionKey, secureCookie)
 	clearOAuthPendingSessionCookie(c, secureCookie)
@@ -225,6 +235,7 @@ func (h *AuthHandler) createDingTalkOAuthChoicePendingSession(
 	compatEmailUser *dbent.User,
 	forceEmailOnSignup bool,
 	signupBlocked bool,
+	affiliateCode string,
 ) error {
 	suggestionEmail := strings.TrimSpace(suggestedEmail)
 	canonicalEmail := strings.TrimSpace(resolvedEmail)
@@ -281,6 +292,7 @@ func (h *AuthHandler) createDingTalkOAuthChoicePendingSession(
 		BrowserSessionKey:      browserSessionKey,
 		UpstreamIdentityClaims: upstreamClaims,
 		CompletionResponse:     completionResponse,
+		AffiliateCode:          affiliateCode,
 	})
 }
 
@@ -317,6 +329,7 @@ func (h *AuthHandler) DingTalkOAuthCallback(c *gin.Context) {
 		clearDingTalkCookie(c, dingTalkOAuthStateCookieName, secureCookie)
 		clearDingTalkCookie(c, dingTalkOAuthRedirectCookie, secureCookie)
 		clearDingTalkCookie(c, dingTalkOAuthIntentCookieName, secureCookie)
+		clearDingTalkCookie(c, dingTalkOAuthAffiliateCookieName, secureCookie)
 	}()
 
 	expectedState, err := readCookieDecoded(c, dingTalkOAuthStateCookieName)
@@ -327,6 +340,8 @@ func (h *AuthHandler) DingTalkOAuthCallback(c *gin.Context) {
 	redirectTo, _ := readCookieDecoded(c, dingTalkOAuthRedirectCookie)
 	intent, _ := readCookieDecoded(c, dingTalkOAuthIntentCookieName)
 	intent = normalizeOAuthIntent(intent)
+	affiliateCode, _ := readCookieDecoded(c, dingTalkOAuthAffiliateCookieName)
+	affiliateCode = normalizeOAuthAffiliateCode(affiliateCode)
 	browserSessionKey, _ := readOAuthPendingBrowserCookie(c)
 	if strings.TrimSpace(browserSessionKey) == "" {
 		redirectOAuthError(c, frontendCallback, "missing_browser_session", "missing browser session cookie", "")
@@ -425,6 +440,7 @@ func (h *AuthHandler) DingTalkOAuthCallback(c *gin.Context) {
 			RedirectTo: redirectTo, BrowserSessionKey: browserSessionKey,
 			UpstreamIdentityClaims: upstreamClaims,
 			CompletionResponse:     map[string]any{"redirect": redirectTo},
+			AffiliateCode:          affiliateCode,
 		}); err != nil {
 			redirectOAuthError(c, frontendCallback, "session_error", infraerrors.Reason(err), infraerrors.Message(err))
 			return
@@ -446,6 +462,7 @@ func (h *AuthHandler) DingTalkOAuthCallback(c *gin.Context) {
 			ResolvedEmail: existing.Email, RedirectTo: redirectTo, BrowserSessionKey: browserSessionKey,
 			UpstreamIdentityClaims: upstreamClaims,
 			CompletionResponse:     map[string]any{"redirect": redirectTo},
+			AffiliateCode:          affiliateCode,
 		}); err != nil {
 			redirectOAuthError(c, frontendCallback, "session_error", infraerrors.Reason(err), infraerrors.Message(err))
 			return
@@ -465,6 +482,7 @@ func (h *AuthHandler) DingTalkOAuthCallback(c *gin.Context) {
 				ResolvedEmail: "", RedirectTo: redirectTo, BrowserSessionKey: browserSessionKey,
 				UpstreamIdentityClaims: upstreamClaims,
 				CompletionResponse:     dingTalkBindLoginCompletionResponse(redirectTo),
+				AffiliateCode:          affiliateCode,
 			}); err != nil {
 				redirectOAuthError(c, frontendCallback, "session_error", infraerrors.Reason(err), infraerrors.Message(err))
 				return
@@ -478,6 +496,7 @@ func (h *AuthHandler) DingTalkOAuthCallback(c *gin.Context) {
 			ResolvedEmail: syntheticEmail, RedirectTo: redirectTo, BrowserSessionKey: browserSessionKey,
 			UpstreamIdentityClaims: upstreamClaims,
 			CompletionResponse:     map[string]any{"redirect": redirectTo, "synthetic_email": syntheticEmail},
+			AffiliateCode:          affiliateCode,
 		}); err != nil {
 			redirectOAuthError(c, frontendCallback, "session_error", infraerrors.Reason(err), infraerrors.Message(err))
 			return
@@ -502,6 +521,7 @@ func (h *AuthHandler) DingTalkOAuthCallback(c *gin.Context) {
 			ResolvedEmail: "", RedirectTo: redirectTo, BrowserSessionKey: browserSessionKey,
 			UpstreamIdentityClaims: upstreamClaims,
 			CompletionResponse:     completionResponse,
+			AffiliateCode:          affiliateCode,
 		}); err != nil {
 			redirectOAuthError(c, frontendCallback, "session_error", infraerrors.Reason(err), infraerrors.Message(err))
 			return
@@ -519,7 +539,7 @@ func (h *AuthHandler) DingTalkOAuthCallback(c *gin.Context) {
 		c, identityKey, staff.Email, staff.Email,
 		redirectTo, browserSessionKey, upstreamClaims,
 		staff.Email, compatEmailUser, forceEmailOnSignup,
-		signupBlocked,
+		signupBlocked, affiliateCode,
 	); err != nil {
 		redirectOAuthError(c, frontendCallback, "session_error", infraerrors.Reason(err), infraerrors.Message(err))
 		return
@@ -779,7 +799,14 @@ func (h *AuthHandler) CompleteDingTalkOAuthRegistration(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, req.InvitationCode, req.AffCode, "dingtalk")
+	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPair(
+		c.Request.Context(),
+		email,
+		username,
+		req.InvitationCode,
+		firstNonEmpty(pendingOAuthAffiliateCode(session), req.AffCode),
+		"dingtalk",
+	)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
