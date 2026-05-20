@@ -89,7 +89,7 @@
               </tr>
               <!-- User breakdown sub-rows -->
               <tr v-if="expandedKey === `group-${group.group_id}`">
-                <td colspan="6" class="p-0">
+                <td colspan="7" class="p-0">
                   <UserBreakdownSubTable
                     :items="breakdownItems"
                     :loading="breakdownLoading"
@@ -245,7 +245,10 @@ const formatNumber = (value: number): string => {
   return value.toLocaleString()
 }
 
-const formatCost = (value: number): string => {
+const formatCost = (value?: number | null): string => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    value = 0
+  }
   if (value >= 1000) {
     return (value / 1000).toFixed(2) + 'K'
   } else if (value >= 1) {

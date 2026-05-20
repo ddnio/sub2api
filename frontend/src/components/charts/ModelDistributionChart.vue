@@ -155,7 +155,7 @@
                 </td>
               </tr>
               <tr v-if="expandedKey === `model-${model.model}`">
-                <td colspan="6" class="p-0">
+                <td colspan="7" class="p-0">
                   <UserBreakdownSubTable
                     :items="breakdownItems"
                     :loading="breakdownLoading"
@@ -499,7 +499,10 @@ const getRankingRowLabel = (item: RankingDisplayItem): string => {
   return getRankingUserLabel(item)
 }
 
-const formatCost = (value: number): string => {
+const formatCost = (value?: number | null): string => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    value = 0
+  }
   if (value >= 1000) {
     return (value / 1000).toFixed(2) + 'K'
   } else if (value >= 1) {

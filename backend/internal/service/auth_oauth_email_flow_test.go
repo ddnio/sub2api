@@ -270,6 +270,36 @@ func TestRegisterOAuthEmailAccountAppliesUserDefaults(t *testing.T) {
 	require.Equal(t, defaultBalanceNotifyThresholdType, userRepo.created[0].BalanceNotifyThresholdType)
 }
 
+func TestRegisterVerifiedOAuthEmailAccountAppliesUserDefaults(t *testing.T) {
+	userRepo := &userRepoStub{nextID: 42}
+	authService := newOAuthEmailFlowAuthService(
+		userRepo,
+		&redeemCodeRepoStub{},
+		&refreshTokenCacheStub{},
+		map[string]string{
+			SettingKeyRegistrationEnabled: "true",
+			SettingKeyDefaultUserRPMLimit: "37",
+		},
+		nil,
+	)
+
+	tokenPair, user, err := authService.RegisterVerifiedOAuthEmailAccount(
+		context.Background(),
+		"verified@example.com",
+		"secret-123",
+		"",
+		"oidc",
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, tokenPair)
+	require.NotNil(t, user)
+	require.Len(t, userRepo.created, 1)
+	require.Equal(t, 37, userRepo.created[0].RPMLimit)
+	require.True(t, userRepo.created[0].BalanceNotifyEnabled)
+	require.Equal(t, defaultBalanceNotifyThresholdType, userRepo.created[0].BalanceNotifyThresholdType)
+}
+
 func TestRegisterOAuthEmailAccountKeepsGitHubAndGoogleSignupSource(t *testing.T) {
 	tests := []struct {
 		name         string
