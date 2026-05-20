@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
+import { resolveCompletedSetupRedirectPath } from '@/router/setupRedirect'
 
 // Mock 导航加载状态
 vi.mock('@/composables/useNavigationLoading', () => {
@@ -54,6 +55,7 @@ interface MockAuthState {
   backendModeEnabled: boolean
   hasPendingAuthSession: boolean
   paymentEnabled?: boolean
+  setupNeedsSetup?: boolean
 }
 
 const BACKEND_MODE_ALLOWED_PATHS = [
@@ -63,12 +65,15 @@ const BACKEND_MODE_ALLOWED_PATHS = [
   '/payment/result',
   '/payment/stripe',
   '/payment/stripe-popup',
+  '/payment/airwallex',
   '/legal',
 ]
 const BACKEND_MODE_ALLOWED_PATH_PREFIXES = ['/legal/']
 const BACKEND_MODE_CALLBACK_PATHS = [
   '/auth/callback',
   '/auth/linuxdo/callback',
+  '/auth/dingtalk/callback',
+  '/auth/dingtalk/email-completion',
   '/auth/oidc/callback',
   '/auth/wechat/callback',
   '/auth/wechat/payment/callback',
@@ -105,6 +110,10 @@ function simulateGuard(
 ): string | null {
   const requiresAuth = toMeta.requiresAuth !== false
   const requiresAdmin = toMeta.requiresAdmin === true
+
+  if (toPath === '/setup' && authState.setupNeedsSetup === false) {
+    return resolveCompletedSetupRedirectPath(authState.isAuthenticated, authState.isAdmin)
+  }
 
   // 不需要认证的路由
   if (!requiresAuth) {
@@ -409,6 +418,32 @@ describe('路由守卫逻辑', () => {
       expect(redirect).toBeNull()
     })
 
+    it('unauthenticated: initialized /setup redirects to /login', () => {
+      const authState: MockAuthState = {
+        isAuthenticated: false,
+        isAdmin: false,
+        isSimpleMode: false,
+        backendModeEnabled: true,
+        hasPendingAuthSession: false,
+        setupNeedsSetup: false,
+      }
+      const redirect = simulateGuard('/setup', { requiresAuth: false }, authState)
+      expect(redirect).toBe('/login')
+    })
+
+    it('admin: initialized /setup redirects to /admin/dashboard', () => {
+      const authState: MockAuthState = {
+        isAuthenticated: true,
+        isAdmin: true,
+        isSimpleMode: false,
+        backendModeEnabled: true,
+        hasPendingAuthSession: false,
+        setupNeedsSetup: false,
+      }
+      const redirect = simulateGuard('/setup', { requiresAuth: false }, authState)
+      expect(redirect).toBe('/admin/dashboard')
+    })
+
     it('admin: /admin/dashboard is allowed', () => {
       const authState: MockAuthState = {
         isAuthenticated: true,
@@ -532,6 +567,9 @@ describe('路由守卫逻辑', () => {
       expect(
         simulateGuard('/payment/stripe-popup', { requiresAuth: false }, authState)
       ).toBeNull()
+      expect(
+        simulateGuard('/payment/airwallex', { requiresAuth: false }, authState)
+      ).toBeNull()
     })
 
     it('unauthenticated: /legal is allowed', () => {
@@ -594,7 +632,7 @@ describe('路由守卫逻辑', () => {
         expect(metaFor(path)?.requiresPayment).toBe(true)
       }
 
-      for (const path of ['/payment/result', '/payment/stripe', '/payment/stripe-popup']) {
+      for (const path of ['/payment/result', '/payment/stripe', '/payment/stripe-popup', '/payment/airwallex']) {
         expect(metaFor(path)?.requiresPayment).toBe(false)
       }
     })
