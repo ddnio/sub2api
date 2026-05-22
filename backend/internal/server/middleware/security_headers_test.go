@@ -329,6 +329,14 @@ func TestEnhanceCSPPolicy(t *testing.T) {
 		assert.NotContains(t, enhanced, StripeDomain)
 	})
 
+	t.Run("does_not_treat_partial_stripe_hostname_as_compatible", func(t *testing.T) {
+		policy := "default-src 'self'; script-src 'self' https://notstripe.com; frame-src 'self' https://notstripe.com"
+		enhanced := enhanceCSPPolicy(policy)
+
+		assert.Equal(t, 1, countDirectiveValue(enhanced, "script-src", StripeDomain))
+		assert.Equal(t, 1, countDirectiveValue(enhanced, "frame-src", StripeDomain))
+	})
+
 	t.Run("handles_policy_without_script_src", func(t *testing.T) {
 		policy := "default-src 'self'"
 		enhanced := enhanceCSPPolicy(policy)

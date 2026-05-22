@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"net/url"
 	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -177,13 +178,40 @@ func directiveHasDomainSuffix(policy, directive, suffix string) bool {
 			continue
 		}
 		for _, field := range fields[1:] {
-			if strings.Contains(field, suffix) {
+			if cspSourceMatchesDomainSuffix(field, suffix) {
 				return true
 			}
 		}
 		return false
 	}
 	return false
+}
+
+func cspSourceMatchesDomainSuffix(source, suffix string) bool {
+	source = strings.TrimSpace(source)
+	suffix = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(suffix)), ".")
+	if source == "" || suffix == "" || strings.HasPrefix(source, "'") {
+		return false
+	}
+
+	host := source
+	if strings.Contains(source, "://") {
+		u, err := url.Parse(source)
+		if err != nil {
+			return false
+		}
+		host = u.Hostname()
+	} else {
+		if beforePath, _, ok := strings.Cut(host, "/"); ok {
+			host = beforePath
+		}
+		if beforePort, _, ok := strings.Cut(host, ":"); ok {
+			host = beforePort
+		}
+	}
+
+	host = strings.TrimPrefix(strings.ToLower(host), "*.")
+	return host == suffix || strings.HasSuffix(host, "."+suffix)
 }
 
 // addToDirective adds a value to a specific CSP directive.

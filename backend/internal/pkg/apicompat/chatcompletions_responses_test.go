@@ -764,6 +764,87 @@ func TestResponsesToChatCompletions_WebSearch(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Streaming: ChatCompletionsChunkToResponsesEvents tests
+// ---------------------------------------------------------------------------
+
+func TestChatCompletionsChunkToResponsesEvents_ToolCallLifecycle(t *testing.T) {
+	state := NewChatCompletionsToResponsesStreamState("gpt-4o")
+	toolIndex := 0
+
+	firstEvents := ChatCompletionsChunkToResponsesEvents(&ChatCompletionsChunk{
+		ID:    "resp_chat_stream",
+		Model: "gpt-4o",
+		Choices: []ChatChunkChoice{{
+			Index: 0,
+			Delta: ChatDelta{
+				ToolCalls: []ChatToolCall{{
+					Index: &toolIndex,
+					ID:    "call_weather",
+					Type:  "function",
+					Function: ChatFunctionCall{
+						Name:      "get_weather",
+						Arguments: `{"city":`,
+					},
+				}},
+			},
+		}},
+	}, state)
+	secondEvents := ChatCompletionsChunkToResponsesEvents(&ChatCompletionsChunk{
+		ID:    "resp_chat_stream",
+		Model: "gpt-4o",
+		Choices: []ChatChunkChoice{{
+			Index: 0,
+			Delta: ChatDelta{
+				ToolCalls: []ChatToolCall{{
+					Index: &toolIndex,
+					Function: ChatFunctionCall{
+						Arguments: `"Tokyo"}`,
+					},
+				}},
+			},
+		}},
+	}, state)
+	finalEvents := FinalizeChatCompletionsResponsesStream(state)
+
+	allEvents := append(append(firstEvents, secondEvents...), finalEvents...)
+	added := findResponsesStreamEvent(t, allEvents, "response.output_item.added")
+	require.NotNil(t, added.Item)
+	assert.Equal(t, "function_call", added.Item.Type)
+	assert.Equal(t, "call_weather", added.Item.CallID)
+	assert.NotEmpty(t, added.Item.ID)
+
+	argsDone := findResponsesStreamEvent(t, allEvents, "response.function_call_arguments.done")
+	assert.Equal(t, "call_weather", argsDone.CallID)
+	assert.Equal(t, "get_weather", argsDone.Name)
+	assert.Equal(t, `{"city":"Tokyo"}`, argsDone.Arguments)
+
+	itemDone := findResponsesStreamEvent(t, allEvents, "response.output_item.done")
+	require.NotNil(t, itemDone.Item)
+	assert.Equal(t, added.Item.ID, itemDone.Item.ID)
+	assert.Equal(t, "completed", itemDone.Item.Status)
+	assert.Equal(t, `{"city":"Tokyo"}`, itemDone.Item.Arguments)
+
+	completed := findResponsesStreamEvent(t, allEvents, "response.completed")
+	require.NotNil(t, completed.Response)
+	require.Len(t, completed.Response.Output, 1)
+	assert.Equal(t, "function_call", completed.Response.Output[0].Type)
+	assert.Equal(t, added.Item.ID, completed.Response.Output[0].ID)
+	assert.Equal(t, "call_weather", completed.Response.Output[0].CallID)
+	assert.Equal(t, `{"city":"Tokyo"}`, completed.Response.Output[0].Arguments)
+}
+
+func findResponsesStreamEvent(t *testing.T, events []ResponsesStreamEvent, eventType string) ResponsesStreamEvent {
+	t.Helper()
+	for _, event := range events {
+		if event.Type == eventType {
+			return event
+		}
+	}
+	require.Failf(t, "event not found", "missing event type %s in %#v", eventType, events)
+	return ResponsesStreamEvent{}
+}
+
+// ---------------------------------------------------------------------------
 // Streaming: ResponsesEventToChatChunks tests
 // ---------------------------------------------------------------------------
 
