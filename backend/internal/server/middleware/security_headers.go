@@ -136,12 +136,22 @@ func enhanceCSPPolicy(policy string) string {
 	}
 
 	for _, required := range requiredCSPDirectiveValues {
-		if !directiveHasValue(policy, required.directive, required.value) {
+		if !directiveHasCompatibleValue(policy, required.directive, required.value) {
 			policy = addToDirective(policy, required.directive, required.value)
 		}
 	}
 
 	return policy
+}
+
+func directiveHasCompatibleValue(policy, directive, value string) bool {
+	if directiveHasValue(policy, directive, value) {
+		return true
+	}
+	if value == StripeDomain {
+		return directiveHasDomainSuffix(policy, directive, "stripe.com")
+	}
+	return false
 }
 
 func directiveHasValue(policy, directive, value string) bool {
@@ -152,6 +162,22 @@ func directiveHasValue(policy, directive, value string) bool {
 		}
 		for _, field := range fields[1:] {
 			if field == value {
+				return true
+			}
+		}
+		return false
+	}
+	return false
+}
+
+func directiveHasDomainSuffix(policy, directive, suffix string) bool {
+	for _, rawDirective := range strings.Split(policy, ";") {
+		fields := strings.Fields(strings.TrimSpace(rawDirective))
+		if len(fields) == 0 || fields[0] != directive {
+			continue
+		}
+		for _, field := range fields[1:] {
+			if strings.Contains(field, suffix) {
 				return true
 			}
 		}
