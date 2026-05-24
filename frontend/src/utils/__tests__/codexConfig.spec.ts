@@ -15,7 +15,7 @@ describe('createCodexCliFiles', () => {
     expect(files[0].content).toContain('model = "gpt-5.3-codex"')
     expect(files[0].content).toContain('[model_providers.sub2api]')
     expect(files[0].content).toContain('name = "Sub2API"')
-    expect(files[0].content).toContain('base_url = "https://relay.example.com/v1"')
+    expect(files[0].content).toContain('base_url = "https://relay.example.com"')
     expect(files[0].content).not.toContain('supports_websockets = true')
     expect(files[1].path).toBe('~/.codex/auth.json')
     expect(files[1].content).toContain('"OPENAI_API_KEY": "your-api-key-here"')

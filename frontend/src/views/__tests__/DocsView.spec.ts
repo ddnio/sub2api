@@ -77,27 +77,26 @@ describe('DocsView', () => {
 
     expect(wrapper.find('[data-docs-mode="api"]').exists()).toBe(false)
     expect(wrapper.find('[data-docs-mode="codex"]').exists()).toBe(false)
-    expect(wrapper.text()).toContain('Codex CLI 使用指南')
-    expect(wrapper.text()).toContain('安装 Node.js')
-    expect(wrapper.text()).toContain('https://relay.sub2api.test/v1')
-    expect(wrapper.text()).toContain('curl -I https://relay.sub2api.test/v1')
-    expect(wrapper.text()).toContain('config.toml')
+    expect(wrapper.text()).toContain('快速开始')
+    expect(wrapper.text()).toContain('选择你使用的客户端')
+    expect(wrapper.text()).toContain('https://relay.sub2api.test')
+    expect(wrapper.text()).toContain('Codex CLI')
   })
 
   it('supports direct deep links while still rendering the same guide', async () => {
-    const { wrapper } = await createWrapper('/docs?mode=codex')
+    const { wrapper } = await createWrapper('/docs#codex-cli')
 
     expect(wrapper.text()).toContain('codex --version')
     expect(wrapper.text()).toContain('auth.json')
     expect(wrapper.text()).toContain('常见问题')
     expect(wrapper.text()).toContain('model_provider = "sub2api"')
-    expect(wrapper.text()).toContain('https://relay.sub2api.test/v1')
+    expect(wrapper.text()).toContain('https://relay.sub2api.test')
   })
 
   it('keeps rendering the same guide for legacy api mode links', async () => {
     const { wrapper, router } = await createWrapper('/docs?mode=api')
 
     expect(router.currentRoute.value.query.mode).toBe('api')
-    expect(wrapper.text()).toContain('Codex CLI 使用指南')
+    expect(wrapper.text()).toContain('快速开始')
   })
 })

@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"net/url"
 	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -136,12 +137,22 @@ func enhanceCSPPolicy(policy string) string {
 	}
 
 	for _, required := range requiredCSPDirectiveValues {
-		if !directiveHasValue(policy, required.directive, required.value) {
+		if !directiveHasCompatibleValue(policy, required.directive, required.value) {
 			policy = addToDirective(policy, required.directive, required.value)
 		}
 	}
 
 	return policy
+}
+
+func directiveHasCompatibleValue(policy, directive, value string) bool {
+	if directiveHasValue(policy, directive, value) {
+		return true
+	}
+	if value == StripeDomain {
+		return directiveHasDomainSuffix(policy, directive, "stripe.com")
+	}
+	return false
 }
 
 func directiveHasValue(policy, directive, value string) bool {
@@ -158,6 +169,49 @@ func directiveHasValue(policy, directive, value string) bool {
 		return false
 	}
 	return false
+}
+
+func directiveHasDomainSuffix(policy, directive, suffix string) bool {
+	for _, rawDirective := range strings.Split(policy, ";") {
+		fields := strings.Fields(strings.TrimSpace(rawDirective))
+		if len(fields) == 0 || fields[0] != directive {
+			continue
+		}
+		for _, field := range fields[1:] {
+			if cspSourceMatchesDomainSuffix(field, suffix) {
+				return true
+			}
+		}
+		return false
+	}
+	return false
+}
+
+func cspSourceMatchesDomainSuffix(source, suffix string) bool {
+	source = strings.TrimSpace(source)
+	suffix = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(suffix)), ".")
+	if source == "" || suffix == "" || strings.HasPrefix(source, "'") {
+		return false
+	}
+
+	host := source
+	if strings.Contains(source, "://") {
+		u, err := url.Parse(source)
+		if err != nil {
+			return false
+		}
+		host = u.Hostname()
+	} else {
+		if beforePath, _, ok := strings.Cut(host, "/"); ok {
+			host = beforePath
+		}
+		if beforePort, _, ok := strings.Cut(host, ":"); ok {
+			host = beforePort
+		}
+	}
+
+	host = strings.TrimPrefix(strings.ToLower(host), "*.")
+	return host == suffix || strings.HasSuffix(host, "."+suffix)
 }
 
 // addToDirective adds a value to a specific CSP directive.
