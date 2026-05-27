@@ -163,6 +163,8 @@ export interface AffiliateTransferResponse {
 export interface SendVerifyCodeRequest {
   email: string
   turnstile_token?: string
+  pending_auth_token?: string
+  pending_oauth_token?: string
 }
 
 export interface SendVerifyCodeResponse {
