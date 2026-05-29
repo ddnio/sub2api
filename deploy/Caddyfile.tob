@@ -67,3 +67,41 @@ fx.nanafox.com {
 		respond "{err.status_code} {err.status_text}"
 	}
 }
+
+
+# Grok 上游服务（CLIProxyAPI）
+# 运行目录：/data/service/cliproxyapi
+# 容器：cli-proxy-api
+# 宿主机端口：127.0.0.1:8317
+# Docker 网络：deploy_sub2api-network
+# 控制台 /management.html 公网开放，由 remote-management.secret-key 保护。
+grok.nanafox.com {
+	reverse_proxy localhost:8317 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		transport http {
+			keepalive 120s
+			keepalive_idle_conns 128
+			compression off
+		}
+	}
+
+	request_body {
+		max_size 100MB
+	}
+
+	log {
+		output file /var/log/caddy/cliproxyapi-grok.log {
+			roll_size 50mb
+			roll_keep 10
+		}
+		format json
+		level INFO
+	}
+
+	handle_errors {
+		respond "{err.status_code} {err.status_text}"
+	}
+}

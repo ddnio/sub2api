@@ -14,6 +14,12 @@ ToC 服务器（108.160.133.141）                ToB 服务器（43.106.8.109�
 │       ├── 数据库：sub2api_test                     ├── 数据库：sub2api_tob
 │       └── Redis：DB 1                             └── Redis：DB 0
 │
+│                                           └── Grok 上游（CLIProxyAPI）
+│                                               ├── 域名：grok.nanafox.com
+│                                               ├── 宿主机端口：127.0.0.1:8317
+│                                               ├── 容器内网地址：http://cli-proxy-api:8317
+│                                               └── 存储：本地文件（config.yaml + auth json），无 DB/Redis 依赖
+│
 └── 生产环境
     └── sub2api-prod（端口 8080）
         ├── 域名：router.nanafox.com
@@ -84,7 +90,8 @@ pnpm --dir frontend dev
 
 ```
 /data/service/
-└── sub2api/          # 代码仓库（test 和 prod 共用）
+├── sub2api/          # 代码仓库（test 和 prod 共用）
+└── cliproxyapi/      # ToB 服务器上的 Grok 上游（CLIProxyAPI）
 
 /etc/sub2api/
 ├── test.yaml         # 测试环境配置
@@ -120,6 +127,7 @@ ufw status
 所有容器使用同一个 Docker 网络 `deploy_sub2api-network`，app 容器通过容器名访问 DB：
 - 数据库 host：`sub2api-postgres`
 - Redis host：`sub2api-redis`
+- Grok 上游（CLIProxyAPI）host：`cli-proxy-api`（仅 ToB 服务器）
 
 ---
 
@@ -206,6 +214,8 @@ Cloudflare 配置要点：
 |------|------|------|
 | `router-test.nanafox.com` | `127.0.0.1:8081` | 测试 |
 | `router.nanafox.com` | `127.0.0.1:8080` | 生产 |
+| `fx.nanafox.com` | `127.0.0.1:8080` | ToB 生产 |
+| `grok.nanafox.com` | `127.0.0.1:8317` | Grok 上游（CLIProxyAPI） |
 
 Caddy 自动申请 Let's Encrypt 证书（Cloudflare 回源时会验证此证书）。
 
@@ -326,9 +336,32 @@ docker ps --format '{{.Names}} | {{.CreatedAt}}' | grep sub2api
 
 ```
 /data/service/sub2api/    # 代码仓库（跟踪 main 分支）
+/data/service/cliproxyapi/ # Grok 上游 CLIProxyAPI（docker-compose + config.yaml + auths + logs）
 /etc/sub2api/prod.yaml    # 生产配置（含 DB、Redis、JWT、支付密钥）
 /opt/sub2api/deploy/      # docker-compose（postgres + redis 基础设施）
 ```
+
+### Grok 上游（CLIProxyAPI）
+
+ToB 服务器的 Grok 上游用 [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) 提供，旁路部署，**不依赖数据库**——纯文件型（config + 登录态 json + 日志），无需 PostgreSQL/Redis，也不需要 flaresolverr。Grok 走 xAI OAuth（Grok Build），消耗 SuperGrok 订阅额度（与 grok.com 网页端共享）。
+
+> 历史：原先用 grok2api（爬 grok.com 网页 + flaresolverr 破 Cloudflare），2026-05-30 起替换为 CLIProxyAPI。
+
+```text
+/data/service/cliproxyapi/
+├── docker-compose.yml    # 镜像 eceasy/cli-proxy-api:latest
+├── config.yaml           # 含 api-keys + remote-management.secret-key，不提交
+├── auths/
+│   └── xai-*.json        # xAI OAuth 登录态（本机登录后拷贝上来，含 refresh_token 会自动刷新）
+└── logs/
+```
+
+端口和访问方式：
+- 宿主机只绑定 `127.0.0.1:8317:8317`，由 Caddy 反代 `grok.nanafox.com`。
+- 容器加入 `deploy_sub2api-network`，`sub2api-prod` 用 `http://cli-proxy-api:8317/v1` 作为 OpenAI 兼容上游接入（渠道 API Key = config.yaml 的 `api-keys`）。
+- Web 控制台 `grok.nanafox.com/management.html`，由 `remote-management.secret-key` 保护（`allow-remote: true` 才能经反代访问）。
+- 登录新账号：服务器无浏览器，需在有桌面的机器上 `./cli-proxy-api -xai-login` 完成 OAuth，再把生成的 `~/.cli-proxy-api/*.json` 拷到 `auths/`。
+- 控制台「Grok 额度」可能显示获取失败：查额度接口 `cli-chat-proxy.grok.com/v1/billing` 经 Cloudflare，纯显示问题，不影响推理。
 
 ### 部署
 
