@@ -33,9 +33,12 @@ export function createCodexCliFiles(options: CreateCodexCliFilesOptions): CodexC
   const configDir = options.os === 'windows' ? '%userprofile%\\.codex' : '~/.codex'
   const providerName = options.providerName?.trim() || 'NanaFox API'
   const providerKey = toProviderKey(providerName)
+  const websocketProviderExtension = options.websocket ? '\nsupports_websockets = true' : ''
+  const websocketFeatureExtension = options.websocket ? 'responses_websockets_v2 = true\n' : ''
   const standardConfig = `model_provider = "${providerKey}"
-model = "gpt-5.3-codex"
-model_reasoning_effort = "high"
+model = "gpt-5.5"
+review_model = "gpt-5.5"
+model_reasoning_effort = "xhigh"
 network_access = "enabled"
 disable_response_storage = true
 windows_wsl_setup_acknowledged = true
@@ -45,15 +48,15 @@ model_verbosity = "high"
 name = "${providerName}"
 base_url = "${normalizedBaseUrl}"
 wire_api = "responses"
-requires_openai_auth = true`
-  const websocketExtension = options.websocket
-    ? '\n\nsupports_websockets = true\n\n[features]\nresponses_websockets_v2 = true'
-    : ''
+requires_openai_auth = true${websocketProviderExtension}
+
+[features]
+${websocketFeatureExtension}goals = true`
   const windowsConfig = options.os === 'windows'
     ? '\n\n[windows]\nsandbox = "elevated"'
     : ''
 
-  const configContent = `${standardConfig}${websocketExtension}${windowsConfig}`
+  const configContent = `${standardConfig}${windowsConfig}`
 
   const authContent = `{
   "OPENAI_API_KEY": "${options.apiKey}"
