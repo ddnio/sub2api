@@ -204,13 +204,17 @@ func applyCodexOAuthTransformWithOptions(reqBody map[string]any, opts codexOAuth
 		}
 	}
 
-	// 提取 input 中 role:"system" 消息至 instructions（OAuth 上游不支持 system role）。
-	if extractSystemMessagesFromInput(reqBody) {
+	// ChatGPT internal Codex endpoint does not accept role:"system", but
+	// OpenAI Responses JSON mode validates instructions inside input messages.
+	// Keep system guidance in input by mapping it to developer messages.
+	if normalizeSystemMessagesToDeveloperInInput(reqBody) {
 		result.Modified = true
 	}
 
 	// instructions 处理逻辑：根据是否是 Codex CLI 分别调用不同方法
-	if !opts.SkipDefaultInstructions && applyInstructions(reqBody, opts.IsCodexCLI) {
+	if !opts.SkipDefaultInstructions &&
+		strings.TrimSpace(extractPromptLikeInstructionsFromInput(reqBody)) == "" &&
+		applyInstructions(reqBody, opts.IsCodexCLI) {
 		result.Modified = true
 	}
 	if isCodexSparkModel(normalizedModel) && applyCodexSparkImageUnsupportedInstructions(reqBody) {
@@ -900,46 +904,24 @@ func extractTextFromContent(content any) string {
 	}
 }
 
-// extractSystemMessagesFromInput scans the input array for items with role=="system",
-// removes them, and merges their content into reqBody["instructions"].
-// If instructions is already non-empty, extracted content is prepended with "\n\n".
-// Returns true if any system messages were extracted.
-func extractSystemMessagesFromInput(reqBody map[string]any) bool {
+func normalizeSystemMessagesToDeveloperInInput(reqBody map[string]any) bool {
 	input, ok := reqBody["input"].([]any)
 	if !ok || len(input) == 0 {
 		return false
 	}
 
-	var systemTexts []string
-	remaining := make([]any, 0, len(input))
-
+	modified := false
 	for _, item := range input {
 		m, ok := item.(map[string]any)
 		if !ok {
-			remaining = append(remaining, item)
 			continue
 		}
-		if role, _ := m["role"].(string); role != "system" {
-			remaining = append(remaining, item)
-			continue
-		}
-		if text := extractTextFromContent(m["content"]); text != "" {
-			systemTexts = append(systemTexts, text)
+		if role, _ := m["role"].(string); role == "system" {
+			m["role"] = "developer"
+			modified = true
 		}
 	}
-
-	if len(systemTexts) == 0 {
-		return false
-	}
-
-	extracted := strings.Join(systemTexts, "\n\n")
-	if existing, ok := reqBody["instructions"].(string); ok && strings.TrimSpace(existing) != "" {
-		reqBody["instructions"] = extracted + "\n\n" + existing
-	} else {
-		reqBody["instructions"] = extracted
-	}
-	reqBody["input"] = remaining
-	return true
+	return modified
 }
 
 func extractPromptLikeInstructionsFromInput(reqBody map[string]any) string {
