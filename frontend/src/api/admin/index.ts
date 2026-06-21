@@ -31,6 +31,7 @@ import channelMonitorAPI from './channelMonitor'
 import channelMonitorTemplateAPI from './channelMonitorTemplate'
 import affiliatesAPI from './affiliates'
 import riskControlAPI from './riskControl'
+import adminComplianceAPI from './compliance'
 
 /**
  * Unified admin API object for convenient access
@@ -63,7 +64,8 @@ export const adminAPI = {
   channelMonitor: channelMonitorAPI,
   channelMonitorTemplate: channelMonitorTemplateAPI,
   affiliates: affiliatesAPI,
-  riskControl: riskControlAPI
+  riskControl: riskControlAPI,
+  compliance: adminComplianceAPI
 }
 
 export {
@@ -94,7 +96,8 @@ export {
   channelMonitorAPI,
   channelMonitorTemplateAPI,
   affiliatesAPI,
-  riskControlAPI
+  riskControlAPI,
+  adminComplianceAPI
 }
 
 export default adminAPI

@@ -153,6 +153,7 @@ func (h *AuthHandler) DingTalkOAuthStart(c *gin.Context) {
 	} else {
 		clearDingTalkCookie(c, dingTalkOAuthAffiliateCookieName, secureCookie)
 	}
+	captureOAuthPromoCode(c, secureCookie)
 
 	setOAuthPendingBrowserCookie(c, browserSessionKey, secureCookie)
 	clearOAuthPendingSessionCookie(c, secureCookie)
@@ -330,6 +331,7 @@ func (h *AuthHandler) DingTalkOAuthCallback(c *gin.Context) {
 		clearDingTalkCookie(c, dingTalkOAuthRedirectCookie, secureCookie)
 		clearDingTalkCookie(c, dingTalkOAuthIntentCookieName, secureCookie)
 		clearDingTalkCookie(c, dingTalkOAuthAffiliateCookieName, secureCookie)
+		clearOAuthPromoCodeCookie(c, secureCookie)
 	}()
 
 	expectedState, err := readCookieDecoded(c, dingTalkOAuthStateCookieName)
@@ -799,12 +801,13 @@ func (h *AuthHandler) CompleteDingTalkOAuthRegistration(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPair(
+	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPairAndPromoCode(
 		c.Request.Context(),
 		email,
 		username,
 		req.InvitationCode,
 		firstNonEmpty(pendingOAuthAffiliateCode(session), req.AffCode),
+		pendingOAuthPromoCode(session),
 		"dingtalk",
 	)
 	if err != nil {

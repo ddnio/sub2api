@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"io"
 	"log"
 	"os"
 	"strings"
@@ -41,22 +40,20 @@ func TestNormalizeStdLogMessage(t *testing.T) {
 func TestStdLogBridgeRoutesLevels(t *testing.T) {
 	origStdout := os.Stdout
 	origStderr := os.Stderr
-	stdoutR, stdoutW, err := os.Pipe()
+	stdoutW, err := os.CreateTemp(t.TempDir(), "stdout-*.log")
 	if err != nil {
-		t.Fatalf("create stdout pipe: %v", err)
+		t.Fatalf("create stdout temp file: %v", err)
 	}
-	stderrR, stderrW, err := os.Pipe()
+	stderrW, err := os.CreateTemp(t.TempDir(), "stderr-*.log")
 	if err != nil {
-		t.Fatalf("create stderr pipe: %v", err)
+		t.Fatalf("create stderr temp file: %v", err)
 	}
 	os.Stdout = stdoutW
 	os.Stderr = stderrW
 	t.Cleanup(func() {
 		os.Stdout = origStdout
 		os.Stderr = origStderr
-		_ = stdoutR.Close()
 		_ = stdoutW.Close()
-		_ = stderrR.Close()
 		_ = stderrW.Close()
 	})
 
@@ -81,8 +78,8 @@ func TestStdLogBridgeRoutesLevels(t *testing.T) {
 
 	_ = stdoutW.Close()
 	_ = stderrW.Close()
-	stdoutBytes, _ := io.ReadAll(stdoutR)
-	stderrBytes, _ := io.ReadAll(stderrR)
+	stdoutBytes, _ := os.ReadFile(stdoutW.Name())
+	stderrBytes, _ := os.ReadFile(stderrW.Name())
 	stdoutText := string(stdoutBytes)
 	stderrText := string(stderrBytes)
 
@@ -103,22 +100,20 @@ func TestStdLogBridgeRoutesLevels(t *testing.T) {
 func TestLegacyPrintfRoutesLevels(t *testing.T) {
 	origStdout := os.Stdout
 	origStderr := os.Stderr
-	stdoutR, stdoutW, err := os.Pipe()
+	stdoutW, err := os.CreateTemp(t.TempDir(), "stdout-*.log")
 	if err != nil {
-		t.Fatalf("create stdout pipe: %v", err)
+		t.Fatalf("create stdout temp file: %v", err)
 	}
-	stderrR, stderrW, err := os.Pipe()
+	stderrW, err := os.CreateTemp(t.TempDir(), "stderr-*.log")
 	if err != nil {
-		t.Fatalf("create stderr pipe: %v", err)
+		t.Fatalf("create stderr temp file: %v", err)
 	}
 	os.Stdout = stdoutW
 	os.Stderr = stderrW
 	t.Cleanup(func() {
 		os.Stdout = origStdout
 		os.Stderr = origStderr
-		_ = stdoutR.Close()
 		_ = stdoutW.Close()
-		_ = stderrR.Close()
 		_ = stderrW.Close()
 	})
 
@@ -143,8 +138,8 @@ func TestLegacyPrintfRoutesLevels(t *testing.T) {
 
 	_ = stdoutW.Close()
 	_ = stderrW.Close()
-	stdoutBytes, _ := io.ReadAll(stdoutR)
-	stderrBytes, _ := io.ReadAll(stderrR)
+	stdoutBytes, _ := os.ReadFile(stdoutW.Name())
+	stderrBytes, _ := os.ReadFile(stderrW.Name())
 	stdoutText := string(stdoutBytes)
 	stderrText := string(stderrBytes)
 

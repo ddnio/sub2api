@@ -135,6 +135,7 @@ func (h *AuthHandler) WeChatOAuthStart(c *gin.Context) {
 	} else {
 		wechatClearCookie(c, wechatOAuthAffiliateCookie, secureCookie)
 	}
+	captureOAuthPromoCode(c, secureCookie)
 	setOAuthPendingBrowserCookie(c, browserSessionKey, secureCookie)
 	clearOAuthPendingSessionCookie(c, secureCookie)
 	if intent == oauthIntentBindCurrentUser {
@@ -182,6 +183,7 @@ func (h *AuthHandler) WeChatOAuthCallback(c *gin.Context) {
 		wechatClearCookie(c, wechatOAuthModeCookieName, secureCookie)
 		wechatClearCookie(c, wechatOAuthBindUserCookieName, secureCookie)
 		wechatClearCookie(c, wechatOAuthAffiliateCookie, secureCookie)
+		clearOAuthPromoCodeCookie(c, secureCookie)
 	}()
 
 	expectedState, err := readCookieDecoded(c, wechatOAuthStateCookieName)
@@ -566,7 +568,15 @@ func (h *AuthHandler) CompleteWeChatOAuthRegistration(c *gin.Context) {
 		return
 	}
 
-	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, req.InvitationCode, firstNonEmpty(pendingOAuthAffiliateCode(session), req.AffCode), "wechat")
+	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPairAndPromoCode(
+		c.Request.Context(),
+		email,
+		username,
+		req.InvitationCode,
+		firstNonEmpty(pendingOAuthAffiliateCode(session), req.AffCode),
+		pendingOAuthPromoCode(session),
+		"wechat",
+	)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
