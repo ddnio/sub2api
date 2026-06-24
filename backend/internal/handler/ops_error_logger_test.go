@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -930,6 +931,54 @@ func TestSetOpsEndpointContext_NilContext(t *testing.T) {
 	require.NotPanics(t, func() {
 		setOpsEndpointContext(nil, "model", int16(1))
 	})
+}
+
+func TestAttachOpsRequestSnapshotToEntryStoresBodyAndWhitelistedHeaders(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+	c.Request.Header.Set("anthropic-beta", "messages-2023-12-15")
+	c.Request.Header.Set("anthropic-version", "2023-06-01")
+	c.Request.Header.Set("authorization", "Bearer secret-token")
+	raw := []byte(`{"model":"claude-3-5-sonnet-20241022","api_key":"sk-test","messages":[{"role":"user","content":"hello"}]}`)
+
+	setOpsRequestBodySnapshot(c, raw)
+	entry := &service.OpsInsertErrorLogInput{}
+	attachOpsRequestSnapshotToEntry(c, entry)
+
+	require.NotNil(t, entry.RequestBodyJSON)
+	require.NotNil(t, entry.RequestBodyBytes)
+	require.Equal(t, len(raw), *entry.RequestBodyBytes)
+	require.False(t, entry.RequestBodyTruncated)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal([]byte(*entry.RequestBodyJSON), &body))
+	require.Equal(t, "[REDACTED]", body["api_key"])
+
+	require.NotNil(t, entry.RequestHeadersJSON)
+	var headers map[string]string
+	require.NoError(t, json.Unmarshal([]byte(*entry.RequestHeadersJSON), &headers))
+	require.Equal(t, "messages-2023-12-15", headers["anthropic-beta"])
+	require.Equal(t, "2023-06-01", headers["anthropic-version"])
+	require.NotContains(t, headers, "authorization")
+}
+
+func TestAttachOpsRequestSnapshotToEntryIgnoresInvalidJSONBody(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+	raw := []byte("{invalid-json")
+
+	setOpsRequestBodySnapshot(c, raw)
+	entry := &service.OpsInsertErrorLogInput{}
+	attachOpsRequestSnapshotToEntry(c, entry)
+
+	require.Nil(t, entry.RequestBodyJSON)
+	require.NotNil(t, entry.RequestBodyBytes)
+	require.Equal(t, len(raw), *entry.RequestBodyBytes)
+	require.False(t, entry.RequestBodyTruncated)
 }
 
 func TestGetOpsAPIKeyFallsBackToOpsFallbackKey(t *testing.T) {

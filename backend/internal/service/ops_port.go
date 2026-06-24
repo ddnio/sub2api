@@ -125,6 +125,11 @@ type OpsInsertErrorLogInput struct {
 	ResponseLatencyMs  *int64
 	TimeToFirstTokenMs *int64
 
+	RequestBodyJSON      *string
+	RequestBodyTruncated bool
+	RequestBodyBytes     *int
+	RequestHeadersJSON   *string
+
 	CreatedAt time.Time
 
 	// 已删除 key 归因(仅 INVALID_API_KEY 认证失败时可能非空)

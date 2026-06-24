@@ -25,6 +25,7 @@ import (
 const (
 	opsModelKey                  = "ops_model"
 	opsStreamKey                 = "ops_stream"
+	opsRequestBodySnapshotKey    = "ops_request_body_snapshot"
 	opsAccountIDKey              = "ops_account_id"
 	opsRoutingCapacityLimitedKey = "ops_routing_capacity_limited"
 
@@ -408,6 +409,30 @@ func setOpsEndpointContext(c *gin.Context, upstreamModel string, requestType int
 		c.Set(opsUpstreamModelKey, upstreamModel)
 	}
 	c.Set(opsRequestTypeKey, requestType)
+}
+
+func setOpsRequestBodySnapshot(c *gin.Context, requestBody []byte) {
+	if c == nil || len(requestBody) == 0 {
+		return
+	}
+	c.Set(opsRequestBodySnapshotKey, requestBody)
+}
+
+func attachOpsRequestSnapshotToEntry(c *gin.Context, entry *service.OpsInsertErrorLogInput) {
+	if c == nil || entry == nil {
+		return
+	}
+	entry.RequestHeadersJSON = extractOpsRetryRequestHeaders(c)
+	v, ok := c.Get(opsRequestBodySnapshotKey)
+	if !ok {
+		return
+	}
+	raw, ok := v.([]byte)
+	if !ok || len(raw) == 0 {
+		return
+	}
+	entry.RequestBodyJSON, entry.RequestBodyTruncated, entry.RequestBodyBytes = service.PrepareOpsRequestBodyForQueue(raw)
+	opsErrorLogSanitized.Add(1)
 }
 
 func setOpsSelectedAccount(c *gin.Context, accountID int64, platform ...string) {
@@ -794,6 +819,7 @@ func OpsErrorLoggerMiddleware(ops *service.OpsService) gin.HandlerFunc {
 				}
 			}
 
+			attachOpsRequestSnapshotToEntry(c, entry)
 			enqueueOpsErrorLog(ops, entry)
 			return
 		}
@@ -995,8 +1021,14 @@ func OpsErrorLoggerMiddleware(ops *service.OpsService) gin.HandlerFunc {
 			}
 		}
 
+		attachOpsRequestSnapshotToEntry(c, entry)
 		enqueueOpsErrorLog(ops, entry)
 	}
+}
+
+var opsRetryRequestHeaderAllowlist = []string{
+	"anthropic-beta",
+	"anthropic-version",
 }
 
 // isCountTokensRequest checks if the request is a count_tokens request
@@ -1005,6 +1037,31 @@ func isCountTokensRequest(c *gin.Context) bool {
 		return false
 	}
 	return strings.Contains(c.Request.URL.Path, "/count_tokens")
+}
+
+func extractOpsRetryRequestHeaders(c *gin.Context) *string {
+	if c == nil || c.Request == nil {
+		return nil
+	}
+
+	headers := make(map[string]string, 4)
+	for _, key := range opsRetryRequestHeaderAllowlist {
+		v := strings.TrimSpace(c.GetHeader(key))
+		if v == "" {
+			continue
+		}
+		headers[key] = truncateString(v, 512)
+	}
+	if len(headers) == 0 {
+		return nil
+	}
+
+	raw, err := json.Marshal(headers)
+	if err != nil {
+		return nil
+	}
+	s := string(raw)
+	return &s
 }
 
 func applyOpsLatencyFieldsFromContext(c *gin.Context, entry *service.OpsInsertErrorLogInput) {

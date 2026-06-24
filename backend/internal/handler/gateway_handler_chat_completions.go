@@ -60,6 +60,7 @@ func (h *GatewayHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
+	setOpsRequestBodySnapshot(c, body)
 	setOpsRequestContext(c, "", false)
 
 	// Validate JSON

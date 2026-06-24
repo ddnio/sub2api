@@ -152,6 +152,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 		return
 	}
 
+	setOpsRequestBodySnapshot(c, body)
 	setOpsRequestContext(c, "", false)
 
 	bodyRef := service.NewRequestBodyRef(body)
@@ -1736,6 +1737,7 @@ func (h *GatewayHandler) CountTokens(c *gin.Context) {
 		return
 	}
 
+	setOpsRequestBodySnapshot(c, body)
 	setOpsRequestContext(c, "", false)
 
 	bodyRef := service.NewRequestBodyRef(body)

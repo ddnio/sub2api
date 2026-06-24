@@ -944,6 +944,11 @@ export interface OpsErrorDetail extends OpsErrorLog {
   response_latency_ms?: number | null
   time_to_first_token_ms?: number | null
 
+  request_body?: string
+  request_body_truncated?: boolean
+  request_body_bytes?: number | null
+  request_headers?: string
+
   is_business_limited: boolean
 
   // Deleted key owner info (INVALID_API_KEY attribution)

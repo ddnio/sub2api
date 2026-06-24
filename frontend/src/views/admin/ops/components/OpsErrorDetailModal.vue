@@ -133,7 +133,29 @@
         </div>
       </div>
 
-      <!-- Response content (client request -> error_body; upstream -> upstream_error_detail/message) -->
+      <div v-if="hasRequestSnapshot" class="rounded-xl bg-gray-50 p-6 dark:bg-dark-900">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h3 class="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">{{ t('admin.ops.errorDetail.requestSnapshot') }}</h3>
+          <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <span v-if="detail.request_body_bytes != null" class="font-mono">{{ t('admin.ops.errorDetail.requestBodyBytes') }}: {{ detail.request_body_bytes }}</span>
+            <span v-if="detail.request_body_truncated" class="rounded-md bg-amber-50 px-2 py-0.5 font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-500/30">
+              {{ t('admin.ops.errorDetail.requestBodyTruncated') }}
+            </span>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div v-if="detail.request_headers">
+            <div class="text-xs font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.errorDetail.requestHeaders') }}</div>
+            <pre class="mt-2 max-h-[280px] overflow-auto rounded-xl border border-gray-200 bg-white p-4 text-xs text-gray-800 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-100"><code>{{ prettyJSON(detail.request_headers) }}</code></pre>
+          </div>
+          <div v-if="detail.request_body" :class="{ 'lg:col-span-2': !detail.request_headers }">
+            <div class="text-xs font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.errorDetail.requestBody') }}</div>
+            <pre class="mt-2 max-h-[420px] overflow-auto rounded-xl border border-gray-200 bg-white p-4 text-xs text-gray-800 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-100"><code>{{ prettyJSON(detail.request_body) }}</code></pre>
+          </div>
+        </div>
+      </div>
+
       <div class="rounded-xl bg-gray-50 p-6 dark:bg-dark-900">
         <h3 class="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">{{ t('admin.ops.errorDetail.responseBody') }}</h3>
         <pre class="mt-4 max-h-[520px] overflow-auto rounded-xl border border-gray-200 bg-white p-4 text-xs text-gray-800 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-100"><code>{{ prettyJSON(primaryResponseBody || '') }}</code></pre>
@@ -249,8 +271,11 @@ const primaryResponseBody = computed(() => {
   return resolvePrimaryResponseBody(detail.value, props.errorType)
 })
 
-
-
+const hasRequestSnapshot = computed(() => {
+  const d = detail.value
+  if (!d) return false
+  return !!String(d.request_body || '').trim() || !!String(d.request_headers || '').trim() || d.request_body_bytes != null
+})
 
 const title = computed(() => {
   if (!props.errorId) return t('admin.ops.errorDetail.title')

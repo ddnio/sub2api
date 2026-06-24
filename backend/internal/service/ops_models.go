@@ -89,6 +89,11 @@ type OpsErrorLogDetail struct {
 	ResponseLatencyMs  *int64 `json:"response_latency_ms"`
 	TimeToFirstTokenMs *int64 `json:"time_to_first_token_ms"`
 
+	RequestBody          string `json:"request_body"`
+	RequestBodyTruncated bool   `json:"request_body_truncated"`
+	RequestBodyBytes     *int   `json:"request_body_bytes"`
+	RequestHeaders       string `json:"request_headers,omitempty"`
+
 	// vNext metric semantics
 	IsBusinessLimited bool `json:"is_business_limited"`
 

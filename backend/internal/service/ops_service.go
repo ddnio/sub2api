@@ -16,8 +16,22 @@ import (
 var ErrOpsDisabled = infraerrors.NotFound("OPS_DISABLED", "Ops monitoring is disabled")
 
 const (
-	opsMaxStoredErrorBodyBytes = 20 * 1024
+	opsMaxStoredRequestBodyBytes = 256 * 1024
+	opsMaxStoredErrorBodyBytes   = 20 * 1024
 )
+
+func PrepareOpsRequestBodyForQueue(raw []byte) (requestBodyJSON *string, truncated bool, requestBodyBytes *int) {
+	if len(raw) == 0 {
+		return nil, false, nil
+	}
+	sanitized, truncated, bytesLen := sanitizeAndTrimJSONPayload(raw, opsMaxStoredRequestBodyBytes)
+	if sanitized != "" {
+		out := sanitized
+		requestBodyJSON = &out
+	}
+	n := bytesLen
+	return requestBodyJSON, truncated, &n
+}
 
 // OpsService provides ingestion and query APIs for the Ops monitoring module.
 type OpsService struct {

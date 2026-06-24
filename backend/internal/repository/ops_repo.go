@@ -55,13 +55,17 @@ INSERT INTO ops_error_logs (
   upstream_latency_ms,
   response_latency_ms,
   time_to_first_token_ms,
+  request_body,
+  request_body_truncated,
+  request_body_bytes,
+  request_headers,
   created_at,
   attempted_key_prefix,
   deleted_key_owner_user_id,
   deleted_key_name,
   api_key_prefix
 ) VALUES (
-  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41
+  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,$44,$45
 )`
 
 func NewOpsRepository(db *sql.DB) service.OpsRepository {
@@ -169,6 +173,10 @@ func opsInsertErrorLogArgs(input *service.OpsInsertErrorLogInput) []any {
 		opsNullInt64(input.UpstreamLatencyMs),
 		opsNullInt64(input.ResponseLatencyMs),
 		opsNullInt64(input.TimeToFirstTokenMs),
+		opsNullString(input.RequestBodyJSON),
+		input.RequestBodyTruncated,
+		opsNullInt(input.RequestBodyBytes),
+		opsNullString(input.RequestHeadersJSON),
 		input.CreatedAt,
 		opsNullString(input.AttemptedKeyPrefix),
 		opsNullInt64(input.DeletedKeyOwnerUserID),
@@ -431,6 +439,10 @@ SELECT
   e.upstream_latency_ms,
   e.response_latency_ms,
   e.time_to_first_token_ms,
+  COALESCE(e.request_body::text, ''),
+  e.request_body_truncated,
+  e.request_body_bytes,
+  COALESCE(e.request_headers::text, ''),
   COALESCE(e.attempted_key_prefix, ''),
   e.deleted_key_owner_user_id,
   COALESCE(du.email, ''),
@@ -462,6 +474,7 @@ LIMIT 1`
 	var upstreamLatency sql.NullInt64
 	var responseLatency sql.NullInt64
 	var ttft sql.NullInt64
+	var requestBodyBytes sql.NullInt64
 	var requestType sql.NullInt64
 	var deletedKeyOwnerUserID sql.NullInt64
 	var detailAPIKeyName string
@@ -511,6 +524,10 @@ LIMIT 1`
 		&upstreamLatency,
 		&responseLatency,
 		&ttft,
+		&out.RequestBody,
+		&out.RequestBodyTruncated,
+		&requestBodyBytes,
+		&out.RequestHeaders,
 		&out.AttemptedKeyPrefix,
 		&deletedKeyOwnerUserID,
 		&out.DeletedKeyOwnerEmail,
@@ -576,6 +593,10 @@ LIMIT 1`
 		v := ttft.Int64
 		out.TimeToFirstTokenMs = &v
 	}
+	if requestBodyBytes.Valid {
+		v := int(requestBodyBytes.Int64)
+		out.RequestBodyBytes = &v
+	}
 	if requestType.Valid {
 		v := int16(requestType.Int64)
 		out.RequestType = &v
@@ -592,6 +613,15 @@ LIMIT 1`
 	}
 	// 已删除：ak.deleted_at 非空（软删），或仅命中 deleted_key_name 兜底。
 	out.APIKeyDeleted = detailAPIKeyDeletedAt.Valid || (detailAPIKeyName == "" && out.DeletedKeyName != "")
+
+	out.RequestBody = strings.TrimSpace(out.RequestBody)
+	if out.RequestBody == "null" {
+		out.RequestBody = ""
+	}
+	out.RequestHeaders = strings.TrimSpace(out.RequestHeaders)
+	if out.RequestHeaders == "null" {
+		out.RequestHeaders = ""
+	}
 
 	// Normalize upstream_errors to empty string when stored as JSON null.
 	out.UpstreamErrors = strings.TrimSpace(out.UpstreamErrors)
