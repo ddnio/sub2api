@@ -17,7 +17,9 @@ const messages: Record<string, string> = {
   'admin.dashboard.requests': 'Requests',
   'admin.dashboard.tokens': 'Tokens',
   'admin.dashboard.actual': 'Actual',
+  'admin.dashboard.accountCost': 'Account Cost',
   'admin.dashboard.standard': 'Standard',
+  'usage.accountBilled': 'Account Billed',
   'admin.dashboard.metricTokens': 'By Tokens',
   'admin.dashboard.metricActualCost': 'By Actual Cost',
   'admin.dashboard.noDataAvailable': 'No data available',
@@ -124,6 +126,26 @@ describe('ModelDistributionChart', () => {
       dataset: { data: [1.4, 0.2] },
     })
     expect(label).toBe('model-b: $1.40 (87.5%)')
+  })
+
+  it('can hide account cost for user usage stats without account_cost', () => {
+    const wrapper = mount(ModelDistributionChart, {
+      props: {
+        modelStats,
+        showAccountBilling: false,
+        showAccountCost: false,
+      },
+      global: {
+        stubs: {
+          LoadingSpinner: true,
+        },
+      },
+    })
+
+    expect(wrapper.text()).not.toContain('Account Billed')
+    expect(wrapper.text()).not.toContain('Account Cost')
+    expect(wrapper.findAll('thead th')).toHaveLength(5)
+    expect(wrapper.findAll('tbody tr')[0].findAll('td')).toHaveLength(5)
   })
 
   it('renders Others in the spending ranking table and uses a dedicated chart color', async () => {
