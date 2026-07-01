@@ -68,7 +68,7 @@
               <span class="font-medium text-gray-500 dark:text-gray-400">{{ t('usage.inbound') }}:</span>
               <span class="ml-1">{{ row.inbound_endpoint?.trim() || '-' }}</span>
             </div>
-            <div class="break-all text-gray-700 dark:text-gray-300">
+            <div v-if="showUpstreamEndpoint" class="break-all text-gray-700 dark:text-gray-300">
               <span class="font-medium text-gray-500 dark:text-gray-400">{{ t('usage.upstream') }}:</span>
               <span class="ml-1">{{ row.upstream_endpoint?.trim() || '-' }}</span>
             </div>
@@ -163,7 +163,7 @@
                 </div>
               </div>
             </div>
-            <div v-if="row.account_rate_multiplier != null" class="mt-0.5 text-[11px] text-orange-500 dark:text-orange-400">
+            <div v-if="showAccountBilling && row.account_rate_multiplier != null" class="mt-0.5 text-[11px] text-orange-500 dark:text-orange-400">
               A ${{ accountBilled(row).toFixed(6) }}
             </div>
           </div>
@@ -380,20 +380,22 @@
             <span class="font-semibold text-green-400">${{ tooltipData?.actual_cost?.toFixed(6) || '0.000000' }}</span>
           </div>
           <!-- Account billing (separated from user billing) -->
-          <div class="flex items-center justify-between gap-6 border-t border-gray-700 pt-1.5">
-            <span class="text-gray-400">{{ t('usage.accountMultiplier') }}</span>
-            <span class="font-semibold text-blue-400">{{ formatMultiplier(tooltipData?.account_rate_multiplier ?? 1) }}x</span>
-          </div>
-          <div class="flex items-center justify-between gap-6">
-            <span class="text-gray-400">{{ t('usage.accountBilled') }}</span>
-            <span class="font-semibold text-green-400">
-              ${{ accountBilled({
-                total_cost: tooltipData?.total_cost,
-                account_stats_cost: tooltipData?.account_stats_cost,
-                account_rate_multiplier: tooltipData?.account_rate_multiplier,
-              }).toFixed(6) }}
-            </span>
-          </div>
+          <template v-if="showAccountBilling">
+            <div class="flex items-center justify-between gap-6 border-t border-gray-700 pt-1.5">
+              <span class="text-gray-400">{{ t('usage.accountMultiplier') }}</span>
+              <span class="font-semibold text-blue-400">{{ formatMultiplier(tooltipData?.account_rate_multiplier ?? 1) }}x</span>
+            </div>
+            <div class="flex items-center justify-between gap-6">
+              <span class="text-gray-400">{{ t('usage.accountBilled') }}</span>
+              <span class="font-semibold text-green-400">
+                ${{ accountBilled({
+                  total_cost: tooltipData?.total_cost,
+                  account_stats_cost: tooltipData?.account_stats_cost,
+                  account_rate_multiplier: tooltipData?.account_rate_multiplier,
+                }).toFixed(6) }}
+              </span>
+            </div>
+          </template>
         </div>
         <div class="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-b-[6px] border-r-[6px] border-t-[6px] border-b-transparent border-r-gray-900 border-t-transparent dark:border-r-gray-800"></div>
       </div>
@@ -439,41 +441,56 @@ function accountBilled(row: { total_cost?: number | null; account_stats_cost?: n
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import Icon from '@/components/icons/Icon.vue'
-import type { AdminUsageLog } from '@/types'
+import type { AdminUsageLog, UsageLog } from '@/types'
 import type { Column } from '@/components/common/types'
 
+type UsageTableRow = UsageLog & Partial<Pick<AdminUsageLog,
+  | 'upstream_model'
+  | 'model_mapping_chain'
+  | 'account_rate_multiplier'
+  | 'account_stats_cost'
+  | 'account_cost'
+  | 'account'
+>>
+
 interface Props {
-  data: AdminUsageLog[]
+  data: UsageTableRow[]
   loading?: boolean
   columns: Column[]
   serverSideSort?: boolean
   defaultSortKey?: string
   defaultSortOrder?: 'asc' | 'desc'
+  showAccountBilling?: boolean
+  showUpstreamEndpoint?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   loading: false,
   serverSideSort: false,
   defaultSortKey: '',
-  defaultSortOrder: 'asc'
+  defaultSortOrder: 'asc',
+  showAccountBilling: true,
+  showUpstreamEndpoint: true
 })
 defineEmits<{
   userClick: [userID: number, email?: string]
   sort: [key: string, order: 'asc' | 'desc']
 }>()
 const { t } = useI18n()
+const showAccountBilling = props.showAccountBilling
+const showUpstreamEndpoint = props.showUpstreamEndpoint
 
 // Tooltip state - cost
 const tooltipVisible = ref(false)
 const tooltipPosition = ref({ x: 0, y: 0 })
-const tooltipData = ref<AdminUsageLog | null>(null)
+const tooltipData = ref<UsageTableRow | null>(null)
 
 // Tooltip state - token
 const tokenTooltipVisible = ref(false)
 const tokenTooltipPosition = ref({ x: 0, y: 0 })
-const tokenTooltipData = ref<AdminUsageLog | null>(null)
+const tokenTooltipData = ref<UsageTableRow | null>(null)
 
-const getRequestTypeLabel = (row: AdminUsageLog): string => {
+const getRequestTypeLabel = (row: UsageTableRow): string => {
   const requestType = resolveUsageRequestType(row)
   if (requestType === 'cyber') return t('usage.cyber')
   if (requestType === 'ws_v2') return t('usage.ws')
@@ -482,7 +499,7 @@ const getRequestTypeLabel = (row: AdminUsageLog): string => {
   return t('usage.unknown')
 }
 
-const getRequestTypeBadgeClass = (row: AdminUsageLog): string => {
+const getRequestTypeBadgeClass = (row: UsageTableRow): string => {
   const requestType = resolveUsageRequestType(row)
   if (requestType === 'cyber') return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
   if (requestType === 'ws_v2') return 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200'
@@ -504,7 +521,7 @@ const formatDuration = (ms: number | null | undefined): string => {
 }
 
 // Cost tooltip functions
-const showTooltip = (event: MouseEvent, row: AdminUsageLog) => {
+const showTooltip = (event: MouseEvent, row: UsageTableRow) => {
   const target = event.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
   tooltipData.value = row
@@ -519,7 +536,7 @@ const hideTooltip = () => {
 }
 
 // Token tooltip functions
-const showTokenTooltip = (event: MouseEvent, row: AdminUsageLog) => {
+const showTokenTooltip = (event: MouseEvent, row: UsageTableRow) => {
   const target = event.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
   tokenTooltipData.value = row

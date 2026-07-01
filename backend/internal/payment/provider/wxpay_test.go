@@ -687,6 +687,9 @@ func TestWxpayRefundUsesOrderAmountAndMapsSuccess(t *testing.T) {
 		if got := wxSV(req.OutTradeNo); got != "sub2_order_3" {
 			t.Fatalf("OutTradeNo = %q, want sub2_order_3", got)
 		}
+		if got := wxSV(req.OutRefundNo); got != "sub2_order_3-refund-500" {
+			t.Fatalf("OutRefundNo = %q, want sub2_order_3-refund-500", got)
+		}
 		if req.Amount == nil || req.Amount.Refund == nil || *req.Amount.Refund != 500 {
 			t.Fatalf("Refund amount = %#v, want 500", req.Amount)
 		}
@@ -707,8 +710,8 @@ func TestWxpayRefundUsesOrderAmountAndMapsSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Refund returned error: %v", err)
 	}
-	if resp.RefundID != "refund-1" {
-		t.Fatalf("RefundID = %q, want refund-1", resp.RefundID)
+	if resp.RefundID != "sub2_order_3-refund-500" {
+		t.Fatalf("RefundID = %q, want sub2_order_3-refund-500", resp.RefundID)
 	}
 	if resp.Status != payment.ProviderStatusSuccess {
 		t.Fatalf("Status = %q, want success", resp.Status)
