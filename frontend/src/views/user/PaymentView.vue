@@ -20,6 +20,7 @@
             :expires-at="paymentState.expiresAt"
             :payment-type="paymentState.paymentType"
             :pay-url="paymentState.payUrl"
+            :out-trade-no="paymentState.outTradeNo"
             :order-type="paymentState.orderType"
             :currency="paymentState.currency || selectedCurrency"
             @done="onPaymentDone"
@@ -765,6 +766,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
           order_id: String(result.order_id),
           client_secret: result.client_secret,
           method: stripeMethod || undefined,
+          out_trade_no: result.out_trade_no || undefined,
           resume_token: result.resume_token || undefined,
         },
       }).href
@@ -972,6 +974,7 @@ async function attemptMobileQrFallback(err: unknown, context: MobileQrFallbackCo
           order_id: String(result.order_id),
           client_secret: result.client_secret,
           method: stripeMethod,
+          out_trade_no: result.out_trade_no || undefined,
           resume_token: result.resume_token || undefined,
         },
       }).href

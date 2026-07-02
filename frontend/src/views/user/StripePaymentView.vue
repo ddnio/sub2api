@@ -203,9 +203,24 @@ function formatGatewayAmount(value: number): string {
   return formatPaymentAmount(value, currency.value, localeCode.value)
 }
 
+function paymentResultQuery(orderId: number | string): Record<string, string> {
+  const query: Record<string, string> = {
+    order_id: String(orderId),
+    status: 'success',
+  }
+  if (typeof route.query.out_trade_no === 'string' && route.query.out_trade_no.trim()) {
+    query.out_trade_no = route.query.out_trade_no.trim()
+  }
+  return query
+}
+
+function paymentResultUrl(orderId: number | string): string {
+  return window.location.origin + '/payment/result?' + new URLSearchParams(paymentResultQuery(orderId)).toString()
+}
+
 async function confirmAlipay(stripe: Stripe, clientSecret: string, orderId: number) {
   redirecting.value = true
-  const returnUrl = window.location.origin + '/payment/result?order_id=' + orderId + '&status=success'
+  const returnUrl = paymentResultUrl(orderId)
   const { error } = await stripe.confirmAlipayPayment(clientSecret, { return_url: returnUrl })
   if (error) {
     redirecting.value = false
@@ -263,7 +278,7 @@ async function handleGenericPay() {
     const { error } = await stripeInstance.confirmPayment({
       elements: elementsInstance,
       confirmParams: {
-        return_url: window.location.origin + '/payment/result?order_id=' + route.query.order_id + '&status=success',
+        return_url: paymentResultUrl(String(route.query.order_id || '')),
       },
       redirect: 'if_required',
     })
@@ -302,7 +317,7 @@ function scheduleClose() {
     redirectTimer = setTimeout(() => { window.close() }, 2000)
   } else {
     redirectTimer = setTimeout(() => {
-      router.push({ path: '/payment/result', query: { order_id: String(route.query.order_id || ''), status: 'success' } })
+      router.push({ path: '/payment/result', query: paymentResultQuery(String(route.query.order_id || '')) })
     }, 2000)
   }
 }

@@ -97,6 +97,8 @@ describe('PaymentStatusPanel', () => {
 
     expect(pollOrderStatus).toHaveBeenCalledWith(42)
     expect(wrapper.text()).toContain('payment.result.success')
+    expect(wrapper.text()).toContain('sub2_20260420abcd1234')
+    expect(wrapper.text()).not.toContain('#42')
     expect(wrapper.emitted('success')).toHaveLength(1)
   })
 
@@ -160,6 +162,8 @@ describe('PaymentStatusPanel', () => {
     expect(pollOrderStatus).toHaveBeenCalledWith(42)
     expect(verifyOrder).toHaveBeenCalledWith('sub2_20260420abcd1234')
     expect(wrapper.text()).toContain('payment.result.success')
+    expect(wrapper.text()).toContain('sub2_20260420abcd1234')
+    expect(wrapper.text()).not.toContain('#42')
     expect(wrapper.emitted('success')).toHaveLength(1)
   })
 })

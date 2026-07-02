@@ -39,9 +39,9 @@
       <p class="text-lg font-bold text-gray-900 dark:text-white">{{ t('payment.result.success') }}</p>
       <div v-if="paidOrder" class="w-full rounded-xl bg-gray-50 p-4 dark:bg-dark-800">
         <div class="space-y-2 text-sm">
-          <div class="flex justify-between">
-            <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.orderId') }}</span>
-            <span class="font-medium text-gray-900 dark:text-white">#{{ paidOrder.id }}</span>
+          <div v-if="paidOrder.out_trade_no" class="flex justify-between">
+            <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.orderNo') }}</span>
+            <span class="font-medium text-gray-900 dark:text-white">{{ paidOrder.out_trade_no }}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.amount') }}</span>

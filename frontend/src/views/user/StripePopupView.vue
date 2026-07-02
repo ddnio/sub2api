@@ -3,11 +3,11 @@
     <div
       class="w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-lg dark:border-slate-700 dark:bg-slate-900"
     >
-      <!-- Amount + Order ID -->
+      <!-- Amount + Order No -->
       <div v-if="amount" class="text-center">
         <p class="text-3xl font-bold" :style="{ color: methodColor }">¥{{ amount }}</p>
-        <p v-if="orderId" class="mt-1 text-sm text-gray-500 dark:text-slate-400">
-          {{ t('payment.orders.orderId') }}: {{ orderId }}
+        <p v-if="outTradeNo" class="mt-1 text-sm text-gray-500 dark:text-slate-400">
+          {{ t('payment.orders.orderNo') }}: {{ outTradeNo }}
         </p>
       </div>
 
@@ -74,6 +74,7 @@ const { t } = useI18n()
 const route = useRoute()
 
 const orderId = String(route.query.order_id || '')
+const outTradeNo = String(route.query.out_trade_no || '')
 const method = String(route.query.method || 'alipay')
 const amount = String(route.query.amount || '')
 
@@ -86,6 +87,17 @@ const hint = ref(t('payment.stripePopup.redirecting'))
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
 function closeWindow() { window.close() }
+
+function buildPaymentResultUrl(): string {
+  const params = new URLSearchParams({
+    order_id: orderId,
+    status: 'success',
+  })
+  if (outTradeNo) {
+    params.set('out_trade_no', outTradeNo)
+  }
+  return window.location.origin + '/payment/result?' + params.toString()
+}
 
 onMounted(() => {
   const handler = (event: MessageEvent) => {
@@ -121,7 +133,7 @@ async function initStripe(clientSecret: string, publishableKey: string) {
     const stripe = await loadStripe(publishableKey)
     if (!stripe) { error.value = t('payment.stripeLoadFailed'); return }
 
-    const returnUrl = window.location.origin + '/payment/result?order_id=' + orderId + '&status=success'
+    const returnUrl = buildPaymentResultUrl()
 
     if (method === 'alipay') {
       // Alipay: redirect this popup to Alipay payment page
