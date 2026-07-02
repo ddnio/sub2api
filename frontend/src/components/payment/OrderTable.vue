@@ -52,6 +52,7 @@ const { t } = useI18n()
 const props = defineProps<{
   orders: PaymentOrder[]
   loading: boolean
+  showInternalId?: boolean
   showUser?: boolean
 }>()
 
@@ -64,10 +65,14 @@ function paymentAmountSymbol(order: PaymentOrder): string {
 }
 
 const columns = computed((): Column[] => {
-  const cols: Column[] = [
-    { key: 'id', label: t('payment.orders.orderId') },
-    { key: 'out_trade_no', label: t('payment.orders.orderNo') },
-  ]
+  const cols: Column[] = props.showInternalId
+    ? [
+        { key: 'id', label: t('payment.orders.orderId') },
+        { key: 'out_trade_no', label: t('payment.orders.orderNo') },
+      ]
+    : [
+        { key: 'out_trade_no', label: t('payment.orders.orderNo') },
+      ]
   if (props.showUser) {
     cols.push({ key: 'user_email', label: t('payment.admin.colUser') })
   }
