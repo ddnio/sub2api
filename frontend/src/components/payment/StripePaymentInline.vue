@@ -165,6 +165,7 @@ async function handlePay() {
         order_id: String(props.orderId),
         method: selectedType.value,
         amount: String(props.payAmount),
+        out_trade_no: props.outTradeNo || undefined,
       },
     }).href
     const popup = window.open(popupUrl, 'paymentPopup', getPaymentPopupFeatures())
