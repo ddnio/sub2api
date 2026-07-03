@@ -261,3 +261,25 @@ func TestMigration163AddsSparkShadowIndexesConcurrently(t *testing.T) {
 	require.Contains(t, sql, "quota_dimension = 'spark'")
 	require.Contains(t, sql, "deleted_at IS NULL")
 }
+
+func TestMigration164AddsGroupPeakRateMultiplierColumns(t *testing.T) {
+	content, err := FS.ReadFile("164_add_group_peak_rate_multiplier.sql")
+	require.NoError(t, err)
+
+	sql := string(content)
+	require.Contains(t, sql, "ADD COLUMN IF NOT EXISTS peak_rate_enabled")
+	require.Contains(t, sql, "ADD COLUMN IF NOT EXISTS peak_start")
+	require.Contains(t, sql, "ADD COLUMN IF NOT EXISTS peak_end")
+	require.Contains(t, sql, "ADD COLUMN IF NOT EXISTS peak_rate_multiplier")
+}
+
+func TestMigration165BackfillsGrokMediaGenerationGroups(t *testing.T) {
+	content, err := FS.ReadFile("165_enable_grok_media_generation_groups.sql")
+	require.NoError(t, err)
+
+	sql := string(content)
+	require.Contains(t, sql, "UPDATE groups")
+	require.Contains(t, sql, "SET allow_image_generation = true")
+	require.Contains(t, sql, "WHERE platform = 'grok'")
+	require.Contains(t, sql, "AND allow_image_generation = false")
+}
