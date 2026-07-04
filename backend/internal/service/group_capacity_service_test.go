@@ -18,6 +18,9 @@ type groupCapacityAccountRepoStub struct {
 
 func (s *groupCapacityAccountRepoStub) ListSchedulableCapacityByGroupIDs(_ context.Context, groupIDs []int64) ([]GroupAccountCapacityRow, error) {
 	s.requested = append([]int64(nil), groupIDs...)
+	if s.onList != nil {
+		s.onList()
+	}
 	return append([]GroupAccountCapacityRow(nil), s.rows...), nil
 }
 
@@ -208,5 +211,49 @@ func TestGetAllGroupCapacityBatchKeepsEmptyGroupRows(t *testing.T) {
 	require.Equal(t, []GroupCapacitySummary{
 		{GroupID: 10},
 		{GroupID: 20, ConcurrencyMax: 4},
+	}, results)
+}
+
+func TestGetAllGroupCapacityBatchRuntimeMetricsIgnoreCanceledRequestContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	accountRepo := &groupCapacityAccountRepoStub{
+		rows: []GroupAccountCapacityRow{
+			{
+				GroupID:     10,
+				AccountID:   1,
+				Concurrency: 2,
+				Extra: map[string]any{
+					"max_sessions": 3,
+					"base_rpm":     11,
+				},
+			},
+		},
+		onList: cancel,
+	}
+	groupRepo := &groupCapacityGroupRepoStub{groupIDs: []int64{10}}
+	concurrencyCache := &groupCapacityConcurrencyCacheStub{counts: map[int64]int{1: 1}}
+	sessionCache := &groupCapacitySessionCacheStub{counts: map[int64]int{1: 2}}
+	rpmCache := &groupCapacityRPMCacheStub{counts: map[int64]int{1: 5}}
+	svc := NewGroupCapacityService(
+		accountRepo,
+		groupRepo,
+		NewConcurrencyService(concurrencyCache),
+		sessionCache,
+		rpmCache,
+	)
+
+	results, err := svc.GetAllGroupCapacity(ctx)
+	require.NoError(t, err)
+
+	require.Equal(t, []GroupCapacitySummary{
+		{
+			GroupID:         10,
+			ConcurrencyUsed: 1,
+			ConcurrencyMax:  2,
+			SessionsUsed:    2,
+			SessionsMax:     3,
+			RPMUsed:         5,
+			RPMMax:          11,
+		},
 	}, results)
 }

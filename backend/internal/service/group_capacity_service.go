@@ -183,9 +183,14 @@ func (s *GroupCapacityService) getGroupCapacitiesBatch(ctx context.Context, grou
 		return results, nil
 	}
 
+	// Detach runtime metric lookups from request cancellation, matching the
+	// sequential path. Capacity summaries should not collapse to all-zero
+	// runtime values when the caller disconnects after the DB rows are loaded.
+	metricsCtx := context.WithoutCancel(ctx)
+
 	concurrencyMap := map[int64]int{}
 	if s.concurrencyService != nil {
-		concurrencyMap, _ = s.concurrencyService.GetAccountConcurrencyBatch(ctx, accountIDs)
+		concurrencyMap, _ = s.concurrencyService.GetAccountConcurrencyBatch(metricsCtx, accountIDs)
 	}
 
 	sessionAccountIDs := accountIDsForGroupsWithLimit(refs, groupIndex, results, func(summary GroupCapacitySummary) bool {
@@ -193,7 +198,7 @@ func (s *GroupCapacityService) getGroupCapacitiesBatch(ctx context.Context, grou
 	})
 	var sessionsMap map[int64]int
 	if len(sessionAccountIDs) > 0 && s.sessionLimitCache != nil {
-		sessionsMap, _ = s.sessionLimitCache.GetActiveSessionCountBatch(ctx, sessionAccountIDs, sessionTimeouts)
+		sessionsMap, _ = s.sessionLimitCache.GetActiveSessionCountBatch(metricsCtx, sessionAccountIDs, sessionTimeouts)
 	}
 
 	rpmAccountIDs := accountIDsForGroupsWithLimit(refs, groupIndex, results, func(summary GroupCapacitySummary) bool {
@@ -201,7 +206,7 @@ func (s *GroupCapacityService) getGroupCapacitiesBatch(ctx context.Context, grou
 	})
 	var rpmMap map[int64]int
 	if len(rpmAccountIDs) > 0 && s.rpmCache != nil {
-		rpmMap, _ = s.rpmCache.GetRPMBatch(ctx, rpmAccountIDs)
+		rpmMap, _ = s.rpmCache.GetRPMBatch(metricsCtx, rpmAccountIDs)
 	}
 
 	for _, ref := range refs {
