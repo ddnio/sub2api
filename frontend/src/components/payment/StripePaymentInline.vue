@@ -17,9 +17,9 @@
           <p class="text-lg font-bold text-gray-900 dark:text-white">{{ t('payment.result.success') }}</p>
           <div class="w-full rounded-xl bg-gray-50 p-4 dark:bg-dark-800">
             <div class="space-y-2 text-sm">
-              <div class="flex justify-between">
-                <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.orderId') }}</span>
-                <span class="font-medium text-gray-900 dark:text-white">#{{ orderId }}</span>
+              <div v-if="outTradeNo" class="flex justify-between">
+                <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.orderNo') }}</span>
+                <span class="font-medium text-gray-900 dark:text-white">{{ outTradeNo }}</span>
               </div>
               <div v-if="amount > 0" class="flex justify-between">
                 <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.amount') }}</span>
@@ -82,6 +82,7 @@ const props = defineProps<{
   orderId: number
   amount: number
   clientSecret: string
+  outTradeNo?: string
   orderType?: 'balance' | 'subscription'
   publishableKey: string
   payAmount: number
@@ -108,6 +109,17 @@ const paymentAmountSymbol = computed(() => currencySymbol(props.currency))
 
 let stripeInstance: Stripe | null = null
 let elementsInstance: StripeElements | null = null
+
+function paymentResultUrl(): string {
+  const params = new URLSearchParams({
+    order_id: String(props.orderId),
+    status: 'success',
+  })
+  if (props.outTradeNo) {
+    params.set('out_trade_no', props.outTradeNo)
+  }
+  return window.location.origin + '/payment/result?' + params.toString()
+}
 
 onMounted(async () => {
   try {
@@ -153,6 +165,7 @@ async function handlePay() {
         order_id: String(props.orderId),
         method: selectedType.value,
         amount: String(props.payAmount),
+        out_trade_no: props.outTradeNo || undefined,
       },
     }).href
     const popup = window.open(popupUrl, 'paymentPopup', getPaymentPopupFeatures())
@@ -179,7 +192,7 @@ async function handlePay() {
     const { error: stripeError } = await stripeInstance.confirmPayment({
       elements: elementsInstance,
       confirmParams: {
-        return_url: window.location.origin + '/payment/result?order_id=' + props.orderId + '&status=success',
+        return_url: paymentResultUrl(),
       },
       redirect: 'if_required',
     })

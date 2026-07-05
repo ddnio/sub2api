@@ -1,5 +1,3 @@
-//go:build unit
-
 package service
 
 import (
@@ -7,71 +5,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/stretchr/testify/require"
 )
 
 type groupCapacityAccountRepoStub struct {
-	accounts []Account
-	onList   func()
+	AccountRepository
+	rows      []GroupAccountCapacityRow
+	requested []int64
+	accounts  []Account
+	onList    func()
 }
 
-func (s *groupCapacityAccountRepoStub) Create(context.Context, *Account) error { return nil }
-func (s *groupCapacityAccountRepoStub) GetByID(context.Context, int64) (*Account, error) {
-	return nil, ErrAccountNotFound
+func (s *groupCapacityAccountRepoStub) ListSchedulableCapacityByGroupIDs(_ context.Context, groupIDs []int64) ([]GroupAccountCapacityRow, error) {
+	s.requested = append([]int64(nil), groupIDs...)
+	if s.onList != nil {
+		s.onList()
+	}
+	return append([]GroupAccountCapacityRow(nil), s.rows...), nil
 }
-func (s *groupCapacityAccountRepoStub) GetByIDs(context.Context, []int64) ([]*Account, error) {
-	return nil, nil
-}
-func (s *groupCapacityAccountRepoStub) ExistsByID(context.Context, int64) (bool, error) {
-	return false, nil
-}
-func (s *groupCapacityAccountRepoStub) GetByCRSAccountID(context.Context, string) (*Account, error) {
-	return nil, nil
-}
-func (s *groupCapacityAccountRepoStub) FindByExtraField(context.Context, string, any) ([]Account, error) {
-	return nil, nil
-}
-func (s *groupCapacityAccountRepoStub) ListCRSAccountIDs(context.Context) (map[string]int64, error) {
-	return nil, nil
-}
-func (s *groupCapacityAccountRepoStub) Update(context.Context, *Account) error { return nil }
-func (s *groupCapacityAccountRepoStub) Delete(context.Context, int64) error    { return nil }
-func (s *groupCapacityAccountRepoStub) List(context.Context, pagination.PaginationParams) ([]Account, *pagination.PaginationResult, error) {
-	return nil, nil, nil
-}
-func (s *groupCapacityAccountRepoStub) ListWithFilters(context.Context, pagination.PaginationParams, string, string, string, string, int64, string) ([]Account, *pagination.PaginationResult, error) {
-	return nil, nil, nil
-}
-func (s *groupCapacityAccountRepoStub) ListByGroup(context.Context, int64) ([]Account, error) {
-	return nil, nil
-}
-func (s *groupCapacityAccountRepoStub) ListActive(context.Context) ([]Account, error) {
-	return nil, nil
-}
-func (s *groupCapacityAccountRepoStub) ListByPlatform(context.Context, string) ([]Account, error) {
-	return nil, nil
-}
-func (s *groupCapacityAccountRepoStub) UpdateLastUsed(context.Context, int64) error { return nil }
-func (s *groupCapacityAccountRepoStub) BatchUpdateLastUsed(context.Context, map[int64]time.Time) error {
-	return nil
-}
-func (s *groupCapacityAccountRepoStub) SetError(context.Context, int64, string) error {
-	return nil
-}
-func (s *groupCapacityAccountRepoStub) ClearError(context.Context, int64) error { return nil }
-func (s *groupCapacityAccountRepoStub) SetSchedulable(context.Context, int64, bool) error {
-	return nil
-}
-func (s *groupCapacityAccountRepoStub) AutoPauseExpiredAccounts(context.Context, time.Time) (int64, error) {
-	return 0, nil
-}
-func (s *groupCapacityAccountRepoStub) BindGroups(context.Context, int64, []int64) error {
-	return nil
-}
-func (s *groupCapacityAccountRepoStub) ListSchedulable(context.Context) ([]Account, error) {
-	return nil, nil
-}
+
 func (s *groupCapacityAccountRepoStub) ListSchedulableByGroupID(ctx context.Context, groupID int64) ([]Account, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -79,118 +31,71 @@ func (s *groupCapacityAccountRepoStub) ListSchedulableByGroupID(ctx context.Cont
 	if s.onList != nil {
 		s.onList()
 	}
-	return s.accounts, nil
+	return append([]Account(nil), s.accounts...), nil
 }
-func (s *groupCapacityAccountRepoStub) ListSchedulableByPlatform(context.Context, string) ([]Account, error) {
-	return nil, nil
+
+type groupCapacityGroupRepoStub struct {
+	GroupRepository
+	groupIDs  []int64
+	listCalls int
 }
-func (s *groupCapacityAccountRepoStub) ListSchedulableByGroupIDAndPlatform(context.Context, int64, string) ([]Account, error) {
-	return nil, nil
-}
-func (s *groupCapacityAccountRepoStub) ListSchedulableByPlatforms(context.Context, []string) ([]Account, error) {
-	return nil, nil
-}
-func (s *groupCapacityAccountRepoStub) ListSchedulableByGroupIDAndPlatforms(context.Context, int64, []string) ([]Account, error) {
-	return nil, nil
-}
-func (s *groupCapacityAccountRepoStub) ListSchedulableUngroupedByPlatform(context.Context, string) ([]Account, error) {
-	return nil, nil
-}
-func (s *groupCapacityAccountRepoStub) ListSchedulableUngroupedByPlatforms(context.Context, []string) ([]Account, error) {
-	return nil, nil
-}
-func (s *groupCapacityAccountRepoStub) SetRateLimited(context.Context, int64, time.Time) error {
-	return nil
-}
-func (s *groupCapacityAccountRepoStub) SetModelRateLimit(context.Context, int64, string, time.Time) error {
-	return nil
-}
-func (s *groupCapacityAccountRepoStub) SetOverloaded(context.Context, int64, time.Time) error {
-	return nil
-}
-func (s *groupCapacityAccountRepoStub) SetTempUnschedulable(context.Context, int64, time.Time, string) error {
-	return nil
-}
-func (s *groupCapacityAccountRepoStub) ClearTempUnschedulable(context.Context, int64) error {
-	return nil
-}
-func (s *groupCapacityAccountRepoStub) ClearRateLimit(context.Context, int64) error { return nil }
-func (s *groupCapacityAccountRepoStub) ClearAntigravityQuotaScopes(context.Context, int64) error {
-	return nil
-}
-func (s *groupCapacityAccountRepoStub) ClearModelRateLimits(context.Context, int64) error {
-	return nil
-}
-func (s *groupCapacityAccountRepoStub) UpdateSessionWindow(context.Context, int64, *time.Time, *time.Time, string) error {
-	return nil
-}
-func (s *groupCapacityAccountRepoStub) UpdateExtra(context.Context, int64, map[string]any) error {
-	return nil
-}
-func (s *groupCapacityAccountRepoStub) BulkUpdate(context.Context, []int64, AccountBulkUpdate) (int64, error) {
-	return 0, nil
-}
-func (s *groupCapacityAccountRepoStub) IncrementQuotaUsed(context.Context, int64, float64) error {
-	return nil
-}
-func (s *groupCapacityAccountRepoStub) ResetQuotaUsed(context.Context, int64) error {
-	return nil
+
+func (s *groupCapacityGroupRepoStub) ListActiveIDs(context.Context) ([]int64, error) {
+	s.listCalls++
+	return append([]int64(nil), s.groupIDs...), nil
 }
 
 type groupCapacityConcurrencyCacheStub struct {
-	counts map[int64]int
+	ConcurrencyCache
+	counts    map[int64]int
+	requested []int64
 }
 
-func (s *groupCapacityConcurrencyCacheStub) AcquireAccountSlot(context.Context, int64, int, string) (bool, error) {
-	return false, nil
-}
-func (s *groupCapacityConcurrencyCacheStub) ReleaseAccountSlot(context.Context, int64, string) error {
-	return nil
-}
-func (s *groupCapacityConcurrencyCacheStub) GetAccountConcurrency(context.Context, int64) (int, error) {
-	return 0, nil
-}
 func (s *groupCapacityConcurrencyCacheStub) GetAccountConcurrencyBatch(ctx context.Context, accountIDs []int64) (map[int64]int, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	return s.counts, nil
+	s.requested = append([]int64(nil), accountIDs...)
+	out := make(map[int64]int, len(accountIDs))
+	for _, id := range accountIDs {
+		out[id] = s.counts[id]
+	}
+	return out, nil
 }
-func (s *groupCapacityConcurrencyCacheStub) IncrementAccountWaitCount(context.Context, int64, int) (bool, error) {
-	return false, nil
+
+type groupCapacitySessionCacheStub struct {
+	SessionLimitCache
+	counts       map[int64]int
+	requested    []int64
+	idleTimeouts map[int64]time.Duration
 }
-func (s *groupCapacityConcurrencyCacheStub) DecrementAccountWaitCount(context.Context, int64) error {
-	return nil
+
+func (s *groupCapacitySessionCacheStub) GetActiveSessionCountBatch(_ context.Context, accountIDs []int64, idleTimeouts map[int64]time.Duration) (map[int64]int, error) {
+	s.requested = append([]int64(nil), accountIDs...)
+	s.idleTimeouts = make(map[int64]time.Duration, len(idleTimeouts))
+	for id, timeout := range idleTimeouts {
+		s.idleTimeouts[id] = timeout
+	}
+	out := make(map[int64]int, len(accountIDs))
+	for _, id := range accountIDs {
+		out[id] = s.counts[id]
+	}
+	return out, nil
 }
-func (s *groupCapacityConcurrencyCacheStub) GetAccountWaitingCount(context.Context, int64) (int, error) {
-	return 0, nil
+
+type groupCapacityRPMCacheStub struct {
+	RPMCache
+	counts    map[int64]int
+	requested []int64
 }
-func (s *groupCapacityConcurrencyCacheStub) AcquireUserSlot(context.Context, int64, int, string) (bool, error) {
-	return false, nil
-}
-func (s *groupCapacityConcurrencyCacheStub) ReleaseUserSlot(context.Context, int64, string) error {
-	return nil
-}
-func (s *groupCapacityConcurrencyCacheStub) GetUserConcurrency(context.Context, int64) (int, error) {
-	return 0, nil
-}
-func (s *groupCapacityConcurrencyCacheStub) IncrementWaitCount(context.Context, int64, int) (bool, error) {
-	return false, nil
-}
-func (s *groupCapacityConcurrencyCacheStub) DecrementWaitCount(context.Context, int64) error {
-	return nil
-}
-func (s *groupCapacityConcurrencyCacheStub) GetAccountsLoadBatch(context.Context, []AccountWithConcurrency) (map[int64]*AccountLoadInfo, error) {
-	return nil, nil
-}
-func (s *groupCapacityConcurrencyCacheStub) GetUsersLoadBatch(context.Context, []UserWithConcurrency) (map[int64]*UserLoadInfo, error) {
-	return nil, nil
-}
-func (s *groupCapacityConcurrencyCacheStub) CleanupExpiredAccountSlots(context.Context, int64) error {
-	return nil
-}
-func (s *groupCapacityConcurrencyCacheStub) CleanupStaleProcessSlots(context.Context, string) error {
-	return nil
+
+func (s *groupCapacityRPMCacheStub) GetRPMBatch(_ context.Context, accountIDs []int64) (map[int64]int, error) {
+	s.requested = append([]int64(nil), accountIDs...)
+	out := make(map[int64]int, len(accountIDs))
+	for _, id := range accountIDs {
+		out[id] = s.counts[id]
+	}
+	return out, nil
 }
 
 func TestGroupCapacityService_RuntimeMetricsIgnoreCanceledRequestContext(t *testing.T) {
@@ -209,4 +114,146 @@ func TestGroupCapacityService_RuntimeMetricsIgnoreCanceledRequestContext(t *test
 	require.NoError(t, err)
 	require.Equal(t, 5, cap.ConcurrencyUsed)
 	require.Equal(t, 12, cap.ConcurrencyMax)
+}
+
+func TestGetAllGroupCapacityBatchAggregatesRuntimeAndLimits(t *testing.T) {
+	accountRepo := &groupCapacityAccountRepoStub{
+		rows: []GroupAccountCapacityRow{
+			{
+				GroupID:     10,
+				AccountID:   1,
+				Concurrency: 2,
+				Extra: map[string]any{
+					"max_sessions":                 3,
+					"session_idle_timeout_minutes": 7,
+					"base_rpm":                     11,
+				},
+			},
+			{
+				GroupID:     20,
+				AccountID:   1,
+				Concurrency: 2,
+				Extra: map[string]any{
+					"max_sessions":                 3,
+					"session_idle_timeout_minutes": 7,
+					"base_rpm":                     11,
+				},
+			},
+			{
+				GroupID:     20,
+				AccountID:   2,
+				Concurrency: 4,
+				Extra: map[string]any{
+					"max_sessions":                 1,
+					"session_idle_timeout_minutes": 9,
+					"base_rpm":                     13,
+				},
+			},
+		},
+	}
+	groupRepo := &groupCapacityGroupRepoStub{groupIDs: []int64{10, 20}}
+	concurrencyCache := &groupCapacityConcurrencyCacheStub{counts: map[int64]int{1: 1, 2: 2}}
+	sessionCache := &groupCapacitySessionCacheStub{counts: map[int64]int{1: 2, 2: 1}}
+	rpmCache := &groupCapacityRPMCacheStub{counts: map[int64]int{1: 5, 2: 7}}
+	svc := NewGroupCapacityService(
+		accountRepo,
+		groupRepo,
+		NewConcurrencyService(concurrencyCache),
+		sessionCache,
+		rpmCache,
+	)
+
+	results, err := svc.GetAllGroupCapacity(context.Background())
+	require.NoError(t, err)
+
+	require.Equal(t, 1, groupRepo.listCalls)
+	require.Equal(t, []int64{10, 20}, accountRepo.requested)
+	require.Equal(t, []int64{1, 2}, concurrencyCache.requested)
+	require.ElementsMatch(t, []int64{1, 2}, sessionCache.requested)
+	require.ElementsMatch(t, []int64{1, 2}, rpmCache.requested)
+	require.Equal(t, 7*time.Minute, sessionCache.idleTimeouts[1])
+	require.Equal(t, 9*time.Minute, sessionCache.idleTimeouts[2])
+
+	require.Equal(t, []GroupCapacitySummary{
+		{
+			GroupID:         10,
+			ConcurrencyUsed: 1,
+			ConcurrencyMax:  2,
+			SessionsUsed:    2,
+			SessionsMax:     3,
+			RPMUsed:         5,
+			RPMMax:          11,
+		},
+		{
+			GroupID:         20,
+			ConcurrencyUsed: 3,
+			ConcurrencyMax:  6,
+			SessionsUsed:    3,
+			SessionsMax:     4,
+			RPMUsed:         12,
+			RPMMax:          24,
+		},
+	}, results)
+}
+
+func TestGetAllGroupCapacityBatchKeepsEmptyGroupRows(t *testing.T) {
+	accountRepo := &groupCapacityAccountRepoStub{
+		rows: []GroupAccountCapacityRow{
+			{GroupID: 20, AccountID: 2, Concurrency: 4},
+		},
+	}
+	groupRepo := &groupCapacityGroupRepoStub{groupIDs: []int64{10, 20}}
+	svc := NewGroupCapacityService(accountRepo, groupRepo, nil, nil, nil)
+
+	results, err := svc.GetAllGroupCapacity(context.Background())
+	require.NoError(t, err)
+
+	require.Equal(t, []GroupCapacitySummary{
+		{GroupID: 10},
+		{GroupID: 20, ConcurrencyMax: 4},
+	}, results)
+}
+
+func TestGetAllGroupCapacityBatchRuntimeMetricsIgnoreCanceledRequestContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	accountRepo := &groupCapacityAccountRepoStub{
+		rows: []GroupAccountCapacityRow{
+			{
+				GroupID:     10,
+				AccountID:   1,
+				Concurrency: 2,
+				Extra: map[string]any{
+					"max_sessions": 3,
+					"base_rpm":     11,
+				},
+			},
+		},
+		onList: cancel,
+	}
+	groupRepo := &groupCapacityGroupRepoStub{groupIDs: []int64{10}}
+	concurrencyCache := &groupCapacityConcurrencyCacheStub{counts: map[int64]int{1: 1}}
+	sessionCache := &groupCapacitySessionCacheStub{counts: map[int64]int{1: 2}}
+	rpmCache := &groupCapacityRPMCacheStub{counts: map[int64]int{1: 5}}
+	svc := NewGroupCapacityService(
+		accountRepo,
+		groupRepo,
+		NewConcurrencyService(concurrencyCache),
+		sessionCache,
+		rpmCache,
+	)
+
+	results, err := svc.GetAllGroupCapacity(ctx)
+	require.NoError(t, err)
+
+	require.Equal(t, []GroupCapacitySummary{
+		{
+			GroupID:         10,
+			ConcurrencyUsed: 1,
+			ConcurrencyMax:  2,
+			SessionsUsed:    2,
+			SessionsMax:     3,
+			RPMUsed:         5,
+			RPMMax:          11,
+		},
+	}, results)
 }
