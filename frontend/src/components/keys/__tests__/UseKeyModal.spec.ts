@@ -136,8 +136,9 @@ describe('UseKeyModal', () => {
 
     const codeBlock = wrapper.find('pre code')
     expect(codeBlock.exists()).toBe(true)
+    expect(codeBlock.text()).toContain('"name": "GPT-5.6 Sol"')
     expect(codeBlock.text()).toContain('"name": "GPT-5.4 Mini"')
-    expect(codeBlock.text()).toContain('"name": "GPT-5.3 Codex"')
+    expect(codeBlock.text()).toContain('"name": "GPT-5.3 Codex Spark"')
     expect(codeBlock.text()).toContain('"name": "Codex Mini"')
     expect(codeBlock.text()).not.toContain('"GPT-5.4 Nano"')
     expect(codeBlock.text()).not.toContain('"GPT-5.1 Codex"')

@@ -521,20 +521,20 @@ default:
 
 **⚠️ セキュリティ警告: HTTP URL 設定**
 
-`security.url_allowlist.enabled=false` の場合、システムはデフォルトで最小限の URL バリデーションを行い、**HTTP URL を拒否**して HTTPS のみを許可します。HTTP URL を許可するには（開発環境や内部テスト用など）、以下を明示的に設定する必要があります:
+`security.url_allowlist.enabled=false` の場合、システムは最小限の URL バリデーションのみを行い、**デフォルトで HTTP URL を許可**します（開発フレンドリーモード）。この fork の Docker Compose テンプレートは、環境変数で明示的に上書きしない限り、より厳格な HTTPS のみの fallback を維持します。本番環境では、この制限を維持することを推奨します:
 
 ```yaml
 security:
   url_allowlist:
     enabled: false                # 許可リストチェックを無効化
-    allow_insecure_http: true     # HTTP URL を許可（⚠️ セキュリティリスクあり）
+    allow_insecure_http: false    # HTTPS のみ許可（本番環境推奨）
 ```
 
 **または環境変数で設定:**
 
 ```bash
 SECURITY_URL_ALLOWLIST_ENABLED=false
-SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP=true
+SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP=false
 ```
 
 **HTTP を許可するリスク:**
@@ -548,7 +548,7 @@ SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP=true
 - ✅ HTTPS 取得前のアカウント接続テスト
 - ❌ 本番環境（HTTPS のみを使用）
 
-**この設定なしで表示されるエラー例:**
+**`allow_insecure_http: false` 設定時に HTTP URL で表示されるエラー例:**
 ```
 Invalid base URL: invalid url scheme: http
 ```
