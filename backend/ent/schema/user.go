@@ -49,19 +49,7 @@ func (User) Fields() []ent.Field {
 		field.Float("balance").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
 			Default(0),
-		field.Bool("balance_notify_enabled").
-			Default(true),
-		field.Float("balance_notify_threshold").
-			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
-			Optional().
-			Nillable(),
-		field.String("balance_notify_extra_emails").
-			SchemaType(map[string]string{dialect.Postgres: "text"}).
-			Default("[]"),
-		field.String("balance_notify_threshold_type").
-			MaxLen(10).
-			Default("fixed"),
-		field.Float("total_recharged").
+		field.Float("frozen_balance").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
 			Default(0),
 		field.Int("concurrency").
@@ -107,12 +95,26 @@ func (User) Fields() []ent.Field {
 			Optional().
 			Nillable().
 			SchemaType(map[string]string{dialect.Postgres: "timestamptz"}),
-
-		// 推荐码（邀请归因）
 		field.String("referral_code").
 			MaxLen(16).
 			Optional().
 			Nillable(),
+
+		// 余额不足通知
+		field.Bool("balance_notify_enabled").
+			Default(true),
+		field.String("balance_notify_threshold_type").
+			Default("fixed"), // "fixed" | "percentage"
+		field.Float("balance_notify_threshold").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
+			Optional().
+			Nillable(),
+		field.String("balance_notify_extra_emails").
+			SchemaType(map[string]string{dialect.Postgres: "text"}).
+			Default("[]"),
+		field.Float("total_recharged").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
+			Default(0),
 
 		// 用户级每分钟请求数上限（0 = 不限制）。仅当所在分组未设置 rpm_limit 时作为兜底生效。
 		field.Int("rpm_limit").

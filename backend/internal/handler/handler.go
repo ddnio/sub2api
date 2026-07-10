@@ -60,6 +60,7 @@ type Handlers struct {
 	AvailableChannel *AvailableChannelHandler
 	Pricing          *PricingHandler
 	Referral         *ReferralHandler
+	BatchImage       *BatchImageHandler
 }
 
 // BuildInfo contains build-time information
