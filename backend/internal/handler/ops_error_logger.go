@@ -1157,6 +1157,7 @@ func logOpsStreamError(c *gin.Context, ops *service.OpsService, wireStatus int) 
 		entry.ClientIP = &clientIP
 	}
 
+	attachOpsRequestSnapshotToEntry(c, entry)
 	enqueueOpsErrorLog(ops, entry)
 }
 

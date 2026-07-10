@@ -160,6 +160,9 @@ func TestLogOpsStreamError_RecordsInBandConcurrencyLimit(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+	c.Request.Header.Set("anthropic-beta", "messages-2023-12-15")
+	c.Request.Header.Set("authorization", "Bearer secret-token")
+	setOpsRequestBodySnapshot(c, []byte(`{"model":"test-model","api_key":"sk-test","messages":[{"role":"user","content":"hello"}]}`))
 	c.Set(opsModelKey, "test-model")
 
 	service.MarkOpsStreamError(c, "rate_limit_error",
@@ -181,6 +184,11 @@ func TestLogOpsStreamError_RecordsInBandConcurrencyLimit(t *testing.T) {
 	require.Equal(t, "P1", job.entry.Severity)            // 用 IntendedStatus 429 分级
 	require.Equal(t, "test-model", job.entry.Model)
 	require.Equal(t, "Concurrency limit exceeded for account, please retry later", job.entry.ErrorMessage)
+	require.NotNil(t, job.entry.RequestBodyJSON)
+	require.JSONEq(t, `{"api_key":"[REDACTED]","messages":[{"content":"hello","role":"user"}],"model":"test-model"}`, *job.entry.RequestBodyJSON)
+	require.NotNil(t, job.entry.RequestHeadersJSON)
+	require.JSONEq(t, `{"anthropic-beta":"messages-2023-12-15"}`, *job.entry.RequestHeadersJSON)
+	require.NotContains(t, *job.entry.RequestHeadersJSON, "secret-token")
 }
 
 // 未标记流内错误时 logOpsStreamError 必须是 no-op（不误记正常的 200 流）。
