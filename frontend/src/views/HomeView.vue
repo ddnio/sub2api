@@ -2,7 +2,7 @@
   <div v-if="homeContent" class="min-h-screen">
     <iframe
       v-if="isHomeContentUrl"
-      :src="homeContent.trim()"
+      :src="safeHomeContentUrl"
       class="h-screen w-full border-0"
       allowfullscreen
     ></iframe>
@@ -55,14 +55,16 @@ import { useAuthStore, useAppStore } from '@/stores'
 import HomeFooter from '@/components/home/HomeFooter.vue'
 import HomeHeader from '@/components/home/HomeHeader.vue'
 import HomeHero from '@/components/home/HomeHero.vue'
+import { sanitizeUrl } from '@/utils/url'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
 const appStore = useAppStore()
 
 const homeContent = computed(() => appStore.cachedPublicSettings?.home_content || '')
+const safeHomeContentUrl = computed(() => sanitizeUrl(homeContent.value.trim()))
 const isHomeContentUrl = computed(() => {
-  const content = homeContent.value.trim()
+  const content = safeHomeContentUrl.value
   return content.startsWith('http://') || content.startsWith('https://')
 })
 

@@ -11,7 +11,7 @@ import (
 // enables Anthropic platform groups to accept OpenAI Responses API requests
 // by converting them to the native /v1/messages format before forwarding upstream.
 func ResponsesToAnthropicRequest(req *ResponsesRequest) (*AnthropicRequest, error) {
-	system, messages, err := convertResponsesInputToAnthropic(req.Input)
+	system, messages, err := convertResponsesInputToAnthropic(req.Instructions, req.Input)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func ResponsesToAnthropicRequest(req *ResponsesRequest) (*AnthropicRequest, erro
 	//   → output_config.format: {type:"json_schema", schema:{...}}  (name/strict dropped)
 	// json_object: {type:"json_object"}
 	//   → output_config.format: {type:"json"}  (Anthropic uses "json" not "json_object")
-	if req.Text != nil && req.Text.Format != nil {
+	if req.Text != nil && len(req.Text.Format) > 0 {
 		if af := convertTextFormatToAnthropic(req.Text.Format); af != nil {
 			if out.OutputConfig == nil {
 				out.OutputConfig = &AnthropicOutputConfig{}
@@ -87,8 +87,15 @@ func ResponsesToAnthropicRequest(req *ResponsesRequest) (*AnthropicRequest, erro
 //	{type:"json_schema", schema:{...}} → &AnthropicOutputFormat{Type:"json_schema", Schema:{...}}
 //	{type:"json_object"}               → &AnthropicOutputFormat{Type:"json"}
 //	other                              → nil
-func convertTextFormatToAnthropic(tf *ResponsesTextFormat) *AnthropicOutputFormat {
-	if tf == nil {
+func convertTextFormatToAnthropic(raw json.RawMessage) *AnthropicOutputFormat {
+	if len(raw) == 0 {
+		return nil
+	}
+	var tf struct {
+		Type   string          `json:"type"`
+		Schema json.RawMessage `json:"schema"`
+	}
+	if err := json.Unmarshal(raw, &tf); err != nil {
 		return nil
 	}
 	switch tf.Type {
@@ -135,14 +142,23 @@ func mapResponsesEffortToAnthropic(effort string) string {
 }
 
 // convertResponsesInputToAnthropic extracts system prompt and messages from
-// a Responses API input array. Returns the system as raw JSON (for Anthropic's
-// polymorphic system field) and a list of Anthropic messages.
-func convertResponsesInputToAnthropic(inputRaw json.RawMessage) (json.RawMessage, []AnthropicMessage, error) {
+// a Responses API instructions + input array. Returns the system as raw JSON
+// (for Anthropic's polymorphic system field) and a list of Anthropic messages.
+func convertResponsesInputToAnthropic(instructions string, inputRaw json.RawMessage) (json.RawMessage, []AnthropicMessage, error) {
+	var systemParts []string
+	if strings.TrimSpace(instructions) != "" {
+		systemParts = append(systemParts, strings.TrimSpace(instructions))
+	}
+
 	// Try as plain string input.
 	var inputStr string
 	if err := json.Unmarshal(inputRaw, &inputStr); err == nil {
 		content, _ := json.Marshal(inputStr)
-		return nil, []AnthropicMessage{{Role: "user", Content: content}}, nil
+		var system json.RawMessage
+		if len(systemParts) > 0 {
+			system, _ = json.Marshal(strings.Join(systemParts, "\n\n"))
+		}
+		return system, []AnthropicMessage{{Role: "user", Content: content}}, nil
 	}
 
 	var items []ResponsesInputItem
@@ -150,16 +166,14 @@ func convertResponsesInputToAnthropic(inputRaw json.RawMessage) (json.RawMessage
 		return nil, nil, fmt.Errorf("parse responses input: %w", err)
 	}
 
-	var system json.RawMessage
 	var messages []AnthropicMessage
 
 	for _, item := range items {
 		switch {
-		case item.Role == "system":
-			// System prompt → Anthropic system field
+		case item.Role == "system" || item.Role == "developer":
 			text := extractTextFromContent(item.Content)
 			if text != "" {
-				system, _ = json.Marshal(text)
+				systemParts = append(systemParts, text)
 			}
 
 		case item.Type == "function_call":
@@ -237,6 +251,11 @@ func convertResponsesInputToAnthropic(inputRaw json.RawMessage) (json.RawMessage
 	messages = mergeConsecutiveMessages(messages)
 	messages = normalizeAnthropicToolPairing(messages)
 	messages = mergeConsecutiveMessages(messages)
+
+	var system json.RawMessage
+	if len(systemParts) > 0 {
+		system, _ = json.Marshal(strings.Join(systemParts, "\n\n"))
+	}
 
 	return system, messages, nil
 }
