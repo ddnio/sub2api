@@ -9714,14 +9714,14 @@ async function saveSettings() {
             .map((p) => p.trim())
             .filter((p) => p !== "");
           const hasWhitelist = whitelist.length > 0;
+          const userIDs = (rule.user_ids || []).filter(
+            (userID) => Number.isInteger(userID) && userID > 0,
+          );
           return {
             service_tier: rule.service_tier,
             action: rule.action,
             scope: rule.scope,
-            user_ids:
-              rule.user_ids && rule.user_ids.length > 0
-                ? [...rule.user_ids]
-                : undefined,
+            user_ids: userIDs.length > 0 ? userIDs : undefined,
             error_message:
               rule.action === "block" ? rule.error_message : undefined,
             model_whitelist: hasWhitelist ? whitelist : undefined,

@@ -517,7 +517,7 @@ async function openUsersTab(wrapper: ReturnType<typeof mountView>) {
   await flushPromises();
 }
 
-describe("admin SettingsView payment visible method controls", () => {
+describe("admin SettingsView gateway and payment controls", () => {
   beforeEach(() => {
     getSettings.mockReset();
     updateSettings.mockReset();
@@ -815,6 +815,42 @@ describe("admin SettingsView payment visible method controls", () => {
       "默认关闭。开启后仅影响本网关在 OpenAI 账号间的实验性调度选择逻辑",
     );
     expect(wrapper.text()).not.toContain("OpenAI 高级调度器");
+  });
+
+  it("omits an unfilled OpenAI fast policy user ID row when saving", async () => {
+    getSettings.mockResolvedValueOnce({
+      ...baseSettingsResponse,
+      openai_fast_policy_settings: {
+        rules: [
+          {
+            service_tier: "priority",
+            action: "filter",
+            scope: "all",
+            user_ids: [],
+          },
+        ],
+      },
+    });
+
+    const wrapper = mountView();
+    await flushPromises();
+
+    const addUserIDButton = wrapper
+      .findAll("button")
+      .find((node) =>
+        node.text().includes("admin.settings.openaiFastPolicy.addUserId"),
+      );
+    expect(addUserIDButton).toBeDefined();
+    await addUserIDButton?.trigger("click");
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+
+    const payload = updateSettings.mock.calls[0]?.[0];
+    const savedRule = payload.openai_fast_policy_settings.rules[0];
+    expect(savedRule.user_ids).toBeUndefined();
+    expect(JSON.parse(JSON.stringify(savedRule))).not.toHaveProperty(
+      "user_ids",
+    );
   });
 
   it("passes translated upload and remove labels to the payment help image uploader", async () => {
