@@ -6,7 +6,8 @@ import { describe, expect, it } from 'vitest'
 
 const dir = dirname(fileURLToPath(import.meta.url))
 const headerSource = readFileSync(resolve(dir, '../AppHeader.vue'), 'utf8')
-const homeViewSource = readFileSync(resolve(dir, '../../../views/HomeView.vue'), 'utf8')
+const homeHeaderSource = readFileSync(resolve(dir, '../../home/HomeHeader.vue'), 'utf8')
+const homeFooterSource = readFileSync(resolve(dir, '../../home/HomeFooter.vue'), 'utf8')
 const keyUsageViewSource = readFileSync(resolve(dir, '../../../views/KeyUsageView.vue'), 'utf8')
 
 describe('doc_url sanitization', () => {
@@ -18,12 +19,14 @@ describe('doc_url sanitization', () => {
     expect(headerSource).toContain('sanitizeUrl(appStore.docUrl)')
   })
 
-  it('HomeView imports sanitizeUrl', () => {
-    expect(homeViewSource).toContain("import { sanitizeUrl } from '@/utils/url'")
+  it('home layout components import sanitizeUrl', () => {
+    expect(homeHeaderSource).toContain("import { sanitizeUrl } from '@/utils/url'")
+    expect(homeFooterSource).toContain("import { sanitizeUrl } from '@/utils/url'")
   })
 
-  it('HomeView applies sanitizeUrl to docUrl', () => {
-    expect(homeViewSource).toContain('sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl')
+  it('home layout components apply sanitizeUrl to docUrl', () => {
+    expect(homeHeaderSource).toContain('sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl')
+    expect(homeFooterSource).toContain('sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl')
   })
 
   it('KeyUsageView imports sanitizeUrl', () => {

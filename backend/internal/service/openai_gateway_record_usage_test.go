@@ -474,6 +474,48 @@ func TestOpenAIGatewayServiceRecordUsage_PeakRateAffectsTokenModeImageOutputToke
 	require.InDelta(t, expectedActual, userRepo.lastAmount, 1e-12)
 }
 
+func TestOpenAIGatewayServiceRecordUsage_WebSearchLogUsesBaseMultiplier(t *testing.T) {
+	groupID := int64(15)
+	groupRate := 2.0
+	searchPrice := 0.01
+
+	usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}
+	userRepo := &openAIRecordUsageUserRepoStub{}
+	svc := newOpenAIRecordUsageServiceForTest(usageRepo, userRepo, &openAIRecordUsageSubRepoStub{}, nil)
+
+	err := svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
+		Result: &OpenAIForwardResult{
+			RequestID:      "resp_web_search_peak",
+			Model:          "gpt-5.6-sol",
+			UpstreamModel:  "gpt-5.6-sol",
+			WebSearchCalls: 1,
+			Duration:       time.Second,
+		},
+		APIKey: &APIKey{
+			ID:      1005,
+			GroupID: i64p(groupID),
+			Group: &Group{
+				ID:                    groupID,
+				RateMultiplier:        groupRate,
+				PeakRateEnabled:       true,
+				PeakStart:             "00:00",
+				PeakEnd:               "23:59",
+				PeakRateMultiplier:    3.0,
+				WebSearchPricePerCall: &searchPrice,
+			},
+		},
+		User:    &User{ID: 2005},
+		Account: &Account{ID: 3005},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, usageRepo.lastLog)
+	require.InDelta(t, searchPrice, usageRepo.lastLog.TotalCost, 1e-12)
+	require.InDelta(t, searchPrice*groupRate, usageRepo.lastLog.ActualCost, 1e-12)
+	require.InDelta(t, groupRate, usageRepo.lastLog.RateMultiplier, 1e-12)
+	require.InDelta(t, searchPrice*groupRate, userRepo.lastAmount, 1e-12)
+}
+
 func TestOpenAIGatewayServiceRecordUsage_IncludesEndpointMetadata(t *testing.T) {
 	usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}
 	userRepo := &openAIRecordUsageUserRepoStub{}

@@ -78,7 +78,7 @@ describe('DocsView', () => {
     expect(wrapper.find('[data-docs-mode="api"]').exists()).toBe(false)
     expect(wrapper.find('[data-docs-mode="codex"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('快速开始')
-    expect(wrapper.text()).toContain('选择你使用的客户端')
+    expect(wrapper.text()).toContain('选择你使用的工具')
     expect(wrapper.text()).toContain('https://relay.sub2api.test')
     expect(wrapper.text()).toContain('Codex CLI')
   })

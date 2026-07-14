@@ -65,6 +65,7 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore, useAuthStore } from '@/stores'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { sanitizeUrl } from '@/utils/url'
 
 defineProps<{
   isDark: boolean
@@ -79,9 +80,10 @@ const appStore = useAppStore()
 const authStore = useAuthStore()
 
 const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'NanaFox API')
-const siteLogo = computed(() => appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '')
-const hasExternalDocUrl = computed(() => !!appStore.docUrl)
-const effectiveDocUrl = computed(() => appStore.docUrl || '/docs')
+const siteLogo = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
+const docUrl = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl || ''))
+const hasExternalDocUrl = computed(() => docUrl.value.startsWith('https://') || docUrl.value.startsWith('http://'))
+const effectiveDocUrl = computed(() => docUrl.value || '/docs')
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 const isAdmin = computed(() => authStore.isAdmin)
 const dashboardPath = computed(() => (isAdmin.value ? '/admin/dashboard' : '/dashboard'))

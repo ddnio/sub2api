@@ -290,17 +290,27 @@ func TestMigration181AllowsCyberBlockedUsageRequestType(t *testing.T) {
 
 	previousIndex := -1
 	currentIndex := -1
+	latestIPIndex := -1
+	webSearchPriceIndex := -1
 	for i, entry := range entries {
 		switch entry.Name() {
 		case "180_video_per_second_billing_metadata.sql":
 			previousIndex = i
 		case "181_allow_cyber_blocked_usage_request_type.sql":
 			currentIndex = i
+		case "182_add_usage_logs_api_key_latest_ip_index_notx.sql":
+			latestIPIndex = i
+		case "183_group_web_search_price_per_call.sql":
+			webSearchPriceIndex = i
 		}
 	}
 	require.NotEqual(t, -1, previousIndex)
 	require.NotEqual(t, -1, currentIndex)
+	require.NotEqual(t, -1, latestIPIndex)
+	require.NotEqual(t, -1, webSearchPriceIndex)
 	require.Less(t, previousIndex, currentIndex)
+	require.Less(t, currentIndex, latestIPIndex)
+	require.Less(t, latestIPIndex, webSearchPriceIndex)
 
 	content, err := FS.ReadFile("181_allow_cyber_blocked_usage_request_type.sql")
 	require.NoError(t, err)
@@ -309,4 +319,8 @@ func TestMigration181AllowsCyberBlockedUsageRequestType(t *testing.T) {
 	require.Contains(t, sql, "DROP CONSTRAINT IF EXISTS usage_logs_request_type_check")
 	require.Contains(t, sql, "ADD CONSTRAINT usage_logs_request_type_check")
 	require.Contains(t, sql, "CHECK (request_type IN (0, 1, 2, 3, 4)) NOT VALID")
+
+	webSearchPriceContent, err := FS.ReadFile("183_group_web_search_price_per_call.sql")
+	require.NoError(t, err)
+	require.Contains(t, string(webSearchPriceContent), "ADD COLUMN IF NOT EXISTS web_search_price_per_call")
 }

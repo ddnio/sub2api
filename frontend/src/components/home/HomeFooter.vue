@@ -29,6 +29,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores'
+import { sanitizeUrl } from '@/utils/url'
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -43,7 +44,8 @@ const contactInfoHref = computed(() => {
   return info
 })
 
-const hasExternalDocUrl = computed(() => !!appStore.docUrl)
-const effectiveDocUrl = computed(() => appStore.docUrl || '/docs')
+const docUrl = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl || ''))
+const hasExternalDocUrl = computed(() => docUrl.value.startsWith('https://') || docUrl.value.startsWith('http://'))
+const effectiveDocUrl = computed(() => docUrl.value || '/docs')
 const currentYear = computed(() => new Date().getFullYear())
 </script>

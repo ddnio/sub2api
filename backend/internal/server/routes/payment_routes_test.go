@@ -44,7 +44,6 @@ func TestRegisterPaymentRoutesExposesUpstreamPaymentSurface(t *testing.T) {
 		http.MethodGet + " /api/v1/payment/config",
 		http.MethodGet + " /api/v1/payment/checkout-info",
 		http.MethodGet + " /api/v1/payment/plans",
-		http.MethodGet + " /api/v1/payment/channels",
 		http.MethodGet + " /api/v1/payment/limits",
 		http.MethodPost + " /api/v1/payment/orders",
 		http.MethodPost + " /api/v1/payment/orders/verify",
@@ -82,5 +81,9 @@ func TestRegisterPaymentRoutesExposesUpstreamPaymentSurface(t *testing.T) {
 		if !routes[want] {
 			t.Fatalf("missing payment route %s", want)
 		}
+	}
+
+	if routes[http.MethodGet+" /api/v1/payment/channels"] {
+		t.Fatal("deprecated payment channels route exposes internal AI channel configuration")
 	}
 }

@@ -817,7 +817,7 @@ describe("admin SettingsView gateway and payment controls", () => {
     expect(wrapper.text()).not.toContain("OpenAI 高级调度器");
   });
 
-  it("omits an unfilled OpenAI fast policy user ID row when saving", async () => {
+  it("omits invalid OpenAI fast policy user IDs when saving", async () => {
     getSettings.mockResolvedValueOnce({
       ...baseSettingsResponse,
       openai_fast_policy_settings: {
@@ -826,7 +826,7 @@ describe("admin SettingsView gateway and payment controls", () => {
             service_tier: "priority",
             action: "filter",
             scope: "all",
-            user_ids: [],
+            user_ids: [0, -1],
           },
         ],
       },
@@ -835,13 +835,6 @@ describe("admin SettingsView gateway and payment controls", () => {
     const wrapper = mountView();
     await flushPromises();
 
-    const addUserIDButton = wrapper
-      .findAll("button")
-      .find((node) =>
-        node.text().includes("admin.settings.openaiFastPolicy.addUserId"),
-      );
-    expect(addUserIDButton).toBeDefined();
-    await addUserIDButton?.trigger("click");
     await wrapper.find("form").trigger("submit.prevent");
     await flushPromises();
 
