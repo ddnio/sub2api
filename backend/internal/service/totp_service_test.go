@@ -51,6 +51,14 @@ func (s *totpLoginSessionCacheStub) GetVerifyAttempts(context.Context, int64) (i
 
 func (s *totpLoginSessionCacheStub) ClearVerifyAttempts(context.Context, int64) error { return nil }
 
+func (s *totpLoginSessionCacheStub) SetStepUpGrant(context.Context, int64, string, time.Duration) error {
+	return nil
+}
+
+func (s *totpLoginSessionCacheStub) HasStepUpGrant(context.Context, int64, string) (bool, error) {
+	return false, nil
+}
+
 func TestCreatePendingOAuthBindLoginSessionStoresBrowserBoundSession(t *testing.T) {
 	cache := &totpLoginSessionCacheStub{}
 	svc := &TotpService{cache: cache}

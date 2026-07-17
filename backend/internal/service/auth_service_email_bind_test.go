@@ -93,8 +93,9 @@ CREATE TABLE IF NOT EXISTS user_provider_default_grants (
 	repo := repository.NewUserRepository(client, db)
 	cfg := &config.Config{
 		JWT: config.JWTConfig{
-			Secret:     "test-bind-email-secret",
-			ExpireHour: 1,
+			Secret:                 "test-bind-email-secret",
+			ExpireHour:             1,
+			RefreshTokenExpireDays: 7,
 		},
 		Default: config.DefaultConfig{
 			UserBalance:     3.5,
@@ -112,6 +113,29 @@ CREATE TABLE IF NOT EXISTS user_provider_default_grants (
 
 	svc := service.NewAuthService(client, repo, nil, refreshTokenCache, cfg, settingSvc, emailSvc, nil, nil, nil, nil, defaultSubAssigner, nil, nil)
 	return svc, repo, client
+}
+
+func TestAuthServiceTokenRefreshAcceptsResolvedLegacyVersion(t *testing.T) {
+	ctx := context.Background()
+	refreshTokenCache := newEmailBindRefreshTokenCacheStub()
+	svc, repo, client := newAuthServiceForEmailBindWithRefreshCache(t, nil, nil, nil, refreshTokenCache)
+	created := createEmailBindTestUser(t, client, "refresh@example.com", "refresh-user", "legacy-password-hash")
+
+	user, err := repo.GetByID(ctx, created.ID)
+	require.NoError(t, err)
+	require.False(t, user.TokenVersionResolved)
+
+	pair, err := svc.GenerateTokenPair(ctx, user, "")
+	require.NoError(t, err)
+
+	refreshedAccessToken, err := svc.RefreshToken(ctx, pair.AccessToken)
+	require.NoError(t, err)
+	require.NotEmpty(t, refreshedAccessToken)
+
+	refreshedPair, err := svc.RefreshTokenPair(ctx, pair.RefreshToken)
+	require.NoError(t, err)
+	require.NotEmpty(t, refreshedPair.AccessToken)
+	require.NotEmpty(t, refreshedPair.RefreshToken)
 }
 
 func TestAuthServiceBindEmailIdentity_UpdatesEmailAndAppliesFirstBindDefaults(t *testing.T) {
@@ -467,7 +491,7 @@ func TestAuthServiceBindEmailIdentity_RevokesExistingAccessAndRefreshTokens(t *t
 		},
 	}
 	emailService := service.NewEmailService(nil, cache)
-	svc := service.NewAuthService(nil, userRepo, nil, refreshTokenCache, cfg, nil, emailService, nil, nil, nil, nil, nil, nil)
+	svc := service.NewAuthService(nil, userRepo, nil, refreshTokenCache, cfg, nil, emailService, nil, nil, nil, nil, nil, nil, nil)
 
 	oldTokenPair, err := svc.GenerateTokenPair(ctx, &service.User{
 		ID:           41,
@@ -961,6 +985,9 @@ func (s *emailBindUserRepoStub) BatchSetConcurrency(context.Context, []int64, in
 	return 0, nil
 }
 func (s *emailBindUserRepoStub) BatchAddConcurrency(context.Context, []int64, int) (int, error) {
+	return 0, nil
+}
+func (s *emailBindUserRepoStub) BatchUpdateLimits(context.Context, []int64, *int, *int) (int, error) {
 	return 0, nil
 }
 

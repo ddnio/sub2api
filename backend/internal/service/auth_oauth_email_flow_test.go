@@ -258,6 +258,7 @@ func TestRegisterOAuthEmailAccountAppliesUserDefaults(t *testing.T) {
 			SettingKeyDefaultUserRPMLimit: "37",
 		},
 		emailCache,
+		nil,
 	)
 
 	tokenPair, user, err := authService.RegisterOAuthEmailAccount(
@@ -288,6 +289,7 @@ func TestRegisterVerifiedOAuthEmailAccountAppliesUserDefaults(t *testing.T) {
 			SettingKeyRegistrationEnabled: "true",
 			SettingKeyDefaultUserRPMLimit: "37",
 		},
+		nil,
 		nil,
 	)
 

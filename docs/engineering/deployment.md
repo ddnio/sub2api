@@ -206,7 +206,9 @@ Cloudflare 配置要点：
 
 ### Caddy 反向代理
 
-配置文件：`/etc/caddy/Caddyfile`（服务器），代码库模板：`deploy/Caddyfile`
+配置文件：`/etc/caddy/Caddyfile`（服务器）。代码库按部署面分别维护模板：
+`deploy/Caddyfile.server` 用于 `router`/`router-test`，`deploy/Caddyfile.tob` 用于 `fx`；
+新环境可从 `deploy/Caddyfile.template` 开始配置。
 
 当前域名配置：
 
