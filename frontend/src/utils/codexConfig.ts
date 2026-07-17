@@ -11,6 +11,7 @@ interface CreateCodexCliFilesOptions {
   os: CodexCliOS
   providerName?: string
   websocket?: boolean
+  authMode?: 'legacy' | 'api-key'
 }
 
 function normalizeBaseUrl(baseUrl: string): string {
@@ -35,6 +36,9 @@ export function createCodexCliFiles(options: CreateCodexCliFilesOptions): CodexC
   const providerKey = toProviderKey(providerName)
   const websocketProviderExtension = options.websocket ? '\nsupports_websockets = true' : ''
   const websocketFeatureExtension = options.websocket ? 'responses_websockets_v2 = true\n' : ''
+  const authConfig = options.authMode === 'api-key'
+    ? 'requires_openai_auth = false\nhttp_headers = { "x-openai-actor-authorization" = "local-image-extension" }'
+    : 'requires_openai_auth = true'
   const standardConfig = `model_provider = "${providerKey}"
 model = "gpt-5.5"
 review_model = "gpt-5.5"
@@ -48,7 +52,7 @@ model_verbosity = "high"
 name = "${providerName}"
 base_url = "${normalizedBaseUrl}"
 wire_api = "responses"
-requires_openai_auth = true${websocketProviderExtension}
+${authConfig}${websocketProviderExtension}
 
 [features]
 ${websocketFeatureExtension}goals = true`

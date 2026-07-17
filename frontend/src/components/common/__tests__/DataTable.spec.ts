@@ -30,7 +30,7 @@ const stubDesktopMatchMedia = () => {
   })
 }
 
-function mountDesktopTable(props: Record<string, unknown> = {}) {
+function mountTable(props: Record<string, unknown> = {}) {
   return mount(DataTable, {
     props: {
       columns: [
@@ -50,6 +50,22 @@ function mountDesktopTable(props: Record<string, unknown> = {}) {
   })
 }
 
+const stubMobileMatchMedia = () => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn()
+    }))
+  })
+}
+
 describe('DataTable', () => {
   beforeEach(() => {
     stubDesktopMatchMedia()
@@ -57,7 +73,7 @@ describe('DataTable', () => {
   })
 
   it('renders desktop rows even when the virtualizer has no visible items yet', async () => {
-    const wrapper = mountDesktopTable({
+    const wrapper = mountTable({
       data: [
         { id: 1, name: 'First order' },
         { id: 2, name: 'Second order' },
@@ -76,7 +92,7 @@ describe('DataTable', () => {
   })
 
   it('keeps desktop tables wide enough to expose horizontal overflow', async () => {
-    const wrapper = mountDesktopTable({
+    const wrapper = mountTable({
       data: [{ id: 1, name: 'First order' }],
     })
 
@@ -92,7 +108,7 @@ describe('DataTable', () => {
   })
 
   it('renders paired sort arrows and highlights the active direction', async () => {
-    const wrapper = mountDesktopTable({
+    const wrapper = mountTable({
       columns: [
         { key: 'name', label: 'Name', sortable: true },
         { key: 'created_at', label: 'Created', sortable: true },
@@ -127,7 +143,7 @@ describe('DataTable', () => {
 
   it('renders every row with no virtual padding spacer for small datasets (virtualization off)', async () => {
     const data = Array.from({ length: 8 }, (_, i) => ({ id: i + 1, name: `Row ${i + 1}` }))
-    const wrapper = mountDesktopTable({
+    const wrapper = mountTable({
       columns: [{ key: 'name', label: 'Name' }],
       data,
     })
@@ -148,7 +164,7 @@ describe('DataTable', () => {
 
   it('switches to windowed rendering once row count exceeds virtualizeThreshold', async () => {
     const data = Array.from({ length: 12 }, (_, i) => ({ id: i + 1, name: `Row ${i + 1}` }))
-    const wrapper = mountDesktopTable({
+    const wrapper = mountTable({
       columns: [{ key: 'name', label: 'Name' }],
       data,
       virtualizeThreshold: 3,
@@ -170,7 +186,7 @@ describe('DataTable', () => {
 
   it('keys the virtualizer size cache by row identity, not index (avoids stale heights on sort/filter)', async () => {
     const data = Array.from({ length: 12 }, (_, i) => ({ id: 100 + i, name: `Row ${i + 1}` }))
-    const wrapper = mountDesktopTable({
+    const wrapper = mountTable({
       columns: [{ key: 'name', label: 'Name' }],
       data,
       rowKey: 'id',
@@ -188,5 +204,178 @@ describe('DataTable', () => {
     } finally {
       wrapper.unmount()
     }
+  })
+
+  it('clears stale row and element caches when pagination replaces the row ID set', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, i) => ({ id: i + 1, name: `First ${i + 1}` }))
+    const secondPage = Array.from({ length: 100 }, (_, i) => ({ id: i + 101, name: `Second ${i + 1}` }))
+    const wrapper = mountTable({
+      columns: [{ key: 'name', label: 'Name' }],
+      data: firstPage,
+      rowKey: 'id',
+      virtualizeThreshold: 1
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const exposed = (wrapper.vm as any).virtualizer
+    const instance = exposed?.value ?? exposed
+    const firstPageIDs = firstPage.map(row => row.id)
+    ;(instance as any).itemSizeCache = new Map(firstPageIDs.map(id => [id, 156]))
+    instance.elementsCache.clear()
+    for (const id of firstPageIDs) {
+      instance.elementsCache.set(id, document.createElement('tr'))
+    }
+    const measureElementSpy = vi.spyOn(instance, 'measureElement')
+
+    await wrapper.setProps({ data: secondPage })
+    await wrapper.vm.$nextTick()
+
+    const sizeCache = (instance as any).itemSizeCache as Map<number, number>
+    expect(sizeCache.size).toBeLessThanOrEqual(secondPage.length)
+    expect(instance.elementsCache.size).toBeLessThanOrEqual(secondPage.length)
+    expect(firstPageIDs.some(id => sizeCache.has(id))).toBe(false)
+    expect(firstPageIDs.some(id => instance.elementsCache.has(id))).toBe(false)
+    expect(measureElementSpy.mock.calls.some(([node]) => node === null)).toBe(true)
+  })
+
+  it('clears stale caches when equal-length pages replace rows without stable keys', async () => {
+    const firstPage = Array.from({ length: 12 }, (_, i) => ({ name: `First ${i + 1}` }))
+    const secondPage = Array.from({ length: 12 }, (_, i) => ({ name: `Second ${i + 1}` }))
+    const wrapper = mountTable({
+      columns: [{ key: 'name', label: 'Name' }],
+      data: firstPage,
+      virtualizeThreshold: 1
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const exposed = (wrapper.vm as any).virtualizer
+    const instance = exposed?.value ?? exposed
+    const measureElementSpy = vi.spyOn(instance, 'measureElement')
+
+    await wrapper.setProps({ data: secondPage })
+    await wrapper.vm.$nextTick()
+
+    expect(measureElementSpy.mock.calls.some(([node]) => node === null)).toBe(true)
+  })
+
+  it('conservatively clears caches when duplicate row-key multiplicity changes', async () => {
+    const firstPage = [
+      { id: 1, name: 'First A' },
+      { id: 1, name: 'First B' },
+      { id: 2, name: 'First C' }
+    ]
+    const secondPage = [
+      { id: 1, name: 'Second A' },
+      { id: 2, name: 'Second B' },
+      { id: 2, name: 'Second C' }
+    ]
+    const wrapper = mountTable({
+      columns: [{ key: 'name', label: 'Name' }],
+      data: firstPage,
+      rowKey: 'id',
+      virtualizeThreshold: 1
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const exposed = (wrapper.vm as any).virtualizer
+    const instance = exposed?.value ?? exposed
+    const measureElementSpy = vi.spyOn(instance, 'measureElement')
+
+    await wrapper.setProps({ data: secondPage })
+    await wrapper.vm.$nextTick()
+
+    expect(measureElementSpy.mock.calls.some(([node]) => node === null)).toBe(true)
+  })
+
+  it('preserves cache when rows without stable keys only reorder the same objects', async () => {
+    const data = Array.from({ length: 12 }, (_, i) => ({ name: `Row ${i + 1}` }))
+    const wrapper = mountTable({
+      columns: [{ key: 'name', label: 'Name' }],
+      data,
+      virtualizeThreshold: 1
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const exposed = (wrapper.vm as any).virtualizer
+    const instance = exposed?.value ?? exposed
+    const measureSpy = vi.spyOn(instance, 'measure')
+
+    await wrapper.setProps({ data: [...data].reverse() })
+    await wrapper.vm.$nextTick()
+
+    expect(measureSpy).not.toHaveBeenCalled()
+  })
+
+  it('preserves stable row height cache when the same row IDs are only reordered', async () => {
+    const data = Array.from({ length: 100 }, (_, i) => ({ id: i + 1, name: `Row ${i + 1}` }))
+    const wrapper = mountTable({
+      columns: [{ key: 'name', label: 'Name' }],
+      data,
+      rowKey: 'id',
+      virtualizeThreshold: 1
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const exposed = (wrapper.vm as any).virtualizer
+    const instance = exposed?.value ?? exposed
+    ;(instance as any).itemSizeCache = new Map(data.map(row => [row.id, 156]))
+    const measureSpy = vi.spyOn(instance, 'measure')
+
+    await wrapper.setProps({ data: [...data].reverse() })
+    await wrapper.vm.$nextTick()
+
+    const sizeCache = (instance as any).itemSizeCache as Map<number, number>
+    expect(measureSpy).not.toHaveBeenCalled()
+    expect(sizeCache.size).toBe(100)
+  })
+
+  it('emits controlled current-page selection while preserving off-page keys', async () => {
+    const wrapper = mountTable({
+      columns: [{ key: 'name', label: 'Name' }],
+      data: [
+        { id: 1, name: 'One' },
+        { id: 2, name: 'Two' }
+      ],
+      rowKey: 'id',
+      selectable: true,
+      selectedKeys: [99]
+    })
+
+    await wrapper.get('[data-test="select-all"]').setValue(true)
+
+    const selectedAll = wrapper.emitted('update:selectedKeys')?.at(-1)?.[0]
+    expect(selectedAll).toEqual([99, 1, 2])
+
+    await wrapper.setProps({ selectedKeys: selectedAll as number[] })
+    const rowCheckboxes = wrapper.findAll<HTMLInputElement>('[data-test="select-row"]')
+    expect(rowCheckboxes.every((checkbox) => checkbox.element.checked)).toBe(true)
+
+    await rowCheckboxes[0].setValue(false)
+
+    expect(wrapper.emitted('update:selectedKeys')?.at(-1)?.[0]).toEqual([99, 2])
+    expect(wrapper.emitted('selectionChange')?.at(-1)?.[0]).toEqual([99, 2])
+  })
+
+  it('offers current-page select all in the mobile card layout', async () => {
+    stubMobileMatchMedia()
+    const wrapper = mountTable({
+      columns: [{ key: 'name', label: 'Name' }],
+      data: [
+        { id: 1, name: 'One' },
+        { id: 2, name: 'Two' }
+      ],
+      rowKey: 'id',
+      selectable: true,
+      selectedKeys: [99]
+    })
+
+    await wrapper.get('[data-test="select-all-mobile"]').setValue(true)
+
+    expect(wrapper.emitted('update:selectedKeys')?.at(-1)?.[0]).toEqual([99, 1, 2])
   })
 })

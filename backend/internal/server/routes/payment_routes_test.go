@@ -32,6 +32,7 @@ func TestRegisterPaymentRoutesExposesUpstreamPaymentSurface(t *testing.T) {
 		handlers.Admin.Payment,
 		middleware.JWTAuthMiddleware(allow),
 		middleware.AdminAuthMiddleware(allow),
+		middleware.AuditLogMiddleware(allow),
 		nil,
 	)
 

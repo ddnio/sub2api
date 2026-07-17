@@ -485,7 +485,7 @@ func TestAuthService_ValidateToken_ExpiredReturnsClaimsWithError(t *testing.T) {
 		Status:       StatusActive,
 		TokenVersion: 1,
 	}
-	token, err := service.GenerateToken(user)
+	token, err := service.GenerateToken(context.Background(), user)
 	require.NoError(t, err)
 
 	// 验证有效 token
@@ -496,7 +496,7 @@ func TestAuthService_ValidateToken_ExpiredReturnsClaimsWithError(t *testing.T) {
 
 	// 模拟过期 token（通过创建一个过期很久的 token）
 	service.cfg.JWT.ExpireHour = -1 // 设置为负数使 token 立即过期
-	expiredToken, err := service.GenerateToken(user)
+	expiredToken, err := service.GenerateToken(context.Background(), user)
 	require.NoError(t, err)
 	service.cfg.JWT.ExpireHour = 1 // 恢复
 
@@ -521,7 +521,7 @@ func TestAuthService_RefreshToken_ExpiredTokenNoPanic(t *testing.T) {
 
 	// 创建过期 token
 	service.cfg.JWT.ExpireHour = -1
-	expiredToken, err := service.GenerateToken(user)
+	expiredToken, err := service.GenerateToken(context.Background(), user)
 	require.NoError(t, err)
 	service.cfg.JWT.ExpireHour = 1
 
@@ -562,7 +562,7 @@ func TestAuthService_GenerateToken_UsesExpireHourWhenMinutesZero(t *testing.T) {
 		TokenVersion: 1,
 	}
 
-	token, err := service.GenerateToken(user)
+	token, err := service.GenerateToken(context.Background(), user)
 	require.NoError(t, err)
 
 	claims, err := service.ValidateToken(token)
@@ -587,7 +587,7 @@ func TestAuthService_GenerateToken_UsesMinutesWhenConfigured(t *testing.T) {
 		TokenVersion: 1,
 	}
 
-	token, err := service.GenerateToken(user)
+	token, err := service.GenerateToken(context.Background(), user)
 	require.NoError(t, err)
 
 	claims, err := service.ValidateToken(token)
@@ -758,7 +758,7 @@ func newAuthServiceWithDingTalkCfg(settings map[string]string, dtCfg config.Ding
 		DingTalk: dtCfg,
 	}
 	settingService := NewSettingService(&settingRepoStub{values: settings}, cfg)
-	return NewAuthService(nil, nil, nil, nil, cfg, settingService, nil, nil, nil, nil, nil, nil, nil)
+	return NewAuthService(nil, nil, nil, nil, cfg, settingService, nil, nil, nil, nil, nil, nil, nil, nil)
 }
 
 // minDingTalkURLs 返回一个包含必填字段的基础 DingTalkConnectConfig（不设 Enabled/BypassRegistration/Policy）。

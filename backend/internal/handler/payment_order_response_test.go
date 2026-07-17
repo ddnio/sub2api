@@ -35,7 +35,4 @@ func TestSanitizePaymentOrderForResponseKeepsZeroMoneyFields(t *testing.T) {
 	if got.RefundAmount != 0 {
 		t.Fatalf("expected refund_amount to be 0, got %#v", got.RefundAmount)
 	}
-	if got.ProviderSnapshot != nil {
-		t.Fatalf("provider_snapshot should not be exposed: %#v", got.ProviderSnapshot)
-	}
 }

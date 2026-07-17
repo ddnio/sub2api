@@ -49,4 +49,17 @@ describe('createCodexCliFiles', () => {
     expect(files[0].content).toContain('supports_websockets = true')
     expect(files[0].content).toContain('responses_websockets_v2 = true')
   })
+
+  it('supports direct API key authentication mode', () => {
+    const files = createCodexCliFiles({
+      baseUrl: 'https://relay.example.com',
+      apiKey: 'sk-api-key-mode',
+      os: 'unix',
+      authMode: 'api-key',
+      providerName: 'Sub2API'
+    })
+
+    expect(files[0].content).toContain('requires_openai_auth = false')
+    expect(files[0].content).toContain('http_headers = { "x-openai-actor-authorization" = "local-image-extension" }')
+  })
 })
