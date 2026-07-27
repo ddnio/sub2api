@@ -17,6 +17,18 @@ do
 		echo "$caddyfile must continue proxying application routes to the backend" >&2
 		exit 1
 	fi
+	if printf '%s\n' "$active_config" | grep -Eq '^[[:space:]]*flush_interval([[:space:]]|$)'; then
+		echo "$caddyfile must leave flush_interval unset so SSE auto-flushing and client cancellation remain intact" >&2
+		exit 1
+	fi
+	if printf '%s\n' "$active_config" | grep -Eq '^[[:space:]]*header[[:space:]]+Content-Type[[:space:]]+text/\*'; then
+		echo "$caddyfile must not compress every text response because that buffers SSE" >&2
+		exit 1
+	fi
+	if ! printf '%s\n' "$active_config" | grep -Eq '^[[:space:]]*header[[:space:]]+Content-Type[[:space:]]+text/plain\*'; then
+		echo "$caddyfile must keep the explicit non-SSE text compression policy" >&2
+		exit 1
+	fi
 done
 
-echo "NanaFox Caddyfiles preserve backend Cache-Control policy and reverse_proxy routing"
+echo "NanaFox Caddyfiles preserve backend cache policy, SSE streaming, and reverse_proxy routing"

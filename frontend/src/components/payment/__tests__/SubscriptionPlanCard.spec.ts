@@ -2,6 +2,7 @@ import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import { createPinia } from "pinia";
 import { createI18n } from "vue-i18n";
+import type { SubscriptionPlan } from "@/types/payment";
 import SubscriptionPlanCard from "../SubscriptionPlanCard.vue";
 
 const i18n = createI18n({
@@ -13,6 +14,9 @@ const i18n = createI18n({
     en: {
       payment: {
         days: "days",
+        weeks: "weeks",
+        months: "months",
+        perMonth: "month",
         models: "Models",
         planCard: {
           quota: "Quota",
@@ -25,7 +29,7 @@ const i18n = createI18n({
   },
 });
 
-const mountPlanCard = (groupPlatform: string) =>
+const mountPlanCard = (groupPlatform: string, overrides: Partial<SubscriptionPlan> = {}) =>
   mount(SubscriptionPlanCard, {
     props: {
       plan: {
@@ -41,6 +45,7 @@ const mountPlanCard = (groupPlatform: string) =>
         validity_unit: "day",
         supported_model_scopes: ["claude", "gemini_text", "gemini_image"],
         is_active: true,
+        ...overrides,
       },
     },
     global: { plugins: [i18n, createPinia()] },
@@ -61,5 +66,21 @@ describe("SubscriptionPlanCard", () => {
     expect(text).toContain("Claude");
     expect(text).toContain("Gemini");
     expect(text).toContain("Imagen");
+  });
+
+  it("renders plural admin-form validity units instead of mislabeled days (#4607)", () => {
+    expect(mountPlanCard("openai", { validity_days: 1, validity_unit: "months" }).text()).toContain("/ month");
+    expect(mountPlanCard("openai", { validity_days: 3, validity_unit: "months" }).text()).toContain("/ 3months");
+    expect(mountPlanCard("openai", { validity_days: 2, validity_unit: "weeks" }).text()).toContain("/ 2weeks");
+    expect(mountPlanCard("openai", { validity_days: 30, validity_unit: "day" }).text()).toContain("/ 30days");
+  });
+
+  it("uses the configured currency symbol while preserving USD for legacy plans", () => {
+    const cnyPlan = mountPlanCard("openai", { currency: "CNY", original_price: 20 }).text();
+
+    expect(cnyPlan).toContain("¥10CNY");
+    expect(cnyPlan).toContain("¥20CNY");
+    expect(mountPlanCard("openai", { currency: "USD" }).text()).toContain("$10USD");
+    expect(mountPlanCard("openai", { currency: "" }).text()).toContain("$10");
   });
 });

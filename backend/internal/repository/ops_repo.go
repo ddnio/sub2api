@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -60,12 +59,9 @@ INSERT INTO ops_error_logs (
   request_body_bytes,
   request_headers,
   created_at,
-  attempted_key_prefix,
-  deleted_key_owner_user_id,
-  deleted_key_name,
   api_key_prefix
 ) VALUES (
-  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,$44,$45
+  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42
 )`
 
 func NewOpsRepository(db *sql.DB) service.OpsRepository {
@@ -178,9 +174,6 @@ func opsInsertErrorLogArgs(input *service.OpsInsertErrorLogInput) []any {
 		opsNullInt(input.RequestBodyBytes),
 		opsNullString(input.RequestHeadersJSON),
 		input.CreatedAt,
-		opsNullString(input.AttemptedKeyPrefix),
-		opsNullInt64(input.DeletedKeyOwnerUserID),
-		opsNullString(input.DeletedKeyName),
 		opsNullString(input.APIKeyPrefix),
 	}
 }
@@ -282,16 +275,12 @@ SELECT
   COALESCE(e.user_agent, ''),
   e.request_type,
   COALESCE(ak.name, ''),
-  ak.deleted_at,
-  COALESCE(e.deleted_key_name, ''),
-  e.deleted_key_owner_user_id,
-  COALESCE(du.email, '')
+  ak.deleted_at
 FROM ops_error_logs e
 LEFT JOIN accounts a ON e.account_id = a.id
 LEFT JOIN groups g ON e.group_id = g.id
 LEFT JOIN users u ON e.user_id = u.id
 LEFT JOIN users u2 ON e.resolved_by_user_id = u2.id
-LEFT JOIN users du ON e.deleted_key_owner_user_id = du.id
 LEFT JOIN api_keys ak ON ak.id = e.api_key_id
 ` + where + `
 ORDER BY ` + opsErrorLogsOrderBy(filter) + `
@@ -321,9 +310,6 @@ LIMIT $` + itoa(len(args)+1) + ` OFFSET $` + itoa(len(args)+2)
 		var requestType sql.NullInt64
 		var apiKeyName string
 		var apiKeyDeletedAt sql.NullTime
-		var deletedKeyName string
-		var deletedKeyOwnerID sql.NullInt64
-		var deletedKeyOwnerEmail string
 		if err := rows.Scan(
 			&item.ID,
 			&item.CreatedAt,
@@ -360,9 +346,6 @@ LIMIT $` + itoa(len(args)+1) + ` OFFSET $` + itoa(len(args)+2)
 			&requestType,
 			&apiKeyName,
 			&apiKeyDeletedAt,
-			&deletedKeyName,
-			&deletedKeyOwnerID,
-			&deletedKeyOwnerEmail,
 		); err != nil {
 			return nil, err
 		}
@@ -403,21 +386,8 @@ LIMIT $` + itoa(len(args)+1) + ` OFFSET $` + itoa(len(args)+2)
 			v := int16(requestType.Int64)
 			item.RequestType = &v
 		}
-		// Key 名称：优先关联到的 ak.name（已软删的 key name 仍保留）；
-		// 关联不到（api_key_id 为空 / 历史硬删）时回退错误记录里快照的 deleted_key_name。
-		if apiKeyName != "" {
-			item.APIKeyName = apiKeyName
-		} else {
-			item.APIKeyName = deletedKeyName
-		}
-		// 已删除：ak.deleted_at 非空（软删），或仅命中 deleted_key_name 兜底。
-		item.APIKeyDeleted = apiKeyDeletedAt.Valid || (apiKeyName == "" && deletedKeyName != "")
-		// 已删除 KEY 所有者快照:认证失败行 user_id 为空,列表用户列以此回退。
-		if deletedKeyOwnerID.Valid {
-			v := deletedKeyOwnerID.Int64
-			item.DeletedKeyOwnerUserID = &v
-			item.DeletedKeyOwnerEmail = deletedKeyOwnerEmail
-		}
+		item.APIKeyName = apiKeyName
+		item.APIKeyDeleted = apiKeyDeletedAt.Valid
 		out = append(out, &item)
 	}
 	if err := rows.Err(); err != nil {
@@ -489,10 +459,6 @@ SELECT
   e.request_body_truncated,
   e.request_body_bytes,
   COALESCE(e.request_headers::text, ''),
-  COALESCE(e.attempted_key_prefix, ''),
-  e.deleted_key_owner_user_id,
-  COALESCE(du.email, ''),
-  COALESCE(e.deleted_key_name, ''),
   COALESCE(e.api_key_prefix, ''),
   COALESCE(ak.name, ''),
   ak.deleted_at
@@ -500,7 +466,6 @@ FROM ops_error_logs e
 LEFT JOIN users u ON e.user_id = u.id
 LEFT JOIN accounts a ON e.account_id = a.id
 LEFT JOIN groups g ON e.group_id = g.id
-LEFT JOIN users du ON e.deleted_key_owner_user_id = du.id
 LEFT JOIN api_keys ak ON ak.id = e.api_key_id
 WHERE e.id = $1
 LIMIT 1`
@@ -522,7 +487,6 @@ LIMIT 1`
 	var ttft sql.NullInt64
 	var requestBodyBytes sql.NullInt64
 	var requestType sql.NullInt64
-	var deletedKeyOwnerUserID sql.NullInt64
 	var detailAPIKeyName string
 	var detailAPIKeyDeletedAt sql.NullTime
 
@@ -574,10 +538,6 @@ LIMIT 1`
 		&out.RequestBodyTruncated,
 		&requestBodyBytes,
 		&out.RequestHeaders,
-		&out.AttemptedKeyPrefix,
-		&deletedKeyOwnerUserID,
-		&out.DeletedKeyOwnerEmail,
-		&out.DeletedKeyName,
 		&out.APIKeyPrefix,
 		&detailAPIKeyName,
 		&detailAPIKeyDeletedAt,
@@ -647,18 +607,8 @@ LIMIT 1`
 		v := int16(requestType.Int64)
 		out.RequestType = &v
 	}
-	if deletedKeyOwnerUserID.Valid {
-		v := deletedKeyOwnerUserID.Int64
-		out.DeletedKeyOwnerUserID = &v
-	}
-	// Key 名称：优先关联到的 ak.name；关联不到时回退快照的 deleted_key_name。
-	if detailAPIKeyName != "" {
-		out.APIKeyName = detailAPIKeyName
-	} else {
-		out.APIKeyName = out.DeletedKeyName
-	}
-	// 已删除：ak.deleted_at 非空（软删），或仅命中 deleted_key_name 兜底。
-	out.APIKeyDeleted = detailAPIKeyDeletedAt.Valid || (detailAPIKeyName == "" && out.DeletedKeyName != "")
+	out.APIKeyName = detailAPIKeyName
+	out.APIKeyDeleted = detailAPIKeyDeletedAt.Valid
 
 	out.RequestBody = strings.TrimSpace(out.RequestBody)
 	if out.RequestBody == "null" {
@@ -676,26 +626,6 @@ LIMIT 1`
 	}
 
 	return &out, nil
-}
-
-// LookupDeletedKeyAudit 按明文 key 反查最近一条已删除 key 审计。
-// 同一 key 可能有多条历史(反复创建/删除),取 deleted_at 最近一条(id 作同毫秒 tiebreaker)。
-// 未命中返回 (nil, nil)。
-func (r *opsRepository) LookupDeletedKeyAudit(ctx context.Context, key string) (*service.DeletedKeyAuditResult, error) {
-	var res service.DeletedKeyAuditResult
-	err := r.db.QueryRowContext(ctx, `
-		SELECT user_id, key_name
-		FROM deleted_api_key_audits
-		WHERE key = $1
-		ORDER BY deleted_at DESC, id DESC
-		LIMIT 1`, key).Scan(&res.UserID, &res.KeyName)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &res, nil
 }
 
 func (r *opsRepository) UpdateErrorResolution(ctx context.Context, errorID int64, resolved bool, resolvedByUserID *int64, resolvedAt *time.Time) error {
@@ -1112,12 +1042,7 @@ func buildOpsErrorLogsWhere(filter *service.OpsErrorLogFilter) (string, []any) {
 	if filter.UserID != nil && *filter.UserID > 0 {
 		args = append(args, *filter.UserID)
 		n := itoa(len(args))
-		if filter.MatchDeletedKeyOwner {
-			// 用户侧:把「删 key 后认证失败」(user_id=NULL,靠 deleted_key_owner 归因)的记录也纳入。
-			clauses = append(clauses, "(e.user_id = $"+n+" OR e.deleted_key_owner_user_id = $"+n+")")
-		} else {
-			clauses = append(clauses, "e.user_id = $"+n)
-		}
+		clauses = append(clauses, "e.user_id = $"+n)
 	}
 	if filter.APIKeyID != nil && *filter.APIKeyID > 0 {
 		args = append(args, *filter.APIKeyID)
