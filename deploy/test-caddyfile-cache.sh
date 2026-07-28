@@ -17,6 +17,22 @@ do
 		echo "$caddyfile must continue proxying application routes to the backend" >&2
 		exit 1
 	fi
+	if ! printf '%s\n' "$active_config" | grep -Eq '^[[:space:]]*max_header_size[[:space:]]+64KB[[:space:]]*$'; then
+		echo "$caddyfile must keep the 64 KiB request-header limit" >&2
+		exit 1
+	fi
+	if ! printf '%s\n' "$active_config" | grep -Eq '^[[:space:]]*read_header[[:space:]]+10s[[:space:]]*$'; then
+		echo "$caddyfile must keep the 10-second request-header timeout" >&2
+		exit 1
+	fi
+	if ! printf '%s\n' "$active_config" | grep -Eq '^[[:space:]]*idle[[:space:]]+2m[[:space:]]*$'; then
+		echo "$caddyfile must keep the two-minute idle timeout" >&2
+		exit 1
+	fi
+	if ! printf '%s\n' "$active_config" | grep -Eq '^[[:space:]]*max_size[[:space:]]+100MB[[:space:]]*$'; then
+		echo "$caddyfile must keep NanaFox's 100 MB edge request-body limit" >&2
+		exit 1
+	fi
 	if printf '%s\n' "$active_config" | grep -Eq '^[[:space:]]*flush_interval([[:space:]]|$)'; then
 		echo "$caddyfile must leave flush_interval unset so SSE auto-flushing and client cancellation remain intact" >&2
 		exit 1
@@ -31,4 +47,4 @@ do
 	fi
 done
 
-echo "NanaFox Caddyfiles preserve backend cache policy, SSE streaming, and reverse_proxy routing"
+echo "NanaFox Caddyfiles preserve ingress limits, backend cache policy, SSE streaming, and reverse_proxy routing"

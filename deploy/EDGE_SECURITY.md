@@ -147,9 +147,12 @@ processing is restricted to explicit trusted proxy CIDRs.
 
 ## Caddy and CDN
 
-The bundled `deploy/Caddyfile` sets a 64 KiB header limit, a 10-second header
-timeout, a 256 MiB absolute body limit, and overwrites forwarded addresses from
-the TCP peer. It is therefore a direct-to-Caddy baseline. Do not use its
+The NanaFox deployment files `deploy/Caddyfile.server`,
+`deploy/Caddyfile.tob`, and `deploy/Caddyfile.template` set a 64 KiB header
+limit, a 10-second header timeout, and a 100 MB edge body limit. The application
+still keeps its 256 MiB absolute safety net, but requests larger than the edge
+limit do not reach it. These files overwrite forwarded addresses from the TCP
+peer and are therefore direct-to-Caddy baselines. Do not use their
 `{remote_host}` forwarding lines unchanged behind a CDN: all clients would be
 attributed to a CDN egress address, collapsing rejection aggregation and the
 invalid-auth limiter onto unrelated users.

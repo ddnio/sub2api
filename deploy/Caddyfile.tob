@@ -3,6 +3,16 @@
 # 对应 /etc/caddy/Caddyfile，修改后需同步到服务器并 reload
 # =============================================================================
 
+{
+	servers {
+		max_header_size 64KB
+		timeouts {
+			read_header 10s
+			idle 2m
+		}
+	}
+}
+
 fx.nanafox.com {
 	tls {
 		protocols tls1.2 tls1.3
