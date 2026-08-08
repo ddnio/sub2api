@@ -4,6 +4,9 @@
  */
 
 import { apiClient } from './client'
+import { refreshAuthTokens, type RefreshTokenResponse } from './tokenRefresh'
+export type { RefreshTokenResponse } from './tokenRefresh'
+import { loadOAuthAffiliateCode, normalizeOAuthAffiliateCode } from '@/utils/oauthAffiliate'
 import type {
   LoginRequest,
   RegisterRequest,
@@ -12,6 +15,7 @@ import type {
   SendVerifyCodeRequest,
   SendVerifyCodeResponse,
   PublicSettings,
+  ActionCaptchaRequestProof,
   TotpLoginResponse,
   TotpLogin2FARequest
 } from '@/types'
@@ -20,6 +24,48 @@ import type {
  * Login response type - can be either full auth or 2FA required
  */
 export type LoginResponse = AuthResponse | TotpLoginResponse
+
+export type OAuthLoginProvider =
+  | 'github'
+  | 'google'
+  | 'linuxdo'
+  | 'dingtalk'
+  | 'wechat'
+  | 'oidc'
+
+export interface OAuthLoginStart {
+  provider: OAuthLoginProvider
+  params: Record<string, string>
+}
+
+export interface OAuthLoginStartResponse {
+  authorize_url: string
+}
+
+function oauthLoginStartParams(params: Record<string, string>): Record<string, string> {
+  const affiliateCode = normalizeOAuthAffiliateCode(params.aff_code) || loadOAuthAffiliateCode()
+  return affiliateCode ? { ...params, aff_code: affiliateCode } : params
+}
+
+export function buildOAuthLoginStartURL(request: OAuthLoginStart): string {
+  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
+  const normalized = apiBase.replace(/\/$/, '')
+  const query = new URLSearchParams(oauthLoginStartParams(request.params)).toString()
+  const path = `${normalized}/auth/oauth/${request.provider}/start`
+  return query ? `${path}?${query}` : path
+}
+
+export async function startOAuthLogin(
+  request: OAuthLoginStart,
+  proof: ActionCaptchaRequestProof
+): Promise<OAuthLoginStartResponse> {
+  const { data } = await apiClient.post<OAuthLoginStartResponse>(
+    `/auth/oauth/${request.provider}/start`,
+    proof,
+    { params: oauthLoginStartParams(request.params) }
+  )
+  return data
+}
 
 /**
  * Type guard to check if login response requires 2FA
@@ -179,13 +225,6 @@ export async function logout(): Promise<void> {
 /**
  * Refresh token response
  */
-export interface RefreshTokenResponse {
-  access_token: string
-  refresh_token: string
-  expires_in: number
-  token_type: string
-}
-
 export interface OAuthTokenResponse {
   access_token: string
   refresh_token?: string
@@ -294,21 +333,7 @@ export async function prepareOAuthBindAccessTokenCookie(): Promise<void> {
  * @returns New token pair
  */
 export async function refreshToken(): Promise<RefreshTokenResponse> {
-  const currentRefreshToken = getRefreshToken()
-  if (!currentRefreshToken) {
-    throw new Error('No refresh token available')
-  }
-
-  const { data } = await apiClient.post<RefreshTokenResponse>('/auth/refresh', {
-    refresh_token: currentRefreshToken
-  })
-
-  // Update tokens in localStorage
-  setAuthToken(data.access_token)
-  setRefreshToken(data.refresh_token)
-  setTokenExpiresAt(data.expires_in)
-
-  return data
+  return refreshAuthTokens()
 }
 
 /**
@@ -513,6 +538,8 @@ export async function validateInvitationCode(code: string): Promise<ValidateInvi
 export interface ForgotPasswordRequest {
   email: string
   turnstile_token?: string
+  tencent_captcha_ticket?: string
+  tencent_captcha_randstr?: string
 }
 
 /**

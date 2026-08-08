@@ -26,15 +26,18 @@ func TestDingTalkOAuthStart_Disabled(t *testing.T) {
 
 func TestDingTalkOAuthStartPersistsAffiliateCodeInHttpOnlyCookie(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := &AuthHandler{
-		cfg: &config.Config{
-			DingTalk: config.DingTalkConnectConfig{
-				Enabled:      true,
-				ClientID:     "ding-client",
-				AuthorizeURL: "https://login.dingtalk.example/oauth2/auth",
-				RedirectURL:  "https://app.example.com/api/v1/auth/oauth/dingtalk/callback",
-			},
+	cfg := &config.Config{
+		DingTalk: config.DingTalkConnectConfig{
+			Enabled:      true,
+			ClientID:     "ding-client",
+			AuthorizeURL: "https://login.dingtalk.example/oauth2/auth",
+			RedirectURL:  "https://app.example.com/api/v1/auth/oauth/dingtalk/callback",
 		},
+	}
+	settings := service.NewSettingService(&oauthPendingFlowSettingRepoStub{values: map[string]string{}}, cfg)
+	handler := &AuthHandler{
+		cfg:         cfg,
+		authService: service.NewAuthService(nil, nil, nil, nil, cfg, settings, nil, nil, nil, nil, nil, nil, nil, nil),
 	}
 	router := gin.New()
 	router.GET("/api/v1/auth/oauth/dingtalk/start", handler.DingTalkOAuthStart)
