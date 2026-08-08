@@ -53,6 +53,7 @@ echo "==> [4/4] 启动新容器"
 docker run -d \
     --name "$CONTAINER_NAME" \
     --restart unless-stopped \
+    --security-opt no-new-privileges:true \
     --network "$NETWORK" \
     --ulimit nofile=100000:100000 \
     --log-driver json-file \

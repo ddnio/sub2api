@@ -42,6 +42,7 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import type { OAuthLoginStart } from '@/api/auth'
 import { resolveAffiliateReferralCode, storeOAuthAffiliateCode } from '@/utils/oauthAffiliate'
 
 const props = withDefaults(defineProps<{
@@ -51,30 +52,16 @@ const props = withDefaults(defineProps<{
 }>(), {
   showDivider: true
 })
+const emit = defineEmits<{
+  start: [request: OAuthLoginStart]
+}>()
 
 const route = useRoute()
 const { t } = useI18n()
 
-function queryStringValue(value: unknown): string {
-  if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0] : ''
-  return typeof value === 'string' ? value : ''
-}
-
-function currentAffiliateCode(): string {
-  return (queryStringValue(route.query.aff_code) || queryStringValue(route.query.aff)).trim()
-}
-
 function startLogin(): void {
   const redirectTo = (route.query.redirect as string) || '/dashboard'
   storeOAuthAffiliateCode(resolveAffiliateReferralCode(props.affCode, route.query.aff, route.query.aff_code))
-  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
-  const normalized = apiBase.replace(/\/$/, '')
-  const params = new URLSearchParams({ redirect: redirectTo })
-  const affiliateCode = currentAffiliateCode()
-  if (affiliateCode) {
-    params.set('aff_code', affiliateCode)
-  }
-  const startURL = `${normalized}/auth/oauth/linuxdo/start?${params.toString()}`
-  window.location.href = startURL
+  emit('start', { provider: 'linuxdo', params: { redirect: redirectTo } })
 }
 </script>

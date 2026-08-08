@@ -31,7 +31,7 @@
 import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { resolveWeChatOAuthStart } from '@/api/auth'
+import { resolveWeChatOAuthStart, type OAuthLoginStart } from '@/api/auth'
 import { useAppStore } from '@/stores'
 import { resolveAffiliateReferralCode, storeOAuthAffiliateCode } from '@/utils/oauthAffiliate'
 
@@ -42,6 +42,9 @@ const props = withDefaults(defineProps<{
 }>(), {
   showDivider: true,
 })
+const emit = defineEmits<{
+  start: [request: OAuthLoginStart]
+}>()
 
 const appStore = useAppStore()
 const route = useRoute()
@@ -81,30 +84,16 @@ onMounted(() => {
   }
 })
 
-function queryStringValue(value: unknown): string {
-  if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0] : ''
-  return typeof value === 'string' ? value : ''
-}
-
-function currentAffiliateCode(): string {
-  return (queryStringValue(route.query.aff_code) || queryStringValue(route.query.aff)).trim()
-}
-
 function startLogin(): void {
   if (buttonDisabled.value || !resolvedStart.value.mode) {
     return
   }
   const redirectTo = (route.query.redirect as string) || '/dashboard'
   storeOAuthAffiliateCode(resolveAffiliateReferralCode(props.affCode, route.query.aff, route.query.aff_code))
-  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
-  const normalized = apiBase.replace(/\/$/, '')
   const mode = resolvedStart.value.mode
-  const params = new URLSearchParams({ mode, redirect: redirectTo })
-  const affiliateCode = currentAffiliateCode()
-  if (affiliateCode) {
-    params.set('aff_code', affiliateCode)
-  }
-  const startURL = `${normalized}/auth/oauth/wechat/start?${params.toString()}`
-  window.location.href = startURL
+  emit('start', {
+    provider: 'wechat',
+    params: { mode, redirect: redirectTo }
+  })
 }
 </script>
