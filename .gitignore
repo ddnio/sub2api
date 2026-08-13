@@ -158,3 +158,6 @@ ONBOARDING.md
 QODER.md
 _bmad/
 config.json
+
+# Vitest / Vite cache at repo root
+.vite/
