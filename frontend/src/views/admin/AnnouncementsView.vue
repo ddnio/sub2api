@@ -147,8 +147,8 @@
 
           <template #empty>
             <EmptyState
-              :title="loadError ? t('admin.announcements.failedToLoad') : t('admin.announcements.empty')"
-              :description="loadError ? loadError : t('admin.announcements.emptyDescription')"
+              :title="loadError ? t('admin.announcements.failedToLoad') : t('empty.noData')"
+              :description="loadError ? loadError : t('admin.announcements.createFirstAnnouncement')"
               :action-text="t('admin.announcements.createAnnouncement')"
               @action="openCreateDialog"
             />
