@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { buildEmbeddedUrl, detectTheme } from '../embedded-url'
+import {
+  buildEmbeddedUrl,
+  buildImageCreationEmbeddedUrl,
+  detectTheme,
+  isImageCreationEmbedUrl,
+} from '../embedded-url'
 
 describe('embedded-url', () => {
   const originalLocation = window.location
@@ -58,6 +63,34 @@ describe('embedded-url', () => {
 
   it('returns original string for invalid url input', () => {
     expect(buildEmbeddedUrl('not a url', 1, 'token')).toBe('not a url')
+  })
+
+  it('puts the image creation launch ticket in a scrub-friendly fragment without JWT context', () => {
+    const result = buildImageCreationEmbeddedUrl(
+      'https://app.example.com/tools/image-playground/',
+      'one-time-ticket',
+      'dark',
+      'zh-CN',
+    )
+
+    const url = new URL(result)
+    const fragment = new URLSearchParams(url.hash.slice(1))
+    expect(url.search).toBe('')
+    expect(fragment.get('launch')).toBe('one-time-ticket')
+    expect(fragment.get('theme')).toBe('dark')
+    expect(fragment.get('lang')).toBe('zh-CN')
+    expect(fragment.get('ui_mode')).toBe('embedded')
+    expect(fragment.get('src_host')).toBe('https://app.example.com')
+    expect(fragment.get('src_url')).toBe('https://app.example.com/user/purchase')
+    expect(result).not.toContain('user_id=')
+    expect(result).not.toContain('token=')
+  })
+
+  it('only selects the stable image playground path for scoped launch tickets', () => {
+    expect(isImageCreationEmbedUrl('https://app.example.com/tools/image-playground/')).toBe(true)
+    expect(isImageCreationEmbedUrl('https://app.example.com/tools/image-playground')).toBe(true)
+    expect(isImageCreationEmbedUrl('https://app.example.com/tools/image-studio/')).toBe(false)
+    expect(isImageCreationEmbedUrl('https://other.example.com/tools/image-playground/')).toBe(false)
   })
 
   it('detects dark mode from document root class', () => {
