@@ -50,6 +50,7 @@ type Handlers struct {
 	User             *UserHandler
 	APIKey           *APIKeyHandler
 	ImageCreation    *ImageCreationSessionHandler
+	ImageCreationAPI *ImageCreationHandler
 	Usage            *UsageHandler
 	Redeem           *RedeemHandler
 	Subscription     *SubscriptionHandler

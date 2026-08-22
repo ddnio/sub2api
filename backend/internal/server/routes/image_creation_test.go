@@ -17,6 +17,7 @@ func TestRegisterImageCreationSessionRoutes(t *testing.T) {
 	RegisterImageCreationSessionRoutes(
 		router.Group("/api/v1"),
 		handler.NewImageCreationSessionHandler(nil, nil),
+		handler.NewImageCreationHandler(nil),
 		middleware.JWTAuthMiddleware(next),
 		middleware.AdminAuthMiddleware(next),
 		nil,
@@ -29,4 +30,20 @@ func TestRegisterImageCreationSessionRoutes(t *testing.T) {
 	require.True(t, routes["POST /api/v1/image-creation/sessions"])
 	require.True(t, routes["POST /api/v1/image-creation/embed-tickets"])
 	require.True(t, routes["POST /api/v1/admin/image-creation/embed-tickets"])
+	require.True(t, routes["GET /api/v1/image-creation/assets/:id/content"])
+	require.True(t, routes["GET /api/v1/image-creation/templates"])
+	require.True(t, routes["GET /api/v1/image-creation/templates/:id"])
+	require.True(t, routes["PUT /api/v1/image-creation/templates/:id/favorite"])
+	require.True(t, routes["DELETE /api/v1/image-creation/templates/:id/favorite"])
+	require.True(t, routes["POST /api/v1/image-creation/templates/:id/apply"])
+	require.True(t, routes["GET /api/v1/admin/image-creation/templates"])
+	require.True(t, routes["POST /api/v1/admin/image-creation/templates"])
+	require.True(t, routes["GET /api/v1/admin/image-creation/templates/:id"])
+	require.True(t, routes["PUT /api/v1/admin/image-creation/templates/:id/draft"])
+	require.True(t, routes["POST /api/v1/admin/image-creation/templates/:id/publish"])
+	require.True(t, routes["POST /api/v1/admin/image-creation/templates/:id/archive"])
+	require.True(t, routes["POST /api/v1/admin/image-creation/templates/:id/restore"])
+	require.True(t, routes["POST /api/v1/admin/image-creation/assets"])
+	require.True(t, routes["GET /api/v1/admin/image-creation/home-featured"])
+	require.True(t, routes["PUT /api/v1/admin/image-creation/home-featured"])
 }

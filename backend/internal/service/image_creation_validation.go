@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/Wei-Shaw/sub2api/internal/domain"
@@ -33,6 +34,7 @@ type ImageCreationAsset struct {
 	SourceProvider string
 	SourceModel    string
 	CreatedBy      int64
+	CreatedAt      time.Time
 }
 
 func ValidateImageCreationTemplateDocument(doc domain.ImageCreationTemplateDocument) error {

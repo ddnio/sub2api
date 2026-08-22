@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
@@ -92,6 +93,27 @@ func (h *ImageCreationSessionHandler) Exchange(c *gin.Context) {
 		"viewer":        viewer,
 		"api_keys":      eligible,
 	})
+}
+
+func (h *ImageCreationSessionHandler) ScopedAuth(requiredScope string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		parts := strings.SplitN(strings.TrimSpace(c.GetHeader("Authorization")), " ", 2)
+		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || strings.TrimSpace(parts[1]) == "" {
+			h.writeError(c, service.ErrImageCreationSessionInvalid)
+			c.Abort()
+			return
+		}
+		viewer, err := h.sessions.Authenticate(c.Request.Context(), strings.TrimSpace(parts[1]), requiredScope)
+		if err != nil {
+			h.writeError(c, err)
+			c.Abort()
+			return
+		}
+		c.Set(string(middleware2.ContextKeyUser), middleware2.AuthSubject{UserID: viewer.UserID})
+		c.Set(string(middleware2.ContextKeyUserRole), viewer.Role)
+		c.Set("image_creation_scope", viewer.Scope)
+		c.Next()
+	}
 }
 
 func (h *ImageCreationSessionHandler) writeError(c *gin.Context, err error) {
