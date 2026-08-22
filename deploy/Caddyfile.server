@@ -133,6 +133,9 @@ router.nanafox.com {
 		max_size 100MB
 	}
 
+	@retired_image_studio path /tools/image-studio /tools/image-studio/*
+	respond @retired_image_studio "Image Studio retired" 410
+
 	handle_path /tools/image-playground/* {
 		header {
 			Cache-Control "no-store"
