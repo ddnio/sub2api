@@ -46,6 +46,22 @@ router-test.nanafox.com {
 		max_size 100MB
 	}
 
+	@retired_image_studio path /tools/image-studio /tools/image-studio/*
+	respond @retired_image_studio "Image Studio retired" 410
+
+	handle_path /tools/image-playground/* {
+		header {
+			Cache-Control "no-store"
+			Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self' data: blob:; font-src 'self' data:; form-action 'self'; frame-ancestors 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+			Referrer-Policy "no-referrer"
+			X-Content-Type-Options "nosniff"
+			X-Frame-Options "SAMEORIGIN"
+		}
+		root * /srv/nanafox/image-playground/current
+		try_files {path} /index.html
+		file_server
+	}
+
 	reverse_proxy 127.0.0.1:8081 {
 		health_uri /health
 		health_interval 30s
@@ -115,6 +131,19 @@ router.nanafox.com {
 
 	request_body {
 		max_size 100MB
+	}
+
+	handle_path /tools/image-playground/* {
+		header {
+			Cache-Control "no-store"
+			Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self' data: blob:; font-src 'self' data:; form-action 'self'; frame-ancestors 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+			Referrer-Policy "no-referrer"
+			X-Content-Type-Options "nosniff"
+			X-Frame-Options "SAMEORIGIN"
+		}
+		root * /srv/nanafox/image-playground/prod-current
+		try_files {path} /index.html
+		file_server
 	}
 
 	reverse_proxy 127.0.0.1:8080 {
