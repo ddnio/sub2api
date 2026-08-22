@@ -22,6 +22,7 @@ var (
 	ErrImageCreationNotFound      = infraerrors.NotFound("IMAGE_CREATION_NOT_FOUND", "image creation resource not found")
 	ErrImageCreationConflict      = infraerrors.New(http.StatusConflict, "IMAGE_CREATION_CONFLICT", "image creation resource changed; reload and try again")
 	ErrImageCreationCoverRequired = infraerrors.BadRequest("IMAGE_CREATION_INVALID_INPUT", "template cover is required before publish")
+	ErrImageCreationAssetTooLarge = infraerrors.New(http.StatusRequestEntityTooLarge, "IMAGE_CREATION_ASSET_TOO_LARGE", "image must not exceed 8 MiB")
 	imageCreationAssetIDPattern   = regexp.MustCompile(`^[0-9a-f]{64}$`)
 )
 

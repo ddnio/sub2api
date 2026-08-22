@@ -71,7 +71,7 @@ func TestValidateImageCreationAsset(t *testing.T) {
 	_, err = ValidateImageCreationAsset([]byte("not an image"), "uploaded", "", "", 9)
 	require.Error(t, err)
 	_, err = ValidateImageCreationAsset(make([]byte, ImageCreationAssetMaxBytes+1), "uploaded", "", "", 9)
-	require.Error(t, err)
+	require.ErrorIs(t, err, ErrImageCreationAssetTooLarge)
 
 	var oversized bytes.Buffer
 	require.NoError(t, png.Encode(&oversized, image.NewRGBA(image.Rect(0, 0, 8193, 1))))

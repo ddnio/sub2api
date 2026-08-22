@@ -7,7 +7,6 @@ import (
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
-	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
@@ -100,7 +99,7 @@ func ValidateImageCreationAsset(content []byte, sourceType, sourceProvider, sour
 		return nil, invalidImageCreationInput("image content is required")
 	}
 	if len(content) > ImageCreationAssetMaxBytes {
-		return nil, infraerrors.New(http.StatusRequestEntityTooLarge, "IMAGE_CREATION_ASSET_TOO_LARGE", "image must not exceed 8 MiB")
+		return nil, ErrImageCreationAssetTooLarge
 	}
 	if sourceType != "generated" && sourceType != "uploaded" && sourceType != "imported" {
 		return nil, invalidImageCreationInput("source_type is invalid")
