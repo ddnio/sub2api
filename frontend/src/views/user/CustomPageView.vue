@@ -94,17 +94,18 @@
         </div>
 
         <!-- Iframe embed mode -->
-        <div v-else class="custom-embed-shell">
-          <button
-            v-if="isImageCreationMode"
-            type="button"
-            class="btn btn-secondary btn-sm custom-open-fab"
-            :disabled="imageCreationLoading"
-            @click="openImageCreationInNewTab"
-          >
-            <Icon name="externalLink" size="sm" class="mr-1.5" :stroke-width="2" />
-            {{ t('customPage.openInNewTab') }}
-          </button>
+        <div v-else class="custom-embed-shell" :class="{ 'custom-image-creation-shell': isImageCreationMode }">
+          <div v-if="isImageCreationMode" class="custom-embed-toolbar">
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              :disabled="imageCreationLoading"
+              @click="openImageCreationInNewTab"
+            >
+              <Icon name="externalLink" size="sm" class="mr-1.5" :stroke-width="2" />
+              {{ t('customPage.openInNewTab') }}
+            </button>
+          </div>
           <a
             v-else
             :href="embeddedUrl"
@@ -525,6 +526,14 @@ onUnmounted(() => {
   @apply p-0;
 }
 
+.custom-image-creation-shell {
+  @apply flex flex-col;
+}
+
+.custom-embed-toolbar {
+  @apply flex shrink-0 justify-end border-b border-gray-200 bg-white px-3 py-2 dark:border-dark-700 dark:bg-dark-900;
+}
+
 .custom-open-fab {
   @apply absolute right-3 top-3 z-10;
   @apply shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-dark-800/80;
@@ -532,6 +541,8 @@ onUnmounted(() => {
 
 .custom-embed-frame {
   display: block;
+  flex: 1 1 0%;
+  min-height: 0;
   margin: 0;
   width: 100%;
   height: 100%;
