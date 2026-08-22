@@ -105,11 +105,19 @@ type UserEdges struct {
 	PendingAuthSessions []*PendingAuthSession `json:"pending_auth_sessions,omitempty"`
 	// PlatformQuotas holds the value of the platform_quotas edge.
 	PlatformQuotas []*UserPlatformQuota `json:"platform_quotas,omitempty"`
+	// ImageCreationAssets holds the value of the image_creation_assets edge.
+	ImageCreationAssets []*ImageCreationAsset `json:"image_creation_assets,omitempty"`
+	// CreatedImageCreationTemplates holds the value of the created_image_creation_templates edge.
+	CreatedImageCreationTemplates []*ImageCreationTemplate `json:"created_image_creation_templates,omitempty"`
+	// UpdatedImageCreationTemplates holds the value of the updated_image_creation_templates edge.
+	UpdatedImageCreationTemplates []*ImageCreationTemplate `json:"updated_image_creation_templates,omitempty"`
+	// ImageCreationChangeLogs holds the value of the image_creation_change_logs edge.
+	ImageCreationChangeLogs []*ImageCreationChangeLog `json:"image_creation_change_logs,omitempty"`
 	// UserAllowedGroups holds the value of the user_allowed_groups edge.
 	UserAllowedGroups []*UserAllowedGroup `json:"user_allowed_groups,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [16]bool
+	loadedTypes [20]bool
 }
 
 // APIKeysOrErr returns the APIKeys value or an error if the edge
@@ -247,10 +255,46 @@ func (e UserEdges) PlatformQuotasOrErr() ([]*UserPlatformQuota, error) {
 	return nil, &NotLoadedError{edge: "platform_quotas"}
 }
 
+// ImageCreationAssetsOrErr returns the ImageCreationAssets value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ImageCreationAssetsOrErr() ([]*ImageCreationAsset, error) {
+	if e.loadedTypes[15] {
+		return e.ImageCreationAssets, nil
+	}
+	return nil, &NotLoadedError{edge: "image_creation_assets"}
+}
+
+// CreatedImageCreationTemplatesOrErr returns the CreatedImageCreationTemplates value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) CreatedImageCreationTemplatesOrErr() ([]*ImageCreationTemplate, error) {
+	if e.loadedTypes[16] {
+		return e.CreatedImageCreationTemplates, nil
+	}
+	return nil, &NotLoadedError{edge: "created_image_creation_templates"}
+}
+
+// UpdatedImageCreationTemplatesOrErr returns the UpdatedImageCreationTemplates value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) UpdatedImageCreationTemplatesOrErr() ([]*ImageCreationTemplate, error) {
+	if e.loadedTypes[17] {
+		return e.UpdatedImageCreationTemplates, nil
+	}
+	return nil, &NotLoadedError{edge: "updated_image_creation_templates"}
+}
+
+// ImageCreationChangeLogsOrErr returns the ImageCreationChangeLogs value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ImageCreationChangeLogsOrErr() ([]*ImageCreationChangeLog, error) {
+	if e.loadedTypes[18] {
+		return e.ImageCreationChangeLogs, nil
+	}
+	return nil, &NotLoadedError{edge: "image_creation_change_logs"}
+}
+
 // UserAllowedGroupsOrErr returns the UserAllowedGroups value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) UserAllowedGroupsOrErr() ([]*UserAllowedGroup, error) {
-	if e.loadedTypes[15] {
+	if e.loadedTypes[19] {
 		return e.UserAllowedGroups, nil
 	}
 	return nil, &NotLoadedError{edge: "user_allowed_groups"}
@@ -535,6 +579,26 @@ func (_m *User) QueryPendingAuthSessions() *PendingAuthSessionQuery {
 // QueryPlatformQuotas queries the "platform_quotas" edge of the User entity.
 func (_m *User) QueryPlatformQuotas() *UserPlatformQuotaQuery {
 	return NewUserClient(_m.config).QueryPlatformQuotas(_m)
+}
+
+// QueryImageCreationAssets queries the "image_creation_assets" edge of the User entity.
+func (_m *User) QueryImageCreationAssets() *ImageCreationAssetQuery {
+	return NewUserClient(_m.config).QueryImageCreationAssets(_m)
+}
+
+// QueryCreatedImageCreationTemplates queries the "created_image_creation_templates" edge of the User entity.
+func (_m *User) QueryCreatedImageCreationTemplates() *ImageCreationTemplateQuery {
+	return NewUserClient(_m.config).QueryCreatedImageCreationTemplates(_m)
+}
+
+// QueryUpdatedImageCreationTemplates queries the "updated_image_creation_templates" edge of the User entity.
+func (_m *User) QueryUpdatedImageCreationTemplates() *ImageCreationTemplateQuery {
+	return NewUserClient(_m.config).QueryUpdatedImageCreationTemplates(_m)
+}
+
+// QueryImageCreationChangeLogs queries the "image_creation_change_logs" edge of the User entity.
+func (_m *User) QueryImageCreationChangeLogs() *ImageCreationChangeLogQuery {
+	return NewUserClient(_m.config).QueryImageCreationChangeLogs(_m)
 }
 
 // QueryUserAllowedGroups queries the "user_allowed_groups" edge of the User entity.

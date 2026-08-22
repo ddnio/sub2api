@@ -27,6 +27,9 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationasset"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationchangelog"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationtemplate"
 	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
@@ -619,6 +622,87 @@ func (f TraverseIdentityAdoptionDecision) Traverse(ctx context.Context, q ent.Qu
 		return f(ctx, q)
 	}
 	return fmt.Errorf("unexpected query type %T. expect *ent.IdentityAdoptionDecisionQuery", q)
+}
+
+// The ImageCreationAssetFunc type is an adapter to allow the use of ordinary function as a Querier.
+type ImageCreationAssetFunc func(context.Context, *ent.ImageCreationAssetQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f ImageCreationAssetFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.ImageCreationAssetQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.ImageCreationAssetQuery", q)
+}
+
+// The TraverseImageCreationAsset type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseImageCreationAsset func(context.Context, *ent.ImageCreationAssetQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseImageCreationAsset) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseImageCreationAsset) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ImageCreationAssetQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.ImageCreationAssetQuery", q)
+}
+
+// The ImageCreationChangeLogFunc type is an adapter to allow the use of ordinary function as a Querier.
+type ImageCreationChangeLogFunc func(context.Context, *ent.ImageCreationChangeLogQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f ImageCreationChangeLogFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.ImageCreationChangeLogQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.ImageCreationChangeLogQuery", q)
+}
+
+// The TraverseImageCreationChangeLog type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseImageCreationChangeLog func(context.Context, *ent.ImageCreationChangeLogQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseImageCreationChangeLog) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseImageCreationChangeLog) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ImageCreationChangeLogQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.ImageCreationChangeLogQuery", q)
+}
+
+// The ImageCreationTemplateFunc type is an adapter to allow the use of ordinary function as a Querier.
+type ImageCreationTemplateFunc func(context.Context, *ent.ImageCreationTemplateQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f ImageCreationTemplateFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.ImageCreationTemplateQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.ImageCreationTemplateQuery", q)
+}
+
+// The TraverseImageCreationTemplate type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseImageCreationTemplate func(context.Context, *ent.ImageCreationTemplateQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseImageCreationTemplate) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseImageCreationTemplate) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ImageCreationTemplateQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.ImageCreationTemplateQuery", q)
 }
 
 // The PaymentAuditLogFunc type is an adapter to allow the use of ordinary function as a Querier.
@@ -1256,6 +1340,12 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.IdempotencyRecordQuery, predicate.IdempotencyRecord, idempotencyrecord.OrderOption]{typ: ent.TypeIdempotencyRecord, tq: q}, nil
 	case *ent.IdentityAdoptionDecisionQuery:
 		return &query[*ent.IdentityAdoptionDecisionQuery, predicate.IdentityAdoptionDecision, identityadoptiondecision.OrderOption]{typ: ent.TypeIdentityAdoptionDecision, tq: q}, nil
+	case *ent.ImageCreationAssetQuery:
+		return &query[*ent.ImageCreationAssetQuery, predicate.ImageCreationAsset, imagecreationasset.OrderOption]{typ: ent.TypeImageCreationAsset, tq: q}, nil
+	case *ent.ImageCreationChangeLogQuery:
+		return &query[*ent.ImageCreationChangeLogQuery, predicate.ImageCreationChangeLog, imagecreationchangelog.OrderOption]{typ: ent.TypeImageCreationChangeLog, tq: q}, nil
+	case *ent.ImageCreationTemplateQuery:
+		return &query[*ent.ImageCreationTemplateQuery, predicate.ImageCreationTemplate, imagecreationtemplate.OrderOption]{typ: ent.TypeImageCreationTemplate, tq: q}, nil
 	case *ent.PaymentAuditLogQuery:
 		return &query[*ent.PaymentAuditLogQuery, predicate.PaymentAuditLog, paymentauditlog.OrderOption]{typ: ent.TypePaymentAuditLog, tq: q}, nil
 	case *ent.PaymentOrderQuery:

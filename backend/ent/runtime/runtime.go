@@ -24,6 +24,9 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationasset"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationchangelog"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationtemplate"
 	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
@@ -1269,6 +1272,100 @@ func init() {
 	identityadoptiondecisionDescDecidedAt := identityadoptiondecisionFields[4].Descriptor()
 	// identityadoptiondecision.DefaultDecidedAt holds the default value on creation for the decided_at field.
 	identityadoptiondecision.DefaultDecidedAt = identityadoptiondecisionDescDecidedAt.Default.(func() time.Time)
+	imagecreationassetFields := schema.ImageCreationAsset{}.Fields()
+	_ = imagecreationassetFields
+	// imagecreationassetDescContentType is the schema descriptor for content_type field.
+	imagecreationassetDescContentType := imagecreationassetFields[2].Descriptor()
+	// imagecreationasset.ContentTypeValidator is a validator for the "content_type" field. It is called by the builders before save.
+	imagecreationasset.ContentTypeValidator = imagecreationassetDescContentType.Validators[0].(func(string) error)
+	// imagecreationassetDescByteSize is the schema descriptor for byte_size field.
+	imagecreationassetDescByteSize := imagecreationassetFields[3].Descriptor()
+	// imagecreationasset.ByteSizeValidator is a validator for the "byte_size" field. It is called by the builders before save.
+	imagecreationasset.ByteSizeValidator = imagecreationassetDescByteSize.Validators[0].(func(int) error)
+	// imagecreationassetDescWidth is the schema descriptor for width field.
+	imagecreationassetDescWidth := imagecreationassetFields[4].Descriptor()
+	// imagecreationasset.WidthValidator is a validator for the "width" field. It is called by the builders before save.
+	imagecreationasset.WidthValidator = imagecreationassetDescWidth.Validators[0].(func(int) error)
+	// imagecreationassetDescHeight is the schema descriptor for height field.
+	imagecreationassetDescHeight := imagecreationassetFields[5].Descriptor()
+	// imagecreationasset.HeightValidator is a validator for the "height" field. It is called by the builders before save.
+	imagecreationasset.HeightValidator = imagecreationassetDescHeight.Validators[0].(func(int) error)
+	// imagecreationassetDescSourceType is the schema descriptor for source_type field.
+	imagecreationassetDescSourceType := imagecreationassetFields[6].Descriptor()
+	// imagecreationasset.SourceTypeValidator is a validator for the "source_type" field. It is called by the builders before save.
+	imagecreationasset.SourceTypeValidator = imagecreationassetDescSourceType.Validators[0].(func(string) error)
+	// imagecreationassetDescSourceProvider is the schema descriptor for source_provider field.
+	imagecreationassetDescSourceProvider := imagecreationassetFields[7].Descriptor()
+	// imagecreationasset.SourceProviderValidator is a validator for the "source_provider" field. It is called by the builders before save.
+	imagecreationasset.SourceProviderValidator = imagecreationassetDescSourceProvider.Validators[0].(func(string) error)
+	// imagecreationassetDescSourceModel is the schema descriptor for source_model field.
+	imagecreationassetDescSourceModel := imagecreationassetFields[8].Descriptor()
+	// imagecreationasset.SourceModelValidator is a validator for the "source_model" field. It is called by the builders before save.
+	imagecreationasset.SourceModelValidator = imagecreationassetDescSourceModel.Validators[0].(func(string) error)
+	// imagecreationassetDescCreatedAt is the schema descriptor for created_at field.
+	imagecreationassetDescCreatedAt := imagecreationassetFields[10].Descriptor()
+	// imagecreationasset.DefaultCreatedAt holds the default value on creation for the created_at field.
+	imagecreationasset.DefaultCreatedAt = imagecreationassetDescCreatedAt.Default.(func() time.Time)
+	// imagecreationassetDescID is the schema descriptor for id field.
+	imagecreationassetDescID := imagecreationassetFields[0].Descriptor()
+	// imagecreationasset.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	imagecreationasset.IDValidator = imagecreationassetDescID.Validators[0].(func(string) error)
+	imagecreationchangelogFields := schema.ImageCreationChangeLog{}.Fields()
+	_ = imagecreationchangelogFields
+	// imagecreationchangelogDescAction is the schema descriptor for action field.
+	imagecreationchangelogDescAction := imagecreationchangelogFields[1].Descriptor()
+	// imagecreationchangelog.ActionValidator is a validator for the "action" field. It is called by the builders before save.
+	imagecreationchangelog.ActionValidator = imagecreationchangelogDescAction.Validators[0].(func(string) error)
+	// imagecreationchangelogDescTargetType is the schema descriptor for target_type field.
+	imagecreationchangelogDescTargetType := imagecreationchangelogFields[2].Descriptor()
+	// imagecreationchangelog.TargetTypeValidator is a validator for the "target_type" field. It is called by the builders before save.
+	imagecreationchangelog.TargetTypeValidator = imagecreationchangelogDescTargetType.Validators[0].(func(string) error)
+	// imagecreationchangelogDescTargetID is the schema descriptor for target_id field.
+	imagecreationchangelogDescTargetID := imagecreationchangelogFields[3].Descriptor()
+	// imagecreationchangelog.TargetIDValidator is a validator for the "target_id" field. It is called by the builders before save.
+	imagecreationchangelog.TargetIDValidator = imagecreationchangelogDescTargetID.Validators[0].(func(string) error)
+	// imagecreationchangelogDescCreatedAt is the schema descriptor for created_at field.
+	imagecreationchangelogDescCreatedAt := imagecreationchangelogFields[5].Descriptor()
+	// imagecreationchangelog.DefaultCreatedAt holds the default value on creation for the created_at field.
+	imagecreationchangelog.DefaultCreatedAt = imagecreationchangelogDescCreatedAt.Default.(func() time.Time)
+	imagecreationtemplateFields := schema.ImageCreationTemplate{}.Fields()
+	_ = imagecreationtemplateFields
+	// imagecreationtemplateDescState is the schema descriptor for state field.
+	imagecreationtemplateDescState := imagecreationtemplateFields[0].Descriptor()
+	// imagecreationtemplate.DefaultState holds the default value on creation for the state field.
+	imagecreationtemplate.DefaultState = imagecreationtemplateDescState.Default.(string)
+	// imagecreationtemplate.StateValidator is a validator for the "state" field. It is called by the builders before save.
+	imagecreationtemplate.StateValidator = imagecreationtemplateDescState.Validators[0].(func(string) error)
+	// imagecreationtemplateDescRevision is the schema descriptor for revision field.
+	imagecreationtemplateDescRevision := imagecreationtemplateFields[3].Descriptor()
+	// imagecreationtemplate.DefaultRevision holds the default value on creation for the revision field.
+	imagecreationtemplate.DefaultRevision = imagecreationtemplateDescRevision.Default.(int)
+	// imagecreationtemplate.RevisionValidator is a validator for the "revision" field. It is called by the builders before save.
+	imagecreationtemplate.RevisionValidator = imagecreationtemplateDescRevision.Validators[0].(func(int) error)
+	// imagecreationtemplateDescPublishedVersion is the schema descriptor for published_version field.
+	imagecreationtemplateDescPublishedVersion := imagecreationtemplateFields[4].Descriptor()
+	// imagecreationtemplate.DefaultPublishedVersion holds the default value on creation for the published_version field.
+	imagecreationtemplate.DefaultPublishedVersion = imagecreationtemplateDescPublishedVersion.Default.(int)
+	// imagecreationtemplate.PublishedVersionValidator is a validator for the "published_version" field. It is called by the builders before save.
+	imagecreationtemplate.PublishedVersionValidator = imagecreationtemplateDescPublishedVersion.Validators[0].(func(int) error)
+	// imagecreationtemplateDescDraftCoverAssetID is the schema descriptor for draft_cover_asset_id field.
+	imagecreationtemplateDescDraftCoverAssetID := imagecreationtemplateFields[5].Descriptor()
+	// imagecreationtemplate.DraftCoverAssetIDValidator is a validator for the "draft_cover_asset_id" field. It is called by the builders before save.
+	imagecreationtemplate.DraftCoverAssetIDValidator = imagecreationtemplateDescDraftCoverAssetID.Validators[0].(func(string) error)
+	// imagecreationtemplateDescPublishedCoverAssetID is the schema descriptor for published_cover_asset_id field.
+	imagecreationtemplateDescPublishedCoverAssetID := imagecreationtemplateFields[6].Descriptor()
+	// imagecreationtemplate.PublishedCoverAssetIDValidator is a validator for the "published_cover_asset_id" field. It is called by the builders before save.
+	imagecreationtemplate.PublishedCoverAssetIDValidator = imagecreationtemplateDescPublishedCoverAssetID.Validators[0].(func(string) error)
+	// imagecreationtemplateDescCreatedAt is the schema descriptor for created_at field.
+	imagecreationtemplateDescCreatedAt := imagecreationtemplateFields[10].Descriptor()
+	// imagecreationtemplate.DefaultCreatedAt holds the default value on creation for the created_at field.
+	imagecreationtemplate.DefaultCreatedAt = imagecreationtemplateDescCreatedAt.Default.(func() time.Time)
+	// imagecreationtemplateDescUpdatedAt is the schema descriptor for updated_at field.
+	imagecreationtemplateDescUpdatedAt := imagecreationtemplateFields[11].Descriptor()
+	// imagecreationtemplate.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	imagecreationtemplate.DefaultUpdatedAt = imagecreationtemplateDescUpdatedAt.Default.(func() time.Time)
+	// imagecreationtemplate.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	imagecreationtemplate.UpdateDefaultUpdatedAt = imagecreationtemplateDescUpdatedAt.UpdateDefault.(func() time.Time)
 	paymentauditlogFields := schema.PaymentAuditLog{}.Fields()
 	_ = paymentauditlogFields
 	// paymentauditlogDescOrderID is the schema descriptor for order_id field.

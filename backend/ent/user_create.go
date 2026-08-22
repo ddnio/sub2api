@@ -15,6 +15,9 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
 	"github.com/Wei-Shaw/sub2api/ent/group"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationasset"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationchangelog"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationtemplate"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/pendingauthsession"
 	"github.com/Wei-Shaw/sub2api/ent/promocodeusage"
@@ -594,6 +597,66 @@ func (_c *UserCreate) AddPlatformQuotas(v ...*UserPlatformQuota) *UserCreate {
 	return _c.AddPlatformQuotaIDs(ids...)
 }
 
+// AddImageCreationAssetIDs adds the "image_creation_assets" edge to the ImageCreationAsset entity by IDs.
+func (_c *UserCreate) AddImageCreationAssetIDs(ids ...string) *UserCreate {
+	_c.mutation.AddImageCreationAssetIDs(ids...)
+	return _c
+}
+
+// AddImageCreationAssets adds the "image_creation_assets" edges to the ImageCreationAsset entity.
+func (_c *UserCreate) AddImageCreationAssets(v ...*ImageCreationAsset) *UserCreate {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddImageCreationAssetIDs(ids...)
+}
+
+// AddCreatedImageCreationTemplateIDs adds the "created_image_creation_templates" edge to the ImageCreationTemplate entity by IDs.
+func (_c *UserCreate) AddCreatedImageCreationTemplateIDs(ids ...int64) *UserCreate {
+	_c.mutation.AddCreatedImageCreationTemplateIDs(ids...)
+	return _c
+}
+
+// AddCreatedImageCreationTemplates adds the "created_image_creation_templates" edges to the ImageCreationTemplate entity.
+func (_c *UserCreate) AddCreatedImageCreationTemplates(v ...*ImageCreationTemplate) *UserCreate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreatedImageCreationTemplateIDs(ids...)
+}
+
+// AddUpdatedImageCreationTemplateIDs adds the "updated_image_creation_templates" edge to the ImageCreationTemplate entity by IDs.
+func (_c *UserCreate) AddUpdatedImageCreationTemplateIDs(ids ...int64) *UserCreate {
+	_c.mutation.AddUpdatedImageCreationTemplateIDs(ids...)
+	return _c
+}
+
+// AddUpdatedImageCreationTemplates adds the "updated_image_creation_templates" edges to the ImageCreationTemplate entity.
+func (_c *UserCreate) AddUpdatedImageCreationTemplates(v ...*ImageCreationTemplate) *UserCreate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddUpdatedImageCreationTemplateIDs(ids...)
+}
+
+// AddImageCreationChangeLogIDs adds the "image_creation_change_logs" edge to the ImageCreationChangeLog entity by IDs.
+func (_c *UserCreate) AddImageCreationChangeLogIDs(ids ...int64) *UserCreate {
+	_c.mutation.AddImageCreationChangeLogIDs(ids...)
+	return _c
+}
+
+// AddImageCreationChangeLogs adds the "image_creation_change_logs" edges to the ImageCreationChangeLog entity.
+func (_c *UserCreate) AddImageCreationChangeLogs(v ...*ImageCreationChangeLog) *UserCreate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddImageCreationChangeLogIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_c *UserCreate) Mutation() *UserMutation {
 	return _c.mutation
@@ -1159,6 +1222,70 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(userplatformquota.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ImageCreationAssetsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ImageCreationAssetsTable,
+			Columns: []string{user.ImageCreationAssetsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(imagecreationasset.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreatedImageCreationTemplatesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedImageCreationTemplatesTable,
+			Columns: []string{user.CreatedImageCreationTemplatesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(imagecreationtemplate.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.UpdatedImageCreationTemplatesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.UpdatedImageCreationTemplatesTable,
+			Columns: []string{user.UpdatedImageCreationTemplatesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(imagecreationtemplate.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ImageCreationChangeLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ImageCreationChangeLogsTable,
+			Columns: []string{user.ImageCreationChangeLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(imagecreationchangelog.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

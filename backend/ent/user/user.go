@@ -95,6 +95,14 @@ const (
 	EdgePendingAuthSessions = "pending_auth_sessions"
 	// EdgePlatformQuotas holds the string denoting the platform_quotas edge name in mutations.
 	EdgePlatformQuotas = "platform_quotas"
+	// EdgeImageCreationAssets holds the string denoting the image_creation_assets edge name in mutations.
+	EdgeImageCreationAssets = "image_creation_assets"
+	// EdgeCreatedImageCreationTemplates holds the string denoting the created_image_creation_templates edge name in mutations.
+	EdgeCreatedImageCreationTemplates = "created_image_creation_templates"
+	// EdgeUpdatedImageCreationTemplates holds the string denoting the updated_image_creation_templates edge name in mutations.
+	EdgeUpdatedImageCreationTemplates = "updated_image_creation_templates"
+	// EdgeImageCreationChangeLogs holds the string denoting the image_creation_change_logs edge name in mutations.
+	EdgeImageCreationChangeLogs = "image_creation_change_logs"
 	// EdgeUserAllowedGroups holds the string denoting the user_allowed_groups edge name in mutations.
 	EdgeUserAllowedGroups = "user_allowed_groups"
 	// Table holds the table name of the user in the database.
@@ -202,6 +210,34 @@ const (
 	PlatformQuotasInverseTable = "user_platform_quotas"
 	// PlatformQuotasColumn is the table column denoting the platform_quotas relation/edge.
 	PlatformQuotasColumn = "user_id"
+	// ImageCreationAssetsTable is the table that holds the image_creation_assets relation/edge.
+	ImageCreationAssetsTable = "image_creation_assets"
+	// ImageCreationAssetsInverseTable is the table name for the ImageCreationAsset entity.
+	// It exists in this package in order to avoid circular dependency with the "imagecreationasset" package.
+	ImageCreationAssetsInverseTable = "image_creation_assets"
+	// ImageCreationAssetsColumn is the table column denoting the image_creation_assets relation/edge.
+	ImageCreationAssetsColumn = "created_by"
+	// CreatedImageCreationTemplatesTable is the table that holds the created_image_creation_templates relation/edge.
+	CreatedImageCreationTemplatesTable = "image_creation_templates"
+	// CreatedImageCreationTemplatesInverseTable is the table name for the ImageCreationTemplate entity.
+	// It exists in this package in order to avoid circular dependency with the "imagecreationtemplate" package.
+	CreatedImageCreationTemplatesInverseTable = "image_creation_templates"
+	// CreatedImageCreationTemplatesColumn is the table column denoting the created_image_creation_templates relation/edge.
+	CreatedImageCreationTemplatesColumn = "created_by"
+	// UpdatedImageCreationTemplatesTable is the table that holds the updated_image_creation_templates relation/edge.
+	UpdatedImageCreationTemplatesTable = "image_creation_templates"
+	// UpdatedImageCreationTemplatesInverseTable is the table name for the ImageCreationTemplate entity.
+	// It exists in this package in order to avoid circular dependency with the "imagecreationtemplate" package.
+	UpdatedImageCreationTemplatesInverseTable = "image_creation_templates"
+	// UpdatedImageCreationTemplatesColumn is the table column denoting the updated_image_creation_templates relation/edge.
+	UpdatedImageCreationTemplatesColumn = "updated_by"
+	// ImageCreationChangeLogsTable is the table that holds the image_creation_change_logs relation/edge.
+	ImageCreationChangeLogsTable = "image_creation_change_logs"
+	// ImageCreationChangeLogsInverseTable is the table name for the ImageCreationChangeLog entity.
+	// It exists in this package in order to avoid circular dependency with the "imagecreationchangelog" package.
+	ImageCreationChangeLogsInverseTable = "image_creation_change_logs"
+	// ImageCreationChangeLogsColumn is the table column denoting the image_creation_change_logs relation/edge.
+	ImageCreationChangeLogsColumn = "actor_user_id"
 	// UserAllowedGroupsTable is the table that holds the user_allowed_groups relation/edge.
 	UserAllowedGroupsTable = "user_allowed_groups"
 	// UserAllowedGroupsInverseTable is the table name for the UserAllowedGroup entity.
@@ -658,6 +694,62 @@ func ByPlatformQuotas(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByImageCreationAssetsCount orders the results by image_creation_assets count.
+func ByImageCreationAssetsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newImageCreationAssetsStep(), opts...)
+	}
+}
+
+// ByImageCreationAssets orders the results by image_creation_assets terms.
+func ByImageCreationAssets(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newImageCreationAssetsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByCreatedImageCreationTemplatesCount orders the results by created_image_creation_templates count.
+func ByCreatedImageCreationTemplatesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCreatedImageCreationTemplatesStep(), opts...)
+	}
+}
+
+// ByCreatedImageCreationTemplates orders the results by created_image_creation_templates terms.
+func ByCreatedImageCreationTemplates(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCreatedImageCreationTemplatesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByUpdatedImageCreationTemplatesCount orders the results by updated_image_creation_templates count.
+func ByUpdatedImageCreationTemplatesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newUpdatedImageCreationTemplatesStep(), opts...)
+	}
+}
+
+// ByUpdatedImageCreationTemplates orders the results by updated_image_creation_templates terms.
+func ByUpdatedImageCreationTemplates(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newUpdatedImageCreationTemplatesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByImageCreationChangeLogsCount orders the results by image_creation_change_logs count.
+func ByImageCreationChangeLogsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newImageCreationChangeLogsStep(), opts...)
+	}
+}
+
+// ByImageCreationChangeLogs orders the results by image_creation_change_logs terms.
+func ByImageCreationChangeLogs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newImageCreationChangeLogsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByUserAllowedGroupsCount orders the results by user_allowed_groups count.
 func ByUserAllowedGroupsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -774,6 +866,34 @@ func newPlatformQuotasStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PlatformQuotasInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, PlatformQuotasTable, PlatformQuotasColumn),
+	)
+}
+func newImageCreationAssetsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ImageCreationAssetsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ImageCreationAssetsTable, ImageCreationAssetsColumn),
+	)
+}
+func newCreatedImageCreationTemplatesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CreatedImageCreationTemplatesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CreatedImageCreationTemplatesTable, CreatedImageCreationTemplatesColumn),
+	)
+}
+func newUpdatedImageCreationTemplatesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(UpdatedImageCreationTemplatesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, UpdatedImageCreationTemplatesTable, UpdatedImageCreationTemplatesColumn),
+	)
+}
+func newImageCreationChangeLogsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ImageCreationChangeLogsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ImageCreationChangeLogsTable, ImageCreationChangeLogsColumn),
 	)
 }
 func newUserAllowedGroupsStep() *sqlgraph.Step {

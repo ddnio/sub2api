@@ -141,6 +141,10 @@ func (User) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("pending_auth_sessions", PendingAuthSession.Type),
 		edge.To("platform_quotas", UserPlatformQuota.Type),
+		edge.To("image_creation_assets", ImageCreationAsset.Type),
+		edge.To("created_image_creation_templates", ImageCreationTemplate.Type),
+		edge.To("updated_image_creation_templates", ImageCreationTemplate.Type),
+		edge.To("image_creation_change_logs", ImageCreationChangeLog.Type),
 	}
 }
 

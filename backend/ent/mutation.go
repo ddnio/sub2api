@@ -31,6 +31,9 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationasset"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationchangelog"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationtemplate"
 	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/paymentplan"
@@ -85,6 +88,9 @@ const (
 	TypeGroup                         = "Group"
 	TypeIdempotencyRecord             = "IdempotencyRecord"
 	TypeIdentityAdoptionDecision      = "IdentityAdoptionDecision"
+	TypeImageCreationAsset            = "ImageCreationAsset"
+	TypeImageCreationChangeLog        = "ImageCreationChangeLog"
+	TypeImageCreationTemplate         = "ImageCreationTemplate"
 	TypePaymentAuditLog               = "PaymentAuditLog"
 	TypePaymentOrder                  = "PaymentOrder"
 	TypePaymentPlan                   = "PaymentPlan"
@@ -29427,6 +29433,3309 @@ func (m *IdentityAdoptionDecisionMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown IdentityAdoptionDecision edge %s", name)
 }
 
+// ImageCreationAssetMutation represents an operation that mutates the ImageCreationAsset nodes in the graph.
+type ImageCreationAssetMutation struct {
+	config
+	op                         Op
+	typ                        string
+	id                         *string
+	content                    *[]byte
+	content_type               *string
+	byte_size                  *int
+	addbyte_size               *int
+	width                      *int
+	addwidth                   *int
+	height                     *int
+	addheight                  *int
+	source_type                *string
+	source_provider            *string
+	source_model               *string
+	created_at                 *time.Time
+	clearedFields              map[string]struct{}
+	creator                    *int64
+	clearedcreator             bool
+	draft_templates            map[int64]struct{}
+	removeddraft_templates     map[int64]struct{}
+	cleareddraft_templates     bool
+	published_templates        map[int64]struct{}
+	removedpublished_templates map[int64]struct{}
+	clearedpublished_templates bool
+	done                       bool
+	oldValue                   func(context.Context) (*ImageCreationAsset, error)
+	predicates                 []predicate.ImageCreationAsset
+}
+
+var _ ent.Mutation = (*ImageCreationAssetMutation)(nil)
+
+// imagecreationassetOption allows management of the mutation configuration using functional options.
+type imagecreationassetOption func(*ImageCreationAssetMutation)
+
+// newImageCreationAssetMutation creates new mutation for the ImageCreationAsset entity.
+func newImageCreationAssetMutation(c config, op Op, opts ...imagecreationassetOption) *ImageCreationAssetMutation {
+	m := &ImageCreationAssetMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeImageCreationAsset,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withImageCreationAssetID sets the ID field of the mutation.
+func withImageCreationAssetID(id string) imagecreationassetOption {
+	return func(m *ImageCreationAssetMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ImageCreationAsset
+		)
+		m.oldValue = func(ctx context.Context) (*ImageCreationAsset, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ImageCreationAsset.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withImageCreationAsset sets the old ImageCreationAsset of the mutation.
+func withImageCreationAsset(node *ImageCreationAsset) imagecreationassetOption {
+	return func(m *ImageCreationAssetMutation) {
+		m.oldValue = func(context.Context) (*ImageCreationAsset, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ImageCreationAssetMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ImageCreationAssetMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ImageCreationAsset entities.
+func (m *ImageCreationAssetMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ImageCreationAssetMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ImageCreationAssetMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ImageCreationAsset.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetContent sets the "content" field.
+func (m *ImageCreationAssetMutation) SetContent(b []byte) {
+	m.content = &b
+}
+
+// Content returns the value of the "content" field in the mutation.
+func (m *ImageCreationAssetMutation) Content() (r []byte, exists bool) {
+	v := m.content
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldContent returns the old "content" field's value of the ImageCreationAsset entity.
+// If the ImageCreationAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationAssetMutation) OldContent(ctx context.Context) (v []byte, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldContent is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldContent requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldContent: %w", err)
+	}
+	return oldValue.Content, nil
+}
+
+// ResetContent resets all changes to the "content" field.
+func (m *ImageCreationAssetMutation) ResetContent() {
+	m.content = nil
+}
+
+// SetContentType sets the "content_type" field.
+func (m *ImageCreationAssetMutation) SetContentType(s string) {
+	m.content_type = &s
+}
+
+// ContentType returns the value of the "content_type" field in the mutation.
+func (m *ImageCreationAssetMutation) ContentType() (r string, exists bool) {
+	v := m.content_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldContentType returns the old "content_type" field's value of the ImageCreationAsset entity.
+// If the ImageCreationAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationAssetMutation) OldContentType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldContentType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldContentType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldContentType: %w", err)
+	}
+	return oldValue.ContentType, nil
+}
+
+// ResetContentType resets all changes to the "content_type" field.
+func (m *ImageCreationAssetMutation) ResetContentType() {
+	m.content_type = nil
+}
+
+// SetByteSize sets the "byte_size" field.
+func (m *ImageCreationAssetMutation) SetByteSize(i int) {
+	m.byte_size = &i
+	m.addbyte_size = nil
+}
+
+// ByteSize returns the value of the "byte_size" field in the mutation.
+func (m *ImageCreationAssetMutation) ByteSize() (r int, exists bool) {
+	v := m.byte_size
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldByteSize returns the old "byte_size" field's value of the ImageCreationAsset entity.
+// If the ImageCreationAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationAssetMutation) OldByteSize(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldByteSize is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldByteSize requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldByteSize: %w", err)
+	}
+	return oldValue.ByteSize, nil
+}
+
+// AddByteSize adds i to the "byte_size" field.
+func (m *ImageCreationAssetMutation) AddByteSize(i int) {
+	if m.addbyte_size != nil {
+		*m.addbyte_size += i
+	} else {
+		m.addbyte_size = &i
+	}
+}
+
+// AddedByteSize returns the value that was added to the "byte_size" field in this mutation.
+func (m *ImageCreationAssetMutation) AddedByteSize() (r int, exists bool) {
+	v := m.addbyte_size
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetByteSize resets all changes to the "byte_size" field.
+func (m *ImageCreationAssetMutation) ResetByteSize() {
+	m.byte_size = nil
+	m.addbyte_size = nil
+}
+
+// SetWidth sets the "width" field.
+func (m *ImageCreationAssetMutation) SetWidth(i int) {
+	m.width = &i
+	m.addwidth = nil
+}
+
+// Width returns the value of the "width" field in the mutation.
+func (m *ImageCreationAssetMutation) Width() (r int, exists bool) {
+	v := m.width
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWidth returns the old "width" field's value of the ImageCreationAsset entity.
+// If the ImageCreationAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationAssetMutation) OldWidth(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWidth is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWidth requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWidth: %w", err)
+	}
+	return oldValue.Width, nil
+}
+
+// AddWidth adds i to the "width" field.
+func (m *ImageCreationAssetMutation) AddWidth(i int) {
+	if m.addwidth != nil {
+		*m.addwidth += i
+	} else {
+		m.addwidth = &i
+	}
+}
+
+// AddedWidth returns the value that was added to the "width" field in this mutation.
+func (m *ImageCreationAssetMutation) AddedWidth() (r int, exists bool) {
+	v := m.addwidth
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetWidth resets all changes to the "width" field.
+func (m *ImageCreationAssetMutation) ResetWidth() {
+	m.width = nil
+	m.addwidth = nil
+}
+
+// SetHeight sets the "height" field.
+func (m *ImageCreationAssetMutation) SetHeight(i int) {
+	m.height = &i
+	m.addheight = nil
+}
+
+// Height returns the value of the "height" field in the mutation.
+func (m *ImageCreationAssetMutation) Height() (r int, exists bool) {
+	v := m.height
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHeight returns the old "height" field's value of the ImageCreationAsset entity.
+// If the ImageCreationAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationAssetMutation) OldHeight(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHeight is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHeight requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHeight: %w", err)
+	}
+	return oldValue.Height, nil
+}
+
+// AddHeight adds i to the "height" field.
+func (m *ImageCreationAssetMutation) AddHeight(i int) {
+	if m.addheight != nil {
+		*m.addheight += i
+	} else {
+		m.addheight = &i
+	}
+}
+
+// AddedHeight returns the value that was added to the "height" field in this mutation.
+func (m *ImageCreationAssetMutation) AddedHeight() (r int, exists bool) {
+	v := m.addheight
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetHeight resets all changes to the "height" field.
+func (m *ImageCreationAssetMutation) ResetHeight() {
+	m.height = nil
+	m.addheight = nil
+}
+
+// SetSourceType sets the "source_type" field.
+func (m *ImageCreationAssetMutation) SetSourceType(s string) {
+	m.source_type = &s
+}
+
+// SourceType returns the value of the "source_type" field in the mutation.
+func (m *ImageCreationAssetMutation) SourceType() (r string, exists bool) {
+	v := m.source_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSourceType returns the old "source_type" field's value of the ImageCreationAsset entity.
+// If the ImageCreationAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationAssetMutation) OldSourceType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSourceType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSourceType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSourceType: %w", err)
+	}
+	return oldValue.SourceType, nil
+}
+
+// ResetSourceType resets all changes to the "source_type" field.
+func (m *ImageCreationAssetMutation) ResetSourceType() {
+	m.source_type = nil
+}
+
+// SetSourceProvider sets the "source_provider" field.
+func (m *ImageCreationAssetMutation) SetSourceProvider(s string) {
+	m.source_provider = &s
+}
+
+// SourceProvider returns the value of the "source_provider" field in the mutation.
+func (m *ImageCreationAssetMutation) SourceProvider() (r string, exists bool) {
+	v := m.source_provider
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSourceProvider returns the old "source_provider" field's value of the ImageCreationAsset entity.
+// If the ImageCreationAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationAssetMutation) OldSourceProvider(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSourceProvider is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSourceProvider requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSourceProvider: %w", err)
+	}
+	return oldValue.SourceProvider, nil
+}
+
+// ClearSourceProvider clears the value of the "source_provider" field.
+func (m *ImageCreationAssetMutation) ClearSourceProvider() {
+	m.source_provider = nil
+	m.clearedFields[imagecreationasset.FieldSourceProvider] = struct{}{}
+}
+
+// SourceProviderCleared returns if the "source_provider" field was cleared in this mutation.
+func (m *ImageCreationAssetMutation) SourceProviderCleared() bool {
+	_, ok := m.clearedFields[imagecreationasset.FieldSourceProvider]
+	return ok
+}
+
+// ResetSourceProvider resets all changes to the "source_provider" field.
+func (m *ImageCreationAssetMutation) ResetSourceProvider() {
+	m.source_provider = nil
+	delete(m.clearedFields, imagecreationasset.FieldSourceProvider)
+}
+
+// SetSourceModel sets the "source_model" field.
+func (m *ImageCreationAssetMutation) SetSourceModel(s string) {
+	m.source_model = &s
+}
+
+// SourceModel returns the value of the "source_model" field in the mutation.
+func (m *ImageCreationAssetMutation) SourceModel() (r string, exists bool) {
+	v := m.source_model
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSourceModel returns the old "source_model" field's value of the ImageCreationAsset entity.
+// If the ImageCreationAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationAssetMutation) OldSourceModel(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSourceModel is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSourceModel requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSourceModel: %w", err)
+	}
+	return oldValue.SourceModel, nil
+}
+
+// ClearSourceModel clears the value of the "source_model" field.
+func (m *ImageCreationAssetMutation) ClearSourceModel() {
+	m.source_model = nil
+	m.clearedFields[imagecreationasset.FieldSourceModel] = struct{}{}
+}
+
+// SourceModelCleared returns if the "source_model" field was cleared in this mutation.
+func (m *ImageCreationAssetMutation) SourceModelCleared() bool {
+	_, ok := m.clearedFields[imagecreationasset.FieldSourceModel]
+	return ok
+}
+
+// ResetSourceModel resets all changes to the "source_model" field.
+func (m *ImageCreationAssetMutation) ResetSourceModel() {
+	m.source_model = nil
+	delete(m.clearedFields, imagecreationasset.FieldSourceModel)
+}
+
+// SetCreatedBy sets the "created_by" field.
+func (m *ImageCreationAssetMutation) SetCreatedBy(i int64) {
+	m.creator = &i
+}
+
+// CreatedBy returns the value of the "created_by" field in the mutation.
+func (m *ImageCreationAssetMutation) CreatedBy() (r int64, exists bool) {
+	v := m.creator
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedBy returns the old "created_by" field's value of the ImageCreationAsset entity.
+// If the ImageCreationAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationAssetMutation) OldCreatedBy(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedBy: %w", err)
+	}
+	return oldValue.CreatedBy, nil
+}
+
+// ResetCreatedBy resets all changes to the "created_by" field.
+func (m *ImageCreationAssetMutation) ResetCreatedBy() {
+	m.creator = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ImageCreationAssetMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ImageCreationAssetMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ImageCreationAsset entity.
+// If the ImageCreationAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationAssetMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ImageCreationAssetMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetCreatorID sets the "creator" edge to the User entity by id.
+func (m *ImageCreationAssetMutation) SetCreatorID(id int64) {
+	m.creator = &id
+}
+
+// ClearCreator clears the "creator" edge to the User entity.
+func (m *ImageCreationAssetMutation) ClearCreator() {
+	m.clearedcreator = true
+	m.clearedFields[imagecreationasset.FieldCreatedBy] = struct{}{}
+}
+
+// CreatorCleared reports if the "creator" edge to the User entity was cleared.
+func (m *ImageCreationAssetMutation) CreatorCleared() bool {
+	return m.clearedcreator
+}
+
+// CreatorID returns the "creator" edge ID in the mutation.
+func (m *ImageCreationAssetMutation) CreatorID() (id int64, exists bool) {
+	if m.creator != nil {
+		return *m.creator, true
+	}
+	return
+}
+
+// CreatorIDs returns the "creator" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CreatorID instead. It exists only for internal usage by the builders.
+func (m *ImageCreationAssetMutation) CreatorIDs() (ids []int64) {
+	if id := m.creator; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCreator resets all changes to the "creator" edge.
+func (m *ImageCreationAssetMutation) ResetCreator() {
+	m.creator = nil
+	m.clearedcreator = false
+}
+
+// AddDraftTemplateIDs adds the "draft_templates" edge to the ImageCreationTemplate entity by ids.
+func (m *ImageCreationAssetMutation) AddDraftTemplateIDs(ids ...int64) {
+	if m.draft_templates == nil {
+		m.draft_templates = make(map[int64]struct{})
+	}
+	for i := range ids {
+		m.draft_templates[ids[i]] = struct{}{}
+	}
+}
+
+// ClearDraftTemplates clears the "draft_templates" edge to the ImageCreationTemplate entity.
+func (m *ImageCreationAssetMutation) ClearDraftTemplates() {
+	m.cleareddraft_templates = true
+}
+
+// DraftTemplatesCleared reports if the "draft_templates" edge to the ImageCreationTemplate entity was cleared.
+func (m *ImageCreationAssetMutation) DraftTemplatesCleared() bool {
+	return m.cleareddraft_templates
+}
+
+// RemoveDraftTemplateIDs removes the "draft_templates" edge to the ImageCreationTemplate entity by IDs.
+func (m *ImageCreationAssetMutation) RemoveDraftTemplateIDs(ids ...int64) {
+	if m.removeddraft_templates == nil {
+		m.removeddraft_templates = make(map[int64]struct{})
+	}
+	for i := range ids {
+		delete(m.draft_templates, ids[i])
+		m.removeddraft_templates[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedDraftTemplates returns the removed IDs of the "draft_templates" edge to the ImageCreationTemplate entity.
+func (m *ImageCreationAssetMutation) RemovedDraftTemplatesIDs() (ids []int64) {
+	for id := range m.removeddraft_templates {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// DraftTemplatesIDs returns the "draft_templates" edge IDs in the mutation.
+func (m *ImageCreationAssetMutation) DraftTemplatesIDs() (ids []int64) {
+	for id := range m.draft_templates {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetDraftTemplates resets all changes to the "draft_templates" edge.
+func (m *ImageCreationAssetMutation) ResetDraftTemplates() {
+	m.draft_templates = nil
+	m.cleareddraft_templates = false
+	m.removeddraft_templates = nil
+}
+
+// AddPublishedTemplateIDs adds the "published_templates" edge to the ImageCreationTemplate entity by ids.
+func (m *ImageCreationAssetMutation) AddPublishedTemplateIDs(ids ...int64) {
+	if m.published_templates == nil {
+		m.published_templates = make(map[int64]struct{})
+	}
+	for i := range ids {
+		m.published_templates[ids[i]] = struct{}{}
+	}
+}
+
+// ClearPublishedTemplates clears the "published_templates" edge to the ImageCreationTemplate entity.
+func (m *ImageCreationAssetMutation) ClearPublishedTemplates() {
+	m.clearedpublished_templates = true
+}
+
+// PublishedTemplatesCleared reports if the "published_templates" edge to the ImageCreationTemplate entity was cleared.
+func (m *ImageCreationAssetMutation) PublishedTemplatesCleared() bool {
+	return m.clearedpublished_templates
+}
+
+// RemovePublishedTemplateIDs removes the "published_templates" edge to the ImageCreationTemplate entity by IDs.
+func (m *ImageCreationAssetMutation) RemovePublishedTemplateIDs(ids ...int64) {
+	if m.removedpublished_templates == nil {
+		m.removedpublished_templates = make(map[int64]struct{})
+	}
+	for i := range ids {
+		delete(m.published_templates, ids[i])
+		m.removedpublished_templates[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedPublishedTemplates returns the removed IDs of the "published_templates" edge to the ImageCreationTemplate entity.
+func (m *ImageCreationAssetMutation) RemovedPublishedTemplatesIDs() (ids []int64) {
+	for id := range m.removedpublished_templates {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// PublishedTemplatesIDs returns the "published_templates" edge IDs in the mutation.
+func (m *ImageCreationAssetMutation) PublishedTemplatesIDs() (ids []int64) {
+	for id := range m.published_templates {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetPublishedTemplates resets all changes to the "published_templates" edge.
+func (m *ImageCreationAssetMutation) ResetPublishedTemplates() {
+	m.published_templates = nil
+	m.clearedpublished_templates = false
+	m.removedpublished_templates = nil
+}
+
+// Where appends a list predicates to the ImageCreationAssetMutation builder.
+func (m *ImageCreationAssetMutation) Where(ps ...predicate.ImageCreationAsset) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ImageCreationAssetMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ImageCreationAssetMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ImageCreationAsset, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ImageCreationAssetMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ImageCreationAssetMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ImageCreationAsset).
+func (m *ImageCreationAssetMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ImageCreationAssetMutation) Fields() []string {
+	fields := make([]string, 0, 10)
+	if m.content != nil {
+		fields = append(fields, imagecreationasset.FieldContent)
+	}
+	if m.content_type != nil {
+		fields = append(fields, imagecreationasset.FieldContentType)
+	}
+	if m.byte_size != nil {
+		fields = append(fields, imagecreationasset.FieldByteSize)
+	}
+	if m.width != nil {
+		fields = append(fields, imagecreationasset.FieldWidth)
+	}
+	if m.height != nil {
+		fields = append(fields, imagecreationasset.FieldHeight)
+	}
+	if m.source_type != nil {
+		fields = append(fields, imagecreationasset.FieldSourceType)
+	}
+	if m.source_provider != nil {
+		fields = append(fields, imagecreationasset.FieldSourceProvider)
+	}
+	if m.source_model != nil {
+		fields = append(fields, imagecreationasset.FieldSourceModel)
+	}
+	if m.creator != nil {
+		fields = append(fields, imagecreationasset.FieldCreatedBy)
+	}
+	if m.created_at != nil {
+		fields = append(fields, imagecreationasset.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ImageCreationAssetMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case imagecreationasset.FieldContent:
+		return m.Content()
+	case imagecreationasset.FieldContentType:
+		return m.ContentType()
+	case imagecreationasset.FieldByteSize:
+		return m.ByteSize()
+	case imagecreationasset.FieldWidth:
+		return m.Width()
+	case imagecreationasset.FieldHeight:
+		return m.Height()
+	case imagecreationasset.FieldSourceType:
+		return m.SourceType()
+	case imagecreationasset.FieldSourceProvider:
+		return m.SourceProvider()
+	case imagecreationasset.FieldSourceModel:
+		return m.SourceModel()
+	case imagecreationasset.FieldCreatedBy:
+		return m.CreatedBy()
+	case imagecreationasset.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ImageCreationAssetMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case imagecreationasset.FieldContent:
+		return m.OldContent(ctx)
+	case imagecreationasset.FieldContentType:
+		return m.OldContentType(ctx)
+	case imagecreationasset.FieldByteSize:
+		return m.OldByteSize(ctx)
+	case imagecreationasset.FieldWidth:
+		return m.OldWidth(ctx)
+	case imagecreationasset.FieldHeight:
+		return m.OldHeight(ctx)
+	case imagecreationasset.FieldSourceType:
+		return m.OldSourceType(ctx)
+	case imagecreationasset.FieldSourceProvider:
+		return m.OldSourceProvider(ctx)
+	case imagecreationasset.FieldSourceModel:
+		return m.OldSourceModel(ctx)
+	case imagecreationasset.FieldCreatedBy:
+		return m.OldCreatedBy(ctx)
+	case imagecreationasset.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown ImageCreationAsset field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ImageCreationAssetMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case imagecreationasset.FieldContent:
+		v, ok := value.([]byte)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetContent(v)
+		return nil
+	case imagecreationasset.FieldContentType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetContentType(v)
+		return nil
+	case imagecreationasset.FieldByteSize:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetByteSize(v)
+		return nil
+	case imagecreationasset.FieldWidth:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWidth(v)
+		return nil
+	case imagecreationasset.FieldHeight:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHeight(v)
+		return nil
+	case imagecreationasset.FieldSourceType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSourceType(v)
+		return nil
+	case imagecreationasset.FieldSourceProvider:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSourceProvider(v)
+		return nil
+	case imagecreationasset.FieldSourceModel:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSourceModel(v)
+		return nil
+	case imagecreationasset.FieldCreatedBy:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedBy(v)
+		return nil
+	case imagecreationasset.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationAsset field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ImageCreationAssetMutation) AddedFields() []string {
+	var fields []string
+	if m.addbyte_size != nil {
+		fields = append(fields, imagecreationasset.FieldByteSize)
+	}
+	if m.addwidth != nil {
+		fields = append(fields, imagecreationasset.FieldWidth)
+	}
+	if m.addheight != nil {
+		fields = append(fields, imagecreationasset.FieldHeight)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ImageCreationAssetMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case imagecreationasset.FieldByteSize:
+		return m.AddedByteSize()
+	case imagecreationasset.FieldWidth:
+		return m.AddedWidth()
+	case imagecreationasset.FieldHeight:
+		return m.AddedHeight()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ImageCreationAssetMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case imagecreationasset.FieldByteSize:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddByteSize(v)
+		return nil
+	case imagecreationasset.FieldWidth:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWidth(v)
+		return nil
+	case imagecreationasset.FieldHeight:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddHeight(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationAsset numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ImageCreationAssetMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(imagecreationasset.FieldSourceProvider) {
+		fields = append(fields, imagecreationasset.FieldSourceProvider)
+	}
+	if m.FieldCleared(imagecreationasset.FieldSourceModel) {
+		fields = append(fields, imagecreationasset.FieldSourceModel)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ImageCreationAssetMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ImageCreationAssetMutation) ClearField(name string) error {
+	switch name {
+	case imagecreationasset.FieldSourceProvider:
+		m.ClearSourceProvider()
+		return nil
+	case imagecreationasset.FieldSourceModel:
+		m.ClearSourceModel()
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationAsset nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ImageCreationAssetMutation) ResetField(name string) error {
+	switch name {
+	case imagecreationasset.FieldContent:
+		m.ResetContent()
+		return nil
+	case imagecreationasset.FieldContentType:
+		m.ResetContentType()
+		return nil
+	case imagecreationasset.FieldByteSize:
+		m.ResetByteSize()
+		return nil
+	case imagecreationasset.FieldWidth:
+		m.ResetWidth()
+		return nil
+	case imagecreationasset.FieldHeight:
+		m.ResetHeight()
+		return nil
+	case imagecreationasset.FieldSourceType:
+		m.ResetSourceType()
+		return nil
+	case imagecreationasset.FieldSourceProvider:
+		m.ResetSourceProvider()
+		return nil
+	case imagecreationasset.FieldSourceModel:
+		m.ResetSourceModel()
+		return nil
+	case imagecreationasset.FieldCreatedBy:
+		m.ResetCreatedBy()
+		return nil
+	case imagecreationasset.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationAsset field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ImageCreationAssetMutation) AddedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.creator != nil {
+		edges = append(edges, imagecreationasset.EdgeCreator)
+	}
+	if m.draft_templates != nil {
+		edges = append(edges, imagecreationasset.EdgeDraftTemplates)
+	}
+	if m.published_templates != nil {
+		edges = append(edges, imagecreationasset.EdgePublishedTemplates)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ImageCreationAssetMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case imagecreationasset.EdgeCreator:
+		if id := m.creator; id != nil {
+			return []ent.Value{*id}
+		}
+	case imagecreationasset.EdgeDraftTemplates:
+		ids := make([]ent.Value, 0, len(m.draft_templates))
+		for id := range m.draft_templates {
+			ids = append(ids, id)
+		}
+		return ids
+	case imagecreationasset.EdgePublishedTemplates:
+		ids := make([]ent.Value, 0, len(m.published_templates))
+		for id := range m.published_templates {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ImageCreationAssetMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.removeddraft_templates != nil {
+		edges = append(edges, imagecreationasset.EdgeDraftTemplates)
+	}
+	if m.removedpublished_templates != nil {
+		edges = append(edges, imagecreationasset.EdgePublishedTemplates)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ImageCreationAssetMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case imagecreationasset.EdgeDraftTemplates:
+		ids := make([]ent.Value, 0, len(m.removeddraft_templates))
+		for id := range m.removeddraft_templates {
+			ids = append(ids, id)
+		}
+		return ids
+	case imagecreationasset.EdgePublishedTemplates:
+		ids := make([]ent.Value, 0, len(m.removedpublished_templates))
+		for id := range m.removedpublished_templates {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ImageCreationAssetMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.clearedcreator {
+		edges = append(edges, imagecreationasset.EdgeCreator)
+	}
+	if m.cleareddraft_templates {
+		edges = append(edges, imagecreationasset.EdgeDraftTemplates)
+	}
+	if m.clearedpublished_templates {
+		edges = append(edges, imagecreationasset.EdgePublishedTemplates)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ImageCreationAssetMutation) EdgeCleared(name string) bool {
+	switch name {
+	case imagecreationasset.EdgeCreator:
+		return m.clearedcreator
+	case imagecreationasset.EdgeDraftTemplates:
+		return m.cleareddraft_templates
+	case imagecreationasset.EdgePublishedTemplates:
+		return m.clearedpublished_templates
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ImageCreationAssetMutation) ClearEdge(name string) error {
+	switch name {
+	case imagecreationasset.EdgeCreator:
+		m.ClearCreator()
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationAsset unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ImageCreationAssetMutation) ResetEdge(name string) error {
+	switch name {
+	case imagecreationasset.EdgeCreator:
+		m.ResetCreator()
+		return nil
+	case imagecreationasset.EdgeDraftTemplates:
+		m.ResetDraftTemplates()
+		return nil
+	case imagecreationasset.EdgePublishedTemplates:
+		m.ResetPublishedTemplates()
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationAsset edge %s", name)
+}
+
+// ImageCreationChangeLogMutation represents an operation that mutates the ImageCreationChangeLog nodes in the graph.
+type ImageCreationChangeLogMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int64
+	action        *string
+	target_type   *string
+	target_id     *string
+	metadata      *map[string]interface{}
+	created_at    *time.Time
+	clearedFields map[string]struct{}
+	actor         *int64
+	clearedactor  bool
+	done          bool
+	oldValue      func(context.Context) (*ImageCreationChangeLog, error)
+	predicates    []predicate.ImageCreationChangeLog
+}
+
+var _ ent.Mutation = (*ImageCreationChangeLogMutation)(nil)
+
+// imagecreationchangelogOption allows management of the mutation configuration using functional options.
+type imagecreationchangelogOption func(*ImageCreationChangeLogMutation)
+
+// newImageCreationChangeLogMutation creates new mutation for the ImageCreationChangeLog entity.
+func newImageCreationChangeLogMutation(c config, op Op, opts ...imagecreationchangelogOption) *ImageCreationChangeLogMutation {
+	m := &ImageCreationChangeLogMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeImageCreationChangeLog,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withImageCreationChangeLogID sets the ID field of the mutation.
+func withImageCreationChangeLogID(id int64) imagecreationchangelogOption {
+	return func(m *ImageCreationChangeLogMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ImageCreationChangeLog
+		)
+		m.oldValue = func(ctx context.Context) (*ImageCreationChangeLog, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ImageCreationChangeLog.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withImageCreationChangeLog sets the old ImageCreationChangeLog of the mutation.
+func withImageCreationChangeLog(node *ImageCreationChangeLog) imagecreationchangelogOption {
+	return func(m *ImageCreationChangeLogMutation) {
+		m.oldValue = func(context.Context) (*ImageCreationChangeLog, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ImageCreationChangeLogMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ImageCreationChangeLogMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ImageCreationChangeLogMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ImageCreationChangeLogMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ImageCreationChangeLog.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetActorUserID sets the "actor_user_id" field.
+func (m *ImageCreationChangeLogMutation) SetActorUserID(i int64) {
+	m.actor = &i
+}
+
+// ActorUserID returns the value of the "actor_user_id" field in the mutation.
+func (m *ImageCreationChangeLogMutation) ActorUserID() (r int64, exists bool) {
+	v := m.actor
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldActorUserID returns the old "actor_user_id" field's value of the ImageCreationChangeLog entity.
+// If the ImageCreationChangeLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationChangeLogMutation) OldActorUserID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldActorUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldActorUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldActorUserID: %w", err)
+	}
+	return oldValue.ActorUserID, nil
+}
+
+// ResetActorUserID resets all changes to the "actor_user_id" field.
+func (m *ImageCreationChangeLogMutation) ResetActorUserID() {
+	m.actor = nil
+}
+
+// SetAction sets the "action" field.
+func (m *ImageCreationChangeLogMutation) SetAction(s string) {
+	m.action = &s
+}
+
+// Action returns the value of the "action" field in the mutation.
+func (m *ImageCreationChangeLogMutation) Action() (r string, exists bool) {
+	v := m.action
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAction returns the old "action" field's value of the ImageCreationChangeLog entity.
+// If the ImageCreationChangeLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationChangeLogMutation) OldAction(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAction is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAction requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAction: %w", err)
+	}
+	return oldValue.Action, nil
+}
+
+// ResetAction resets all changes to the "action" field.
+func (m *ImageCreationChangeLogMutation) ResetAction() {
+	m.action = nil
+}
+
+// SetTargetType sets the "target_type" field.
+func (m *ImageCreationChangeLogMutation) SetTargetType(s string) {
+	m.target_type = &s
+}
+
+// TargetType returns the value of the "target_type" field in the mutation.
+func (m *ImageCreationChangeLogMutation) TargetType() (r string, exists bool) {
+	v := m.target_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTargetType returns the old "target_type" field's value of the ImageCreationChangeLog entity.
+// If the ImageCreationChangeLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationChangeLogMutation) OldTargetType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTargetType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTargetType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTargetType: %w", err)
+	}
+	return oldValue.TargetType, nil
+}
+
+// ResetTargetType resets all changes to the "target_type" field.
+func (m *ImageCreationChangeLogMutation) ResetTargetType() {
+	m.target_type = nil
+}
+
+// SetTargetID sets the "target_id" field.
+func (m *ImageCreationChangeLogMutation) SetTargetID(s string) {
+	m.target_id = &s
+}
+
+// TargetID returns the value of the "target_id" field in the mutation.
+func (m *ImageCreationChangeLogMutation) TargetID() (r string, exists bool) {
+	v := m.target_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTargetID returns the old "target_id" field's value of the ImageCreationChangeLog entity.
+// If the ImageCreationChangeLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationChangeLogMutation) OldTargetID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTargetID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTargetID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTargetID: %w", err)
+	}
+	return oldValue.TargetID, nil
+}
+
+// ResetTargetID resets all changes to the "target_id" field.
+func (m *ImageCreationChangeLogMutation) ResetTargetID() {
+	m.target_id = nil
+}
+
+// SetMetadata sets the "metadata" field.
+func (m *ImageCreationChangeLogMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *ImageCreationChangeLogMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the ImageCreationChangeLog entity.
+// If the ImageCreationChangeLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationChangeLogMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *ImageCreationChangeLogMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[imagecreationchangelog.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *ImageCreationChangeLogMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[imagecreationchangelog.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *ImageCreationChangeLogMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, imagecreationchangelog.FieldMetadata)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ImageCreationChangeLogMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ImageCreationChangeLogMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ImageCreationChangeLog entity.
+// If the ImageCreationChangeLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationChangeLogMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ImageCreationChangeLogMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetActorID sets the "actor" edge to the User entity by id.
+func (m *ImageCreationChangeLogMutation) SetActorID(id int64) {
+	m.actor = &id
+}
+
+// ClearActor clears the "actor" edge to the User entity.
+func (m *ImageCreationChangeLogMutation) ClearActor() {
+	m.clearedactor = true
+	m.clearedFields[imagecreationchangelog.FieldActorUserID] = struct{}{}
+}
+
+// ActorCleared reports if the "actor" edge to the User entity was cleared.
+func (m *ImageCreationChangeLogMutation) ActorCleared() bool {
+	return m.clearedactor
+}
+
+// ActorID returns the "actor" edge ID in the mutation.
+func (m *ImageCreationChangeLogMutation) ActorID() (id int64, exists bool) {
+	if m.actor != nil {
+		return *m.actor, true
+	}
+	return
+}
+
+// ActorIDs returns the "actor" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ActorID instead. It exists only for internal usage by the builders.
+func (m *ImageCreationChangeLogMutation) ActorIDs() (ids []int64) {
+	if id := m.actor; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetActor resets all changes to the "actor" edge.
+func (m *ImageCreationChangeLogMutation) ResetActor() {
+	m.actor = nil
+	m.clearedactor = false
+}
+
+// Where appends a list predicates to the ImageCreationChangeLogMutation builder.
+func (m *ImageCreationChangeLogMutation) Where(ps ...predicate.ImageCreationChangeLog) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ImageCreationChangeLogMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ImageCreationChangeLogMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ImageCreationChangeLog, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ImageCreationChangeLogMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ImageCreationChangeLogMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ImageCreationChangeLog).
+func (m *ImageCreationChangeLogMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ImageCreationChangeLogMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.actor != nil {
+		fields = append(fields, imagecreationchangelog.FieldActorUserID)
+	}
+	if m.action != nil {
+		fields = append(fields, imagecreationchangelog.FieldAction)
+	}
+	if m.target_type != nil {
+		fields = append(fields, imagecreationchangelog.FieldTargetType)
+	}
+	if m.target_id != nil {
+		fields = append(fields, imagecreationchangelog.FieldTargetID)
+	}
+	if m.metadata != nil {
+		fields = append(fields, imagecreationchangelog.FieldMetadata)
+	}
+	if m.created_at != nil {
+		fields = append(fields, imagecreationchangelog.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ImageCreationChangeLogMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case imagecreationchangelog.FieldActorUserID:
+		return m.ActorUserID()
+	case imagecreationchangelog.FieldAction:
+		return m.Action()
+	case imagecreationchangelog.FieldTargetType:
+		return m.TargetType()
+	case imagecreationchangelog.FieldTargetID:
+		return m.TargetID()
+	case imagecreationchangelog.FieldMetadata:
+		return m.Metadata()
+	case imagecreationchangelog.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ImageCreationChangeLogMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case imagecreationchangelog.FieldActorUserID:
+		return m.OldActorUserID(ctx)
+	case imagecreationchangelog.FieldAction:
+		return m.OldAction(ctx)
+	case imagecreationchangelog.FieldTargetType:
+		return m.OldTargetType(ctx)
+	case imagecreationchangelog.FieldTargetID:
+		return m.OldTargetID(ctx)
+	case imagecreationchangelog.FieldMetadata:
+		return m.OldMetadata(ctx)
+	case imagecreationchangelog.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown ImageCreationChangeLog field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ImageCreationChangeLogMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case imagecreationchangelog.FieldActorUserID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetActorUserID(v)
+		return nil
+	case imagecreationchangelog.FieldAction:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAction(v)
+		return nil
+	case imagecreationchangelog.FieldTargetType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTargetType(v)
+		return nil
+	case imagecreationchangelog.FieldTargetID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTargetID(v)
+		return nil
+	case imagecreationchangelog.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
+		return nil
+	case imagecreationchangelog.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationChangeLog field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ImageCreationChangeLogMutation) AddedFields() []string {
+	var fields []string
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ImageCreationChangeLogMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ImageCreationChangeLogMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ImageCreationChangeLog numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ImageCreationChangeLogMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(imagecreationchangelog.FieldMetadata) {
+		fields = append(fields, imagecreationchangelog.FieldMetadata)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ImageCreationChangeLogMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ImageCreationChangeLogMutation) ClearField(name string) error {
+	switch name {
+	case imagecreationchangelog.FieldMetadata:
+		m.ClearMetadata()
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationChangeLog nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ImageCreationChangeLogMutation) ResetField(name string) error {
+	switch name {
+	case imagecreationchangelog.FieldActorUserID:
+		m.ResetActorUserID()
+		return nil
+	case imagecreationchangelog.FieldAction:
+		m.ResetAction()
+		return nil
+	case imagecreationchangelog.FieldTargetType:
+		m.ResetTargetType()
+		return nil
+	case imagecreationchangelog.FieldTargetID:
+		m.ResetTargetID()
+		return nil
+	case imagecreationchangelog.FieldMetadata:
+		m.ResetMetadata()
+		return nil
+	case imagecreationchangelog.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationChangeLog field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ImageCreationChangeLogMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.actor != nil {
+		edges = append(edges, imagecreationchangelog.EdgeActor)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ImageCreationChangeLogMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case imagecreationchangelog.EdgeActor:
+		if id := m.actor; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ImageCreationChangeLogMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ImageCreationChangeLogMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ImageCreationChangeLogMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedactor {
+		edges = append(edges, imagecreationchangelog.EdgeActor)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ImageCreationChangeLogMutation) EdgeCleared(name string) bool {
+	switch name {
+	case imagecreationchangelog.EdgeActor:
+		return m.clearedactor
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ImageCreationChangeLogMutation) ClearEdge(name string) error {
+	switch name {
+	case imagecreationchangelog.EdgeActor:
+		m.ClearActor()
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationChangeLog unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ImageCreationChangeLogMutation) ResetEdge(name string) error {
+	switch name {
+	case imagecreationchangelog.EdgeActor:
+		m.ResetActor()
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationChangeLog edge %s", name)
+}
+
+// ImageCreationTemplateMutation represents an operation that mutates the ImageCreationTemplate nodes in the graph.
+type ImageCreationTemplateMutation struct {
+	config
+	op                     Op
+	typ                    string
+	id                     *int64
+	state                  *string
+	draft_data             *domain.ImageCreationTemplateDocument
+	published_data         **domain.ImageCreationTemplateDocument
+	revision               *int
+	addrevision            *int
+	published_version      *int
+	addpublished_version   *int
+	home_position          *int16
+	addhome_position       *int16
+	created_at             *time.Time
+	updated_at             *time.Time
+	published_at           *time.Time
+	clearedFields          map[string]struct{}
+	draft_cover            *string
+	cleareddraft_cover     bool
+	published_cover        *string
+	clearedpublished_cover bool
+	creator                *int64
+	clearedcreator         bool
+	updater                *int64
+	clearedupdater         bool
+	done                   bool
+	oldValue               func(context.Context) (*ImageCreationTemplate, error)
+	predicates             []predicate.ImageCreationTemplate
+}
+
+var _ ent.Mutation = (*ImageCreationTemplateMutation)(nil)
+
+// imagecreationtemplateOption allows management of the mutation configuration using functional options.
+type imagecreationtemplateOption func(*ImageCreationTemplateMutation)
+
+// newImageCreationTemplateMutation creates new mutation for the ImageCreationTemplate entity.
+func newImageCreationTemplateMutation(c config, op Op, opts ...imagecreationtemplateOption) *ImageCreationTemplateMutation {
+	m := &ImageCreationTemplateMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeImageCreationTemplate,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withImageCreationTemplateID sets the ID field of the mutation.
+func withImageCreationTemplateID(id int64) imagecreationtemplateOption {
+	return func(m *ImageCreationTemplateMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ImageCreationTemplate
+		)
+		m.oldValue = func(ctx context.Context) (*ImageCreationTemplate, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ImageCreationTemplate.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withImageCreationTemplate sets the old ImageCreationTemplate of the mutation.
+func withImageCreationTemplate(node *ImageCreationTemplate) imagecreationtemplateOption {
+	return func(m *ImageCreationTemplateMutation) {
+		m.oldValue = func(context.Context) (*ImageCreationTemplate, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ImageCreationTemplateMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ImageCreationTemplateMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ImageCreationTemplateMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ImageCreationTemplateMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ImageCreationTemplate.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetState sets the "state" field.
+func (m *ImageCreationTemplateMutation) SetState(s string) {
+	m.state = &s
+}
+
+// State returns the value of the "state" field in the mutation.
+func (m *ImageCreationTemplateMutation) State() (r string, exists bool) {
+	v := m.state
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldState returns the old "state" field's value of the ImageCreationTemplate entity.
+// If the ImageCreationTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationTemplateMutation) OldState(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldState is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldState requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldState: %w", err)
+	}
+	return oldValue.State, nil
+}
+
+// ResetState resets all changes to the "state" field.
+func (m *ImageCreationTemplateMutation) ResetState() {
+	m.state = nil
+}
+
+// SetDraftData sets the "draft_data" field.
+func (m *ImageCreationTemplateMutation) SetDraftData(dctd domain.ImageCreationTemplateDocument) {
+	m.draft_data = &dctd
+}
+
+// DraftData returns the value of the "draft_data" field in the mutation.
+func (m *ImageCreationTemplateMutation) DraftData() (r domain.ImageCreationTemplateDocument, exists bool) {
+	v := m.draft_data
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDraftData returns the old "draft_data" field's value of the ImageCreationTemplate entity.
+// If the ImageCreationTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationTemplateMutation) OldDraftData(ctx context.Context) (v domain.ImageCreationTemplateDocument, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDraftData is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDraftData requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDraftData: %w", err)
+	}
+	return oldValue.DraftData, nil
+}
+
+// ResetDraftData resets all changes to the "draft_data" field.
+func (m *ImageCreationTemplateMutation) ResetDraftData() {
+	m.draft_data = nil
+}
+
+// SetPublishedData sets the "published_data" field.
+func (m *ImageCreationTemplateMutation) SetPublishedData(dctd *domain.ImageCreationTemplateDocument) {
+	m.published_data = &dctd
+}
+
+// PublishedData returns the value of the "published_data" field in the mutation.
+func (m *ImageCreationTemplateMutation) PublishedData() (r *domain.ImageCreationTemplateDocument, exists bool) {
+	v := m.published_data
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPublishedData returns the old "published_data" field's value of the ImageCreationTemplate entity.
+// If the ImageCreationTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationTemplateMutation) OldPublishedData(ctx context.Context) (v *domain.ImageCreationTemplateDocument, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPublishedData is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPublishedData requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPublishedData: %w", err)
+	}
+	return oldValue.PublishedData, nil
+}
+
+// ClearPublishedData clears the value of the "published_data" field.
+func (m *ImageCreationTemplateMutation) ClearPublishedData() {
+	m.published_data = nil
+	m.clearedFields[imagecreationtemplate.FieldPublishedData] = struct{}{}
+}
+
+// PublishedDataCleared returns if the "published_data" field was cleared in this mutation.
+func (m *ImageCreationTemplateMutation) PublishedDataCleared() bool {
+	_, ok := m.clearedFields[imagecreationtemplate.FieldPublishedData]
+	return ok
+}
+
+// ResetPublishedData resets all changes to the "published_data" field.
+func (m *ImageCreationTemplateMutation) ResetPublishedData() {
+	m.published_data = nil
+	delete(m.clearedFields, imagecreationtemplate.FieldPublishedData)
+}
+
+// SetRevision sets the "revision" field.
+func (m *ImageCreationTemplateMutation) SetRevision(i int) {
+	m.revision = &i
+	m.addrevision = nil
+}
+
+// Revision returns the value of the "revision" field in the mutation.
+func (m *ImageCreationTemplateMutation) Revision() (r int, exists bool) {
+	v := m.revision
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRevision returns the old "revision" field's value of the ImageCreationTemplate entity.
+// If the ImageCreationTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationTemplateMutation) OldRevision(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRevision is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRevision requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRevision: %w", err)
+	}
+	return oldValue.Revision, nil
+}
+
+// AddRevision adds i to the "revision" field.
+func (m *ImageCreationTemplateMutation) AddRevision(i int) {
+	if m.addrevision != nil {
+		*m.addrevision += i
+	} else {
+		m.addrevision = &i
+	}
+}
+
+// AddedRevision returns the value that was added to the "revision" field in this mutation.
+func (m *ImageCreationTemplateMutation) AddedRevision() (r int, exists bool) {
+	v := m.addrevision
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRevision resets all changes to the "revision" field.
+func (m *ImageCreationTemplateMutation) ResetRevision() {
+	m.revision = nil
+	m.addrevision = nil
+}
+
+// SetPublishedVersion sets the "published_version" field.
+func (m *ImageCreationTemplateMutation) SetPublishedVersion(i int) {
+	m.published_version = &i
+	m.addpublished_version = nil
+}
+
+// PublishedVersion returns the value of the "published_version" field in the mutation.
+func (m *ImageCreationTemplateMutation) PublishedVersion() (r int, exists bool) {
+	v := m.published_version
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPublishedVersion returns the old "published_version" field's value of the ImageCreationTemplate entity.
+// If the ImageCreationTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationTemplateMutation) OldPublishedVersion(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPublishedVersion is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPublishedVersion requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPublishedVersion: %w", err)
+	}
+	return oldValue.PublishedVersion, nil
+}
+
+// AddPublishedVersion adds i to the "published_version" field.
+func (m *ImageCreationTemplateMutation) AddPublishedVersion(i int) {
+	if m.addpublished_version != nil {
+		*m.addpublished_version += i
+	} else {
+		m.addpublished_version = &i
+	}
+}
+
+// AddedPublishedVersion returns the value that was added to the "published_version" field in this mutation.
+func (m *ImageCreationTemplateMutation) AddedPublishedVersion() (r int, exists bool) {
+	v := m.addpublished_version
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPublishedVersion resets all changes to the "published_version" field.
+func (m *ImageCreationTemplateMutation) ResetPublishedVersion() {
+	m.published_version = nil
+	m.addpublished_version = nil
+}
+
+// SetDraftCoverAssetID sets the "draft_cover_asset_id" field.
+func (m *ImageCreationTemplateMutation) SetDraftCoverAssetID(s string) {
+	m.draft_cover = &s
+}
+
+// DraftCoverAssetID returns the value of the "draft_cover_asset_id" field in the mutation.
+func (m *ImageCreationTemplateMutation) DraftCoverAssetID() (r string, exists bool) {
+	v := m.draft_cover
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDraftCoverAssetID returns the old "draft_cover_asset_id" field's value of the ImageCreationTemplate entity.
+// If the ImageCreationTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationTemplateMutation) OldDraftCoverAssetID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDraftCoverAssetID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDraftCoverAssetID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDraftCoverAssetID: %w", err)
+	}
+	return oldValue.DraftCoverAssetID, nil
+}
+
+// ClearDraftCoverAssetID clears the value of the "draft_cover_asset_id" field.
+func (m *ImageCreationTemplateMutation) ClearDraftCoverAssetID() {
+	m.draft_cover = nil
+	m.clearedFields[imagecreationtemplate.FieldDraftCoverAssetID] = struct{}{}
+}
+
+// DraftCoverAssetIDCleared returns if the "draft_cover_asset_id" field was cleared in this mutation.
+func (m *ImageCreationTemplateMutation) DraftCoverAssetIDCleared() bool {
+	_, ok := m.clearedFields[imagecreationtemplate.FieldDraftCoverAssetID]
+	return ok
+}
+
+// ResetDraftCoverAssetID resets all changes to the "draft_cover_asset_id" field.
+func (m *ImageCreationTemplateMutation) ResetDraftCoverAssetID() {
+	m.draft_cover = nil
+	delete(m.clearedFields, imagecreationtemplate.FieldDraftCoverAssetID)
+}
+
+// SetPublishedCoverAssetID sets the "published_cover_asset_id" field.
+func (m *ImageCreationTemplateMutation) SetPublishedCoverAssetID(s string) {
+	m.published_cover = &s
+}
+
+// PublishedCoverAssetID returns the value of the "published_cover_asset_id" field in the mutation.
+func (m *ImageCreationTemplateMutation) PublishedCoverAssetID() (r string, exists bool) {
+	v := m.published_cover
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPublishedCoverAssetID returns the old "published_cover_asset_id" field's value of the ImageCreationTemplate entity.
+// If the ImageCreationTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationTemplateMutation) OldPublishedCoverAssetID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPublishedCoverAssetID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPublishedCoverAssetID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPublishedCoverAssetID: %w", err)
+	}
+	return oldValue.PublishedCoverAssetID, nil
+}
+
+// ClearPublishedCoverAssetID clears the value of the "published_cover_asset_id" field.
+func (m *ImageCreationTemplateMutation) ClearPublishedCoverAssetID() {
+	m.published_cover = nil
+	m.clearedFields[imagecreationtemplate.FieldPublishedCoverAssetID] = struct{}{}
+}
+
+// PublishedCoverAssetIDCleared returns if the "published_cover_asset_id" field was cleared in this mutation.
+func (m *ImageCreationTemplateMutation) PublishedCoverAssetIDCleared() bool {
+	_, ok := m.clearedFields[imagecreationtemplate.FieldPublishedCoverAssetID]
+	return ok
+}
+
+// ResetPublishedCoverAssetID resets all changes to the "published_cover_asset_id" field.
+func (m *ImageCreationTemplateMutation) ResetPublishedCoverAssetID() {
+	m.published_cover = nil
+	delete(m.clearedFields, imagecreationtemplate.FieldPublishedCoverAssetID)
+}
+
+// SetHomePosition sets the "home_position" field.
+func (m *ImageCreationTemplateMutation) SetHomePosition(i int16) {
+	m.home_position = &i
+	m.addhome_position = nil
+}
+
+// HomePosition returns the value of the "home_position" field in the mutation.
+func (m *ImageCreationTemplateMutation) HomePosition() (r int16, exists bool) {
+	v := m.home_position
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHomePosition returns the old "home_position" field's value of the ImageCreationTemplate entity.
+// If the ImageCreationTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationTemplateMutation) OldHomePosition(ctx context.Context) (v *int16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHomePosition is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHomePosition requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHomePosition: %w", err)
+	}
+	return oldValue.HomePosition, nil
+}
+
+// AddHomePosition adds i to the "home_position" field.
+func (m *ImageCreationTemplateMutation) AddHomePosition(i int16) {
+	if m.addhome_position != nil {
+		*m.addhome_position += i
+	} else {
+		m.addhome_position = &i
+	}
+}
+
+// AddedHomePosition returns the value that was added to the "home_position" field in this mutation.
+func (m *ImageCreationTemplateMutation) AddedHomePosition() (r int16, exists bool) {
+	v := m.addhome_position
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearHomePosition clears the value of the "home_position" field.
+func (m *ImageCreationTemplateMutation) ClearHomePosition() {
+	m.home_position = nil
+	m.addhome_position = nil
+	m.clearedFields[imagecreationtemplate.FieldHomePosition] = struct{}{}
+}
+
+// HomePositionCleared returns if the "home_position" field was cleared in this mutation.
+func (m *ImageCreationTemplateMutation) HomePositionCleared() bool {
+	_, ok := m.clearedFields[imagecreationtemplate.FieldHomePosition]
+	return ok
+}
+
+// ResetHomePosition resets all changes to the "home_position" field.
+func (m *ImageCreationTemplateMutation) ResetHomePosition() {
+	m.home_position = nil
+	m.addhome_position = nil
+	delete(m.clearedFields, imagecreationtemplate.FieldHomePosition)
+}
+
+// SetCreatedBy sets the "created_by" field.
+func (m *ImageCreationTemplateMutation) SetCreatedBy(i int64) {
+	m.creator = &i
+}
+
+// CreatedBy returns the value of the "created_by" field in the mutation.
+func (m *ImageCreationTemplateMutation) CreatedBy() (r int64, exists bool) {
+	v := m.creator
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedBy returns the old "created_by" field's value of the ImageCreationTemplate entity.
+// If the ImageCreationTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationTemplateMutation) OldCreatedBy(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedBy: %w", err)
+	}
+	return oldValue.CreatedBy, nil
+}
+
+// ResetCreatedBy resets all changes to the "created_by" field.
+func (m *ImageCreationTemplateMutation) ResetCreatedBy() {
+	m.creator = nil
+}
+
+// SetUpdatedBy sets the "updated_by" field.
+func (m *ImageCreationTemplateMutation) SetUpdatedBy(i int64) {
+	m.updater = &i
+}
+
+// UpdatedBy returns the value of the "updated_by" field in the mutation.
+func (m *ImageCreationTemplateMutation) UpdatedBy() (r int64, exists bool) {
+	v := m.updater
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedBy returns the old "updated_by" field's value of the ImageCreationTemplate entity.
+// If the ImageCreationTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationTemplateMutation) OldUpdatedBy(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedBy: %w", err)
+	}
+	return oldValue.UpdatedBy, nil
+}
+
+// ResetUpdatedBy resets all changes to the "updated_by" field.
+func (m *ImageCreationTemplateMutation) ResetUpdatedBy() {
+	m.updater = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ImageCreationTemplateMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ImageCreationTemplateMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ImageCreationTemplate entity.
+// If the ImageCreationTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationTemplateMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ImageCreationTemplateMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ImageCreationTemplateMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ImageCreationTemplateMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ImageCreationTemplate entity.
+// If the ImageCreationTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationTemplateMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ImageCreationTemplateMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetPublishedAt sets the "published_at" field.
+func (m *ImageCreationTemplateMutation) SetPublishedAt(t time.Time) {
+	m.published_at = &t
+}
+
+// PublishedAt returns the value of the "published_at" field in the mutation.
+func (m *ImageCreationTemplateMutation) PublishedAt() (r time.Time, exists bool) {
+	v := m.published_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPublishedAt returns the old "published_at" field's value of the ImageCreationTemplate entity.
+// If the ImageCreationTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageCreationTemplateMutation) OldPublishedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPublishedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPublishedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPublishedAt: %w", err)
+	}
+	return oldValue.PublishedAt, nil
+}
+
+// ClearPublishedAt clears the value of the "published_at" field.
+func (m *ImageCreationTemplateMutation) ClearPublishedAt() {
+	m.published_at = nil
+	m.clearedFields[imagecreationtemplate.FieldPublishedAt] = struct{}{}
+}
+
+// PublishedAtCleared returns if the "published_at" field was cleared in this mutation.
+func (m *ImageCreationTemplateMutation) PublishedAtCleared() bool {
+	_, ok := m.clearedFields[imagecreationtemplate.FieldPublishedAt]
+	return ok
+}
+
+// ResetPublishedAt resets all changes to the "published_at" field.
+func (m *ImageCreationTemplateMutation) ResetPublishedAt() {
+	m.published_at = nil
+	delete(m.clearedFields, imagecreationtemplate.FieldPublishedAt)
+}
+
+// SetDraftCoverID sets the "draft_cover" edge to the ImageCreationAsset entity by id.
+func (m *ImageCreationTemplateMutation) SetDraftCoverID(id string) {
+	m.draft_cover = &id
+}
+
+// ClearDraftCover clears the "draft_cover" edge to the ImageCreationAsset entity.
+func (m *ImageCreationTemplateMutation) ClearDraftCover() {
+	m.cleareddraft_cover = true
+	m.clearedFields[imagecreationtemplate.FieldDraftCoverAssetID] = struct{}{}
+}
+
+// DraftCoverCleared reports if the "draft_cover" edge to the ImageCreationAsset entity was cleared.
+func (m *ImageCreationTemplateMutation) DraftCoverCleared() bool {
+	return m.DraftCoverAssetIDCleared() || m.cleareddraft_cover
+}
+
+// DraftCoverID returns the "draft_cover" edge ID in the mutation.
+func (m *ImageCreationTemplateMutation) DraftCoverID() (id string, exists bool) {
+	if m.draft_cover != nil {
+		return *m.draft_cover, true
+	}
+	return
+}
+
+// DraftCoverIDs returns the "draft_cover" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// DraftCoverID instead. It exists only for internal usage by the builders.
+func (m *ImageCreationTemplateMutation) DraftCoverIDs() (ids []string) {
+	if id := m.draft_cover; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetDraftCover resets all changes to the "draft_cover" edge.
+func (m *ImageCreationTemplateMutation) ResetDraftCover() {
+	m.draft_cover = nil
+	m.cleareddraft_cover = false
+}
+
+// SetPublishedCoverID sets the "published_cover" edge to the ImageCreationAsset entity by id.
+func (m *ImageCreationTemplateMutation) SetPublishedCoverID(id string) {
+	m.published_cover = &id
+}
+
+// ClearPublishedCover clears the "published_cover" edge to the ImageCreationAsset entity.
+func (m *ImageCreationTemplateMutation) ClearPublishedCover() {
+	m.clearedpublished_cover = true
+	m.clearedFields[imagecreationtemplate.FieldPublishedCoverAssetID] = struct{}{}
+}
+
+// PublishedCoverCleared reports if the "published_cover" edge to the ImageCreationAsset entity was cleared.
+func (m *ImageCreationTemplateMutation) PublishedCoverCleared() bool {
+	return m.PublishedCoverAssetIDCleared() || m.clearedpublished_cover
+}
+
+// PublishedCoverID returns the "published_cover" edge ID in the mutation.
+func (m *ImageCreationTemplateMutation) PublishedCoverID() (id string, exists bool) {
+	if m.published_cover != nil {
+		return *m.published_cover, true
+	}
+	return
+}
+
+// PublishedCoverIDs returns the "published_cover" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// PublishedCoverID instead. It exists only for internal usage by the builders.
+func (m *ImageCreationTemplateMutation) PublishedCoverIDs() (ids []string) {
+	if id := m.published_cover; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetPublishedCover resets all changes to the "published_cover" edge.
+func (m *ImageCreationTemplateMutation) ResetPublishedCover() {
+	m.published_cover = nil
+	m.clearedpublished_cover = false
+}
+
+// SetCreatorID sets the "creator" edge to the User entity by id.
+func (m *ImageCreationTemplateMutation) SetCreatorID(id int64) {
+	m.creator = &id
+}
+
+// ClearCreator clears the "creator" edge to the User entity.
+func (m *ImageCreationTemplateMutation) ClearCreator() {
+	m.clearedcreator = true
+	m.clearedFields[imagecreationtemplate.FieldCreatedBy] = struct{}{}
+}
+
+// CreatorCleared reports if the "creator" edge to the User entity was cleared.
+func (m *ImageCreationTemplateMutation) CreatorCleared() bool {
+	return m.clearedcreator
+}
+
+// CreatorID returns the "creator" edge ID in the mutation.
+func (m *ImageCreationTemplateMutation) CreatorID() (id int64, exists bool) {
+	if m.creator != nil {
+		return *m.creator, true
+	}
+	return
+}
+
+// CreatorIDs returns the "creator" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CreatorID instead. It exists only for internal usage by the builders.
+func (m *ImageCreationTemplateMutation) CreatorIDs() (ids []int64) {
+	if id := m.creator; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCreator resets all changes to the "creator" edge.
+func (m *ImageCreationTemplateMutation) ResetCreator() {
+	m.creator = nil
+	m.clearedcreator = false
+}
+
+// SetUpdaterID sets the "updater" edge to the User entity by id.
+func (m *ImageCreationTemplateMutation) SetUpdaterID(id int64) {
+	m.updater = &id
+}
+
+// ClearUpdater clears the "updater" edge to the User entity.
+func (m *ImageCreationTemplateMutation) ClearUpdater() {
+	m.clearedupdater = true
+	m.clearedFields[imagecreationtemplate.FieldUpdatedBy] = struct{}{}
+}
+
+// UpdaterCleared reports if the "updater" edge to the User entity was cleared.
+func (m *ImageCreationTemplateMutation) UpdaterCleared() bool {
+	return m.clearedupdater
+}
+
+// UpdaterID returns the "updater" edge ID in the mutation.
+func (m *ImageCreationTemplateMutation) UpdaterID() (id int64, exists bool) {
+	if m.updater != nil {
+		return *m.updater, true
+	}
+	return
+}
+
+// UpdaterIDs returns the "updater" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UpdaterID instead. It exists only for internal usage by the builders.
+func (m *ImageCreationTemplateMutation) UpdaterIDs() (ids []int64) {
+	if id := m.updater; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUpdater resets all changes to the "updater" edge.
+func (m *ImageCreationTemplateMutation) ResetUpdater() {
+	m.updater = nil
+	m.clearedupdater = false
+}
+
+// Where appends a list predicates to the ImageCreationTemplateMutation builder.
+func (m *ImageCreationTemplateMutation) Where(ps ...predicate.ImageCreationTemplate) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ImageCreationTemplateMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ImageCreationTemplateMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ImageCreationTemplate, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ImageCreationTemplateMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ImageCreationTemplateMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ImageCreationTemplate).
+func (m *ImageCreationTemplateMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ImageCreationTemplateMutation) Fields() []string {
+	fields := make([]string, 0, 13)
+	if m.state != nil {
+		fields = append(fields, imagecreationtemplate.FieldState)
+	}
+	if m.draft_data != nil {
+		fields = append(fields, imagecreationtemplate.FieldDraftData)
+	}
+	if m.published_data != nil {
+		fields = append(fields, imagecreationtemplate.FieldPublishedData)
+	}
+	if m.revision != nil {
+		fields = append(fields, imagecreationtemplate.FieldRevision)
+	}
+	if m.published_version != nil {
+		fields = append(fields, imagecreationtemplate.FieldPublishedVersion)
+	}
+	if m.draft_cover != nil {
+		fields = append(fields, imagecreationtemplate.FieldDraftCoverAssetID)
+	}
+	if m.published_cover != nil {
+		fields = append(fields, imagecreationtemplate.FieldPublishedCoverAssetID)
+	}
+	if m.home_position != nil {
+		fields = append(fields, imagecreationtemplate.FieldHomePosition)
+	}
+	if m.creator != nil {
+		fields = append(fields, imagecreationtemplate.FieldCreatedBy)
+	}
+	if m.updater != nil {
+		fields = append(fields, imagecreationtemplate.FieldUpdatedBy)
+	}
+	if m.created_at != nil {
+		fields = append(fields, imagecreationtemplate.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, imagecreationtemplate.FieldUpdatedAt)
+	}
+	if m.published_at != nil {
+		fields = append(fields, imagecreationtemplate.FieldPublishedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ImageCreationTemplateMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case imagecreationtemplate.FieldState:
+		return m.State()
+	case imagecreationtemplate.FieldDraftData:
+		return m.DraftData()
+	case imagecreationtemplate.FieldPublishedData:
+		return m.PublishedData()
+	case imagecreationtemplate.FieldRevision:
+		return m.Revision()
+	case imagecreationtemplate.FieldPublishedVersion:
+		return m.PublishedVersion()
+	case imagecreationtemplate.FieldDraftCoverAssetID:
+		return m.DraftCoverAssetID()
+	case imagecreationtemplate.FieldPublishedCoverAssetID:
+		return m.PublishedCoverAssetID()
+	case imagecreationtemplate.FieldHomePosition:
+		return m.HomePosition()
+	case imagecreationtemplate.FieldCreatedBy:
+		return m.CreatedBy()
+	case imagecreationtemplate.FieldUpdatedBy:
+		return m.UpdatedBy()
+	case imagecreationtemplate.FieldCreatedAt:
+		return m.CreatedAt()
+	case imagecreationtemplate.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case imagecreationtemplate.FieldPublishedAt:
+		return m.PublishedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ImageCreationTemplateMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case imagecreationtemplate.FieldState:
+		return m.OldState(ctx)
+	case imagecreationtemplate.FieldDraftData:
+		return m.OldDraftData(ctx)
+	case imagecreationtemplate.FieldPublishedData:
+		return m.OldPublishedData(ctx)
+	case imagecreationtemplate.FieldRevision:
+		return m.OldRevision(ctx)
+	case imagecreationtemplate.FieldPublishedVersion:
+		return m.OldPublishedVersion(ctx)
+	case imagecreationtemplate.FieldDraftCoverAssetID:
+		return m.OldDraftCoverAssetID(ctx)
+	case imagecreationtemplate.FieldPublishedCoverAssetID:
+		return m.OldPublishedCoverAssetID(ctx)
+	case imagecreationtemplate.FieldHomePosition:
+		return m.OldHomePosition(ctx)
+	case imagecreationtemplate.FieldCreatedBy:
+		return m.OldCreatedBy(ctx)
+	case imagecreationtemplate.FieldUpdatedBy:
+		return m.OldUpdatedBy(ctx)
+	case imagecreationtemplate.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case imagecreationtemplate.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case imagecreationtemplate.FieldPublishedAt:
+		return m.OldPublishedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown ImageCreationTemplate field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ImageCreationTemplateMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case imagecreationtemplate.FieldState:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetState(v)
+		return nil
+	case imagecreationtemplate.FieldDraftData:
+		v, ok := value.(domain.ImageCreationTemplateDocument)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDraftData(v)
+		return nil
+	case imagecreationtemplate.FieldPublishedData:
+		v, ok := value.(*domain.ImageCreationTemplateDocument)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPublishedData(v)
+		return nil
+	case imagecreationtemplate.FieldRevision:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRevision(v)
+		return nil
+	case imagecreationtemplate.FieldPublishedVersion:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPublishedVersion(v)
+		return nil
+	case imagecreationtemplate.FieldDraftCoverAssetID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDraftCoverAssetID(v)
+		return nil
+	case imagecreationtemplate.FieldPublishedCoverAssetID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPublishedCoverAssetID(v)
+		return nil
+	case imagecreationtemplate.FieldHomePosition:
+		v, ok := value.(int16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHomePosition(v)
+		return nil
+	case imagecreationtemplate.FieldCreatedBy:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedBy(v)
+		return nil
+	case imagecreationtemplate.FieldUpdatedBy:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedBy(v)
+		return nil
+	case imagecreationtemplate.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case imagecreationtemplate.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case imagecreationtemplate.FieldPublishedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPublishedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationTemplate field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ImageCreationTemplateMutation) AddedFields() []string {
+	var fields []string
+	if m.addrevision != nil {
+		fields = append(fields, imagecreationtemplate.FieldRevision)
+	}
+	if m.addpublished_version != nil {
+		fields = append(fields, imagecreationtemplate.FieldPublishedVersion)
+	}
+	if m.addhome_position != nil {
+		fields = append(fields, imagecreationtemplate.FieldHomePosition)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ImageCreationTemplateMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case imagecreationtemplate.FieldRevision:
+		return m.AddedRevision()
+	case imagecreationtemplate.FieldPublishedVersion:
+		return m.AddedPublishedVersion()
+	case imagecreationtemplate.FieldHomePosition:
+		return m.AddedHomePosition()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ImageCreationTemplateMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case imagecreationtemplate.FieldRevision:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRevision(v)
+		return nil
+	case imagecreationtemplate.FieldPublishedVersion:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPublishedVersion(v)
+		return nil
+	case imagecreationtemplate.FieldHomePosition:
+		v, ok := value.(int16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddHomePosition(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationTemplate numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ImageCreationTemplateMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(imagecreationtemplate.FieldPublishedData) {
+		fields = append(fields, imagecreationtemplate.FieldPublishedData)
+	}
+	if m.FieldCleared(imagecreationtemplate.FieldDraftCoverAssetID) {
+		fields = append(fields, imagecreationtemplate.FieldDraftCoverAssetID)
+	}
+	if m.FieldCleared(imagecreationtemplate.FieldPublishedCoverAssetID) {
+		fields = append(fields, imagecreationtemplate.FieldPublishedCoverAssetID)
+	}
+	if m.FieldCleared(imagecreationtemplate.FieldHomePosition) {
+		fields = append(fields, imagecreationtemplate.FieldHomePosition)
+	}
+	if m.FieldCleared(imagecreationtemplate.FieldPublishedAt) {
+		fields = append(fields, imagecreationtemplate.FieldPublishedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ImageCreationTemplateMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ImageCreationTemplateMutation) ClearField(name string) error {
+	switch name {
+	case imagecreationtemplate.FieldPublishedData:
+		m.ClearPublishedData()
+		return nil
+	case imagecreationtemplate.FieldDraftCoverAssetID:
+		m.ClearDraftCoverAssetID()
+		return nil
+	case imagecreationtemplate.FieldPublishedCoverAssetID:
+		m.ClearPublishedCoverAssetID()
+		return nil
+	case imagecreationtemplate.FieldHomePosition:
+		m.ClearHomePosition()
+		return nil
+	case imagecreationtemplate.FieldPublishedAt:
+		m.ClearPublishedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationTemplate nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ImageCreationTemplateMutation) ResetField(name string) error {
+	switch name {
+	case imagecreationtemplate.FieldState:
+		m.ResetState()
+		return nil
+	case imagecreationtemplate.FieldDraftData:
+		m.ResetDraftData()
+		return nil
+	case imagecreationtemplate.FieldPublishedData:
+		m.ResetPublishedData()
+		return nil
+	case imagecreationtemplate.FieldRevision:
+		m.ResetRevision()
+		return nil
+	case imagecreationtemplate.FieldPublishedVersion:
+		m.ResetPublishedVersion()
+		return nil
+	case imagecreationtemplate.FieldDraftCoverAssetID:
+		m.ResetDraftCoverAssetID()
+		return nil
+	case imagecreationtemplate.FieldPublishedCoverAssetID:
+		m.ResetPublishedCoverAssetID()
+		return nil
+	case imagecreationtemplate.FieldHomePosition:
+		m.ResetHomePosition()
+		return nil
+	case imagecreationtemplate.FieldCreatedBy:
+		m.ResetCreatedBy()
+		return nil
+	case imagecreationtemplate.FieldUpdatedBy:
+		m.ResetUpdatedBy()
+		return nil
+	case imagecreationtemplate.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case imagecreationtemplate.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case imagecreationtemplate.FieldPublishedAt:
+		m.ResetPublishedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationTemplate field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ImageCreationTemplateMutation) AddedEdges() []string {
+	edges := make([]string, 0, 4)
+	if m.draft_cover != nil {
+		edges = append(edges, imagecreationtemplate.EdgeDraftCover)
+	}
+	if m.published_cover != nil {
+		edges = append(edges, imagecreationtemplate.EdgePublishedCover)
+	}
+	if m.creator != nil {
+		edges = append(edges, imagecreationtemplate.EdgeCreator)
+	}
+	if m.updater != nil {
+		edges = append(edges, imagecreationtemplate.EdgeUpdater)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ImageCreationTemplateMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case imagecreationtemplate.EdgeDraftCover:
+		if id := m.draft_cover; id != nil {
+			return []ent.Value{*id}
+		}
+	case imagecreationtemplate.EdgePublishedCover:
+		if id := m.published_cover; id != nil {
+			return []ent.Value{*id}
+		}
+	case imagecreationtemplate.EdgeCreator:
+		if id := m.creator; id != nil {
+			return []ent.Value{*id}
+		}
+	case imagecreationtemplate.EdgeUpdater:
+		if id := m.updater; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ImageCreationTemplateMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 4)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ImageCreationTemplateMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ImageCreationTemplateMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 4)
+	if m.cleareddraft_cover {
+		edges = append(edges, imagecreationtemplate.EdgeDraftCover)
+	}
+	if m.clearedpublished_cover {
+		edges = append(edges, imagecreationtemplate.EdgePublishedCover)
+	}
+	if m.clearedcreator {
+		edges = append(edges, imagecreationtemplate.EdgeCreator)
+	}
+	if m.clearedupdater {
+		edges = append(edges, imagecreationtemplate.EdgeUpdater)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ImageCreationTemplateMutation) EdgeCleared(name string) bool {
+	switch name {
+	case imagecreationtemplate.EdgeDraftCover:
+		return m.cleareddraft_cover
+	case imagecreationtemplate.EdgePublishedCover:
+		return m.clearedpublished_cover
+	case imagecreationtemplate.EdgeCreator:
+		return m.clearedcreator
+	case imagecreationtemplate.EdgeUpdater:
+		return m.clearedupdater
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ImageCreationTemplateMutation) ClearEdge(name string) error {
+	switch name {
+	case imagecreationtemplate.EdgeDraftCover:
+		m.ClearDraftCover()
+		return nil
+	case imagecreationtemplate.EdgePublishedCover:
+		m.ClearPublishedCover()
+		return nil
+	case imagecreationtemplate.EdgeCreator:
+		m.ClearCreator()
+		return nil
+	case imagecreationtemplate.EdgeUpdater:
+		m.ClearUpdater()
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationTemplate unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ImageCreationTemplateMutation) ResetEdge(name string) error {
+	switch name {
+	case imagecreationtemplate.EdgeDraftCover:
+		m.ResetDraftCover()
+		return nil
+	case imagecreationtemplate.EdgePublishedCover:
+		m.ResetPublishedCover()
+		return nil
+	case imagecreationtemplate.EdgeCreator:
+		m.ResetCreator()
+		return nil
+	case imagecreationtemplate.EdgeUpdater:
+		m.ResetUpdater()
+		return nil
+	}
+	return fmt.Errorf("unknown ImageCreationTemplate edge %s", name)
+}
+
 // PaymentAuditLogMutation represents an operation that mutates the PaymentAuditLog nodes in the graph.
 type PaymentAuditLogMutation struct {
 	config
@@ -49740,89 +53049,101 @@ func (m *UsageLogMutation) ResetEdge(name string) error {
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op                            Op
-	typ                           string
-	id                            *int64
-	created_at                    *time.Time
-	updated_at                    *time.Time
-	deleted_at                    *time.Time
-	email                         *string
-	password_hash                 *string
-	role                          *string
-	balance                       *float64
-	addbalance                    *float64
-	frozen_balance                *float64
-	addfrozen_balance             *float64
-	concurrency                   *int
-	addconcurrency                *int
-	status                        *string
-	username                      *string
-	notes                         *string
-	totp_secret_encrypted         *string
-	totp_enabled                  *bool
-	totp_enabled_at               *time.Time
-	signup_source                 *string
-	last_login_at                 *time.Time
-	last_active_at                *time.Time
-	referral_code                 *string
-	balance_notify_enabled        *bool
-	balance_notify_threshold_type *string
-	balance_notify_threshold      *float64
-	addbalance_notify_threshold   *float64
-	balance_notify_extra_emails   *string
-	total_recharged               *float64
-	addtotal_recharged            *float64
-	rpm_limit                     *int
-	addrpm_limit                  *int
-	clearedFields                 map[string]struct{}
-	api_keys                      map[int64]struct{}
-	removedapi_keys               map[int64]struct{}
-	clearedapi_keys               bool
-	redeem_codes                  map[int64]struct{}
-	removedredeem_codes           map[int64]struct{}
-	clearedredeem_codes           bool
-	subscriptions                 map[int64]struct{}
-	removedsubscriptions          map[int64]struct{}
-	clearedsubscriptions          bool
-	assigned_subscriptions        map[int64]struct{}
-	removedassigned_subscriptions map[int64]struct{}
-	clearedassigned_subscriptions bool
-	announcement_reads            map[int64]struct{}
-	removedannouncement_reads     map[int64]struct{}
-	clearedannouncement_reads     bool
-	allowed_groups                map[int64]struct{}
-	removedallowed_groups         map[int64]struct{}
-	clearedallowed_groups         bool
-	usage_logs                    map[int64]struct{}
-	removedusage_logs             map[int64]struct{}
-	clearedusage_logs             bool
-	attribute_values              map[int64]struct{}
-	removedattribute_values       map[int64]struct{}
-	clearedattribute_values       bool
-	promo_code_usages             map[int64]struct{}
-	removedpromo_code_usages      map[int64]struct{}
-	clearedpromo_code_usages      bool
-	payment_orders                map[int64]struct{}
-	removedpayment_orders         map[int64]struct{}
-	clearedpayment_orders         bool
-	referrals_as_inviter          map[int64]struct{}
-	removedreferrals_as_inviter   map[int64]struct{}
-	clearedreferrals_as_inviter   bool
-	referrals_as_invitee          map[int64]struct{}
-	removedreferrals_as_invitee   map[int64]struct{}
-	clearedreferrals_as_invitee   bool
-	auth_identities               map[int64]struct{}
-	removedauth_identities        map[int64]struct{}
-	clearedauth_identities        bool
-	pending_auth_sessions         map[int64]struct{}
-	removedpending_auth_sessions  map[int64]struct{}
-	clearedpending_auth_sessions  bool
-	platform_quotas               map[int64]struct{}
-	removedplatform_quotas        map[int64]struct{}
-	clearedplatform_quotas        bool
-	done                          bool
-	oldValue                      func(context.Context) (*User, error)
-	predicates                    []predicate.User
+	op                                      Op
+	typ                                     string
+	id                                      *int64
+	created_at                              *time.Time
+	updated_at                              *time.Time
+	deleted_at                              *time.Time
+	email                                   *string
+	password_hash                           *string
+	role                                    *string
+	balance                                 *float64
+	addbalance                              *float64
+	frozen_balance                          *float64
+	addfrozen_balance                       *float64
+	concurrency                             *int
+	addconcurrency                          *int
+	status                                  *string
+	username                                *string
+	notes                                   *string
+	totp_secret_encrypted                   *string
+	totp_enabled                            *bool
+	totp_enabled_at                         *time.Time
+	signup_source                           *string
+	last_login_at                           *time.Time
+	last_active_at                          *time.Time
+	referral_code                           *string
+	balance_notify_enabled                  *bool
+	balance_notify_threshold_type           *string
+	balance_notify_threshold                *float64
+	addbalance_notify_threshold             *float64
+	balance_notify_extra_emails             *string
+	total_recharged                         *float64
+	addtotal_recharged                      *float64
+	rpm_limit                               *int
+	addrpm_limit                            *int
+	clearedFields                           map[string]struct{}
+	api_keys                                map[int64]struct{}
+	removedapi_keys                         map[int64]struct{}
+	clearedapi_keys                         bool
+	redeem_codes                            map[int64]struct{}
+	removedredeem_codes                     map[int64]struct{}
+	clearedredeem_codes                     bool
+	subscriptions                           map[int64]struct{}
+	removedsubscriptions                    map[int64]struct{}
+	clearedsubscriptions                    bool
+	assigned_subscriptions                  map[int64]struct{}
+	removedassigned_subscriptions           map[int64]struct{}
+	clearedassigned_subscriptions           bool
+	announcement_reads                      map[int64]struct{}
+	removedannouncement_reads               map[int64]struct{}
+	clearedannouncement_reads               bool
+	allowed_groups                          map[int64]struct{}
+	removedallowed_groups                   map[int64]struct{}
+	clearedallowed_groups                   bool
+	usage_logs                              map[int64]struct{}
+	removedusage_logs                       map[int64]struct{}
+	clearedusage_logs                       bool
+	attribute_values                        map[int64]struct{}
+	removedattribute_values                 map[int64]struct{}
+	clearedattribute_values                 bool
+	promo_code_usages                       map[int64]struct{}
+	removedpromo_code_usages                map[int64]struct{}
+	clearedpromo_code_usages                bool
+	payment_orders                          map[int64]struct{}
+	removedpayment_orders                   map[int64]struct{}
+	clearedpayment_orders                   bool
+	referrals_as_inviter                    map[int64]struct{}
+	removedreferrals_as_inviter             map[int64]struct{}
+	clearedreferrals_as_inviter             bool
+	referrals_as_invitee                    map[int64]struct{}
+	removedreferrals_as_invitee             map[int64]struct{}
+	clearedreferrals_as_invitee             bool
+	auth_identities                         map[int64]struct{}
+	removedauth_identities                  map[int64]struct{}
+	clearedauth_identities                  bool
+	pending_auth_sessions                   map[int64]struct{}
+	removedpending_auth_sessions            map[int64]struct{}
+	clearedpending_auth_sessions            bool
+	platform_quotas                         map[int64]struct{}
+	removedplatform_quotas                  map[int64]struct{}
+	clearedplatform_quotas                  bool
+	image_creation_assets                   map[string]struct{}
+	removedimage_creation_assets            map[string]struct{}
+	clearedimage_creation_assets            bool
+	created_image_creation_templates        map[int64]struct{}
+	removedcreated_image_creation_templates map[int64]struct{}
+	clearedcreated_image_creation_templates bool
+	updated_image_creation_templates        map[int64]struct{}
+	removedupdated_image_creation_templates map[int64]struct{}
+	clearedupdated_image_creation_templates bool
+	image_creation_change_logs              map[int64]struct{}
+	removedimage_creation_change_logs       map[int64]struct{}
+	clearedimage_creation_change_logs       bool
+	done                                    bool
+	oldValue                                func(context.Context) (*User, error)
+	predicates                              []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -51845,6 +55166,222 @@ func (m *UserMutation) ResetPlatformQuotas() {
 	m.removedplatform_quotas = nil
 }
 
+// AddImageCreationAssetIDs adds the "image_creation_assets" edge to the ImageCreationAsset entity by ids.
+func (m *UserMutation) AddImageCreationAssetIDs(ids ...string) {
+	if m.image_creation_assets == nil {
+		m.image_creation_assets = make(map[string]struct{})
+	}
+	for i := range ids {
+		m.image_creation_assets[ids[i]] = struct{}{}
+	}
+}
+
+// ClearImageCreationAssets clears the "image_creation_assets" edge to the ImageCreationAsset entity.
+func (m *UserMutation) ClearImageCreationAssets() {
+	m.clearedimage_creation_assets = true
+}
+
+// ImageCreationAssetsCleared reports if the "image_creation_assets" edge to the ImageCreationAsset entity was cleared.
+func (m *UserMutation) ImageCreationAssetsCleared() bool {
+	return m.clearedimage_creation_assets
+}
+
+// RemoveImageCreationAssetIDs removes the "image_creation_assets" edge to the ImageCreationAsset entity by IDs.
+func (m *UserMutation) RemoveImageCreationAssetIDs(ids ...string) {
+	if m.removedimage_creation_assets == nil {
+		m.removedimage_creation_assets = make(map[string]struct{})
+	}
+	for i := range ids {
+		delete(m.image_creation_assets, ids[i])
+		m.removedimage_creation_assets[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedImageCreationAssets returns the removed IDs of the "image_creation_assets" edge to the ImageCreationAsset entity.
+func (m *UserMutation) RemovedImageCreationAssetsIDs() (ids []string) {
+	for id := range m.removedimage_creation_assets {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ImageCreationAssetsIDs returns the "image_creation_assets" edge IDs in the mutation.
+func (m *UserMutation) ImageCreationAssetsIDs() (ids []string) {
+	for id := range m.image_creation_assets {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetImageCreationAssets resets all changes to the "image_creation_assets" edge.
+func (m *UserMutation) ResetImageCreationAssets() {
+	m.image_creation_assets = nil
+	m.clearedimage_creation_assets = false
+	m.removedimage_creation_assets = nil
+}
+
+// AddCreatedImageCreationTemplateIDs adds the "created_image_creation_templates" edge to the ImageCreationTemplate entity by ids.
+func (m *UserMutation) AddCreatedImageCreationTemplateIDs(ids ...int64) {
+	if m.created_image_creation_templates == nil {
+		m.created_image_creation_templates = make(map[int64]struct{})
+	}
+	for i := range ids {
+		m.created_image_creation_templates[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCreatedImageCreationTemplates clears the "created_image_creation_templates" edge to the ImageCreationTemplate entity.
+func (m *UserMutation) ClearCreatedImageCreationTemplates() {
+	m.clearedcreated_image_creation_templates = true
+}
+
+// CreatedImageCreationTemplatesCleared reports if the "created_image_creation_templates" edge to the ImageCreationTemplate entity was cleared.
+func (m *UserMutation) CreatedImageCreationTemplatesCleared() bool {
+	return m.clearedcreated_image_creation_templates
+}
+
+// RemoveCreatedImageCreationTemplateIDs removes the "created_image_creation_templates" edge to the ImageCreationTemplate entity by IDs.
+func (m *UserMutation) RemoveCreatedImageCreationTemplateIDs(ids ...int64) {
+	if m.removedcreated_image_creation_templates == nil {
+		m.removedcreated_image_creation_templates = make(map[int64]struct{})
+	}
+	for i := range ids {
+		delete(m.created_image_creation_templates, ids[i])
+		m.removedcreated_image_creation_templates[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCreatedImageCreationTemplates returns the removed IDs of the "created_image_creation_templates" edge to the ImageCreationTemplate entity.
+func (m *UserMutation) RemovedCreatedImageCreationTemplatesIDs() (ids []int64) {
+	for id := range m.removedcreated_image_creation_templates {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CreatedImageCreationTemplatesIDs returns the "created_image_creation_templates" edge IDs in the mutation.
+func (m *UserMutation) CreatedImageCreationTemplatesIDs() (ids []int64) {
+	for id := range m.created_image_creation_templates {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCreatedImageCreationTemplates resets all changes to the "created_image_creation_templates" edge.
+func (m *UserMutation) ResetCreatedImageCreationTemplates() {
+	m.created_image_creation_templates = nil
+	m.clearedcreated_image_creation_templates = false
+	m.removedcreated_image_creation_templates = nil
+}
+
+// AddUpdatedImageCreationTemplateIDs adds the "updated_image_creation_templates" edge to the ImageCreationTemplate entity by ids.
+func (m *UserMutation) AddUpdatedImageCreationTemplateIDs(ids ...int64) {
+	if m.updated_image_creation_templates == nil {
+		m.updated_image_creation_templates = make(map[int64]struct{})
+	}
+	for i := range ids {
+		m.updated_image_creation_templates[ids[i]] = struct{}{}
+	}
+}
+
+// ClearUpdatedImageCreationTemplates clears the "updated_image_creation_templates" edge to the ImageCreationTemplate entity.
+func (m *UserMutation) ClearUpdatedImageCreationTemplates() {
+	m.clearedupdated_image_creation_templates = true
+}
+
+// UpdatedImageCreationTemplatesCleared reports if the "updated_image_creation_templates" edge to the ImageCreationTemplate entity was cleared.
+func (m *UserMutation) UpdatedImageCreationTemplatesCleared() bool {
+	return m.clearedupdated_image_creation_templates
+}
+
+// RemoveUpdatedImageCreationTemplateIDs removes the "updated_image_creation_templates" edge to the ImageCreationTemplate entity by IDs.
+func (m *UserMutation) RemoveUpdatedImageCreationTemplateIDs(ids ...int64) {
+	if m.removedupdated_image_creation_templates == nil {
+		m.removedupdated_image_creation_templates = make(map[int64]struct{})
+	}
+	for i := range ids {
+		delete(m.updated_image_creation_templates, ids[i])
+		m.removedupdated_image_creation_templates[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedUpdatedImageCreationTemplates returns the removed IDs of the "updated_image_creation_templates" edge to the ImageCreationTemplate entity.
+func (m *UserMutation) RemovedUpdatedImageCreationTemplatesIDs() (ids []int64) {
+	for id := range m.removedupdated_image_creation_templates {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// UpdatedImageCreationTemplatesIDs returns the "updated_image_creation_templates" edge IDs in the mutation.
+func (m *UserMutation) UpdatedImageCreationTemplatesIDs() (ids []int64) {
+	for id := range m.updated_image_creation_templates {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetUpdatedImageCreationTemplates resets all changes to the "updated_image_creation_templates" edge.
+func (m *UserMutation) ResetUpdatedImageCreationTemplates() {
+	m.updated_image_creation_templates = nil
+	m.clearedupdated_image_creation_templates = false
+	m.removedupdated_image_creation_templates = nil
+}
+
+// AddImageCreationChangeLogIDs adds the "image_creation_change_logs" edge to the ImageCreationChangeLog entity by ids.
+func (m *UserMutation) AddImageCreationChangeLogIDs(ids ...int64) {
+	if m.image_creation_change_logs == nil {
+		m.image_creation_change_logs = make(map[int64]struct{})
+	}
+	for i := range ids {
+		m.image_creation_change_logs[ids[i]] = struct{}{}
+	}
+}
+
+// ClearImageCreationChangeLogs clears the "image_creation_change_logs" edge to the ImageCreationChangeLog entity.
+func (m *UserMutation) ClearImageCreationChangeLogs() {
+	m.clearedimage_creation_change_logs = true
+}
+
+// ImageCreationChangeLogsCleared reports if the "image_creation_change_logs" edge to the ImageCreationChangeLog entity was cleared.
+func (m *UserMutation) ImageCreationChangeLogsCleared() bool {
+	return m.clearedimage_creation_change_logs
+}
+
+// RemoveImageCreationChangeLogIDs removes the "image_creation_change_logs" edge to the ImageCreationChangeLog entity by IDs.
+func (m *UserMutation) RemoveImageCreationChangeLogIDs(ids ...int64) {
+	if m.removedimage_creation_change_logs == nil {
+		m.removedimage_creation_change_logs = make(map[int64]struct{})
+	}
+	for i := range ids {
+		delete(m.image_creation_change_logs, ids[i])
+		m.removedimage_creation_change_logs[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedImageCreationChangeLogs returns the removed IDs of the "image_creation_change_logs" edge to the ImageCreationChangeLog entity.
+func (m *UserMutation) RemovedImageCreationChangeLogsIDs() (ids []int64) {
+	for id := range m.removedimage_creation_change_logs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ImageCreationChangeLogsIDs returns the "image_creation_change_logs" edge IDs in the mutation.
+func (m *UserMutation) ImageCreationChangeLogsIDs() (ids []int64) {
+	for id := range m.image_creation_change_logs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetImageCreationChangeLogs resets all changes to the "image_creation_change_logs" edge.
+func (m *UserMutation) ResetImageCreationChangeLogs() {
+	m.image_creation_change_logs = nil
+	m.clearedimage_creation_change_logs = false
+	m.removedimage_creation_change_logs = nil
+}
+
 // Where appends a list predicates to the UserMutation builder.
 func (m *UserMutation) Where(ps ...predicate.User) {
 	m.predicates = append(m.predicates, ps...)
@@ -52506,7 +56043,7 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 15)
+	edges := make([]string, 0, 19)
 	if m.api_keys != nil {
 		edges = append(edges, user.EdgeAPIKeys)
 	}
@@ -52551,6 +56088,18 @@ func (m *UserMutation) AddedEdges() []string {
 	}
 	if m.platform_quotas != nil {
 		edges = append(edges, user.EdgePlatformQuotas)
+	}
+	if m.image_creation_assets != nil {
+		edges = append(edges, user.EdgeImageCreationAssets)
+	}
+	if m.created_image_creation_templates != nil {
+		edges = append(edges, user.EdgeCreatedImageCreationTemplates)
+	}
+	if m.updated_image_creation_templates != nil {
+		edges = append(edges, user.EdgeUpdatedImageCreationTemplates)
+	}
+	if m.image_creation_change_logs != nil {
+		edges = append(edges, user.EdgeImageCreationChangeLogs)
 	}
 	return edges
 }
@@ -52649,13 +56198,37 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeImageCreationAssets:
+		ids := make([]ent.Value, 0, len(m.image_creation_assets))
+		for id := range m.image_creation_assets {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeCreatedImageCreationTemplates:
+		ids := make([]ent.Value, 0, len(m.created_image_creation_templates))
+		for id := range m.created_image_creation_templates {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeUpdatedImageCreationTemplates:
+		ids := make([]ent.Value, 0, len(m.updated_image_creation_templates))
+		for id := range m.updated_image_creation_templates {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeImageCreationChangeLogs:
+		ids := make([]ent.Value, 0, len(m.image_creation_change_logs))
+		for id := range m.image_creation_change_logs {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 15)
+	edges := make([]string, 0, 19)
 	if m.removedapi_keys != nil {
 		edges = append(edges, user.EdgeAPIKeys)
 	}
@@ -52700,6 +56273,18 @@ func (m *UserMutation) RemovedEdges() []string {
 	}
 	if m.removedplatform_quotas != nil {
 		edges = append(edges, user.EdgePlatformQuotas)
+	}
+	if m.removedimage_creation_assets != nil {
+		edges = append(edges, user.EdgeImageCreationAssets)
+	}
+	if m.removedcreated_image_creation_templates != nil {
+		edges = append(edges, user.EdgeCreatedImageCreationTemplates)
+	}
+	if m.removedupdated_image_creation_templates != nil {
+		edges = append(edges, user.EdgeUpdatedImageCreationTemplates)
+	}
+	if m.removedimage_creation_change_logs != nil {
+		edges = append(edges, user.EdgeImageCreationChangeLogs)
 	}
 	return edges
 }
@@ -52798,13 +56383,37 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeImageCreationAssets:
+		ids := make([]ent.Value, 0, len(m.removedimage_creation_assets))
+		for id := range m.removedimage_creation_assets {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeCreatedImageCreationTemplates:
+		ids := make([]ent.Value, 0, len(m.removedcreated_image_creation_templates))
+		for id := range m.removedcreated_image_creation_templates {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeUpdatedImageCreationTemplates:
+		ids := make([]ent.Value, 0, len(m.removedupdated_image_creation_templates))
+		for id := range m.removedupdated_image_creation_templates {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeImageCreationChangeLogs:
+		ids := make([]ent.Value, 0, len(m.removedimage_creation_change_logs))
+		for id := range m.removedimage_creation_change_logs {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 15)
+	edges := make([]string, 0, 19)
 	if m.clearedapi_keys {
 		edges = append(edges, user.EdgeAPIKeys)
 	}
@@ -52850,6 +56459,18 @@ func (m *UserMutation) ClearedEdges() []string {
 	if m.clearedplatform_quotas {
 		edges = append(edges, user.EdgePlatformQuotas)
 	}
+	if m.clearedimage_creation_assets {
+		edges = append(edges, user.EdgeImageCreationAssets)
+	}
+	if m.clearedcreated_image_creation_templates {
+		edges = append(edges, user.EdgeCreatedImageCreationTemplates)
+	}
+	if m.clearedupdated_image_creation_templates {
+		edges = append(edges, user.EdgeUpdatedImageCreationTemplates)
+	}
+	if m.clearedimage_creation_change_logs {
+		edges = append(edges, user.EdgeImageCreationChangeLogs)
+	}
 	return edges
 }
 
@@ -52887,6 +56508,14 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedpending_auth_sessions
 	case user.EdgePlatformQuotas:
 		return m.clearedplatform_quotas
+	case user.EdgeImageCreationAssets:
+		return m.clearedimage_creation_assets
+	case user.EdgeCreatedImageCreationTemplates:
+		return m.clearedcreated_image_creation_templates
+	case user.EdgeUpdatedImageCreationTemplates:
+		return m.clearedupdated_image_creation_templates
+	case user.EdgeImageCreationChangeLogs:
+		return m.clearedimage_creation_change_logs
 	}
 	return false
 }
@@ -52947,6 +56576,18 @@ func (m *UserMutation) ResetEdge(name string) error {
 		return nil
 	case user.EdgePlatformQuotas:
 		m.ResetPlatformQuotas()
+		return nil
+	case user.EdgeImageCreationAssets:
+		m.ResetImageCreationAssets()
+		return nil
+	case user.EdgeCreatedImageCreationTemplates:
+		m.ResetCreatedImageCreationTemplates()
+		return nil
+	case user.EdgeUpdatedImageCreationTemplates:
+		m.ResetUpdatedImageCreationTemplates()
+		return nil
+	case user.EdgeImageCreationChangeLogs:
+		m.ResetImageCreationChangeLogs()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)

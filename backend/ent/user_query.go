@@ -17,6 +17,9 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
 	"github.com/Wei-Shaw/sub2api/ent/group"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationasset"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationchangelog"
+	"github.com/Wei-Shaw/sub2api/ent/imagecreationtemplate"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/pendingauthsession"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
@@ -34,27 +37,31 @@ import (
 // UserQuery is the builder for querying User entities.
 type UserQuery struct {
 	config
-	ctx                       *QueryContext
-	order                     []user.OrderOption
-	inters                    []Interceptor
-	predicates                []predicate.User
-	withAPIKeys               *APIKeyQuery
-	withRedeemCodes           *RedeemCodeQuery
-	withSubscriptions         *UserSubscriptionQuery
-	withAssignedSubscriptions *UserSubscriptionQuery
-	withAnnouncementReads     *AnnouncementReadQuery
-	withAllowedGroups         *GroupQuery
-	withUsageLogs             *UsageLogQuery
-	withAttributeValues       *UserAttributeValueQuery
-	withPromoCodeUsages       *PromoCodeUsageQuery
-	withPaymentOrders         *PaymentOrderQuery
-	withReferralsAsInviter    *UserReferralQuery
-	withReferralsAsInvitee    *UserReferralQuery
-	withAuthIdentities        *AuthIdentityQuery
-	withPendingAuthSessions   *PendingAuthSessionQuery
-	withPlatformQuotas        *UserPlatformQuotaQuery
-	withUserAllowedGroups     *UserAllowedGroupQuery
-	modifiers                 []func(*sql.Selector)
+	ctx                               *QueryContext
+	order                             []user.OrderOption
+	inters                            []Interceptor
+	predicates                        []predicate.User
+	withAPIKeys                       *APIKeyQuery
+	withRedeemCodes                   *RedeemCodeQuery
+	withSubscriptions                 *UserSubscriptionQuery
+	withAssignedSubscriptions         *UserSubscriptionQuery
+	withAnnouncementReads             *AnnouncementReadQuery
+	withAllowedGroups                 *GroupQuery
+	withUsageLogs                     *UsageLogQuery
+	withAttributeValues               *UserAttributeValueQuery
+	withPromoCodeUsages               *PromoCodeUsageQuery
+	withPaymentOrders                 *PaymentOrderQuery
+	withReferralsAsInviter            *UserReferralQuery
+	withReferralsAsInvitee            *UserReferralQuery
+	withAuthIdentities                *AuthIdentityQuery
+	withPendingAuthSessions           *PendingAuthSessionQuery
+	withPlatformQuotas                *UserPlatformQuotaQuery
+	withImageCreationAssets           *ImageCreationAssetQuery
+	withCreatedImageCreationTemplates *ImageCreationTemplateQuery
+	withUpdatedImageCreationTemplates *ImageCreationTemplateQuery
+	withImageCreationChangeLogs       *ImageCreationChangeLogQuery
+	withUserAllowedGroups             *UserAllowedGroupQuery
+	modifiers                         []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -421,6 +428,94 @@ func (_q *UserQuery) QueryPlatformQuotas() *UserPlatformQuotaQuery {
 	return query
 }
 
+// QueryImageCreationAssets chains the current query on the "image_creation_assets" edge.
+func (_q *UserQuery) QueryImageCreationAssets() *ImageCreationAssetQuery {
+	query := (&ImageCreationAssetClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(imagecreationasset.Table, imagecreationasset.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ImageCreationAssetsTable, user.ImageCreationAssetsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCreatedImageCreationTemplates chains the current query on the "created_image_creation_templates" edge.
+func (_q *UserQuery) QueryCreatedImageCreationTemplates() *ImageCreationTemplateQuery {
+	query := (&ImageCreationTemplateClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(imagecreationtemplate.Table, imagecreationtemplate.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedImageCreationTemplatesTable, user.CreatedImageCreationTemplatesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryUpdatedImageCreationTemplates chains the current query on the "updated_image_creation_templates" edge.
+func (_q *UserQuery) QueryUpdatedImageCreationTemplates() *ImageCreationTemplateQuery {
+	query := (&ImageCreationTemplateClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(imagecreationtemplate.Table, imagecreationtemplate.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.UpdatedImageCreationTemplatesTable, user.UpdatedImageCreationTemplatesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryImageCreationChangeLogs chains the current query on the "image_creation_change_logs" edge.
+func (_q *UserQuery) QueryImageCreationChangeLogs() *ImageCreationChangeLogQuery {
+	query := (&ImageCreationChangeLogClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(imagecreationchangelog.Table, imagecreationchangelog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ImageCreationChangeLogsTable, user.ImageCreationChangeLogsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // QueryUserAllowedGroups chains the current query on the "user_allowed_groups" edge.
 func (_q *UserQuery) QueryUserAllowedGroups() *UserAllowedGroupQuery {
 	query := (&UserAllowedGroupClient{config: _q.config}).Query()
@@ -630,27 +725,31 @@ func (_q *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:                    _q.config,
-		ctx:                       _q.ctx.Clone(),
-		order:                     append([]user.OrderOption{}, _q.order...),
-		inters:                    append([]Interceptor{}, _q.inters...),
-		predicates:                append([]predicate.User{}, _q.predicates...),
-		withAPIKeys:               _q.withAPIKeys.Clone(),
-		withRedeemCodes:           _q.withRedeemCodes.Clone(),
-		withSubscriptions:         _q.withSubscriptions.Clone(),
-		withAssignedSubscriptions: _q.withAssignedSubscriptions.Clone(),
-		withAnnouncementReads:     _q.withAnnouncementReads.Clone(),
-		withAllowedGroups:         _q.withAllowedGroups.Clone(),
-		withUsageLogs:             _q.withUsageLogs.Clone(),
-		withAttributeValues:       _q.withAttributeValues.Clone(),
-		withPromoCodeUsages:       _q.withPromoCodeUsages.Clone(),
-		withPaymentOrders:         _q.withPaymentOrders.Clone(),
-		withReferralsAsInviter:    _q.withReferralsAsInviter.Clone(),
-		withReferralsAsInvitee:    _q.withReferralsAsInvitee.Clone(),
-		withAuthIdentities:        _q.withAuthIdentities.Clone(),
-		withPendingAuthSessions:   _q.withPendingAuthSessions.Clone(),
-		withPlatformQuotas:        _q.withPlatformQuotas.Clone(),
-		withUserAllowedGroups:     _q.withUserAllowedGroups.Clone(),
+		config:                            _q.config,
+		ctx:                               _q.ctx.Clone(),
+		order:                             append([]user.OrderOption{}, _q.order...),
+		inters:                            append([]Interceptor{}, _q.inters...),
+		predicates:                        append([]predicate.User{}, _q.predicates...),
+		withAPIKeys:                       _q.withAPIKeys.Clone(),
+		withRedeemCodes:                   _q.withRedeemCodes.Clone(),
+		withSubscriptions:                 _q.withSubscriptions.Clone(),
+		withAssignedSubscriptions:         _q.withAssignedSubscriptions.Clone(),
+		withAnnouncementReads:             _q.withAnnouncementReads.Clone(),
+		withAllowedGroups:                 _q.withAllowedGroups.Clone(),
+		withUsageLogs:                     _q.withUsageLogs.Clone(),
+		withAttributeValues:               _q.withAttributeValues.Clone(),
+		withPromoCodeUsages:               _q.withPromoCodeUsages.Clone(),
+		withPaymentOrders:                 _q.withPaymentOrders.Clone(),
+		withReferralsAsInviter:            _q.withReferralsAsInviter.Clone(),
+		withReferralsAsInvitee:            _q.withReferralsAsInvitee.Clone(),
+		withAuthIdentities:                _q.withAuthIdentities.Clone(),
+		withPendingAuthSessions:           _q.withPendingAuthSessions.Clone(),
+		withPlatformQuotas:                _q.withPlatformQuotas.Clone(),
+		withImageCreationAssets:           _q.withImageCreationAssets.Clone(),
+		withCreatedImageCreationTemplates: _q.withCreatedImageCreationTemplates.Clone(),
+		withUpdatedImageCreationTemplates: _q.withUpdatedImageCreationTemplates.Clone(),
+		withImageCreationChangeLogs:       _q.withImageCreationChangeLogs.Clone(),
+		withUserAllowedGroups:             _q.withUserAllowedGroups.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -822,6 +921,50 @@ func (_q *UserQuery) WithPlatformQuotas(opts ...func(*UserPlatformQuotaQuery)) *
 	return _q
 }
 
+// WithImageCreationAssets tells the query-builder to eager-load the nodes that are connected to
+// the "image_creation_assets" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithImageCreationAssets(opts ...func(*ImageCreationAssetQuery)) *UserQuery {
+	query := (&ImageCreationAssetClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withImageCreationAssets = query
+	return _q
+}
+
+// WithCreatedImageCreationTemplates tells the query-builder to eager-load the nodes that are connected to
+// the "created_image_creation_templates" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithCreatedImageCreationTemplates(opts ...func(*ImageCreationTemplateQuery)) *UserQuery {
+	query := (&ImageCreationTemplateClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCreatedImageCreationTemplates = query
+	return _q
+}
+
+// WithUpdatedImageCreationTemplates tells the query-builder to eager-load the nodes that are connected to
+// the "updated_image_creation_templates" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithUpdatedImageCreationTemplates(opts ...func(*ImageCreationTemplateQuery)) *UserQuery {
+	query := (&ImageCreationTemplateClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withUpdatedImageCreationTemplates = query
+	return _q
+}
+
+// WithImageCreationChangeLogs tells the query-builder to eager-load the nodes that are connected to
+// the "image_creation_change_logs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithImageCreationChangeLogs(opts ...func(*ImageCreationChangeLogQuery)) *UserQuery {
+	query := (&ImageCreationChangeLogClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withImageCreationChangeLogs = query
+	return _q
+}
+
 // WithUserAllowedGroups tells the query-builder to eager-load the nodes that are connected to
 // the "user_allowed_groups" edge. The optional arguments are used to configure the query builder of the edge.
 func (_q *UserQuery) WithUserAllowedGroups(opts ...func(*UserAllowedGroupQuery)) *UserQuery {
@@ -911,7 +1054,7 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [16]bool{
+		loadedTypes = [20]bool{
 			_q.withAPIKeys != nil,
 			_q.withRedeemCodes != nil,
 			_q.withSubscriptions != nil,
@@ -927,6 +1070,10 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 			_q.withAuthIdentities != nil,
 			_q.withPendingAuthSessions != nil,
 			_q.withPlatformQuotas != nil,
+			_q.withImageCreationAssets != nil,
+			_q.withCreatedImageCreationTemplates != nil,
+			_q.withUpdatedImageCreationTemplates != nil,
+			_q.withImageCreationChangeLogs != nil,
 			_q.withUserAllowedGroups != nil,
 		}
 	)
@@ -1057,6 +1204,42 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := _q.loadPlatformQuotas(ctx, query, nodes,
 			func(n *User) { n.Edges.PlatformQuotas = []*UserPlatformQuota{} },
 			func(n *User, e *UserPlatformQuota) { n.Edges.PlatformQuotas = append(n.Edges.PlatformQuotas, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withImageCreationAssets; query != nil {
+		if err := _q.loadImageCreationAssets(ctx, query, nodes,
+			func(n *User) { n.Edges.ImageCreationAssets = []*ImageCreationAsset{} },
+			func(n *User, e *ImageCreationAsset) {
+				n.Edges.ImageCreationAssets = append(n.Edges.ImageCreationAssets, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCreatedImageCreationTemplates; query != nil {
+		if err := _q.loadCreatedImageCreationTemplates(ctx, query, nodes,
+			func(n *User) { n.Edges.CreatedImageCreationTemplates = []*ImageCreationTemplate{} },
+			func(n *User, e *ImageCreationTemplate) {
+				n.Edges.CreatedImageCreationTemplates = append(n.Edges.CreatedImageCreationTemplates, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withUpdatedImageCreationTemplates; query != nil {
+		if err := _q.loadUpdatedImageCreationTemplates(ctx, query, nodes,
+			func(n *User) { n.Edges.UpdatedImageCreationTemplates = []*ImageCreationTemplate{} },
+			func(n *User, e *ImageCreationTemplate) {
+				n.Edges.UpdatedImageCreationTemplates = append(n.Edges.UpdatedImageCreationTemplates, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withImageCreationChangeLogs; query != nil {
+		if err := _q.loadImageCreationChangeLogs(ctx, query, nodes,
+			func(n *User) { n.Edges.ImageCreationChangeLogs = []*ImageCreationChangeLog{} },
+			func(n *User, e *ImageCreationChangeLog) {
+				n.Edges.ImageCreationChangeLogs = append(n.Edges.ImageCreationChangeLogs, e)
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -1556,6 +1739,126 @@ func (_q *UserQuery) loadPlatformQuotas(ctx context.Context, query *UserPlatform
 		node, ok := nodeids[fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadImageCreationAssets(ctx context.Context, query *ImageCreationAssetQuery, nodes []*User, init func(*User), assign func(*User, *ImageCreationAsset)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int64]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(imagecreationasset.FieldCreatedBy)
+	}
+	query.Where(predicate.ImageCreationAsset(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.ImageCreationAssetsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.CreatedBy
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "created_by" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadCreatedImageCreationTemplates(ctx context.Context, query *ImageCreationTemplateQuery, nodes []*User, init func(*User), assign func(*User, *ImageCreationTemplate)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int64]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(imagecreationtemplate.FieldCreatedBy)
+	}
+	query.Where(predicate.ImageCreationTemplate(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.CreatedImageCreationTemplatesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.CreatedBy
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "created_by" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadUpdatedImageCreationTemplates(ctx context.Context, query *ImageCreationTemplateQuery, nodes []*User, init func(*User), assign func(*User, *ImageCreationTemplate)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int64]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(imagecreationtemplate.FieldUpdatedBy)
+	}
+	query.Where(predicate.ImageCreationTemplate(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.UpdatedImageCreationTemplatesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UpdatedBy
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "updated_by" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadImageCreationChangeLogs(ctx context.Context, query *ImageCreationChangeLogQuery, nodes []*User, init func(*User), assign func(*User, *ImageCreationChangeLog)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int64]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(imagecreationchangelog.FieldActorUserID)
+	}
+	query.Where(predicate.ImageCreationChangeLog(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.ImageCreationChangeLogsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ActorUserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "actor_user_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

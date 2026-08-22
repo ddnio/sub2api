@@ -237,6 +237,42 @@ func (f IdentityAdoptionDecisionFunc) Mutate(ctx context.Context, m ent.Mutation
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.IdentityAdoptionDecisionMutation", m)
 }
 
+// The ImageCreationAssetFunc type is an adapter to allow the use of ordinary
+// function as ImageCreationAsset mutator.
+type ImageCreationAssetFunc func(context.Context, *ent.ImageCreationAssetMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ImageCreationAssetFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ImageCreationAssetMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ImageCreationAssetMutation", m)
+}
+
+// The ImageCreationChangeLogFunc type is an adapter to allow the use of ordinary
+// function as ImageCreationChangeLog mutator.
+type ImageCreationChangeLogFunc func(context.Context, *ent.ImageCreationChangeLogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ImageCreationChangeLogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ImageCreationChangeLogMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ImageCreationChangeLogMutation", m)
+}
+
+// The ImageCreationTemplateFunc type is an adapter to allow the use of ordinary
+// function as ImageCreationTemplate mutator.
+type ImageCreationTemplateFunc func(context.Context, *ent.ImageCreationTemplateMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ImageCreationTemplateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ImageCreationTemplateMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ImageCreationTemplateMutation", m)
+}
+
 // The PaymentAuditLogFunc type is an adapter to allow the use of ordinary
 // function as PaymentAuditLog mutator.
 type PaymentAuditLogFunc func(context.Context, *ent.PaymentAuditLogMutation) (ent.Value, error)

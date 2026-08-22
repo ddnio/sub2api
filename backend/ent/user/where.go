@@ -1810,6 +1810,98 @@ func HasPlatformQuotasWith(preds ...predicate.UserPlatformQuota) predicate.User 
 	})
 }
 
+// HasImageCreationAssets applies the HasEdge predicate on the "image_creation_assets" edge.
+func HasImageCreationAssets() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ImageCreationAssetsTable, ImageCreationAssetsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasImageCreationAssetsWith applies the HasEdge predicate on the "image_creation_assets" edge with a given conditions (other predicates).
+func HasImageCreationAssetsWith(preds ...predicate.ImageCreationAsset) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newImageCreationAssetsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCreatedImageCreationTemplates applies the HasEdge predicate on the "created_image_creation_templates" edge.
+func HasCreatedImageCreationTemplates() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CreatedImageCreationTemplatesTable, CreatedImageCreationTemplatesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCreatedImageCreationTemplatesWith applies the HasEdge predicate on the "created_image_creation_templates" edge with a given conditions (other predicates).
+func HasCreatedImageCreationTemplatesWith(preds ...predicate.ImageCreationTemplate) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newCreatedImageCreationTemplatesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasUpdatedImageCreationTemplates applies the HasEdge predicate on the "updated_image_creation_templates" edge.
+func HasUpdatedImageCreationTemplates() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, UpdatedImageCreationTemplatesTable, UpdatedImageCreationTemplatesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasUpdatedImageCreationTemplatesWith applies the HasEdge predicate on the "updated_image_creation_templates" edge with a given conditions (other predicates).
+func HasUpdatedImageCreationTemplatesWith(preds ...predicate.ImageCreationTemplate) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newUpdatedImageCreationTemplatesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasImageCreationChangeLogs applies the HasEdge predicate on the "image_creation_change_logs" edge.
+func HasImageCreationChangeLogs() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ImageCreationChangeLogsTable, ImageCreationChangeLogsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasImageCreationChangeLogsWith applies the HasEdge predicate on the "image_creation_change_logs" edge with a given conditions (other predicates).
+func HasImageCreationChangeLogsWith(preds ...predicate.ImageCreationChangeLog) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newImageCreationChangeLogsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasUserAllowedGroups applies the HasEdge predicate on the "user_allowed_groups" edge.
 func HasUserAllowedGroups() predicate.User {
 	return predicate.User(func(s *sql.Selector) {

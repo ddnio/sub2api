@@ -1093,6 +1093,146 @@ var (
 			},
 		},
 	}
+	// ImageCreationAssetsColumns holds the columns for the "image_creation_assets" table.
+	ImageCreationAssetsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Size: 64},
+		{Name: "content", Type: field.TypeBytes, SchemaType: map[string]string{"postgres": "bytea"}},
+		{Name: "content_type", Type: field.TypeString, Size: 32},
+		{Name: "byte_size", Type: field.TypeInt},
+		{Name: "width", Type: field.TypeInt},
+		{Name: "height", Type: field.TypeInt},
+		{Name: "source_type", Type: field.TypeString, Size: 16},
+		{Name: "source_provider", Type: field.TypeString, Nullable: true, Size: 64},
+		{Name: "source_model", Type: field.TypeString, Nullable: true, Size: 120},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "created_by", Type: field.TypeInt64},
+	}
+	// ImageCreationAssetsTable holds the schema information for the "image_creation_assets" table.
+	ImageCreationAssetsTable = &schema.Table{
+		Name:       "image_creation_assets",
+		Columns:    ImageCreationAssetsColumns,
+		PrimaryKey: []*schema.Column{ImageCreationAssetsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "image_creation_assets_users_image_creation_assets",
+				Columns:    []*schema.Column{ImageCreationAssetsColumns[10]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "imagecreationasset_created_by_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{ImageCreationAssetsColumns[10], ImageCreationAssetsColumns[9]},
+			},
+		},
+	}
+	// ImageCreationChangeLogsColumns holds the columns for the "image_creation_change_logs" table.
+	ImageCreationChangeLogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "action", Type: field.TypeString, Size: 32},
+		{Name: "target_type", Type: field.TypeString, Size: 16},
+		{Name: "target_id", Type: field.TypeString, Size: 64},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "actor_user_id", Type: field.TypeInt64},
+	}
+	// ImageCreationChangeLogsTable holds the schema information for the "image_creation_change_logs" table.
+	ImageCreationChangeLogsTable = &schema.Table{
+		Name:       "image_creation_change_logs",
+		Columns:    ImageCreationChangeLogsColumns,
+		PrimaryKey: []*schema.Column{ImageCreationChangeLogsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "image_creation_change_logs_users_image_creation_change_logs",
+				Columns:    []*schema.Column{ImageCreationChangeLogsColumns[6]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "imagecreationchangelog_actor_user_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{ImageCreationChangeLogsColumns[6], ImageCreationChangeLogsColumns[5]},
+			},
+			{
+				Name:    "imagecreationchangelog_target_type_target_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{ImageCreationChangeLogsColumns[2], ImageCreationChangeLogsColumns[3], ImageCreationChangeLogsColumns[5]},
+			},
+		},
+	}
+	// ImageCreationTemplatesColumns holds the columns for the "image_creation_templates" table.
+	ImageCreationTemplatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "state", Type: field.TypeString, Size: 16, Default: "draft"},
+		{Name: "draft_data", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "published_data", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "revision", Type: field.TypeInt, Default: 1},
+		{Name: "published_version", Type: field.TypeInt, Default: 0},
+		{Name: "home_position", Type: field.TypeInt16, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "published_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "draft_cover_asset_id", Type: field.TypeString, Nullable: true, Size: 64},
+		{Name: "published_cover_asset_id", Type: field.TypeString, Nullable: true, Size: 64},
+		{Name: "created_by", Type: field.TypeInt64},
+		{Name: "updated_by", Type: field.TypeInt64},
+	}
+	// ImageCreationTemplatesTable holds the schema information for the "image_creation_templates" table.
+	ImageCreationTemplatesTable = &schema.Table{
+		Name:       "image_creation_templates",
+		Columns:    ImageCreationTemplatesColumns,
+		PrimaryKey: []*schema.Column{ImageCreationTemplatesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "image_creation_templates_image_creation_assets_draft_templates",
+				Columns:    []*schema.Column{ImageCreationTemplatesColumns[10]},
+				RefColumns: []*schema.Column{ImageCreationAssetsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "image_creation_templates_image_creation_assets_published_templates",
+				Columns:    []*schema.Column{ImageCreationTemplatesColumns[11]},
+				RefColumns: []*schema.Column{ImageCreationAssetsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "image_creation_templates_users_created_image_creation_templates",
+				Columns:    []*schema.Column{ImageCreationTemplatesColumns[12]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "image_creation_templates_users_updated_image_creation_templates",
+				Columns:    []*schema.Column{ImageCreationTemplatesColumns[13]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "imagecreationtemplate_state_published_at",
+				Unique:  false,
+				Columns: []*schema.Column{ImageCreationTemplatesColumns[1], ImageCreationTemplatesColumns[9]},
+			},
+			{
+				Name:    "imagecreationtemplate_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{ImageCreationTemplatesColumns[8]},
+			},
+			{
+				Name:    "imagecreationtemplate_home_position",
+				Unique:  true,
+				Columns: []*schema.Column{ImageCreationTemplatesColumns[6]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "home_position IS NOT NULL",
+				},
+			},
+		},
+	}
 	// PaymentAuditLogsColumns holds the columns for the "payment_audit_logs" table.
 	PaymentAuditLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
@@ -2202,6 +2342,9 @@ var (
 		GroupsTable,
 		IdempotencyRecordsTable,
 		IdentityAdoptionDecisionsTable,
+		ImageCreationAssetsTable,
+		ImageCreationChangeLogsTable,
+		ImageCreationTemplatesTable,
 		PaymentAuditLogsTable,
 		PaymentOrdersTable,
 		PaymentPlansTable,
@@ -2300,6 +2443,21 @@ func init() {
 	IdentityAdoptionDecisionsTable.ForeignKeys[1].RefTable = PendingAuthSessionsTable
 	IdentityAdoptionDecisionsTable.Annotation = &entsql.Annotation{
 		Table: "identity_adoption_decisions",
+	}
+	ImageCreationAssetsTable.ForeignKeys[0].RefTable = UsersTable
+	ImageCreationAssetsTable.Annotation = &entsql.Annotation{
+		Table: "image_creation_assets",
+	}
+	ImageCreationChangeLogsTable.ForeignKeys[0].RefTable = UsersTable
+	ImageCreationChangeLogsTable.Annotation = &entsql.Annotation{
+		Table: "image_creation_change_logs",
+	}
+	ImageCreationTemplatesTable.ForeignKeys[0].RefTable = ImageCreationAssetsTable
+	ImageCreationTemplatesTable.ForeignKeys[1].RefTable = ImageCreationAssetsTable
+	ImageCreationTemplatesTable.ForeignKeys[2].RefTable = UsersTable
+	ImageCreationTemplatesTable.ForeignKeys[3].RefTable = UsersTable
+	ImageCreationTemplatesTable.Annotation = &entsql.Annotation{
+		Table: "image_creation_templates",
 	}
 	PaymentAuditLogsTable.Annotation = &entsql.Annotation{
 		Table: "payment_audit_logs",
