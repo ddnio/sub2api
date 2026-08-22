@@ -30,6 +30,14 @@ type imageCreationApplyRequest struct {
 	PublishedVersion int `json:"published_version"`
 }
 
+type imageCreationApplicationResponse struct {
+	TemplateID       int64                                `json:"template_id"`
+	PublishedVersion int                                  `json:"published_version"`
+	Prompt           string                               `json:"prompt"`
+	Defaults         domain.ImageCreationTemplateDefaults `json:"defaults"`
+	InputMode        string                               `json:"input_mode"`
+}
+
 type imageCreationHomeRequest struct {
 	TemplateIDs []int64 `json:"template_ids"`
 }
@@ -166,7 +174,7 @@ func (h *ImageCreationHandler) Apply(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	response.Success(c, application)
+	response.Success(c, imageCreationApplicationDTO(application))
 }
 
 func (h *ImageCreationHandler) AssetContent(c *gin.Context) {
@@ -415,6 +423,13 @@ func imageCreationUserTemplateListDTO(template *service.ImageCreationTemplate) i
 		ID: template.ID, Title: doc.Title, Summary: doc.Summary, Category: doc.Category, Tags: doc.Tags,
 		CoverAssetID: template.PublishedCoverAssetID, PublishedVersion: template.PublishedVersion,
 		Defaults: doc.Defaults, InputMode: doc.InputMode, HomePosition: template.HomePosition, Favorited: template.FavoritedAt != nil,
+	}
+}
+
+func imageCreationApplicationDTO(application *service.ImageCreationTemplateApplication) imageCreationApplicationResponse {
+	return imageCreationApplicationResponse{
+		TemplateID: application.TemplateID, PublishedVersion: application.PublishedVersion,
+		Prompt: application.Prompt, Defaults: application.Defaults, InputMode: application.InputMode,
 	}
 }
 

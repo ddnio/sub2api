@@ -71,3 +71,23 @@ func TestImageCreationUserListDTODoesNotExposePrompt(t *testing.T) {
 	require.False(t, strings.Contains(string(data), "prompt"))
 	require.False(t, strings.Contains(string(data), "draft"))
 }
+
+func TestImageCreationApplicationDTOUsesFrontendFieldNames(t *testing.T) {
+	application := &service.ImageCreationTemplateApplication{
+		TemplateID:       7,
+		PublishedVersion: 2,
+		Prompt:           "cinematic portrait",
+		Defaults:         domain.ImageCreationTemplateDefaults{Size: "1024x1024", Quality: "high", OutputFormat: "png"},
+		InputMode:        "text",
+	}
+
+	data, err := json.Marshal(imageCreationApplicationDTO(application))
+	require.NoError(t, err)
+	require.JSONEq(t, `{
+		"template_id": 7,
+		"published_version": 2,
+		"prompt": "cinematic portrait",
+		"defaults": {"size":"1024x1024","quality":"high","output_format":"png"},
+		"input_mode": "text"
+	}`, string(data))
+}
