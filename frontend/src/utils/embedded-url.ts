@@ -45,6 +45,41 @@ export function buildEmbeddedUrl(
   }
 }
 
+export function isImageCreationEmbedUrl(baseUrl: string): boolean {
+  try {
+    const url = new URL(baseUrl)
+    if (typeof window !== 'undefined' && url.origin !== window.location.origin) return false
+    return url.pathname.replace(/\/+$/, '') === '/tools/image-playground'
+  } catch {
+    return false
+  }
+}
+
+export function buildImageCreationEmbeddedUrl(
+  baseUrl: string,
+  ticket: string,
+  theme: 'light' | 'dark' = 'light',
+  lang?: string,
+): string {
+  if (!baseUrl) return baseUrl
+  try {
+    const url = new URL(baseUrl)
+    const fragment = new URLSearchParams()
+    fragment.set('launch', ticket)
+    fragment.set(EMBEDDED_THEME_QUERY_KEY, theme)
+    if (lang) fragment.set(EMBEDDED_LANG_QUERY_KEY, lang)
+    fragment.set(EMBEDDED_UI_MODE_QUERY_KEY, EMBEDDED_UI_MODE_VALUE)
+    if (typeof window !== 'undefined') {
+      fragment.set(EMBEDDED_SRC_HOST_QUERY_KEY, window.location.origin)
+      fragment.set(EMBEDDED_SRC_QUERY_KEY, window.location.href)
+    }
+    url.hash = fragment.toString()
+    return url.toString()
+  } catch {
+    return baseUrl
+  }
+}
+
 export function detectTheme(): 'light' | 'dark' {
   if (typeof document === 'undefined') return 'light'
   return document.documentElement.classList.contains('dark') ? 'dark' : 'light'

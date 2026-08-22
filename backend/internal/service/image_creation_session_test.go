@@ -62,7 +62,7 @@ func (s imageCreationUserReaderStub) GetByID(context.Context, int64) (*User, err
 
 func TestImageCreationSessionTicketIsSingleUseAndScopeBound(t *testing.T) {
 	store := &imageCreationSessionStoreStub{}
-	svc := NewImageCreationSessionService(store, imageCreationUserReaderStub{user: &User{
+	svc := newImageCreationSessionService(store, imageCreationUserReaderStub{user: &User{
 		ID: 9, Role: RoleUser, Status: StatusActive, TokenVersion: 7, TokenVersionResolved: true,
 	}})
 
@@ -84,7 +84,7 @@ func TestImageCreationSessionTicketIsSingleUseAndScopeBound(t *testing.T) {
 }
 
 func TestImageCreationSessionFailsClosedWhenStoreIsUnavailable(t *testing.T) {
-	svc := NewImageCreationSessionService(&imageCreationSessionStoreStub{storeErr: errors.New("redis unavailable")}, imageCreationUserReaderStub{user: &User{
+	svc := newImageCreationSessionService(&imageCreationSessionStoreStub{storeErr: errors.New("redis unavailable")}, imageCreationUserReaderStub{user: &User{
 		ID: 9, Role: RoleUser, Status: StatusActive, TokenVersion: 7, TokenVersionResolved: true,
 	}})
 

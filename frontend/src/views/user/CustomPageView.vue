@@ -95,7 +95,18 @@
 
         <!-- Iframe embed mode -->
         <div v-else class="custom-embed-shell">
+          <button
+            v-if="isImageCreationMode"
+            type="button"
+            class="btn btn-secondary btn-sm custom-open-fab"
+            :disabled="imageCreationLoading"
+            @click="openImageCreationInNewTab"
+          >
+            <Icon name="externalLink" size="sm" class="mr-1.5" :stroke-width="2" />
+            {{ t('customPage.openInNewTab') }}
+          </button>
           <a
+            v-else
             :href="embeddedUrl"
             target="_blank"
             rel="noopener noreferrer"
@@ -104,7 +115,14 @@
             <Icon name="externalLink" size="sm" class="mr-1.5" :stroke-width="2" />
             {{ t('customPage.openInNewTab') }}
           </a>
+          <div v-if="isImageCreationMode && imageCreationError" class="absolute inset-0 z-[5] flex items-center justify-center bg-white/95 p-6 text-center dark:bg-dark-900/95">
+            <div class="max-w-sm">
+              <p class="text-sm text-red-600 dark:text-red-400">{{ imageCreationError }}</p>
+              <button type="button" class="btn btn-secondary btn-sm mt-4" @click="refreshImageCreationUrl">重试</button>
+            </div>
+          </div>
           <iframe
+            v-if="embeddedUrl"
             :src="embeddedUrl"
             class="custom-embed-frame"
             allowfullscreen
@@ -124,8 +142,14 @@ import { useAuthStore } from '@/stores/auth'
 import { useAdminSettingsStore } from '@/stores/adminSettings'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { issueImageCreationTicket } from '@/api/imageCreation'
 import { buildApiUrl } from '@/api/client'
-import { buildEmbeddedUrl, detectTheme } from '@/utils/embedded-url'
+import {
+  buildEmbeddedUrl,
+  buildImageCreationEmbeddedUrl,
+  detectTheme,
+  isImageCreationEmbedUrl,
+} from '@/utils/embedded-url'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
@@ -148,6 +172,10 @@ const markdownContainer = ref<HTMLElement | null>(null)
 const tocItems = ref<TocItem[]>([])
 const tocVisible = ref(typeof window !== 'undefined' ? window.innerWidth > 768 : true)
 const activeHeadingId = ref('')
+const imageCreationUrl = ref('')
+const imageCreationError = ref('')
+const imageCreationLoading = ref(false)
+let imageCreationRequestId = 0
 let themeObserver: MutationObserver | null = null
 
 const menuItemId = computed(() => route.params.id as string)
@@ -173,8 +201,14 @@ const markdownSlug = computed(() => {
 
 const isMarkdownMode = computed(() => !!markdownSlug.value)
 
+const isImageCreationMode = computed(() => {
+  if (!menuItem.value || isMarkdownMode.value) return false
+  return isImageCreationEmbedUrl(menuItem.value.url)
+})
+
 const embeddedUrl = computed(() => {
   if (!menuItem.value || isMarkdownMode.value) return ''
+  if (isImageCreationMode.value) return imageCreationUrl.value
   return buildEmbeddedUrl(
     menuItem.value.url,
     authStore.user?.id,
@@ -183,6 +217,47 @@ const embeddedUrl = computed(() => {
     locale.value,
   )
 })
+
+async function refreshImageCreationUrl() {
+  const item = menuItem.value
+  if (!item || !isImageCreationMode.value) {
+    imageCreationUrl.value = ''
+    imageCreationError.value = ''
+    return
+  }
+  const requestId = ++imageCreationRequestId
+  imageCreationLoading.value = true
+  imageCreationError.value = ''
+  try {
+    const ticket = await issueImageCreationTicket(authStore.isAdmin)
+    if (requestId !== imageCreationRequestId) return
+    imageCreationUrl.value = buildImageCreationEmbeddedUrl(item.url, ticket, pageTheme.value, locale.value)
+  } catch (error) {
+    if (requestId !== imageCreationRequestId) return
+    imageCreationUrl.value = ''
+    imageCreationError.value = error instanceof Error ? error.message : '图像创作会话加载失败，请重试。'
+  } finally {
+    if (requestId === imageCreationRequestId) imageCreationLoading.value = false
+  }
+}
+
+async function openImageCreationInNewTab() {
+  const item = menuItem.value
+  if (!item) return
+  const popup = window.open('about:blank', '_blank')
+  if (!popup) {
+    imageCreationError.value = '浏览器阻止了新窗口，请允许弹出窗口后重试。'
+    return
+  }
+  popup.opener = null
+  try {
+    const ticket = await issueImageCreationTicket(authStore.isAdmin)
+    popup.location.replace(buildImageCreationEmbeddedUrl(item.url, ticket, pageTheme.value, locale.value))
+  } catch (error) {
+    popup.close()
+    imageCreationError.value = error instanceof Error ? error.message : '新窗口打开失败，请重试。'
+  }
+}
 
 const isValidUrl = computed(() => {
   if (isMarkdownMode.value) return false
@@ -342,6 +417,12 @@ watch(markdownSlug, (slug) => {
     tocItems.value = []
   }
 }, { immediate: true })
+
+watch(
+  [() => menuItem.value?.url, isImageCreationMode, pageTheme, locale, () => authStore.isAdmin],
+  () => refreshImageCreationUrl(),
+  { immediate: true },
+)
 
 onMounted(async () => {
   pageTheme.value = detectTheme()
