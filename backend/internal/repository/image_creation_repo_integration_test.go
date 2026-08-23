@@ -64,6 +64,14 @@ func TestImageCreationRepositoryLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, template.PublishedVersion)
 
+	byCategory, _, err := svc.ListTemplates(ctx, user.ID, params, service.ImageCreationTemplateListFilters{Category: "portrait"}, false)
+	require.NoError(t, err)
+	require.Len(t, byCategory, 1)
+
+	byTag, _, err := svc.ListTemplates(ctx, user.ID, params, service.ImageCreationTemplateListFilters{Tag: "studio"}, false)
+	require.NoError(t, err)
+	require.Len(t, byTag, 1)
+
 	require.NoError(t, svc.SetFavorite(ctx, user.ID, template.ID, true))
 	favorites, _, err := svc.ListTemplates(ctx, user.ID, params, service.ImageCreationTemplateListFilters{Favorite: true}, false)
 	require.NoError(t, err)

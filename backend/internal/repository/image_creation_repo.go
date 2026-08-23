@@ -11,6 +11,7 @@ import (
 	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqljson"
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/imagecreationasset"
 	"github.com/Wei-Shaw/sub2api/ent/imagecreationtemplate"
@@ -143,21 +144,25 @@ func (r *imageCreationRepository) ListTemplates(ctx context.Context, userID int6
 		q.Where(imagecreationtemplate.StateEQ(service.ImageCreationTemplateStatePublished))
 	}
 	if filters.Query != "" {
-		pattern := "%" + escapeImageCreationLike(filters.Query) + "%"
 		field := "published_data"
 		if admin {
 			field = "draft_data"
 		}
 		q.Where(func(s *entsql.Selector) {
-			s.Where(entsql.ExprP("("+field+"->>'title' ILIKE ? ESCAPE '\\\\' OR "+field+"->>'summary' ILIKE ? ESCAPE '\\\\')", pattern, pattern))
+			s.Where(entsql.Or(
+				sqljson.StringContains(field, filters.Query, sqljson.Path("title")),
+				sqljson.StringContains(field, filters.Query, sqljson.Path("summary")),
+			))
 		})
 	}
 	if filters.Category != "" {
-		q.Where(func(s *entsql.Selector) { s.Where(entsql.ExprP("published_data->>'category' = ?", filters.Category)) })
+		q.Where(func(s *entsql.Selector) {
+			s.Where(sqljson.ValueEQ(imagecreationtemplate.FieldPublishedData, filters.Category, sqljson.Path("category")))
+		})
 	}
 	if filters.Tag != "" {
 		q.Where(func(s *entsql.Selector) {
-			s.Where(entsql.ExprP("EXISTS (SELECT 1 FROM jsonb_array_elements_text(published_data->'tags') AS tag(value) WHERE tag.value = ?)", filters.Tag))
+			s.Where(sqljson.ValueContains(imagecreationtemplate.FieldPublishedData, []string{filters.Tag}, sqljson.Path("tags")))
 		})
 	}
 	if filters.Home {
@@ -575,8 +580,4 @@ func imageCreationTemplateEntitiesToService(entities []*dbent.ImageCreationTempl
 		items = append(items, *imageCreationTemplateEntityToService(entity))
 	}
 	return items
-}
-
-func escapeImageCreationLike(value string) string {
-	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(value)
 }

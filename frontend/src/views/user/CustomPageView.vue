@@ -126,6 +126,7 @@
           </div>
           <iframe
             v-if="embeddedUrl"
+            :key="imageCreationFrameKey"
             :src="embeddedUrl"
             class="custom-embed-frame"
             allowfullscreen
@@ -181,6 +182,7 @@ const activeHeadingId = ref('')
 const imageCreationUrl = ref('')
 const imageCreationError = ref('')
 const imageCreationLoading = ref(false)
+const imageCreationFrameKey = ref(0)
 let imageCreationRequestId = 0
 let themeObserver: MutationObserver | null = null
 
@@ -236,6 +238,7 @@ async function refreshImageCreationUrl() {
     const ticket = await issueImageCreationTicket(props.surface === 'admin')
     if (requestId !== imageCreationRequestId) return
     imageCreationUrl.value = buildImageCreationEmbeddedUrl(item.url, ticket, pageTheme.value, locale.value)
+    imageCreationFrameKey.value += 1
   } catch (error) {
     if (requestId !== imageCreationRequestId) return
     imageCreationUrl.value = ''
@@ -423,7 +426,7 @@ watch(markdownSlug, (slug) => {
 }, { immediate: true })
 
 watch(
-  [() => menuItem.value?.url, isImageCreationMode, pageTheme, locale, () => props.surface],
+  [menuItemId, () => menuItem.value?.url, isImageCreationMode, pageTheme, locale, () => props.surface],
   () => refreshImageCreationUrl(),
   { immediate: true },
 )
