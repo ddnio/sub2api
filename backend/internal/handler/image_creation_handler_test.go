@@ -61,6 +61,7 @@ func TestImageCreationUserListDTODoesNotExposePrompt(t *testing.T) {
 			SchemaVersion: 1,
 			Title:         "光影人像",
 			Prompt:        "private prompt",
+			CoverFit:      "contain",
 			Defaults:      domain.ImageCreationTemplateDefaults{Size: "1024x1024", Quality: "high", OutputFormat: "png"},
 			InputMode:     "text",
 		},
@@ -70,6 +71,7 @@ func TestImageCreationUserListDTODoesNotExposePrompt(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, strings.Contains(string(data), "prompt"))
 	require.False(t, strings.Contains(string(data), "draft"))
+	require.Contains(t, string(data), `"cover_fit":"contain"`)
 }
 
 func TestImageCreationApplicationDTOUsesFrontendFieldNames(t *testing.T) {

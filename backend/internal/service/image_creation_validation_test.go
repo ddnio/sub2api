@@ -29,6 +29,9 @@ func validImageCreationDocument() domain.ImageCreationTemplateDocument {
 
 func TestValidateImageCreationTemplateDocument(t *testing.T) {
 	require.NoError(t, ValidateImageCreationTemplateDocument(validImageCreationDocument()))
+	doc := validImageCreationDocument()
+	doc.CoverFit = "contain"
+	require.NoError(t, ValidateImageCreationTemplateDocument(doc))
 
 	tests := []struct {
 		name   string
@@ -41,6 +44,7 @@ func TestValidateImageCreationTemplateDocument(t *testing.T) {
 		{"duplicate tags", func(doc *domain.ImageCreationTemplateDocument) { doc.Tags = []string{"人像", "人像"} }},
 		{"invalid category", func(doc *domain.ImageCreationTemplateDocument) { doc.Category = "Portrait Space" }},
 		{"invalid input mode", func(doc *domain.ImageCreationTemplateDocument) { doc.InputMode = "image-only" }},
+		{"invalid cover fit", func(doc *domain.ImageCreationTemplateDocument) { doc.CoverFit = "stretch" }},
 		{"invalid size", func(doc *domain.ImageCreationTemplateDocument) { doc.Defaults.Size = "2048x2048" }},
 		{"invalid quality", func(doc *domain.ImageCreationTemplateDocument) { doc.Defaults.Quality = "ultra" }},
 		{"invalid format", func(doc *domain.ImageCreationTemplateDocument) { doc.Defaults.OutputFormat = "gif" }},
