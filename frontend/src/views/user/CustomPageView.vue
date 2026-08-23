@@ -1,5 +1,18 @@
 <template>
   <AppLayout>
+    <template v-if="isImageCreationMode" #header-action>
+      <button
+        type="button"
+        class="btn-ghost btn-icon"
+        :disabled="imageCreationLoading"
+        :title="t('customPage.openInNewTab')"
+        :aria-label="t('customPage.openInNewTab')"
+        @click="openImageCreationInNewTab"
+      >
+        <Icon name="externalLink" size="sm" :stroke-width="2" />
+      </button>
+    </template>
+
     <div class="custom-page-layout">
       <div class="card flex-1 min-h-0 overflow-hidden">
         <div v-if="loading" class="flex h-full items-center justify-center py-12">
@@ -95,19 +108,8 @@
 
         <!-- Iframe embed mode -->
         <div v-else class="custom-embed-shell" :class="{ 'custom-image-creation-shell': isImageCreationMode }">
-          <div v-if="isImageCreationMode" class="custom-embed-toolbar">
-            <button
-              type="button"
-              class="btn btn-secondary btn-sm"
-              :disabled="imageCreationLoading"
-              @click="openImageCreationInNewTab"
-            >
-              <Icon name="externalLink" size="sm" class="mr-1.5" :stroke-width="2" />
-              {{ t('customPage.openInNewTab') }}
-            </button>
-          </div>
           <a
-            v-else
+            v-if="!isImageCreationMode"
             :href="embeddedUrl"
             target="_blank"
             rel="noopener noreferrer"
@@ -528,10 +530,6 @@ onUnmounted(() => {
 
 .custom-image-creation-shell {
   @apply flex flex-col;
-}
-
-.custom-embed-toolbar {
-  @apply flex shrink-0 justify-end border-b border-gray-200 bg-white px-3 py-2 dark:border-dark-700 dark:bg-dark-900;
 }
 
 .custom-open-fab {

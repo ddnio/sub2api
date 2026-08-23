@@ -19,6 +19,8 @@
             {{ pageDescription }}
           </p>
         </div>
+
+        <slot name="title-action" />
       </div>
 
       <!-- Right: Announcements + Docs + Language + Subscriptions + Balance + User Dropdown -->
