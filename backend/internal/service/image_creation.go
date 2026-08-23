@@ -177,7 +177,7 @@ func (s *ImageCreationService) GetHomeFeatured(ctx context.Context) (*ImageCreat
 }
 
 func (s *ImageCreationService) ReplaceHomeFeatured(ctx context.Context, etag string, templateIDs []int64, actorID int64) (*ImageCreationHomeFeatured, error) {
-	if strings.TrimSpace(etag) == "" || actorID <= 0 || len(templateIDs) > 6 {
+	if strings.TrimSpace(etag) == "" || actorID <= 0 || len(templateIDs) > 4 {
 		return nil, invalidImageCreationInput("home featured input is invalid")
 	}
 	seen := make(map[int64]bool, len(templateIDs))
