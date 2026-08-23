@@ -313,7 +313,7 @@ const displayName = computed(() => {
 
 const pageTitle = computed(() => {
   // For custom pages, use the menu item's label instead of generic "自定义页面"
-  if (route.name === 'CustomPage') {
+  if (route.name === 'CustomPage' || route.name === 'AdminCustomPage') {
     const id = route.params.id as string
     const publicItems = appStore.cachedPublicSettings?.custom_menu_items ?? []
     const menuItem = publicItems.find((item) => item.id === id)

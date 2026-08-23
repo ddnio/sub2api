@@ -29,7 +29,7 @@ export function resolveRouteDocumentTitle(
   customMenuItems: CustomMenuItem[] = [],
 ): string {
   const id = typeof route.params.id === 'string' ? route.params.id : ''
-  const menuItem = route.name === 'CustomPage' && id
+  const menuItem = (route.name === 'CustomPage' || route.name === 'AdminCustomPage') && id
     ? customMenuItems.find((item) => item.id === id)
     : undefined
   const menuTitle = menuItem?.label.trim()

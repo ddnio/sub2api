@@ -427,6 +427,7 @@ const routes: RouteRecordRaw[] = [
     path: '/custom/:id',
     name: 'CustomPage',
     component: () => import('@/views/user/CustomPageView.vue'),
+    props: { surface: 'user' },
     meta: {
       requiresAuth: true,
       requiresAdmin: false,
@@ -439,6 +440,18 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/admin',
     redirect: '/admin/dashboard'
+  },
+  {
+    path: '/admin/custom/:id',
+    name: 'AdminCustomPage',
+    component: () => import('@/views/user/CustomPageView.vue'),
+    props: { surface: 'admin' },
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Custom Page',
+      titleKey: 'customPage.title',
+    }
   },
   {
     path: '/admin/dashboard',

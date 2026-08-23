@@ -162,6 +162,9 @@ interface TocItem {
   level: number
 }
 
+const props = withDefaults(defineProps<{ surface?: 'user' | 'admin' }>(), {
+  surface: 'user',
+})
 const { t, locale } = useI18n()
 const route = useRoute()
 const appStore = useAppStore()
@@ -185,13 +188,11 @@ const menuItemId = computed(() => route.params.id as string)
 
 const menuItem = computed(() => {
   const id = menuItemId.value
-  const publicItems = appStore.cachedPublicSettings?.custom_menu_items ?? []
-  const found = publicItems.find((item) => item.id === id) ?? null
-  if (found) return found
-  if (authStore.isAdmin) {
-    return adminSettingsStore.customMenuItems.find((item) => item.id === id) ?? null
+  if (props.surface === 'admin') {
+    return adminSettingsStore.customMenuItems.find((item) => item.id === id && item.visibility === 'admin') ?? null
   }
-  return null
+  const publicItems = appStore.cachedPublicSettings?.custom_menu_items ?? []
+  return publicItems.find((item) => item.id === id && item.visibility === 'user') ?? null
 })
 
 const markdownSlug = computed(() => {
@@ -232,7 +233,7 @@ async function refreshImageCreationUrl() {
   imageCreationLoading.value = true
   imageCreationError.value = ''
   try {
-    const ticket = await issueImageCreationTicket(authStore.isAdmin)
+    const ticket = await issueImageCreationTicket(props.surface === 'admin')
     if (requestId !== imageCreationRequestId) return
     imageCreationUrl.value = buildImageCreationEmbeddedUrl(item.url, ticket, pageTheme.value, locale.value)
   } catch (error) {
@@ -254,7 +255,7 @@ async function openImageCreationInNewTab() {
   }
   popup.opener = null
   try {
-    const ticket = await issueImageCreationTicket(authStore.isAdmin)
+    const ticket = await issueImageCreationTicket(props.surface === 'admin')
     popup.location.replace(buildImageCreationEmbeddedUrl(item.url, ticket, pageTheme.value, locale.value))
   } catch (error) {
     popup.close()
@@ -422,7 +423,7 @@ watch(markdownSlug, (slug) => {
 }, { immediate: true })
 
 watch(
-  [() => menuItem.value?.url, isImageCreationMode, pageTheme, locale, () => authStore.isAdmin],
+  [() => menuItem.value?.url, isImageCreationMode, pageTheme, locale, () => props.surface],
   () => refreshImageCreationUrl(),
   { immediate: true },
 )
