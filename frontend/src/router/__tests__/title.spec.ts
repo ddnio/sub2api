@@ -46,4 +46,19 @@ describe('resolveRouteDocumentTitle', () => {
       }
     ])).toBe('账号调度器 - EzouAPI')
   })
+
+  it('管理员自定义页面也使用管理员菜单名称作为标题', () => {
+    expect(resolveRouteDocumentTitle({
+      name: 'AdminCustomPage',
+      params: { id: 'image-creation-admin' },
+      meta: { title: 'Custom Page' }
+    }, 'EzouAPI', [{
+      id: 'image-creation-admin',
+      label: '图像模板',
+      icon_svg: '',
+      url: 'https://example.com',
+      visibility: 'admin',
+      sort_order: 0
+    }])).toBe('图像模板 - EzouAPI')
+  })
 })
