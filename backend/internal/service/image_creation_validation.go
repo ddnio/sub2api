@@ -69,6 +69,9 @@ func ValidateImageCreationTemplateDocument(doc domain.ImageCreationTemplateDocum
 	if utf8.RuneCountInString(doc.CoverAlt) > 200 {
 		return invalidImageCreationInput("cover_alt must not exceed 200 characters")
 	}
+	if doc.CoverFit != "" && doc.CoverFit != "cover" && doc.CoverFit != "contain" {
+		return invalidImageCreationInput("cover_fit is invalid")
+	}
 	if doc.Defaults.Size != "1024x1024" && doc.Defaults.Size != "1536x1024" && doc.Defaults.Size != "1024x1536" {
 		return invalidImageCreationInput("defaults.size is invalid")
 	}

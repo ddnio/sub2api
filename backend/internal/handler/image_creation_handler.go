@@ -49,6 +49,7 @@ type imageCreationTemplateListDTO struct {
 	Category         string                               `json:"category"`
 	Tags             []string                             `json:"tags"`
 	CoverAssetID     *string                              `json:"cover_asset_id,omitempty"`
+	CoverFit         string                               `json:"cover_fit,omitempty"`
 	PublishedVersion int                                  `json:"published_version"`
 	Defaults         domain.ImageCreationTemplateDefaults `json:"defaults"`
 	InputMode        string                               `json:"input_mode"`
@@ -421,7 +422,7 @@ func imageCreationUserTemplateListDTO(template *service.ImageCreationTemplate) i
 	}
 	return imageCreationTemplateListDTO{
 		ID: template.ID, Title: doc.Title, Summary: doc.Summary, Category: doc.Category, Tags: doc.Tags,
-		CoverAssetID: template.PublishedCoverAssetID, PublishedVersion: template.PublishedVersion,
+		CoverAssetID: template.PublishedCoverAssetID, CoverFit: doc.CoverFit, PublishedVersion: template.PublishedVersion,
 		Defaults: doc.Defaults, InputMode: doc.InputMode, HomePosition: template.HomePosition, Favorited: template.FavoritedAt != nil,
 	}
 }

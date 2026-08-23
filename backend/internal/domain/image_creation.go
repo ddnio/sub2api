@@ -9,6 +9,7 @@ type ImageCreationTemplateDocument struct {
 	Prompt        string                                  `json:"prompt"`
 	InputMode     string                                  `json:"input_mode"`
 	CoverAlt      string                                  `json:"cover_alt"`
+	CoverFit      string                                  `json:"cover_fit,omitempty"`
 	Defaults      ImageCreationTemplateDefaults           `json:"defaults"`
 	Source        *ImageCreationTemplateSourceAttribution `json:"source,omitempty"`
 }
