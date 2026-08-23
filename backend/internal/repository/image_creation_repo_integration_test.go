@@ -9,6 +9,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"strings"
 	"testing"
 	"time"
 
@@ -71,6 +72,10 @@ func TestImageCreationRepositoryLifecycle(t *testing.T) {
 	byTag, _, err := svc.ListTemplates(ctx, user.ID, params, service.ImageCreationTemplateListFilters{Tag: "studio"}, false)
 	require.NoError(t, err)
 	require.Len(t, byTag, 1)
+
+	byQuery, _, err := svc.ListTemplates(ctx, user.ID, params, service.ImageCreationTemplateListFilters{Query: strings.ToUpper(title)}, false)
+	require.NoError(t, err)
+	require.Len(t, byQuery, 1)
 
 	require.NoError(t, svc.SetFavorite(ctx, user.ID, template.ID, true))
 	favorites, _, err := svc.ListTemplates(ctx, user.ID, params, service.ImageCreationTemplateListFilters{Favorite: true}, false)

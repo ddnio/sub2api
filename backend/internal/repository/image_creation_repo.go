@@ -144,14 +144,14 @@ func (r *imageCreationRepository) ListTemplates(ctx context.Context, userID int6
 		q.Where(imagecreationtemplate.StateEQ(service.ImageCreationTemplateStatePublished))
 	}
 	if filters.Query != "" {
-		field := "published_data"
+		field := imagecreationtemplate.FieldPublishedData
 		if admin {
-			field = "draft_data"
+			field = imagecreationtemplate.FieldDraftData
 		}
 		q.Where(func(s *entsql.Selector) {
 			s.Where(entsql.Or(
-				sqljson.StringContains(field, filters.Query, sqljson.Path("title")),
-				sqljson.StringContains(field, filters.Query, sqljson.Path("summary")),
+				imageCreationJSONContainsFold(field, "title", filters.Query),
+				imageCreationJSONContainsFold(field, "summary", filters.Query),
 			))
 		})
 	}
@@ -580,4 +580,11 @@ func imageCreationTemplateEntitiesToService(entities []*dbent.ImageCreationTempl
 		items = append(items, *imageCreationTemplateEntityToService(entity))
 	}
 	return items
+}
+
+func imageCreationJSONContainsFold(field string, path string, value string) *entsql.Predicate {
+	pattern := "%" + strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(strings.ToLower(value)) + "%"
+	return entsql.P(func(b *entsql.Builder) {
+		b.WriteString("LOWER(").Ident(field).WriteString("->>'").WriteString(path).WriteString("') LIKE ").Arg(pattern).WriteString(" ESCAPE ").Arg(`\`)
+	})
 }
