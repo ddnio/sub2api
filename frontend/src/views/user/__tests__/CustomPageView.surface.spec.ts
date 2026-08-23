@@ -24,4 +24,10 @@ describe('自定义页面 surface 边界', () => {
     expect(view).toContain("issueImageCreationTicket(props.surface === 'admin')")
     expect(view).not.toContain('issueImageCreationTicket(authStore.isAdmin)')
   })
+
+  it('在用户和管理菜单间切换时强制重建 iframe 会话', () => {
+    expect(view).toContain(':key="imageCreationFrameKey"')
+    expect(view).toContain('imageCreationFrameKey.value += 1')
+    expect(view).toContain('menuItemId')
+  })
 })
