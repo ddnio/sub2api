@@ -79,7 +79,11 @@ func TestImageCreationServiceRejectsInvalidHomeFeaturedSet(t *testing.T) {
 
 	_, err := svc.ReplaceHomeFeatured(context.Background(), "etag", []int64{1, 1}, 9)
 	require.Error(t, err)
-	_, err = svc.ReplaceHomeFeatured(context.Background(), "etag", []int64{1, 2, 3, 4, 5}, 9)
+	_, err = svc.ReplaceHomeFeatured(context.Background(), "etag", []int64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}, 9)
+	require.NoError(t, err)
+	require.Len(t, repo.homeIDs, 20)
+
+	_, err = svc.ReplaceHomeFeatured(context.Background(), "etag", []int64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21}, 9)
 	require.Error(t, err)
 
 	_, err = svc.ReplaceHomeFeatured(context.Background(), "etag", []int64{3, 7}, 9)
