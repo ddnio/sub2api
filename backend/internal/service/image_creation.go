@@ -91,6 +91,8 @@ type ImageCreationService struct {
 	repo ImageCreationRepository
 }
 
+const maxHomeFeaturedTemplates = 20
+
 func NewImageCreationService(repo ImageCreationRepository) *ImageCreationService {
 	return &ImageCreationService{repo: repo}
 }
@@ -177,7 +179,7 @@ func (s *ImageCreationService) GetHomeFeatured(ctx context.Context) (*ImageCreat
 }
 
 func (s *ImageCreationService) ReplaceHomeFeatured(ctx context.Context, etag string, templateIDs []int64, actorID int64) (*ImageCreationHomeFeatured, error) {
-	if strings.TrimSpace(etag) == "" || actorID <= 0 || len(templateIDs) > 4 {
+	if strings.TrimSpace(etag) == "" || actorID <= 0 || len(templateIDs) > maxHomeFeaturedTemplates {
 		return nil, invalidImageCreationInput("home featured input is invalid")
 	}
 	seen := make(map[int64]bool, len(templateIDs))
