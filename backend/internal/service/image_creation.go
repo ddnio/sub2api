@@ -179,7 +179,14 @@ func (s *ImageCreationService) GetHomeFeatured(ctx context.Context) (*ImageCreat
 }
 
 func (s *ImageCreationService) ReplaceHomeFeatured(ctx context.Context, etag string, templateIDs []int64, actorID int64) (*ImageCreationHomeFeatured, error) {
-	if strings.TrimSpace(etag) == "" || actorID <= 0 || len(templateIDs) > maxHomeFeaturedTemplates {
+	etag = strings.TrimSpace(etag)
+	for _, suffix := range []string{`-zstd"`, `-gzip"`, `-br"`} {
+		if strings.HasSuffix(etag, suffix) {
+			etag = strings.TrimSuffix(etag, suffix) + `"`
+			break
+		}
+	}
+	if etag == "" || actorID <= 0 || len(templateIDs) > maxHomeFeaturedTemplates {
 		return nil, invalidImageCreationInput("home featured input is invalid")
 	}
 	seen := make(map[int64]bool, len(templateIDs))

@@ -9,8 +9,9 @@ import (
 )
 
 type imageCreationRepositoryStub struct {
-	created *ImageCreationTemplate
-	homeIDs []int64
+	created  *ImageCreationTemplate
+	homeIDs  []int64
+	homeETag string
 }
 
 func (s *imageCreationRepositoryStub) StoreAsset(context.Context, *ImageCreationAsset) (*ImageCreationAsset, bool, error) {
@@ -45,7 +46,8 @@ func (s *imageCreationRepositoryStub) RestoreTemplate(context.Context, int64, in
 func (s *imageCreationRepositoryStub) GetHomeFeatured(context.Context) (*ImageCreationHomeFeatured, error) {
 	return nil, nil
 }
-func (s *imageCreationRepositoryStub) ReplaceHomeFeatured(_ context.Context, _ string, ids []int64, _ int64) (*ImageCreationHomeFeatured, error) {
+func (s *imageCreationRepositoryStub) ReplaceHomeFeatured(_ context.Context, etag string, ids []int64, _ int64) (*ImageCreationHomeFeatured, error) {
+	s.homeETag = etag
 	s.homeIDs = ids
 	return &ImageCreationHomeFeatured{TemplateIDs: ids}, nil
 }
@@ -89,4 +91,13 @@ func TestImageCreationServiceRejectsInvalidHomeFeaturedSet(t *testing.T) {
 	_, err = svc.ReplaceHomeFeatured(context.Background(), "etag", []int64{3, 7}, 9)
 	require.NoError(t, err)
 	require.Equal(t, []int64{3, 7}, repo.homeIDs)
+}
+
+func TestImageCreationServiceNormalizesCompressedHomeFeaturedETag(t *testing.T) {
+	repo := &imageCreationRepositoryStub{}
+	svc := NewImageCreationService(repo)
+
+	_, err := svc.ReplaceHomeFeatured(context.Background(), `"version-zstd"`, []int64{3, 7}, 9)
+	require.NoError(t, err)
+	require.Equal(t, `"version"`, repo.homeETag)
 }
