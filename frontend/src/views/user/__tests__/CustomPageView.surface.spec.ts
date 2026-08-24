@@ -21,7 +21,7 @@ describe('自定义页面 surface 边界', () => {
 
   it('票据 scope 由入口决定，不由当前账号角色决定', () => {
     expect(view).toContain("surface?: 'user' | 'admin'")
-    expect(view).toContain("issueImageCreationTicket(props.surface === 'admin')")
+    expect(view).toContain("issueImageCreationTicket(pageSurface.value === 'admin')")
     expect(view).not.toContain('issueImageCreationTicket(authStore.isAdmin)')
   })
 
@@ -29,5 +29,7 @@ describe('自定义页面 surface 边界', () => {
     expect(view).toContain(':key="imageCreationFrameKey"')
     expect(view).toContain('imageCreationFrameKey.value += 1')
     expect(view).toContain('menuItemId')
+    expect(view).toContain("route.name === 'AdminCustomPage'")
+    expect(view).toContain("issueImageCreationTicket(pageSurface.value === 'admin')")
   })
 })

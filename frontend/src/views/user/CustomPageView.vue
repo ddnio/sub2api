@@ -187,10 +187,11 @@ let imageCreationRequestId = 0
 let themeObserver: MutationObserver | null = null
 
 const menuItemId = computed(() => route.params.id as string)
+const pageSurface = computed(() => route.name === 'AdminCustomPage' ? 'admin' : props.surface)
 
 const menuItem = computed(() => {
   const id = menuItemId.value
-  if (props.surface === 'admin') {
+  if (pageSurface.value === 'admin') {
     return adminSettingsStore.customMenuItems.find((item) => item.id === id && item.visibility === 'admin') ?? null
   }
   const publicItems = appStore.cachedPublicSettings?.custom_menu_items ?? []
@@ -235,7 +236,7 @@ async function refreshImageCreationUrl() {
   imageCreationLoading.value = true
   imageCreationError.value = ''
   try {
-    const ticket = await issueImageCreationTicket(props.surface === 'admin')
+    const ticket = await issueImageCreationTicket(pageSurface.value === 'admin')
     if (requestId !== imageCreationRequestId) return
     imageCreationUrl.value = buildImageCreationEmbeddedUrl(item.url, ticket, pageTheme.value, locale.value)
     imageCreationFrameKey.value += 1
@@ -258,7 +259,7 @@ async function openImageCreationInNewTab() {
   }
   popup.opener = null
   try {
-    const ticket = await issueImageCreationTicket(props.surface === 'admin')
+    const ticket = await issueImageCreationTicket(pageSurface.value === 'admin')
     popup.location.replace(buildImageCreationEmbeddedUrl(item.url, ticket, pageTheme.value, locale.value))
   } catch (error) {
     popup.close()
@@ -426,7 +427,7 @@ watch(markdownSlug, (slug) => {
 }, { immediate: true })
 
 watch(
-  [menuItemId, () => menuItem.value?.url, isImageCreationMode, pageTheme, locale, () => props.surface],
+  [menuItemId, () => menuItem.value?.url, isImageCreationMode, pageTheme, locale, pageSurface],
   () => refreshImageCreationUrl(),
   { immediate: true },
 )
