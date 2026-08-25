@@ -31,6 +31,13 @@ type imageCreationAPIKey struct {
 	Key  string `json:"key"`
 }
 
+func isEligibleImageCreationAPIKey(key *service.APIKey) bool {
+	return key.IsActive() &&
+		!key.IsExpired() &&
+		!key.IsQuotaExhausted() &&
+		service.GroupAllowsImageGeneration(key.Group)
+}
+
 func NewImageCreationSessionHandler(sessions *service.ImageCreationSessionService, apiKeys *service.APIKeyService) *ImageCreationSessionHandler {
 	return &ImageCreationSessionHandler{sessions: sessions, apiKeys: apiKeys}
 }
@@ -82,7 +89,7 @@ func (h *ImageCreationSessionHandler) Exchange(c *gin.Context) {
 	}
 	eligible := make([]imageCreationAPIKey, 0, len(keys))
 	for i := range keys {
-		if !keys[i].IsActive() || keys[i].IsExpired() || keys[i].IsQuotaExhausted() {
+		if !isEligibleImageCreationAPIKey(&keys[i]) {
 			continue
 		}
 		eligible = append(eligible, imageCreationAPIKey{ID: keys[i].ID, Name: keys[i].Name, Key: keys[i].Key})

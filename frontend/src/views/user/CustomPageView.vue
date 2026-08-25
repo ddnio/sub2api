@@ -89,6 +89,21 @@
           ></div>
         </div>
 
+        <div v-else-if="isImageCreationMode && imageCreationLoading" class="flex h-full items-center justify-center p-10 text-center">
+          <div class="max-w-md">
+            <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
+            <h3 class="mt-4 text-lg font-semibold text-gray-900 dark:text-white">正在连接图像创作</h3>
+            <p class="mt-2 text-sm text-gray-500 dark:text-dark-400">正在建立安全会话，请稍候。</p>
+          </div>
+        </div>
+
+        <div v-else-if="isImageCreationMode && imageCreationError" class="flex h-full items-center justify-center p-10 text-center">
+          <div class="max-w-md">
+            <p class="text-sm text-red-600 dark:text-red-400">{{ imageCreationError }}</p>
+            <button type="button" class="btn btn-secondary btn-sm mt-4" @click="refreshImageCreationUrl">重试</button>
+          </div>
+        </div>
+
         <!-- URL not configured -->
         <div v-else-if="!isValidUrl" class="flex h-full items-center justify-center p-10 text-center">
           <div class="max-w-md">
@@ -118,12 +133,6 @@
             <Icon name="externalLink" size="sm" class="mr-1.5" :stroke-width="2" />
             {{ t('customPage.openInNewTab') }}
           </a>
-          <div v-if="isImageCreationMode && imageCreationError" class="absolute inset-0 z-[5] flex items-center justify-center bg-white/95 p-6 text-center dark:bg-dark-900/95">
-            <div class="max-w-sm">
-              <p class="text-sm text-red-600 dark:text-red-400">{{ imageCreationError }}</p>
-              <button type="button" class="btn btn-secondary btn-sm mt-4" @click="refreshImageCreationUrl">重试</button>
-            </div>
-          </div>
           <iframe
             v-if="embeddedUrl"
             :key="imageCreationFrameKey"
