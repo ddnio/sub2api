@@ -89,6 +89,24 @@ func (k *APIKey) IsQuotaExhausted() bool {
 	return k.QuotaUsed >= k.Quota
 }
 
+// IsImageCreationAPIKeyEligible 保持图像创作 Key 列表与实际分组鉴权语义一致。
+func IsImageCreationAPIKeyEligible(key *APIKey) bool {
+	if key == nil || !key.IsActive() || key.IsExpired() || key.IsQuotaExhausted() {
+		return false
+	}
+	if key.GroupID == nil {
+		return GroupAllowsImageGeneration(key.Group)
+	}
+	group := key.Group
+	if group == nil || !group.IsActive() || !GroupAllowsImageGeneration(group) {
+		return false
+	}
+	if group.IsSubscriptionType() || !group.IsExclusive {
+		return true
+	}
+	return key.User != nil && key.User.CanBindGroup(group.ID, true)
+}
+
 // GetQuotaRemaining returns remaining quota (-1 for unlimited)
 func (k *APIKey) GetQuotaRemaining() float64 {
 	if k.Quota <= 0 {

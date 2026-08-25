@@ -32,10 +32,7 @@ type imageCreationAPIKey struct {
 }
 
 func isEligibleImageCreationAPIKey(key *service.APIKey) bool {
-	return key.IsActive() &&
-		!key.IsExpired() &&
-		!key.IsQuotaExhausted() &&
-		service.GroupAllowsImageGeneration(key.Group)
+	return service.IsImageCreationAPIKeyEligible(key)
 }
 
 func NewImageCreationSessionHandler(sessions *service.ImageCreationSessionService, apiKeys *service.APIKeyService) *ImageCreationSessionHandler {
