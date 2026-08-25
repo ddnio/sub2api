@@ -4,7 +4,8 @@
       <button
         type="button"
         class="btn-ghost btn-icon"
-        :disabled="imageCreationLoading"
+        data-testid="image-creation-open-new-window"
+        :disabled="imageCreationWindowLoading"
         :title="t('customPage.openInNewTab')"
         :aria-label="t('customPage.openInNewTab')"
         @click="openImageCreationInNewTab"
@@ -14,7 +15,34 @@
     </template>
 
     <div class="custom-page-layout">
-      <div class="card flex-1 min-h-0 overflow-hidden">
+      <div class="card relative flex-1 min-h-0 overflow-hidden">
+        <div
+          v-if="isImageCreationMode && imageCreationWindowError"
+          data-testid="image-creation-window-error"
+          role="alert"
+          class="absolute right-4 top-4 z-20 flex max-w-md items-center gap-3 rounded-xl border border-red-200 bg-white/95 px-4 py-3 text-sm text-red-700 shadow-lg backdrop-blur dark:border-red-900/60 dark:bg-dark-800/95 dark:text-red-300"
+        >
+          <span class="min-w-0 flex-1">{{ imageCreationWindowError }}</span>
+          <button
+            type="button"
+            data-testid="image-creation-retry-new-window"
+            class="shrink-0 font-medium text-primary-600 hover:text-primary-700 disabled:opacity-50 dark:text-primary-400 dark:hover:text-primary-300"
+            :disabled="imageCreationWindowLoading"
+            @click="openImageCreationInNewTab"
+          >
+            {{ t('customPage.imageCreationRetryOpen') }}
+          </button>
+          <button
+            type="button"
+            class="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-dark-200"
+            :title="t('common.close')"
+            :aria-label="t('common.close')"
+            @click="imageCreationWindowError = ''"
+          >
+            <Icon name="x" size="xs" :stroke-width="2" />
+          </button>
+        </div>
+
         <div v-if="loading" class="flex h-full items-center justify-center py-12">
           <div
             class="h-8 w-8 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"
@@ -92,15 +120,15 @@
         <div v-else-if="isImageCreationMode && imageCreationLoading" class="flex h-full items-center justify-center p-10 text-center">
           <div class="max-w-md">
             <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
-            <h3 class="mt-4 text-lg font-semibold text-gray-900 dark:text-white">正在连接图像创作</h3>
-            <p class="mt-2 text-sm text-gray-500 dark:text-dark-400">正在建立安全会话，请稍候。</p>
+            <h3 class="mt-4 text-lg font-semibold text-gray-900 dark:text-white">{{ t('customPage.imageCreationConnectingTitle') }}</h3>
+            <p class="mt-2 text-sm text-gray-500 dark:text-dark-400">{{ t('customPage.imageCreationConnectingDesc') }}</p>
           </div>
         </div>
 
-        <div v-else-if="isImageCreationMode && imageCreationError" class="flex h-full items-center justify-center p-10 text-center">
+        <div v-else-if="isImageCreationMode && imageCreationError" data-testid="image-creation-session-error" class="flex h-full items-center justify-center p-10 text-center">
           <div class="max-w-md">
             <p class="text-sm text-red-600 dark:text-red-400">{{ imageCreationError }}</p>
-            <button type="button" class="btn btn-secondary btn-sm mt-4" @click="refreshImageCreationUrl">重试</button>
+            <button type="button" data-testid="image-creation-retry-session" class="btn btn-secondary btn-sm mt-4" @click="refreshImageCreationUrl">{{ t('customPage.imageCreationRetry') }}</button>
           </div>
         </div>
 
@@ -136,6 +164,7 @@
           <iframe
             v-if="embeddedUrl"
             :key="imageCreationFrameKey"
+            data-testid="image-creation-frame"
             :src="embeddedUrl"
             class="custom-embed-frame"
             allowfullscreen
@@ -191,6 +220,8 @@ const activeHeadingId = ref('')
 const imageCreationUrl = ref('')
 const imageCreationError = ref('')
 const imageCreationLoading = ref(false)
+const imageCreationWindowError = ref('')
+const imageCreationWindowLoading = ref(false)
 const imageCreationFrameKey = ref(0)
 let imageCreationRequestId = 0
 let themeObserver: MutationObserver | null = null
@@ -252,7 +283,7 @@ async function refreshImageCreationUrl() {
   } catch (error) {
     if (requestId !== imageCreationRequestId) return
     imageCreationUrl.value = ''
-    imageCreationError.value = error instanceof Error ? error.message : '图像创作会话加载失败，请重试。'
+    imageCreationError.value = error instanceof Error ? error.message : t('customPage.imageCreationSessionFailed')
   } finally {
     if (requestId === imageCreationRequestId) imageCreationLoading.value = false
   }
@@ -261,18 +292,22 @@ async function refreshImageCreationUrl() {
 async function openImageCreationInNewTab() {
   const item = menuItem.value
   if (!item) return
+  imageCreationWindowError.value = ''
   const popup = window.open('about:blank', '_blank')
   if (!popup) {
-    imageCreationError.value = '浏览器阻止了新窗口，请允许弹出窗口后重试。'
+    imageCreationWindowError.value = t('customPage.imageCreationPopupBlocked')
     return
   }
   popup.opener = null
+  imageCreationWindowLoading.value = true
   try {
     const ticket = await issueImageCreationTicket(pageSurface.value === 'admin')
     popup.location.replace(buildImageCreationEmbeddedUrl(item.url, ticket, pageTheme.value, locale.value))
   } catch (error) {
     popup.close()
-    imageCreationError.value = error instanceof Error ? error.message : '新窗口打开失败，请重试。'
+    imageCreationWindowError.value = error instanceof Error ? error.message : t('customPage.imageCreationOpenFailed')
+  } finally {
+    imageCreationWindowLoading.value = false
   }
 }
 
