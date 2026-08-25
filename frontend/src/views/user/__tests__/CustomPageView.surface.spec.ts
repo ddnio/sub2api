@@ -32,4 +32,15 @@ describe('自定义页面 surface 边界', () => {
     expect(view).toContain("route.name === 'AdminCustomPage'")
     expect(view).toContain("issueImageCreationTicket(pageSurface.value === 'admin')")
   })
+
+  it('建立图像创作会话时不会误报页面链接未配置', () => {
+    const loadingState = 'v-else-if="isImageCreationMode && imageCreationLoading"'
+    const errorState = 'v-else-if="isImageCreationMode && imageCreationError"'
+    const notConfiguredState = 'v-else-if="!isValidUrl"'
+
+    expect(view).toContain(loadingState)
+    expect(view).toContain(errorState)
+    expect(view.indexOf(loadingState)).toBeLessThan(view.indexOf(notConfiguredState))
+    expect(view.indexOf(errorState)).toBeLessThan(view.indexOf(notConfiguredState))
+  })
 })
