@@ -176,6 +176,16 @@ func (s *AuthService) Register(ctx context.Context, email, password string) (str
 
 // RegisterWithVerification 用户注册（支持邮件验证、优惠码、邀请码和邀请返利码），返回token和用户。
 func (s *AuthService) RegisterWithVerification(ctx context.Context, email, password, verifyCode, promoCode, invitationCode, affiliateCode string) (string, *User, error) {
+	return s.registerWithVerification(ctx, email, password, verifyCode, promoCode, invitationCode, affiliateCode, true)
+}
+
+// RegisterWithoutTokenWithVerification 复用完整注册规则，但不签发 Router token。
+func (s *AuthService) RegisterWithoutTokenWithVerification(ctx context.Context, email, password, verifyCode, promoCode, invitationCode, affiliateCode string) (*User, error) {
+	_, user, err := s.registerWithVerification(ctx, email, password, verifyCode, promoCode, invitationCode, affiliateCode, false)
+	return user, err
+}
+
+func (s *AuthService) registerWithVerification(ctx context.Context, email, password, verifyCode, promoCode, invitationCode, affiliateCode string, generateToken bool) (string, *User, error) {
 	// 检查是否开放注册（默认关闭：settingService 未配置时不允许注册）
 	if s.settingService == nil || !s.settingService.IsRegistrationEnabled(ctx) {
 		return "", nil, ErrRegDisabled
@@ -293,7 +303,11 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		}
 	}
 
-	// 生成token
+	if !generateToken {
+		return "", user, nil
+	}
+
+	// Router 注册入口保持原有行为：注册成功后生成 token。
 	token, err := s.GenerateToken(ctx, user)
 	if err != nil {
 		return "", nil, fmt.Errorf("generate token: %w", err)
