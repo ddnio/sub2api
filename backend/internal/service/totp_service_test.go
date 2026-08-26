@@ -76,3 +76,22 @@ func TestCreatePendingOAuthBindLoginSessionStoresBrowserBoundSession(t *testing.
 	require.Equal(t, "pending-token", session.PendingOAuthBind.PendingSessionToken)
 	require.Equal(t, "browser-key", session.PendingOAuthBind.BrowserSessionKey)
 }
+
+func TestCreateLoginSessionForAudienceSeparatesStudioChallenges(t *testing.T) {
+	cache := &totpLoginSessionCacheStub{}
+	svc := &TotpService{cache: cache}
+
+	tempToken, err := svc.CreateLoginSessionForAudience(
+		context.Background(),
+		42,
+		"user@example.com",
+		TotpLoginAudienceStudio,
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, tempToken)
+
+	session, err := svc.GetLoginSession(context.Background(), tempToken)
+	require.NoError(t, err)
+	require.NotNil(t, session)
+	require.Equal(t, TotpLoginAudienceStudio, session.Audience)
+}
