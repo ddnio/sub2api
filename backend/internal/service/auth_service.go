@@ -534,30 +534,31 @@ func (s *AuthService) IsEmailVerifyEnabled(ctx context.Context) bool {
 	return s.settingService.IsEmailVerifyEnabled(ctx)
 }
 
-// Login 用户登录，返回JWT token
-func (s *AuthService) Login(ctx context.Context, email, password string) (string, *User, error) {
-	// 查找用户
+// AuthenticatePassword 只验证账号密码与用户状态，不签发 Router token。
+func (s *AuthService) AuthenticatePassword(ctx context.Context, email, password string) (*User, error) {
 	user, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, ErrUserNotFound) {
-			return "", nil, ErrInvalidCredentials
+			return nil, ErrInvalidCredentials
 		}
-		// 记录数据库错误但不暴露给用户
 		logger.LegacyPrintf("service.auth", "[Auth] Database error during login: %v", err)
-		return "", nil, ErrServiceUnavailable
+		return nil, ErrServiceUnavailable
 	}
-
-	// 验证密码
 	if !s.CheckPassword(password, user.PasswordHash) {
-		return "", nil, ErrInvalidCredentials
+		return nil, ErrInvalidCredentials
 	}
-
-	// 检查用户状态
 	if !user.IsActive() {
-		return "", nil, ErrUserNotActive
+		return nil, ErrUserNotActive
 	}
+	return user, nil
+}
 
-	// 生成JWT token
+// Login 用户登录，返回JWT token
+func (s *AuthService) Login(ctx context.Context, email, password string) (string, *User, error) {
+	user, err := s.AuthenticatePassword(ctx, email, password)
+	if err != nil {
+		return "", nil, err
+	}
 	token, err := s.GenerateToken(ctx, user)
 	if err != nil {
 		return "", nil, fmt.Errorf("generate token: %w", err)
