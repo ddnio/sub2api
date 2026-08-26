@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -41,4 +42,44 @@ func TestLoadStudioAuthRejectsIncompleteSigningKeys(t *testing.T) {
 
 	_, err := Load()
 	require.ErrorContains(t, err, "studio_auth.current_secret")
+}
+
+func TestValidateStudioAuthRejectsUnsafeConfiguration(t *testing.T) {
+	tests := []struct {
+		name    string
+		mutate  func(*StudioAuthConfig)
+		wantErr string
+	}{
+		{name: "missing key id", mutate: func(c *StudioAuthConfig) { c.CurrentKeyID = "" }, wantErr: "current_key_id"},
+		{name: "short secret", mutate: func(c *StudioAuthConfig) { c.CurrentSecret = "short" }, wantErr: "current_secret"},
+		{name: "partial previous key", mutate: func(c *StudioAuthConfig) { c.PreviousKeyID = "previous" }, wantErr: "previous_key_id"},
+		{name: "reused key id", mutate: func(c *StudioAuthConfig) {
+			c.PreviousKeyID = c.CurrentKeyID
+			c.PreviousSecret = strings.Repeat("p", 32)
+		}, wantErr: "must differ"},
+		{name: "clock skew too small", mutate: func(c *StudioAuthConfig) { c.MaxClockSkewSeconds = 0 }, wantErr: "max_clock_skew_seconds"},
+		{name: "clock skew too large", mutate: func(c *StudioAuthConfig) { c.MaxClockSkewSeconds = 301 }, wantErr: "max_clock_skew_seconds"},
+		{name: "nonce ttl too short", mutate: func(c *StudioAuthConfig) { c.NonceTTLSeconds = 119 }, wantErr: "nonce_ttl_seconds"},
+		{name: "nonce ttl too long", mutate: func(c *StudioAuthConfig) { c.NonceTTLSeconds = 3601 }, wantErr: "nonce_ttl_seconds"},
+		{name: "body too small", mutate: func(c *StudioAuthConfig) { c.MaxBodyBytes = 1023 }, wantErr: "max_body_bytes"},
+		{name: "body too large", mutate: func(c *StudioAuthConfig) { c.MaxBodyBytes = 1<<20 + 1 }, wantErr: "max_body_bytes"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			resetViperWithJWTSecret(t)
+			cfg, err := Load()
+			require.NoError(t, err)
+			cfg.StudioAuth = StudioAuthConfig{
+				Enabled:             true,
+				CurrentKeyID:        "studio-current",
+				CurrentSecret:       strings.Repeat("c", 32),
+				MaxClockSkewSeconds: 60,
+				NonceTTLSeconds:     120,
+				MaxBodyBytes:        1 << 20,
+			}
+			test.mutate(&cfg.StudioAuth)
+			require.ErrorContains(t, cfg.Validate(), test.wantErr)
+		})
+	}
 }

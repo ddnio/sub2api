@@ -99,6 +99,18 @@ type Config struct {
 	Idempotency             IdempotencyConfig             `mapstructure:"idempotency"`
 	BatchImage              BatchImageConfig              `mapstructure:"batch_image"`
 	ImageStorage            ImageStorageConfig            `mapstructure:"image_storage"`
+	StudioAuth              StudioAuthConfig              `mapstructure:"studio_auth"`
+}
+
+type StudioAuthConfig struct {
+	Enabled             bool   `mapstructure:"enabled"`
+	CurrentKeyID        string `mapstructure:"current_key_id"`
+	CurrentSecret       string `mapstructure:"current_secret"`
+	PreviousKeyID       string `mapstructure:"previous_key_id"`
+	PreviousSecret      string `mapstructure:"previous_secret"`
+	MaxClockSkewSeconds int    `mapstructure:"max_clock_skew_seconds"`
+	NonceTTLSeconds     int    `mapstructure:"nonce_ttl_seconds"`
+	MaxBodyBytes        int64  `mapstructure:"max_body_bytes"`
 }
 
 type LogConfig struct {
@@ -1819,6 +1831,8 @@ func load(allowMissingJWTSecret bool) (*Config, error) {
 	}
 	cfg.Server.FrontendURL = strings.TrimSpace(cfg.Server.FrontendURL)
 	cfg.JWT.Secret = strings.TrimSpace(cfg.JWT.Secret)
+	cfg.StudioAuth.CurrentKeyID = strings.TrimSpace(cfg.StudioAuth.CurrentKeyID)
+	cfg.StudioAuth.PreviousKeyID = strings.TrimSpace(cfg.StudioAuth.PreviousKeyID)
 	cfg.LinuxDo.ClientID = strings.TrimSpace(cfg.LinuxDo.ClientID)
 	cfg.LinuxDo.ClientSecret = strings.TrimSpace(cfg.LinuxDo.ClientSecret)
 	cfg.LinuxDo.AuthorizeURL = strings.TrimSpace(cfg.LinuxDo.AuthorizeURL)
@@ -1965,6 +1979,14 @@ func configureConfigSource(setConfigFile, addConfigPath func(string)) {
 
 func setDefaults() {
 	viper.SetDefault("run_mode", RunModeStandard)
+	viper.SetDefault("studio_auth.enabled", false)
+	viper.SetDefault("studio_auth.current_key_id", "")
+	viper.SetDefault("studio_auth.current_secret", "")
+	viper.SetDefault("studio_auth.previous_key_id", "")
+	viper.SetDefault("studio_auth.previous_secret", "")
+	viper.SetDefault("studio_auth.max_clock_skew_seconds", 60)
+	viper.SetDefault("studio_auth.nonce_ttl_seconds", 120)
+	viper.SetDefault("studio_auth.max_body_bytes", int64(1<<20))
 
 	// Server
 	viper.SetDefault("server.host", "0.0.0.0")
@@ -2672,6 +2694,30 @@ func (c *Config) Validate() error {
 	// 选择 bytes 而不是 rune 计数，确保二进制/随机串的长度语义更接近“熵”而非“字符数”。
 	if len([]byte(jwtSecret)) < 32 {
 		return fmt.Errorf("jwt.secret must be at least 32 bytes")
+	}
+	if c.StudioAuth.Enabled {
+		if c.StudioAuth.CurrentKeyID == "" {
+			return fmt.Errorf("studio_auth.current_key_id is required when enabled")
+		}
+		if len(c.StudioAuth.CurrentSecret) < 32 {
+			return fmt.Errorf("studio_auth.current_secret must be at least 32 bytes when enabled")
+		}
+		previousKeyConfigured := c.StudioAuth.PreviousKeyID != "" || c.StudioAuth.PreviousSecret != ""
+		if previousKeyConfigured && (c.StudioAuth.PreviousKeyID == "" || len(c.StudioAuth.PreviousSecret) < 32) {
+			return fmt.Errorf("studio_auth.previous_key_id and previous_secret must both be configured, with a secret of at least 32 bytes")
+		}
+		if previousKeyConfigured && c.StudioAuth.PreviousKeyID == c.StudioAuth.CurrentKeyID {
+			return fmt.Errorf("studio_auth.previous_key_id must differ from current_key_id")
+		}
+		if c.StudioAuth.MaxClockSkewSeconds < 1 || c.StudioAuth.MaxClockSkewSeconds > 300 {
+			return fmt.Errorf("studio_auth.max_clock_skew_seconds must be between 1 and 300")
+		}
+		if c.StudioAuth.NonceTTLSeconds < c.StudioAuth.MaxClockSkewSeconds*2 || c.StudioAuth.NonceTTLSeconds > 3600 {
+			return fmt.Errorf("studio_auth.nonce_ttl_seconds must be at least twice max_clock_skew_seconds and at most 3600")
+		}
+		if c.StudioAuth.MaxBodyBytes < 1024 || c.StudioAuth.MaxBodyBytes > 1<<20 {
+			return fmt.Errorf("studio_auth.max_body_bytes must be between 1024 and 1048576")
+		}
 	}
 	switch c.Log.Level {
 	case "debug", "info", "warn", "error":
