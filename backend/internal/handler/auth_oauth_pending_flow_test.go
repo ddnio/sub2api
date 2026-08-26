@@ -2472,6 +2472,38 @@ func TestLogin2FACompletesPendingOAuthBindAndConsumesSession(t *testing.T) {
 	require.Empty(t, defaultSubAssigner.calls)
 }
 
+func TestLogin2FARejectsStudioAudienceBeforeVerification(t *testing.T) {
+	totpCache := &oauthPendingFlowTotpCacheStub{
+		loginSessions: map[string]*service.TotpLoginSession{
+			"studio-token": {
+				UserID:   42,
+				Email:    "studio@example.com",
+				Audience: service.TotpLoginAudienceStudio,
+			},
+		},
+	}
+	handler, _ := newOAuthPendingFlowTestHandlerWithDependencies(t, oauthPendingFlowTestHandlerOptions{
+		settingValues: map[string]string{
+			service.SettingKeyTotpEnabled: "true",
+		},
+		totpCache:     totpCache,
+		totpEncryptor: oauthPendingFlowTotpEncryptorStub{},
+	})
+
+	body := bytes.NewBufferString(`{"temp_token":"studio-token","totp_code":"123456"}`)
+	recorder := httptest.NewRecorder()
+	ginCtx, _ := gin.CreateTestContext(recorder)
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login/2fa", body)
+	request.Header.Set("Content-Type", "application/json")
+	ginCtx.Request = request
+
+	handler.Login2FA(ginCtx)
+
+	require.Equal(t, http.StatusBadRequest, recorder.Code)
+	require.Zero(t, totpCache.verifyAttempts[42])
+	require.NotNil(t, totpCache.loginSessions["studio-token"])
+}
+
 func newOAuthPendingFlowTestHandler(t *testing.T, invitationEnabled bool) (*AuthHandler, *dbent.Client) {
 	t.Helper()
 
