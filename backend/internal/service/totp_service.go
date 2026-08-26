@@ -64,6 +64,7 @@ type TotpSetupSession struct {
 type TotpLoginSession struct {
 	UserID           int64
 	Email            string
+	Audience         string
 	TokenExpiry      time.Time
 	PendingOAuthBind *PendingOAuthBindLoginSession `json:"pending_oauth_bind,omitempty"`
 }
@@ -89,11 +90,12 @@ type TotpSetupResponse struct {
 }
 
 const (
-	totpSetupTTL    = 5 * time.Minute
-	totpLoginTTL    = 5 * time.Minute
-	totpAttemptsTTL = 15 * time.Minute
-	maxTotpAttempts = 5
-	totpIssuer      = "NanaFox API"
+	TotpLoginAudienceStudio = "nanafox-studio"
+	totpSetupTTL            = 5 * time.Minute
+	totpLoginTTL            = 5 * time.Minute
+	totpAttemptsTTL         = 15 * time.Minute
+	maxTotpAttempts         = 5
+	totpIssuer              = "NanaFox API"
 )
 
 // TotpService handles TOTP operations
@@ -422,19 +424,27 @@ func (s *TotpService) HasStepUpGrant(ctx context.Context, userID int64, sessionK
 
 // CreateLoginSession creates a temporary login session for 2FA
 func (s *TotpService) CreateLoginSession(ctx context.Context, userID int64, email string) (string, error) {
-	return s.createLoginSession(ctx, userID, email, nil)
+	return s.createLoginSession(ctx, userID, email, "", nil)
+}
+
+// CreateLoginSessionForAudience 创建只能由指定产品消费的 2FA 挑战。
+func (s *TotpService) CreateLoginSessionForAudience(ctx context.Context, userID int64, email, audience string) (string, error) {
+	if audience == "" {
+		return "", fmt.Errorf("login session audience is required")
+	}
+	return s.createLoginSession(ctx, userID, email, audience, nil)
 }
 
 // CreatePendingOAuthBindLoginSession creates a temporary 2FA session that will
 // finalize a pending OAuth bind after the TOTP code is verified.
 func (s *TotpService) CreatePendingOAuthBindLoginSession(ctx context.Context, userID int64, email string, pendingSessionToken string, browserSessionKey string) (string, error) {
-	return s.createLoginSession(ctx, userID, email, &PendingOAuthBindLoginSession{
+	return s.createLoginSession(ctx, userID, email, "", &PendingOAuthBindLoginSession{
 		PendingSessionToken: pendingSessionToken,
 		BrowserSessionKey:   browserSessionKey,
 	})
 }
 
-func (s *TotpService) createLoginSession(ctx context.Context, userID int64, email string, pendingOAuthBind *PendingOAuthBindLoginSession) (string, error) {
+func (s *TotpService) createLoginSession(ctx context.Context, userID int64, email, audience string, pendingOAuthBind *PendingOAuthBindLoginSession) (string, error) {
 	// Generate a random temp token
 	tempToken, err := generateRandomToken(32)
 	if err != nil {
@@ -444,6 +454,7 @@ func (s *TotpService) createLoginSession(ctx context.Context, userID int64, emai
 	session := &TotpLoginSession{
 		UserID:           userID,
 		Email:            email,
+		Audience:         audience,
 		TokenExpiry:      time.Now().Add(totpLoginTTL),
 		PendingOAuthBind: pendingOAuthBind,
 	}

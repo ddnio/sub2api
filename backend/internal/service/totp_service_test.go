@@ -95,3 +95,11 @@ func TestCreateLoginSessionForAudienceSeparatesStudioChallenges(t *testing.T) {
 	require.NotNil(t, session)
 	require.Equal(t, TotpLoginAudienceStudio, session.Audience)
 }
+
+func TestCreateLoginSessionForAudienceRejectsEmptyAudience(t *testing.T) {
+	svc := &TotpService{cache: &totpLoginSessionCacheStub{}}
+
+	tempToken, err := svc.CreateLoginSessionForAudience(context.Background(), 42, "user@example.com", "")
+	require.Empty(t, tempToken)
+	require.ErrorContains(t, err, "audience is required")
+}
