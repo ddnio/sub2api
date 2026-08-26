@@ -47,6 +47,7 @@ type AdminHandlers struct {
 // Handlers contains all HTTP handlers
 type Handlers struct {
 	Auth             *AuthHandler
+	StudioAuth       *StudioAuthHandler
 	User             *UserHandler
 	APIKey           *APIKeyHandler
 	ImageCreation    *ImageCreationSessionHandler

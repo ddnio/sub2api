@@ -28,6 +28,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/userplatformquota"
 	"github.com/Wei-Shaw/sub2api/ent/userreferral"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/google/uuid"
 )
 
 // UserCreate is the builder for creating a User entity.
@@ -83,6 +84,20 @@ func (_c *UserCreate) SetNillableDeletedAt(v *time.Time) *UserCreate {
 // SetEmail sets the "email" field.
 func (_c *UserCreate) SetEmail(v string) *UserCreate {
 	_c.mutation.SetEmail(v)
+	return _c
+}
+
+// SetPublicID sets the "public_id" field.
+func (_c *UserCreate) SetPublicID(v uuid.UUID) *UserCreate {
+	_c.mutation.SetPublicID(v)
+	return _c
+}
+
+// SetNillablePublicID sets the "public_id" field if the given value is not nil.
+func (_c *UserCreate) SetNillablePublicID(v *uuid.UUID) *UserCreate {
+	if v != nil {
+		_c.SetPublicID(*v)
+	}
 	return _c
 }
 
@@ -708,6 +723,13 @@ func (_c *UserCreate) defaults() error {
 		v := user.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := _c.mutation.PublicID(); !ok {
+		if user.DefaultPublicID == nil {
+			return fmt.Errorf("ent: uninitialized user.DefaultPublicID (forgotten import ent/runtime?)")
+		}
+		v := user.DefaultPublicID()
+		_c.mutation.SetPublicID(v)
+	}
 	if _, ok := _c.mutation.Role(); !ok {
 		v := user.DefaultRole
 		_c.mutation.SetRole(v)
@@ -782,6 +804,9 @@ func (_c *UserCreate) check() error {
 		if err := user.EmailValidator(v); err != nil {
 			return &ValidationError{Name: "email", err: fmt.Errorf(`ent: validator failed for field "User.email": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.PublicID(); !ok {
+		return &ValidationError{Name: "public_id", err: errors.New(`ent: missing required field "User.public_id"`)}
 	}
 	if _, ok := _c.mutation.PasswordHash(); !ok {
 		return &ValidationError{Name: "password_hash", err: errors.New(`ent: missing required field "User.password_hash"`)}
@@ -900,6 +925,10 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Email(); ok {
 		_spec.SetField(user.FieldEmail, field.TypeString, value)
 		_node.Email = value
+	}
+	if value, ok := _c.mutation.PublicID(); ok {
+		_spec.SetField(user.FieldPublicID, field.TypeUUID, value)
+		_node.PublicID = value
 	}
 	if value, ok := _c.mutation.PasswordHash(); ok {
 		_spec.SetField(user.FieldPasswordHash, field.TypeString, value)
@@ -1725,6 +1754,9 @@ func (u *UserUpsertOne) UpdateNewValues() *UserUpsertOne {
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(user.FieldCreatedAt)
 		}
+		if _, exists := u.create.mutation.PublicID(); exists {
+			s.SetIgnore(user.FieldPublicID)
+		}
 	}))
 	return u
 }
@@ -2361,6 +2393,9 @@ func (u *UserUpsertBulk) UpdateNewValues() *UserUpsertBulk {
 		for _, b := range u.create.builders {
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(user.FieldCreatedAt)
+			}
+			if _, exists := b.mutation.PublicID(); exists {
+				s.SetIgnore(user.FieldPublicID)
 			}
 		}
 	}))

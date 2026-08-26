@@ -11,6 +11,7 @@ import (
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/server/routes"
 	"github.com/Wei-Shaw/sub2api/internal/service"
+	"github.com/Wei-Shaw/sub2api/internal/studioauth"
 	"github.com/Wei-Shaw/sub2api/internal/web"
 
 	"github.com/gin-gonic/gin"
@@ -133,6 +134,35 @@ func registerRoutes(
 	routes.RegisterAdminRoutes(v1, h, adminAuth, auditLog, stepUpAuth, settingService, panelRateLimiter)
 	routes.RegisterGatewayRoutes(r, h, apiKeyAuth, apiKeyService, subscriptionService, opsService, settingService, compositeResolver, cfg)
 	routes.RegisterPaymentRoutes(v1, h.Payment, h.PaymentWebhook, h.Admin.Payment, jwtAuth, adminAuth, auditLog, settingService, panelRateLimiter)
+	studioVerifier, err := newStudioAuthVerifier(cfg, redisClient)
+	if err != nil {
+		log.Printf("Studio auth routes disabled: %v", err)
+	}
+	routes.RegisterStudioAuthRoutes(r, h, studioVerifier, cfg.StudioAuth.MaxBodyBytes)
 
 	handler.RegisterPageRoutes(v1, cfg.Pricing.DataDir, gin.HandlerFunc(jwtAuth), gin.HandlerFunc(adminAuth), settingService)
+}
+
+func newStudioAuthVerifier(cfg *config.Config, redisClient *redis.Client) (*studioauth.Verifier, error) {
+	if cfg == nil || !cfg.StudioAuth.Enabled {
+		return nil, nil
+	}
+
+	verifierConfig := studioauth.VerifierConfig{
+		ClientID: studioauth.ClientID,
+		Current: studioauth.SigningKey{
+			ID:     cfg.StudioAuth.CurrentKeyID,
+			Secret: cfg.StudioAuth.CurrentSecret,
+		},
+		MaxClockSkew: time.Duration(cfg.StudioAuth.MaxClockSkewSeconds) * time.Second,
+		NonceTTL:     time.Duration(cfg.StudioAuth.NonceTTLSeconds) * time.Second,
+	}
+	if cfg.StudioAuth.PreviousKeyID != "" || cfg.StudioAuth.PreviousSecret != "" {
+		verifierConfig.Previous = &studioauth.SigningKey{
+			ID:     cfg.StudioAuth.PreviousKeyID,
+			Secret: cfg.StudioAuth.PreviousSecret,
+		}
+	}
+
+	return studioauth.NewVerifier(verifierConfig, studioauth.NewRedisNonceStore(redisClient, ""))
 }
