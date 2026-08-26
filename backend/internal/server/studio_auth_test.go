@@ -50,17 +50,17 @@ func TestNewStudioAuthVerifierBuildsRedisBackedVerifier(t *testing.T) {
 	signature := hmac.New(sha256.New, []byte(cfg.StudioAuth.CurrentSecret))
 	_, _ = signature.Write([]byte(canonical))
 
+	headers := http.Header{}
+	headers.Set(studioauth.HeaderClient, studioauth.ClientID)
+	headers.Set(studioauth.HeaderKeyID, cfg.StudioAuth.CurrentKeyID)
+	headers.Set(studioauth.HeaderTimestamp, timestamp)
+	headers.Set(studioauth.HeaderNonce, nonce)
+	headers.Set(studioauth.HeaderSignature, hex.EncodeToString(signature.Sum(nil)))
 	err = verifier.Verify(context.Background(), studioauth.SignedRequest{
-		Method: http.MethodPost,
-		Path:   path,
-		Headers: http.Header{
-			studioauth.HeaderClient:    []string{studioauth.ClientID},
-			studioauth.HeaderKeyID:     []string{cfg.StudioAuth.CurrentKeyID},
-			studioauth.HeaderTimestamp: []string{timestamp},
-			studioauth.HeaderNonce:     []string{nonce},
-			studioauth.HeaderSignature: []string{hex.EncodeToString(signature.Sum(nil))},
-		},
-		Body: body,
+		Method:  http.MethodPost,
+		Path:    path,
+		Headers: headers,
+		Body:    body,
 	})
 	require.NoError(t, err)
 }
