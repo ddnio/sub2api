@@ -5,6 +5,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/ent/schema/mixins"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
+	"github.com/google/uuid"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
@@ -40,6 +41,10 @@ func (User) Fields() []ent.Field {
 		field.String("email").
 			MaxLen(255).
 			NotEmpty(),
+		field.UUID("public_id", uuid.UUID{}).
+			Default(uuid.New).
+			Immutable().
+			Unique(),
 		field.String("password_hash").
 			MaxLen(255).
 			NotEmpty(),

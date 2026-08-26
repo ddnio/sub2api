@@ -8,6 +8,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
+	"github.com/google/uuid"
 )
 
 // ID filters vertices based on their ID field.
@@ -73,6 +74,11 @@ func DeletedAt(v time.Time) predicate.User {
 // Email applies equality check predicate on the "email" field. It's identical to EmailEQ.
 func Email(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldEmail, v))
+}
+
+// PublicID applies equality check predicate on the "public_id" field. It's identical to PublicIDEQ.
+func PublicID(v uuid.UUID) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldPublicID, v))
 }
 
 // PasswordHash applies equality check predicate on the "password_hash" field. It's identical to PasswordHashEQ.
@@ -373,6 +379,46 @@ func EmailEqualFold(v string) predicate.User {
 // EmailContainsFold applies the ContainsFold predicate on the "email" field.
 func EmailContainsFold(v string) predicate.User {
 	return predicate.User(sql.FieldContainsFold(FieldEmail, v))
+}
+
+// PublicIDEQ applies the EQ predicate on the "public_id" field.
+func PublicIDEQ(v uuid.UUID) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldPublicID, v))
+}
+
+// PublicIDNEQ applies the NEQ predicate on the "public_id" field.
+func PublicIDNEQ(v uuid.UUID) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldPublicID, v))
+}
+
+// PublicIDIn applies the In predicate on the "public_id" field.
+func PublicIDIn(vs ...uuid.UUID) predicate.User {
+	return predicate.User(sql.FieldIn(FieldPublicID, vs...))
+}
+
+// PublicIDNotIn applies the NotIn predicate on the "public_id" field.
+func PublicIDNotIn(vs ...uuid.UUID) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldPublicID, vs...))
+}
+
+// PublicIDGT applies the GT predicate on the "public_id" field.
+func PublicIDGT(v uuid.UUID) predicate.User {
+	return predicate.User(sql.FieldGT(FieldPublicID, v))
+}
+
+// PublicIDGTE applies the GTE predicate on the "public_id" field.
+func PublicIDGTE(v uuid.UUID) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldPublicID, v))
+}
+
+// PublicIDLT applies the LT predicate on the "public_id" field.
+func PublicIDLT(v uuid.UUID) predicate.User {
+	return predicate.User(sql.FieldLT(FieldPublicID, v))
+}
+
+// PublicIDLTE applies the LTE predicate on the "public_id" field.
+func PublicIDLTE(v uuid.UUID) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldPublicID, v))
 }
 
 // PasswordHashEQ applies the EQ predicate on the "password_hash" field.
