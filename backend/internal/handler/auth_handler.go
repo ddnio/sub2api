@@ -322,6 +322,10 @@ func (h *AuthHandler) Login2FA(c *gin.Context) {
 		response.BadRequest(c, "Invalid or expired 2FA session")
 		return
 	}
+	if session.Audience != "" {
+		response.BadRequest(c, "Invalid or expired 2FA session")
+		return
+	}
 
 	slog.Debug("login_2fa_session_found",
 		"user_id", session.UserID,
