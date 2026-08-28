@@ -204,8 +204,8 @@ func (s *emailCacheStub) SetPasswordResetToken(ctx context.Context, email string
 	return nil
 }
 
-func (s *emailCacheStub) DeletePasswordResetToken(ctx context.Context, email string) error {
-	return nil
+func (s *emailCacheStub) ConsumePasswordResetToken(ctx context.Context, email, token string) (bool, error) {
+	return false, nil
 }
 
 func (s *emailCacheStub) IsPasswordResetEmailInCooldown(ctx context.Context, email string) bool {

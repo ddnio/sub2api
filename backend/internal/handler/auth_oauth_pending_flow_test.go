@@ -2874,8 +2874,8 @@ func (s *oauthPendingFlowEmailCacheStub) SetPasswordResetToken(context.Context, 
 	return nil
 }
 
-func (s *oauthPendingFlowEmailCacheStub) DeletePasswordResetToken(context.Context, string) error {
-	return nil
+func (s *oauthPendingFlowEmailCacheStub) ConsumePasswordResetToken(context.Context, string, string) (bool, error) {
+	return false, nil
 }
 
 func (s *oauthPendingFlowEmailCacheStub) IsPasswordResetEmailInCooldown(context.Context, string) bool {

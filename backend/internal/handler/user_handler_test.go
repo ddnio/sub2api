@@ -491,8 +491,8 @@ func (s *userHandlerEmailCacheStub) SetPasswordResetToken(context.Context, strin
 	return nil
 }
 
-func (s *userHandlerEmailCacheStub) DeletePasswordResetToken(context.Context, string) error {
-	return nil
+func (s *userHandlerEmailCacheStub) ConsumePasswordResetToken(context.Context, string, string) (bool, error) {
+	return false, nil
 }
 
 func (s *userHandlerEmailCacheStub) IsPasswordResetEmailInCooldown(context.Context, string) bool {

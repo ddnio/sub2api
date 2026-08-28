@@ -736,8 +736,8 @@ func (s *emailBindCacheStub) SetPasswordResetToken(context.Context, string, *ser
 	return nil
 }
 
-func (s *emailBindCacheStub) DeletePasswordResetToken(context.Context, string) error {
-	return nil
+func (s *emailBindCacheStub) ConsumePasswordResetToken(context.Context, string, string) (bool, error) {
+	return false, nil
 }
 
 func (s *emailBindCacheStub) IsPasswordResetEmailInCooldown(context.Context, string) bool {

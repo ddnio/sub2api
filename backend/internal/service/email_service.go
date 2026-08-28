@@ -46,7 +46,7 @@ type EmailCache interface {
 	// Password reset token methods
 	GetPasswordResetToken(ctx context.Context, email string) (*PasswordResetTokenData, error)
 	SetPasswordResetToken(ctx context.Context, email string, data *PasswordResetTokenData, ttl time.Duration) error
-	DeletePasswordResetToken(ctx context.Context, email string) error
+	ConsumePasswordResetToken(ctx context.Context, email, token string) (bool, error)
 
 	// Password reset email cooldown methods
 	// Returns true if in cooldown period (email was sent recently)
@@ -583,14 +583,13 @@ func (s *EmailService) VerifyPasswordResetToken(ctx context.Context, email, toke
 
 // ConsumePasswordResetToken verifies and deletes the token (one-time use)
 func (s *EmailService) ConsumePasswordResetToken(ctx context.Context, email, token string) error {
-	// Verify first
-	if err := s.VerifyPasswordResetToken(ctx, email, token); err != nil {
-		return err
+	consumed, err := s.cache.ConsumePasswordResetToken(ctx, email, token)
+	if err != nil {
+		slog.Error("failed to consume password reset token", "email", email, "error", err)
+		return ErrInvalidResetToken
 	}
-
-	// Delete after verification (one-time use)
-	if err := s.cache.DeletePasswordResetToken(ctx, email); err != nil {
-		slog.Error("failed to delete password reset token after consumption", "email", email, "error", err)
+	if !consumed {
+		return ErrInvalidResetToken
 	}
 	return nil
 }

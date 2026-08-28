@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -101,9 +103,37 @@ func (c *emailCache) SetPasswordResetToken(ctx context.Context, email string, da
 	return c.rdb.Set(ctx, key, val, ttl).Err()
 }
 
-func (c *emailCache) DeletePasswordResetToken(ctx context.Context, email string) error {
+func (c *emailCache) ConsumePasswordResetToken(ctx context.Context, email, token string) (bool, error) {
 	key := passwordResetKey(email)
-	return c.rdb.Del(ctx, key).Err()
+	consumed := false
+	err := c.rdb.Watch(ctx, func(tx *redis.Tx) error {
+		val, err := tx.Get(ctx, key).Result()
+		if errors.Is(err, redis.Nil) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		var data service.PasswordResetTokenData
+		if err := json.Unmarshal([]byte(val), &data); err != nil {
+			return err
+		}
+		if subtle.ConstantTimeCompare([]byte(data.Token), []byte(token)) != 1 {
+			return nil
+		}
+		_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+			pipe.Del(ctx, key)
+			return nil
+		})
+		if err == nil {
+			consumed = true
+		}
+		return err
+	}, key)
+	if errors.Is(err, redis.TxFailedErr) {
+		return false, nil
+	}
+	return consumed, err
 }
 
 // Password reset email cooldown methods
