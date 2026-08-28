@@ -87,6 +87,25 @@ func (s *EmailCacheSuite) TestGetVerificationCode_JSONCorruption() {
 	require.False(s.T(), errors.Is(err, redis.Nil), "expected decoding error, not redis.Nil")
 }
 
+func (s *EmailCacheSuite) TestConsumePasswordResetToken_IsAtomicAndSingleUse() {
+	email := "reset@example.com"
+	data := &service.PasswordResetTokenData{Token: "secret-token", CreatedAt: time.Now()}
+
+	require.NoError(s.T(), s.cache.SetPasswordResetToken(s.ctx, email, data, 2*time.Minute))
+
+	consumed, err := s.cache.ConsumePasswordResetToken(s.ctx, email, "wrong-token")
+	require.NoError(s.T(), err)
+	require.False(s.T(), consumed)
+
+	consumed, err = s.cache.ConsumePasswordResetToken(s.ctx, email, "secret-token")
+	require.NoError(s.T(), err)
+	require.True(s.T(), consumed)
+
+	consumed, err = s.cache.ConsumePasswordResetToken(s.ctx, email, "secret-token")
+	require.NoError(s.T(), err)
+	require.False(s.T(), consumed)
+}
+
 func TestEmailCacheSuite(t *testing.T) {
 	suite.Run(t, new(EmailCacheSuite))
 }
