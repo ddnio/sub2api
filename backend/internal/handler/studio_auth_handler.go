@@ -17,6 +17,7 @@ type studioAuthService interface {
 
 type studioUserService interface {
 	GetByID(ctx context.Context, id int64) (*service.User, error)
+	GetByEmail(ctx context.Context, email string) (*service.User, error)
 }
 
 type studioSettingService interface {
@@ -60,10 +61,16 @@ type studioSendVerifyCodeRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }
 
+type studioResolveRequest struct {
+	Subject string `json:"subject" binding:"required,max=128"`
+	Email   string `json:"email" binding:"required,email"`
+}
+
 type studioIdentity struct {
 	Subject     string `json:"subject"`
 	Email       string `json:"email"`
 	DisplayName string `json:"display_name,omitempty"`
+	Role        string `json:"role"`
 }
 
 func NewStudioAuthHandler(authService *service.AuthService, userService *service.UserService, settingService *service.SettingService, totpService *service.TotpService) *StudioAuthHandler {
@@ -192,6 +199,29 @@ func (h *StudioAuthHandler) Login2FA(c *gin.Context) {
 	h.respondWithUser(c, user)
 }
 
+func (h *StudioAuthHandler) Resolve(c *gin.Context) {
+	var req studioResolveRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	user, err := h.userService.GetByEmail(c.Request.Context(), req.Email)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	if err := ensureLoginUserActive(user); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	if user.PublicID != req.Subject {
+		response.Forbidden(c, "Identity does not match")
+		return
+	}
+	h.respondWithUser(c, user)
+}
+
 func (h *StudioAuthHandler) respondWithUser(c *gin.Context, user *service.User) {
 	if user == nil || user.PublicID == "" {
 		response.InternalError(c, "User identity is unavailable")
@@ -202,6 +232,7 @@ func (h *StudioAuthHandler) respondWithUser(c *gin.Context, user *service.User) 
 			Subject:     user.PublicID,
 			Email:       user.Email,
 			DisplayName: user.Username,
+			Role:        user.Role,
 		},
 	})
 }

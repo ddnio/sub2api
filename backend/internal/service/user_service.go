@@ -1058,6 +1058,16 @@ func (s *UserService) GetByID(ctx context.Context, id int64) (*User, error) {
 	return user, nil
 }
 
+// GetByEmail 根据邮箱获取用户，供受信任的内部身份适配器解析当前账户状态。
+func (s *UserService) GetByEmail(ctx context.Context, email string) (*User, error) {
+	user, err := s.userRepo.GetByEmail(ctx, email)
+	if err != nil {
+		return nil, fmt.Errorf("get user: %w", err)
+	}
+	normalizeLoadedUserTokenVersion(user)
+	return user, nil
+}
+
 func normalizeLoadedUserTokenVersion(user *User) {
 	if user == nil || user.TokenVersionResolved {
 		return

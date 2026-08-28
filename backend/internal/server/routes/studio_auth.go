@@ -18,4 +18,5 @@ func RegisterStudioAuthRoutes(r *gin.Engine, handlers *handler.Handlers, verifie
 	studio.POST("/register", handlers.StudioAuth.Register)
 	studio.POST("/login", handlers.StudioAuth.Login)
 	studio.POST("/login/2fa", handlers.StudioAuth.Login2FA)
+	studio.POST("/resolve", handlers.StudioAuth.Resolve)
 }
