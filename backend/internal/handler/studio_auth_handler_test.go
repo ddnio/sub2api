@@ -83,6 +83,10 @@ func (s *studioUserServiceStub) GetByID(context.Context, int64) (*service.User, 
 	return s.user, s.err
 }
 
+func (s *studioUserServiceStub) GetByEmail(context.Context, string) (*service.User, error) {
+	return s.user, s.err
+}
+
 type studioSettingServiceStub struct {
 	totpEnabled bool
 }
@@ -176,14 +180,51 @@ func TestStudioAuthLoginCreatesAudienceBound2FAChallenge(t *testing.T) {
 }
 
 func TestStudioAuthLoginReturnsIdentityWithout2FA(t *testing.T) {
-	auth := &studioAuthServiceStub{authenticated: studioUser(42, false)}
+	user := studioUser(42, false)
+	user.Role = service.RoleAdmin
+	auth := &studioAuthServiceStub{authenticated: user}
 	handler := newStudioAuthHandler(auth, &studioUserServiceStub{}, &studioSettingServiceStub{totpEnabled: true}, &studioTotpServiceStub{})
 
 	recorder := serveStudioAuthRequest(t, http.MethodPost, "/internal/v1/studio-auth/login", `{"email":"studio@example.com","password":"Password123!"}`, handler.Login)
 
 	require.Equal(t, http.StatusOK, recorder.Code)
 	require.Equal(t, []int64{42}, auth.recordedLogins)
-	require.Equal(t, auth.authenticated.PublicID, studioResponseData(t, recorder)["user"].(map[string]any)["subject"])
+	identity := studioResponseData(t, recorder)["user"].(map[string]any)
+	require.Equal(t, auth.authenticated.PublicID, identity["subject"])
+	require.Equal(t, service.RoleAdmin, identity["role"])
+}
+
+func TestStudioAuthResolveReturnsCurrentRouterRole(t *testing.T) {
+	user := studioUser(42, false)
+	user.Role = service.RoleAdmin
+	handler := newStudioAuthHandler(&studioAuthServiceStub{}, &studioUserServiceStub{user: user}, &studioSettingServiceStub{}, &studioTotpServiceStub{})
+
+	recorder := serveStudioAuthRequest(t, http.MethodPost, "/internal/v1/studio-auth/resolve", `{
+		"subject":"019c0000-0000-7000-8000-000000000042",
+		"email":"studio@example.com"
+	}`, handler.Resolve)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	identity := studioResponseData(t, recorder)["user"].(map[string]any)
+	require.Equal(t, service.RoleAdmin, identity["role"])
+}
+
+func TestStudioAuthResolveRejectsMismatchedOrInactiveIdentity(t *testing.T) {
+	user := studioUser(42, false)
+	handler := newStudioAuthHandler(&studioAuthServiceStub{}, &studioUserServiceStub{user: user}, &studioSettingServiceStub{}, &studioTotpServiceStub{})
+
+	mismatch := serveStudioAuthRequest(t, http.MethodPost, "/internal/v1/studio-auth/resolve", `{
+		"subject":"019c0000-0000-7000-8000-000000000099",
+		"email":"studio@example.com"
+	}`, handler.Resolve)
+	require.Equal(t, http.StatusForbidden, mismatch.Code)
+
+	user.Status = service.StatusDisabled
+	inactive := serveStudioAuthRequest(t, http.MethodPost, "/internal/v1/studio-auth/resolve", `{
+		"subject":"019c0000-0000-7000-8000-000000000042",
+		"email":"studio@example.com"
+	}`, handler.Resolve)
+	require.Equal(t, http.StatusForbidden, inactive.Code)
 }
 
 func TestStudioAuthLoginFailsClosedWhen2FAChallengeCannotBeStored(t *testing.T) {
