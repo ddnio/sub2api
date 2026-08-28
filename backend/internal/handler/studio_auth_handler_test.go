@@ -20,7 +20,11 @@ type studioAuthServiceStub struct {
 	registerErr      error
 	sendErr          error
 	authenticateErr  error
+	forgotErr        error
+	resetErr         error
 	registrationArgs []string
+	forgotArgs       []string
+	resetArgs        []string
 	recordedLogins   []int64
 }
 
@@ -35,6 +39,17 @@ func (s *studioAuthServiceStub) SendVerifyCodeAsync(context.Context, string, ...
 
 func (s *studioAuthServiceStub) AuthenticatePassword(context.Context, string, string) (*service.User, error) {
 	return s.authenticated, s.authenticateErr
+}
+
+func (s *studioAuthServiceStub) RequestPasswordResetAsync(_ context.Context, email, frontendBaseURL string, locale ...string) error {
+	s.forgotArgs = []string{email, frontendBaseURL}
+	s.forgotArgs = append(s.forgotArgs, locale...)
+	return s.forgotErr
+}
+
+func (s *studioAuthServiceStub) ResetPassword(_ context.Context, email, token, newPassword string) error {
+	s.resetArgs = []string{email, token, newPassword}
+	return s.resetErr
 }
 
 func (s *studioAuthServiceStub) RecordSuccessfulLogin(_ context.Context, userID int64) {
@@ -139,6 +154,32 @@ func TestStudioAuthSendVerifyCodeAndValidation(t *testing.T) {
 
 	invalid := serveStudioAuthRequest(t, http.MethodPost, "/internal/v1/studio-auth/send-verify-code", `{"email":"invalid"}`, handler.SendVerifyCode)
 	require.Equal(t, http.StatusBadRequest, invalid.Code)
+}
+
+func TestStudioAuthPasswordRecoveryUsesTheSignedStudioCallback(t *testing.T) {
+	auth := &studioAuthServiceStub{}
+	handler := newStudioAuthHandler(auth, &studioUserServiceStub{}, &studioSettingServiceStub{}, &studioTotpServiceStub{})
+
+	forgot := serveStudioAuthRequest(t, http.MethodPost, "/internal/v1/studio-auth/forgot-password", `{
+		"email":"studio@example.com",
+		"frontend_base_url":"https://studio.nanafox.com/tools/image-studio"
+	}`, handler.ForgotPassword)
+	require.Equal(t, http.StatusOK, forgot.Code)
+	require.Equal(t, []string{"studio@example.com", "https://studio.nanafox.com/tools/image-studio", ""}, auth.forgotArgs)
+
+	unsafeURL := serveStudioAuthRequest(t, http.MethodPost, "/internal/v1/studio-auth/forgot-password", `{
+		"email":"studio@example.com",
+		"frontend_base_url":"http://evil.example/reset"
+	}`, handler.ForgotPassword)
+	require.Equal(t, http.StatusBadRequest, unsafeURL.Code)
+
+	reset := serveStudioAuthRequest(t, http.MethodPost, "/internal/v1/studio-auth/reset-password", `{
+		"email":"studio@example.com",
+		"token":"single-use-token",
+		"new_password":"NewPassword123!"
+	}`, handler.ResetPassword)
+	require.Equal(t, http.StatusOK, reset.Code)
+	require.Equal(t, []string{"studio@example.com", "single-use-token", "NewPassword123!"}, auth.resetArgs)
 }
 
 func TestStudioAuthServiceErrorsAreReturned(t *testing.T) {

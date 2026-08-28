@@ -60,10 +60,20 @@ func TestRegisterStudioAuthRoutesRequiresSignedInternalRequests(t *testing.T) {
 	router.ServeHTTP(unsignedResponse, unsigned)
 	require.Equal(t, http.StatusUnauthorized, unsignedResponse.Code)
 
-	signed := signedStudioRouteRequest(now, "00112233445566778899aabbccddeeff", []byte(`{}`))
+	signed := signedStudioRouteRequest(now, "/internal/v1/studio-auth/login", "00112233445566778899aabbccddeeff", []byte(`{}`))
 	signedResponse := httptest.NewRecorder()
 	router.ServeHTTP(signedResponse, signed)
 	require.Equal(t, http.StatusBadRequest, signedResponse.Code)
+
+	for idx, path := range []string{
+		"/internal/v1/studio-auth/forgot-password",
+		"/internal/v1/studio-auth/reset-password",
+	} {
+		request := signedStudioRouteRequest(now, path, fmt.Sprintf("%032x", idx+2), []byte(`{}`))
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+		require.Equal(t, http.StatusBadRequest, response.Code, path)
+	}
 }
 
 func TestRegisterStudioAuthRoutesStaysAbsentWhenDisabled(t *testing.T) {
@@ -75,8 +85,7 @@ func TestRegisterStudioAuthRoutesStaysAbsentWhenDisabled(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, response.Code)
 }
 
-func signedStudioRouteRequest(now time.Time, nonce string, body []byte) *http.Request {
-	path := "/internal/v1/studio-auth/login"
+func signedStudioRouteRequest(now time.Time, path, nonce string, body []byte) *http.Request {
 	timestamp := strconv.FormatInt(now.Unix(), 10)
 	bodyHash := sha256.Sum256(body)
 	canonical := fmt.Sprintf("POST\n%s\n%s\n%s\n%s\n%x", path, studioauth.ClientID, timestamp, nonce, bodyHash)
