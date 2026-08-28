@@ -15,6 +15,8 @@ func RegisterStudioAuthRoutes(r *gin.Engine, handlers *handler.Handlers, verifie
 	studio := r.Group("/internal/v1/studio-auth")
 	studio.Use(servermiddleware.StudioAuth(verifier, maxBodyBytes))
 	studio.POST("/send-verify-code", handlers.StudioAuth.SendVerifyCode)
+	studio.POST("/forgot-password", handlers.StudioAuth.ForgotPassword)
+	studio.POST("/reset-password", handlers.StudioAuth.ResetPassword)
 	studio.POST("/register", handlers.StudioAuth.Register)
 	studio.POST("/login", handlers.StudioAuth.Login)
 	studio.POST("/login/2fa", handlers.StudioAuth.Login2FA)

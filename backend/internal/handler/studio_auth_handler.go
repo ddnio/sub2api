@@ -2,6 +2,10 @@ package handler
 
 import (
 	"context"
+	"errors"
+	"net"
+	"net/url"
+	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -12,6 +16,8 @@ type studioAuthService interface {
 	RegisterWithoutTokenWithVerification(ctx context.Context, email, password, verifyCode, promoCode, invitationCode, affiliateCode string) (*service.User, error)
 	SendVerifyCodeAsync(ctx context.Context, email string, locale ...string) (*service.SendVerifyCodeResult, error)
 	AuthenticatePassword(ctx context.Context, email, password string) (*service.User, error)
+	RequestPasswordResetAsync(ctx context.Context, email, frontendBaseURL string, locale ...string) error
+	ResetPassword(ctx context.Context, email, token, newPassword string) error
 	RecordSuccessfulLogin(ctx context.Context, userID int64)
 }
 
@@ -61,6 +67,17 @@ type studioSendVerifyCodeRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }
 
+type studioForgotPasswordRequest struct {
+	Email           string `json:"email" binding:"required,email"`
+	FrontendBaseURL string `json:"frontend_base_url" binding:"required,max=2048"`
+}
+
+type studioResetPasswordRequest struct {
+	Email       string `json:"email" binding:"required,email"`
+	Token       string `json:"token" binding:"required,max=4096"`
+	NewPassword string `json:"new_password" binding:"required,min=6,max=256"`
+}
+
 type studioResolveRequest struct {
 	Subject string `json:"subject" binding:"required,max=128"`
 	Email   string `json:"email" binding:"required,email"`
@@ -104,6 +121,37 @@ func (h *StudioAuthHandler) SendVerifyCode(c *gin.Context) {
 		return
 	}
 	response.Success(c, gin.H{"countdown": result.Countdown})
+}
+
+func (h *StudioAuthHandler) ForgotPassword(c *gin.Context) {
+	var req studioForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	frontendBaseURL, err := normalizeStudioFrontendBaseURL(req.FrontendBaseURL)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.authService.RequestPasswordResetAsync(c.Request.Context(), req.Email, frontendBaseURL, c.GetHeader("Accept-Language")); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, gin.H{"accepted": true})
+}
+
+func (h *StudioAuthHandler) ResetPassword(c *gin.Context) {
+	var req studioResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	if err := h.authService.ResetPassword(c.Request.Context(), req.Email, req.Token, req.NewPassword); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, gin.H{"reset": true})
 }
 
 func (h *StudioAuthHandler) Register(c *gin.Context) {
@@ -235,4 +283,18 @@ func (h *StudioAuthHandler) respondWithUser(c *gin.Context, user *service.User) 
 			Role:        user.Role,
 		},
 	})
+}
+
+func normalizeStudioFrontendBaseURL(value string) (string, error) {
+	parsed, err := url.Parse(strings.TrimSpace(value))
+	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", errors.New("Invalid request: frontend_base_url is invalid")
+	}
+	host := parsed.Hostname()
+	ip := net.ParseIP(host)
+	loopback := host == "localhost" || ip != nil && ip.IsLoopback()
+	if parsed.Scheme != "https" && !(parsed.Scheme == "http" && loopback) {
+		return "", errors.New("Invalid request: frontend_base_url must use HTTPS")
+	}
+	return strings.TrimSuffix(parsed.String(), "/"), nil
 }
