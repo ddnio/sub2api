@@ -323,7 +323,8 @@ func TestStudioAuthLogin2FAConsumesOnlyStudioChallenges(t *testing.T) {
 		require.Equal(t, []int64{42}, auth.recordedLogins)
 		require.NotContains(t, recorder.Body.String(), "access_token")
 		data := studioResponseData(t, recorder)
-		identity := data["user"].(map[string]any)
+		identity, ok := data["user"].(map[string]any)
+		require.True(t, ok)
 		require.Equal(t, user.PublicID, identity["subject"])
 	})
 }
