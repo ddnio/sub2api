@@ -126,7 +126,8 @@ func TestStudioAuthRegisterReturnsIdentityWithoutRouterTokens(t *testing.T) {
 	require.NotContains(t, recorder.Body.String(), "refresh_token")
 	require.Equal(t, []string{"studio@example.com", "Password123!", "246810", "PROMO", "", ""}, auth.registrationArgs)
 	data := studioResponseData(t, recorder)
-	user := data["user"].(map[string]any)
+	user, ok := data["user"].(map[string]any)
+	require.True(t, ok)
 	require.Equal(t, "019c0000-0000-7000-8000-000000000042", user["subject"])
 	require.Equal(t, "studio@example.com", user["email"])
 }
@@ -230,7 +231,8 @@ func TestStudioAuthLoginReturnsIdentityWithout2FA(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, recorder.Code)
 	require.Equal(t, []int64{42}, auth.recordedLogins)
-	identity := studioResponseData(t, recorder)["user"].(map[string]any)
+	identity, ok := studioResponseData(t, recorder)["user"].(map[string]any)
+	require.True(t, ok)
 	require.Equal(t, auth.authenticated.PublicID, identity["subject"])
 	require.Equal(t, service.RoleAdmin, identity["role"])
 }
@@ -246,7 +248,8 @@ func TestStudioAuthResolveReturnsCurrentRouterRole(t *testing.T) {
 	}`, handler.Resolve)
 
 	require.Equal(t, http.StatusOK, recorder.Code)
-	identity := studioResponseData(t, recorder)["user"].(map[string]any)
+	identity, ok := studioResponseData(t, recorder)["user"].(map[string]any)
+	require.True(t, ok)
 	require.Equal(t, service.RoleAdmin, identity["role"])
 }
 

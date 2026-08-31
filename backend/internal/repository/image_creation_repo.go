@@ -483,7 +483,7 @@ func (r *imageCreationRepository) attachImageCreationUserStates(ctx context.Cont
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var id int64
 		var favorite, recent sql.NullTime

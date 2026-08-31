@@ -288,13 +288,13 @@ func (h *StudioAuthHandler) respondWithUser(c *gin.Context, user *service.User) 
 func normalizeStudioFrontendBaseURL(value string) (string, error) {
 	parsed, err := url.Parse(strings.TrimSpace(value))
 	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return "", errors.New("Invalid request: frontend_base_url is invalid")
+		return "", errors.New("invalid request: frontend_base_url is invalid")
 	}
 	host := parsed.Hostname()
 	ip := net.ParseIP(host)
 	loopback := host == "localhost" || ip != nil && ip.IsLoopback()
-	if parsed.Scheme != "https" && !(parsed.Scheme == "http" && loopback) {
-		return "", errors.New("Invalid request: frontend_base_url must use HTTPS")
+	if parsed.Scheme != "https" && (parsed.Scheme != "http" || !loopback) {
+		return "", errors.New("invalid request: frontend_base_url must use HTTPS")
 	}
 	return strings.TrimSuffix(parsed.String(), "/"), nil
 }

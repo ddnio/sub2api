@@ -326,7 +326,7 @@ func (h *ImageCreationHandler) AdminUploadAsset(c *gin.Context) {
 		response.BadRequest(c, "Image file is invalid")
 		return
 	}
-	defer opened.Close()
+	defer func() { _ = opened.Close() }()
 	content, err := io.ReadAll(io.LimitReader(opened, service.ImageCreationAssetMaxBytes+1))
 	if err != nil {
 		response.BadRequest(c, "Image file is invalid")
