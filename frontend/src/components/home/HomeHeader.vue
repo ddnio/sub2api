@@ -23,6 +23,13 @@
         >
           {{ t('home.nav.docs') }}
         </a>
+        <router-link
+          v-if="showModelPlazaEntry"
+          to="/model-plaza"
+          class="hidden text-sm text-gray-500 transition-colors hover:text-gray-900 dark:text-dark-300 dark:hover:text-white md:block"
+        >
+          {{ t('nav.modelPlaza') }}
+        </router-link>
         <LocaleSwitcher />
         <button
           @click="$emit('toggle-theme')"
@@ -65,6 +72,7 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore, useAuthStore } from '@/stores'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { FeatureFlags, isFeatureFlagEnabled } from '@/utils/featureFlags'
 import { sanitizeUrl } from '@/utils/url'
 
 defineProps<{
@@ -85,6 +93,13 @@ const docUrl = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.doc_url
 const hasExternalDocUrl = computed(() => docUrl.value.startsWith('https://') || docUrl.value.startsWith('http://'))
 const effectiveDocUrl = computed(() => docUrl.value || '/docs')
 const isAuthenticated = computed(() => authStore.isAuthenticated)
+const modelPlazaEnabled = computed(() => isFeatureFlagEnabled(FeatureFlags.modelPlaza))
+const modelPlazaRequiresAuth = computed(
+  () => appStore.cachedPublicSettings?.model_plaza_require_auth === true
+)
+const showModelPlazaEntry = computed(
+  () => modelPlazaEnabled.value && (isAuthenticated.value || !modelPlazaRequiresAuth.value)
+)
 const isAdmin = computed(() => authStore.isAdmin)
 const dashboardPath = computed(() => (isAdmin.value ? '/admin/dashboard' : '/dashboard'))
 const userInitial = computed(() => {
