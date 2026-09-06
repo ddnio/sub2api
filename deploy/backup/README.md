@@ -12,3 +12,11 @@
 范围是两生产数据库、角色、配置、容器参数、证书和静态插件/主页/图标。尚未覆盖 Redis AOF、Docker 镜像层、Studio /data 卷及 R2 全量对象的日常异机备份。R2 是当前生产对象存储，模板封面读校验不等于用户作品备份。旧迁移快照只提供迁移时恢复点。
 
 更新程序前核对远端差异及运行锁；正在传输时不停止当前任务。部署新版本后另记其 hash、首轮结果与 MinIO readback，不能将本地语法检查写成远端备份验收。
+
+## Studio 独立每日备份
+
+NAS `/etc/cron.d/nanafox-studio-production` 每天北京时间 03:45 运行相同程序的 `--studio` 模式；使用独立 `studio/run.lock` 和 `studio/last-success.json`，固定 SSH 命令 `backup-studio-v1`。主任务默认模式与原锁不变，仍覆盖两库。
+
+Studio 独立模式只导出 nanafox_studio_prod，保存角色、私有运行参数、Studio 环境、Caddy 与 Studio 证书；MinIO 前缀 `studio-production/<UTC>/`。传输完成后逐文件 SHA256 回读一致才写成功记录。两份远端程序修改前已留 `.before-studio-20260907` 私有备份，本次实际安装已完成，未中断原 Router 备份。
+
+首轮独立 Studio 快照 `20260906T172952Z`，5 文件全部回读一致，北京时间 2026-09-07 01:31:15 完成；数据库 dump 1,877,745 字节。已验证 PG 归档目录与 MinIO 回读，尚未将本快照恢复到另一隔离库做恢复演练。

@@ -95,6 +95,10 @@ Bucket `nanafox-postgres-backups`：
 
 - 新每日任务首轮完成与回读、传输时长能否满足每日窗口；目前无断点续传。
 - Redis AOF、Studio /data、R2 对象和后续镜像版本的独立恢复点；具体范围见备份说明。
-- 自定义菜单是否由用户保存回正式 Router URL；提醒已送达，尚未代改。
+- 图像菜单域名：用户于 2026-09-07 明确确认已改回，此项完成（依据用户确认）。
 - Caddy 流式/SSE、缓存和客户端取消行为；已验证非流式调用不覆盖这些场景。
 - 旧机仍有未迁移或明确不迁移的业务，不可销毁整机。远端旧仓库可能仍带旧部署脚本；本次仓库保护不等于旧服务器 checkout 已自动同步。
+
+## Studio 独立备份（2026-09-07）
+
+已新增独立 Studio 生产数据库备份，NAS 北京时间 03:45 执行 `backup.py --studio`，MinIO `nanafox-postgres-backups/studio-production/<UTC>/`。独立进程锁和 `studio/last-success.json`，不被 Router 大文件备份锁阻塞。固定 SSH 命令新增 `backup-studio-v1`，仅导出 nanafox_studio_prod、角色、私有容器信息、Studio 环境配置和 Caddy/Studio 证书；不执行 shell。首轮快照为北京时间 2026-09-07 01:29:52，于 01:31:15 完成全部 5 个文件的 MinIO SHA256 回读。Studio dump 1,877,745 字节，SHA256 `bb4acf9a8f0ef92909d667ba54181a514a45520be6754d1d1c556ce89a41b663`；前缀 `studio-production/20260906T172952Z/`。Router 大备份仍在传输，不混淆两项状态。

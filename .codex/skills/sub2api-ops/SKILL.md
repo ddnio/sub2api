@@ -33,7 +33,7 @@ Do not add preview write guards, disable payment/generation, rewrite menus or al
 2. Router health, unsigned Studio Auth 401 (404 means adapter missing), signed Studio auth, Studio ready and formal deep links.
 3. Image plugin static files and user/admin APIs, R2 objects, model call and affected payment paths. State what was actually tested; GET 200 is not payment/generation acceptance.
 4. Actual formal-domain request marker in Router production logs plus authoritative DNS and old-container stopped state; ping or HTTP 200 alone is insufficient because old DNS may bridge through the source host.
-5. Resource/queue/error monitoring and backups. NAS daily pull at 03:35 Beijing stores fx-production/<UTC>/ in nanafox-postgres-backups. Check NAS last-success.json plus MinIO readback; first run was still transferring at migration handoff, so refresh before claiming it works.
+5. Resource/queue/error monitoring and backups. NAS daily pull at 03:35 Beijing stores fx-production/<UTC>/ in nanafox-postgres-backups. Check NAS last-success.json plus MinIO readback; the large Router first run was still transferring at migration handoff. Studio now has an independent 03:45 job, studio-production/<UTC>/ prefix and studio/last-success.json; its 20260906T172952Z snapshot passed all 5 file readbacks. Refresh both success timestamps before claiming current backup freshness.
 
 Rollback an app with a compatible image and current production configuration. Do not re-import a migration snapshot over new production writes. Original destination and source backups remain recovery evidence. The user's no-stop-write exception applied to this cutover, not arbitrary future destructive database work.
 
