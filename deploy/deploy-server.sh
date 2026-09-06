@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 服务器部署脚本
+# 历史测试环境部署脚本；生产入口已退役，见 docs/engineering/deployment.md
 # 用法: ./deploy/deploy-server.sh [test|prod]
 
 set -euo pipefail
@@ -8,6 +8,17 @@ ENV="${1:-}"
 if [[ "$ENV" != "test" && "$ENV" != "prod" ]]; then
     echo "用法: $0 [test|prod]"
     exit 1
+fi
+
+# Fail before git, filesystem or Docker mutations. Production now uses another stack.
+if [[ "$ENV" == "prod" ]]; then
+    echo "错误：旧 prod 部署入口已退役。Router 生产环境为 fx-production-router / 127.0.0.1:18080。" >&2
+    echo "先执行 deploy/check-router-production.py 并按 docs/engineering/deployment.md 发布。" >&2
+    exit 64
+fi
+if [[ "$(hostname)" == "iZt4nfdwwipifuqc4q2v01Z" ]]; then
+    echo "错误：生产主机未部署测试环境，不能使用此历史测试部署脚本。" >&2
+    exit 64
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

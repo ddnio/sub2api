@@ -1,3 +1,5 @@
+> NanaFox 运维：当前生产部署入口见 [Router 生产环境](docs/engineering/deployment.md)。以下上游通用安装示例不描述本站现有生产布局。
+
 <div align="center">
 
 <img src="assets/logo.svg" alt="Sub2API Logo" width="128" />

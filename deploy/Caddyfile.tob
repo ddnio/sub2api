@@ -1,6 +1,8 @@
+# HISTORICAL ONLY — retired 2026-09-07. Do not deploy.
+# Current target: docs/engineering/deployment.md.
 # =============================================================================
 # ToB 服务器 Caddyfile（43.106.8.109）
-# 对应 /etc/caddy/Caddyfile，修改后需同步到服务器并 reload
+# 历史实例记录；不得复制到当前服务器
 # =============================================================================
 
 {

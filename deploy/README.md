@@ -1,3 +1,5 @@
+> NanaFox Router 生产环境部署以 [当前运维说明](../docs/engineering/deployment.md) 为准。本文及通用 compose/install 示例不用于替换现有生产栈。
+
 # Sub2API Deployment Files
 
 This directory contains files for deploying Sub2API on Linux servers and Apple-silicon Macs.

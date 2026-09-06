@@ -1,3 +1,5 @@
+# HISTORICAL ONLY — retired 2026-09-07. Do not deploy.
+# Current target: docs/engineering/deployment.md.
 {
 	servers {
 		max_header_size 64KB

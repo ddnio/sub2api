@@ -293,3 +293,7 @@ upstream https://github.com/Wei-Shaw/sub2api.git (push)
 - 一切开发推送都走 `origin`
 
 只有当并行开发和发版协调真的开始带来痛点时，再引入 `develop`。
+
+## 部署范围（2026-09-07）
+
+生产为同一 Router 生产环境 Router 栈的 router/fx 两个域名；Studio 独立发布。合并代码不自动发布全部站点。测试仍在旧主机，Router 生产环境 测试暂不部署。当前目标与发布前核对见 [部署说明](deployment.md)。仅运维文档、skill 和部署保护更新通过相关静态检查后可合并维护分支，不触发应用镜像发布。

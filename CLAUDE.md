@@ -50,22 +50,8 @@ pnpm --dir frontend dev
 
 ## 部署
 
-```bash
-# 在服务器 /data/service/sub2api 下执行
-bash deploy/deploy-server.sh test   # 部署测试环境
-bash deploy/deploy-server.sh prod   # 部署生产环境
-```
-
-脚本会自动 git pull → docker build → 重启容器。
-服务器配置文件在 `/etc/sub2api/test.yaml` 和 `prod.yaml`，不在代码库里。
-
-## 部署补充
-
-- 服务器当前跟踪分支不一定是 main，`git pull` 只拉当前分支
-- 部署新分支前需在服务器先 `git checkout <branch>` 再运行脚本
-- 测试域名：`https://router-test.nanafox.com`（→ 127.0.0.1:8081）
-- 生产域名：`https://router.nanafox.com`（→ 127.0.0.1:8080）
-- 迁移**全自动**：启动时自动检测并执行 delta，无需手动跑 SQL
+当前生产唯一目标为 Router 生产环境 新加坡。Router 与 Router 生产环境 域名共用 `fx-production-router`，回环端口 18080；Studio 为 `fx-production-studio`，18789。先读 `docs/engineering/deployment.md` 并运行 `deploy/check-router-production.py` 只读预检。
+旧 `deploy-server.sh prod` 已退役；旧主机不再部署 Router/Studio 生产。生产主机暂无测试栈，合并 main 不自动触发多环境发布。数据库自动 migrations 仍需发布前核对备份和兼容性。
 
 ## 支付模块
 

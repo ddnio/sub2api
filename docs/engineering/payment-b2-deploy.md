@@ -1,3 +1,5 @@
+> 历史部署记录：主机、容器、端口与配置路径已变更，不可直接执行旧命令。当前生产见 [部署说明](deployment.md)。
+
 # Payment B-2 部署执行手册
 
 **文档目的**：将 fork payment 模块迁移到 upstream payment v2 架构的部署步骤清单。  
