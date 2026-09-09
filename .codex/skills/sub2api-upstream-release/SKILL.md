@@ -1,17 +1,17 @@
 ---
 name: sub2api-upstream-release
-description: "Use for the full Sub2API upstream release workflow when upstream has a new version/tag or the user asks to merge, review, test-deploy, promote, or production-deploy an upstream update. Covers planning the upstream merge, direct-batch code merge and conflict repair, code review, test environment deployment and validation gate, then one Router production production rollout and main promotion."
+description: "Use for the full Sub2API upstream release workflow when upstream has a new version/tag or the user asks to merge, review, promote, or production-deploy an upstream update. Covers planning the upstream merge, direct-batch code merge and conflict repair, code review, an explicit environment validation gate, then one Router production rollout and main promotion."
 ---
 
 # Sub2API Upstream Release
 
-Run the complete upstream release lane for this repository: plan the merge, integrate upstream, review and fix, deploy test, wait for validation, then promote to production.
+Run the complete upstream release lane for this repository: plan the merge, integrate upstream, review and fix, wait for an explicitly authorized validation target, then promote to production.
 
 This is a project-local skill for `/Users/nio/project/nanafox/sub2api`. Use `sub2api-ops` for live deployment details and keep `origin=ddnio/sub2api`, `upstream=Wei-Shaw/sub2api`.
 
 ## Operating Mode
 
-- Execute directly when the user asks to "合并 upstream", "upstream 更新到 X", "部署测试环境", "部署生产/fx", or "按流程执行".
+- Execute merge, verification, review, and release-branch push directly when the user asks to "合并 upstream", "upstream 更新到 X", or "按流程执行".
 - If OMX runtime is attached and `$ralplan` / `$ralph` is available, use them for planning/execution loops. In Codex App outside tmux, run the same phases directly.
 - Use the direct-batch merge model by default: create an isolated scratch worktree, merge the upstream release tag, capture conflicts/protected deletions/migration drift, repair and verify, then promote or replay into the release branch.
 - Do not default to per-PR or per-commit cherry-pick planning unless the direct merge proves a subfeature must be split out.
@@ -142,60 +142,18 @@ Also inspect high-risk paths touched by the merge:
 
 Do not proceed to test deployment until blocking review findings are fixed or explicitly accepted.
 
-## Phase 4: Deploy Test And Wait For Validation
+## Phase 4: Wait For An Explicit Validation Target
 
-Test environments remain on the old host; Router production tests are deferred. Deploy the isolated old-host test surface only when in the authorized release scope. Never start old production or automatically provision Router production tests.
+There is currently no active Sub2API test environment. The old host `108.160.133.141`, its `sub2api-test` container, `/etc/sub2api/test.yaml`, port `8081`, and `router-test.nanafox.com` are legacy state, not deployment targets.
 
-Use `sub2api-ops` and state the target before running the live command:
+After the code-review gate:
 
-- domain: `router-test.nanafox.com`
-- branch: `release/vX.Y.Z`
-- expected commit
-- command: `bash deploy/deploy-server.sh test`
-- rollback: previous server branch/commit or redeploy prior release branch
+- Report the release branch, commit, local verification, review result, database changes, and a web validation checklist.
+- Stop before any SSH, remote checkout, Docker build, database migration, or deployment.
+- Continue only when the user explicitly identifies and authorizes a current validation or production target.
+- Never infer a test environment from a legacy container, config file, DNS record, prior deployment history, or the words "执行合并".
 
-Typical server sequence:
-
-```bash
-ssh nio@108.160.133.141
-cd /data/service/sub2api
-git status --short --branch
-git checkout release/vX.Y.Z
-git pull --ff-only origin release/vX.Y.Z
-bash deploy/deploy-server.sh test
-docker ps --filter name=sub2api-test --format '{{.Names}} | {{.Status}} | {{.Ports}}'
-curl -fsS http://127.0.0.1:8081/health
-docker logs --since 10m sub2api-test
-```
-
-If the first local health check runs while Docker still reports `health: starting`, retry before treating it as a deploy failure:
-
-```bash
-docker ps --filter name=sub2api-test --format '{{.Names}} | {{.Status}} | {{.Ports}}'
-for i in 1 2 3 4 5; do
-  curl -fsS --max-time 5 http://127.0.0.1:8081/health && break
-  sleep 3
-done
-docker inspect --format='{{json .State.Health}}' sub2api-test
-```
-
-External smoke:
-
-```bash
-curl -I -L --max-time 15 https://router-test.nanafox.com/
-curl -fsS --max-time 15 https://router-test.nanafox.com/health
-```
-
-Report:
-
-- deployed branch and commit
-- container health
-- local `/health`
-- external domain status
-- relevant warnings/errors from recent logs
-- web validation checklist for changed features
-
-Then wait for validation. Do not promote to production merely because test deployment succeeded unless the user already authorized automatic promotion after test validation.
+If a new test environment is introduced, update `docs/engineering/deployment.md`, `sub2api-ops`, and this section with its verified host, domain, data boundary, deployment command, validation, and rollback before using it.
 
 ## Phase 5: Deploy One Router production Production Candidate
 
