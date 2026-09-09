@@ -8,7 +8,7 @@
 
 | 服务 | 域名 | 容器与宿主机回环端口 | 数据/配置 |
 |---|---|---|---|
-| Router v0.2.1 | router.nanafox.com、fx.nanafox.com | fx-production-router，18080 → 8080 | sub2api，role router_app |
+| Router v0.2.4 | router.nanafox.com、fx.nanafox.com | fx-production-router，18080 → 8080 | sub2api，role router_app |
 | Studio v0.13.0 | studio.nanafox.com；studio-fx 为临时别名 | fx-production-studio，18789 → 8788 | nanafox_studio_prod，role studio_app |
 | PostgreSQL 18 | 仅内部网络 | fx-production-postgres | fx-production-pgdata |
 | Redis 8 | 仅内部网络 | fx-production-redis | fx-production-redisdata，AOF |
@@ -63,9 +63,9 @@
 
 ## 已部署版本与回退边界
 
-迁移时复用原生产镜像，未重建应用：
+当前生产版本：
 
-- Router 源码 `3acd6da0fb0567ab5e68c1d9655dc77938ad2fe6`，image `sha256:db428c4e57d4f089f001cd9e0daf162517a9f508d98ec9f397949cfa63eb230d`。
+- Router 于 2026-09-09 部署源码 `8caa9e0c6173f70824006299248e9ea008de36fb`，服务器镜像 `sha256:9ba863606057cc1d58f97b933748425afe4d20d52ae4838a265d044bfdcaef0f`（tag `sub2api:prod-v0.2.4-8caa9e0c6`），数据库迁移至 `257_add_minimax_platform.sql`。切换前容器保留为 `fx-production-router-rollback-v0.2.1-7c1552fca`，其镜像为 `sha256:543d5975d7f60d633cd31e64998b1813d5086ed83c882a39149beb85f22db38a`。
 - Studio 源码 `7c69139d273da0feaf5a66339378cd0d3cee750b`，image `sha256:f5e7004ad8bb718499414db2860945436f4278b34847c6d3a77af2f21b2cf5d1`，schema 21。
 - Landing deploy 产物 `c63fc7e7beb7ec3010a1f223dcd5bd7927c645fb`，43 文件逐一 SHA256 相同。
 
