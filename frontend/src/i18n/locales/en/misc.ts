@@ -290,9 +290,59 @@ export default {
     }
   },
 
+  contact: {
+    label: 'Contact Support',
+    openTooltip: 'Open contact options',
+    close: 'Close contact options',
+    firstHint: 'Need help? Contact us here.'
+  },
+
+  pricing: {
+    title: 'Model Pricing',
+    description: 'View model prices for each available group',
+    groupAll: 'All groups',
+    searchPlaceholder: 'Search models',
+    unitPerMillion: 'Price per 1M tokens',
+    currentRate: 'Current rate',
+    loadError: 'Failed to load pricing data',
+    noModels: 'No matching models',
+    modelName: 'Model',
+    input: 'Input',
+    output: 'Output',
+    cacheRead: 'Cache read',
+    cacheCreation: 'Cache creation',
+    provider: 'Provider',
+    notice: 'Prices shown include the applicable group rate.'
+  },
+
+  referral: {
+    title: 'Referral Rewards',
+    description: 'Invite new users and track referral rewards',
+    myCode: 'My referral code',
+    copyLink: 'Copy invite link',
+    totalInvited: 'Total invited',
+    totalRewarded: 'Total rewarded',
+    pendingCount: 'Pending',
+    rewardPerInvite: 'Reward per invite',
+    inviterGets: 'Inviter gets',
+    inviteeGets: 'Invitee gets',
+    noRewardConfigured: 'No reward configured',
+    inviteeList: 'Invited users',
+    noInvitees: 'No invited users yet',
+    email: 'Email',
+    date: 'Date',
+    status: 'Status',
+    reward: 'Reward',
+    statusGranted: 'Granted',
+    statusPending: 'Pending',
+    pendingTooltip: 'The reward is waiting to be granted',
+    linkCopied: 'Invite link copied',
+  },
+
   // Payment System
   payment: {
     title: 'Recharge / Subscription',
+    description: 'Choose an amount and payment method to recharge your balance',
     amountLabel: 'Amount',
     paymentAmount: 'Payment Amount',
     creditedBalance: 'Credited Balance',

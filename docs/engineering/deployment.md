@@ -1,6 +1,6 @@
 # NanaFox 当前部署与运维
 
-最后核对：2026-09-07。本文是生产目标的唯一部署入口；历史日期文档、迁移前双生产模板不能覆盖本文。运行前再次检查宿主机与 Docker 状态。
+最后核对：2026-09-09。本文是生产目标的唯一部署入口；历史日期文档、迁移前双生产模板不能覆盖本文。运行前再次检查宿主机与 Docker 状态。
 
 ## 当前生产拓扑
 
@@ -8,7 +8,7 @@
 
 | 服务 | 域名 | 容器与宿主机回环端口 | 数据/配置 |
 |---|---|---|---|
-| Router v0.2.1 | router.nanafox.com、fx.nanafox.com | fx-production-router，18080 → 8080 | sub2api，role router_app |
+| Router v0.2.4 | router.nanafox.com、fx.nanafox.com | fx-production-router，18080 → 8080 | sub2api，role router_app |
 | Studio v0.13.0 | studio.nanafox.com；studio-fx 为临时别名 | fx-production-studio，18789 → 8788 | nanafox_studio_prod，role studio_app |
 | PostgreSQL 18 | 仅内部网络 | fx-production-postgres | fx-production-pgdata |
 | Redis 8 | 仅内部网络 | fx-production-redis | fx-production-redisdata，AOF |
@@ -31,11 +31,11 @@
 
 新主机上迁移前的独立服务 `sub2api-prod` 已停止，原 `sub2api_tob` 库、旧 PG/Redis 与其他业务保留。生产只连接上述 fx-production 栈；库名不同也不代表可复用旧容器或凭据。
 
-`pick`、`newapi` 用户明确不迁移；Router/Studio 测试留在旧主机，生产主机暂不部署测试。不要因合并 main 自动发布三套环境或重新启动旧生产。
+`pick`、`newapi` 用户明确不迁移。当前没有 Router/Studio 测试环境；旧主机上遗留的 `sub2api-test`、测试配置、端口和历史域名都不是发布目标。不要因合并 main 自动部署、把遗留容器当成测试环境，或重新启动旧生产。
 
 ## 应用更新流程
 
-1. 明确本次授权的项目、版本和 Router 生产环境目标，固定 release 提交与候选镜像 digest。先按 Git 工作流验证候选；测试环境仍单独隔离。未安排测试部署时明确验证缺口，不擅自占用 生产主机建测试栈。
+1. 明确本次授权的项目、版本和 Router 生产环境目标，固定 release 提交与候选镜像 digest。先按 Git 工作流验证候选。当前没有测试环境；未明确提供新的验证目标时，只报告本地验证缺口，不登录旧机部署，也不擅自占用生产主机建测试栈。
 2. 在 生产主机对当前运行态执行只读检查（脚本可从当前受审阅版本经 SSH stdin 运行）：
 
    ```bash
@@ -49,7 +49,7 @@
 6. 检查下列验收项；失败先保全新数据，再恢复上一个兼容应用镜像及当前生产配置。不要恢复旧数据库覆盖新增业务记录。
 7. 应用验证通过后按发布分支流程合并 main，记录已运行 image ID 与源码提交。常规应用发布不需要重切 DNS。仅文档/运维规则更新不重建应用。
 
-测试旧脚本仅在已授权的旧机隔离测试环境使用：先核对 `sub2api-test`、`/etc/sub2api/test.yaml`、回环 8081、测试数据库与选定 release 分支。生产主机上该脚本会拒绝执行。
+`deploy/deploy-server.sh` 已完全退役：当前没有测试环境，且该脚本不能创建现有生产布局。遗留的 `sub2api-test`、`/etc/sub2api/test.yaml`、回环 8081 和 `router-test.nanafox.com` 不能作为当前发布依据。
 
 ## 验收与真实流量证明
 
@@ -63,9 +63,9 @@
 
 ## 已部署版本与回退边界
 
-迁移时复用原生产镜像，未重建应用：
+当前生产版本：
 
-- Router 源码 `3acd6da0fb0567ab5e68c1d9655dc77938ad2fe6`，image `sha256:db428c4e57d4f089f001cd9e0daf162517a9f508d98ec9f397949cfa63eb230d`。
+- Router 于 2026-09-09 部署源码 `8caa9e0c6173f70824006299248e9ea008de36fb`，服务器镜像 `sha256:9ba863606057cc1d58f97b933748425afe4d20d52ae4838a265d044bfdcaef0f`（tag `sub2api:prod-v0.2.4-8caa9e0c6`），数据库迁移至 `257_add_minimax_platform.sql`。切换前容器保留为 `fx-production-router-rollback-v0.2.1-7c1552fca`，其镜像为 `sha256:543d5975d7f60d633cd31e64998b1813d5086ed83c882a39149beb85f22db38a`。
 - Studio 源码 `7c69139d273da0feaf5a66339378cd0d3cee750b`，image `sha256:f5e7004ad8bb718499414db2860945436f4278b34847c6d3a77af2f21b2cf5d1`，schema 21。
 - Landing deploy 产物 `c63fc7e7beb7ec3010a1f223dcd5bd7927c645fb`，43 文件逐一 SHA256 相同。
 

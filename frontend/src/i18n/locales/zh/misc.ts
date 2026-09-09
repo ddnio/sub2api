@@ -314,9 +314,59 @@ export default {
     }
   },
 
+  contact: {
+    label: '联系客服',
+    openTooltip: '打开联系方式',
+    close: '关闭联系方式',
+    firstHint: '需要帮助？可以在这里联系我们。'
+  },
+
+  pricing: {
+    title: '模型定价',
+    description: '查看各个可用分组的模型价格',
+    groupAll: '全部分组',
+    searchPlaceholder: '搜索模型',
+    unitPerMillion: '每百万 Token 价格',
+    currentRate: '当前倍率',
+    loadError: '定价数据加载失败',
+    noModels: '没有匹配的模型',
+    modelName: '模型',
+    input: '输入',
+    output: '输出',
+    cacheRead: '缓存读取',
+    cacheCreation: '缓存写入',
+    provider: '供应商',
+    notice: '页面价格已包含当前分组适用的倍率。'
+  },
+
+  referral: {
+    title: '邀请奖励',
+    description: '邀请新用户并查看奖励记录',
+    myCode: '我的邀请码',
+    copyLink: '复制邀请链接',
+    totalInvited: '累计邀请',
+    totalRewarded: '累计奖励',
+    pendingCount: '待发放',
+    rewardPerInvite: '每次邀请奖励',
+    inviterGets: '邀请人获得',
+    inviteeGets: '受邀人获得',
+    noRewardConfigured: '暂未配置奖励',
+    inviteeList: '受邀用户',
+    noInvitees: '暂无邀请记录',
+    email: '邮箱',
+    date: '日期',
+    status: '状态',
+    reward: '奖励',
+    statusGranted: '已发放',
+    statusPending: '待发放',
+    pendingTooltip: '奖励正在等待发放',
+    linkCopied: '邀请链接已复制',
+  },
+
   // Payment System
   payment: {
     title: '充值/订阅',
+    description: '选择充值金额和支付方式，为账户余额充值',
     amountLabel: '充值金额',
     paymentAmount: '支付金额',
     creditedBalance: '到账余额',
