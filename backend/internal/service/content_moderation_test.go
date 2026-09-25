@@ -1680,7 +1680,7 @@ func TestContentModerationCheck_PreBlockFlaggedWritesRedisHashCache(t *testing.T
 	require.Equal(t, ContentModerationActionHashBlock, logs[1].Action)
 }
 
-func TestContentModerationCheck_PreBlockWithoutAPIKeysBlocks(t *testing.T) {
+func TestContentModerationCheck_PreBlockWithoutAPIKeysAllows(t *testing.T) {
 	cfg := defaultContentModerationConfig()
 	cfg.Enabled = true
 	cfg.Mode = ContentModerationModePreBlock
@@ -1711,19 +1711,14 @@ func TestContentModerationCheck_PreBlockWithoutAPIKeysBlocks(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	require.True(t, decision.Blocked)
-	require.False(t, decision.Allowed)
+	require.False(t, decision.Blocked)
+	require.True(t, decision.Allowed)
 	require.False(t, decision.Flagged)
-	require.Equal(t, ContentModerationActionError, decision.Action)
-	require.Equal(t, http.StatusFailedDependency, decision.StatusCode)
-	require.Equal(t, "内容审计不可用", decision.Message)
-	require.Len(t, repo.logs, 1)
-	require.Equal(t, ContentModerationActionError, repo.logs[0].Action)
-	require.False(t, repo.logs[0].Flagged)
-	require.Contains(t, repo.logs[0].Error, "no moderation api key configured")
+	require.Equal(t, ContentModerationActionAllow, decision.Action)
+	require.Empty(t, repo.logs)
 }
 
-func TestContentModerationCheck_PreBlockModerationAPIFailureBlocks(t *testing.T) {
+func TestContentModerationCheck_PreBlockModerationAPIFailureAllows(t *testing.T) {
 	requestCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestCount++
@@ -1764,12 +1759,10 @@ func TestContentModerationCheck_PreBlockModerationAPIFailureBlocks(t *testing.T)
 	})
 
 	require.NoError(t, err)
-	require.True(t, decision.Blocked)
-	require.False(t, decision.Allowed)
+	require.False(t, decision.Blocked)
+	require.True(t, decision.Allowed)
 	require.False(t, decision.Flagged)
-	require.Equal(t, ContentModerationActionError, decision.Action)
-	require.Equal(t, http.StatusServiceUnavailable, decision.StatusCode)
-	require.Equal(t, "内容审计不可用", decision.Message)
+	require.Equal(t, ContentModerationActionAllow, decision.Action)
 	require.Equal(t, 1, requestCount)
 	require.Len(t, repo.logs, 1)
 	require.Equal(t, ContentModerationActionError, repo.logs[0].Action)

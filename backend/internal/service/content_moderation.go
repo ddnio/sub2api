@@ -1024,9 +1024,6 @@ func (s *ContentModerationService) Check(ctx context.Context, input ContentModer
 			"group_id", contentModerationLogGroupID(input.GroupID),
 			"endpoint", input.Endpoint,
 			"protocol", input.Protocol)
-		if cfg.Mode == ContentModerationModePreBlock {
-			return s.blockOnModerationError(ctx, input, cfg, content, hashText, nil, nil, errors.New("no moderation api key configured")), nil
-		}
 		return allow, nil
 	}
 	if cfg.Mode == ContentModerationModeObserve {
@@ -1072,9 +1069,6 @@ func (s *ContentModerationService) checkSync(ctx context.Context, input ContentM
 			"error", err)
 		if queueDelay != nil {
 			s.asyncErrors.Add(1)
-		}
-		if allowBlock && cfg.Mode == ContentModerationModePreBlock {
-			return s.blockOnModerationError(ctx, input, cfg, content, hashText, &latency, queueDelay, err)
 		}
 		if cfg.RecordNonHits {
 			log := s.buildLog(input, cfg, ContentModerationActionError, false, "", 0, nil, content.ExcerptText(), &latency, queueDelay, err.Error())
@@ -1140,26 +1134,6 @@ func (s *ContentModerationService) checkSync(ctx context.Context, input ContentM
 		HighestScore:    highestScore,
 		CategoryScores:  result.CategoryScores,
 		Action:          action,
-	}
-}
-
-func (s *ContentModerationService) blockOnModerationError(ctx context.Context, input ContentModerationCheckInput, cfg *ContentModerationConfig, content ContentModerationInput, hashText string, latency *int, queueDelay *int, err error) *ContentModerationDecision {
-	errText := ""
-	if err != nil {
-		errText = err.Error()
-	}
-	if s != nil && s.repo != nil {
-		log := s.buildLog(input, cfg, ContentModerationActionError, false, "", 0, nil, content.ExcerptText(), latency, queueDelay, errText)
-		_ = s.repo.CreateLog(ctx, log)
-	}
-	return &ContentModerationDecision{
-		Allowed:    false,
-		Blocked:    true,
-		Flagged:    false,
-		Message:    cfg.BlockMessage,
-		StatusCode: cfg.BlockStatus,
-		InputHash:  hashText,
-		Action:     ContentModerationActionError,
 	}
 }
 
