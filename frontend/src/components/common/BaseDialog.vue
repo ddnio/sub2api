@@ -44,6 +44,7 @@
 
 <script lang="ts">
 let dialogIdCounter = 0
+const openDialogs = new Set<string>()
 </script>
 
 <script setup lang="ts">
@@ -119,6 +120,12 @@ const handleEscape = (event: KeyboardEvent) => {
 const { lock, unlock } = useScrollLock()
 let lockedByMe = false
 
+const updateScrollLock = (isOpen: boolean) => {
+  if (isOpen) openDialogs.add(dialogId)
+  else openDialogs.delete(dialogId)
+  document.body.classList.toggle('modal-open', openDialogs.size > 0)
+}
+
 // Prevent body scroll when modal is open and manage focus
 watch(
   () => props.show,
@@ -128,6 +135,7 @@ watch(
       previousActiveElement = document.activeElement as HTMLElement
       lock()
       lockedByMe = true
+      updateScrollLock(true)
 
       // 等待DOM更新后设置焦点到对话框
       await nextTick()
@@ -145,6 +153,7 @@ watch(
         unlock()
         lockedByMe = false
       }
+      updateScrollLock(false)
       // 恢复之前的焦点
       if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
         previousActiveElement.focus()
@@ -165,5 +174,6 @@ onUnmounted(() => {
     unlock()
     lockedByMe = false
   }
+  updateScrollLock(false)
 })
 </script>

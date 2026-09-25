@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { afterAll, beforeAll, describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import OpsErrorLogTable from '../OpsErrorLogTable.vue'
 import zhLocale from '@/i18n/locales/zh'
@@ -11,6 +11,25 @@ vi.mock('vue-i18n', async (importOriginal) => {
     ...actual,
     useI18n: () => ({ t: (key: string) => key }),
   }
+})
+
+// These assertions exercise the desktop table. Keep the viewport contract local
+// to this spec so the shared jsdom setup can still cover the mobile branch.
+beforeAll(() => {
+  vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+    matches: query === '(min-width: 768px)',
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }) as unknown as MediaQueryList)
+})
+
+afterAll(() => {
+  vi.restoreAllMocks()
 })
 
 const TooltipStub = { template: '<div><slot /></div>' }
