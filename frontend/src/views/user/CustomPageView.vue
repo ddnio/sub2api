@@ -152,7 +152,7 @@
         <!-- Iframe embed mode -->
         <div v-else ref="embedShell" class="custom-embed-shell" :class="{ 'custom-image-creation-shell': isImageCreationMode }">
           <a
-            v-if="!isImageCreationMode"
+            v-if="!isImageCreationMode && !menuItem?.hide_open_button"
             ref="openButton"
             :href="embeddedUrl"
             target="_blank"
