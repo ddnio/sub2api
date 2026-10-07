@@ -35,6 +35,7 @@ func TestRegisterPaymentRoutesExposesUpstreamPaymentSurface(t *testing.T) {
 		middleware.AuditLogMiddleware(allow),
 		nil,
 		nil,
+		nil,
 	)
 
 	routes := map[string]bool{}
