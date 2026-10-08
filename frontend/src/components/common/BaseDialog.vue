@@ -42,13 +42,17 @@
   </Teleport>
 </template>
 
+<script lang="ts">
+let dialogIdCounter = 0
+const openDialogs = new Set<string>()
+</script>
+
 <script setup lang="ts">
 import { computed, watch, onMounted, onUnmounted, ref, nextTick } from 'vue'
 import Icon from '@/components/icons/Icon.vue'
 import { useScrollLock } from '@/composables/useScrollLock'
 
 // 生成唯一ID以避免多个对话框时ID冲突
-let dialogIdCounter = 0
 const dialogId = `modal-title-${++dialogIdCounter}`
 
 // 焦点管理
@@ -116,6 +120,12 @@ const handleEscape = (event: KeyboardEvent) => {
 const { lock, unlock } = useScrollLock()
 let lockedByMe = false
 
+const updateScrollLock = (isOpen: boolean) => {
+  if (isOpen) openDialogs.add(dialogId)
+  else openDialogs.delete(dialogId)
+  document.body.classList.toggle('modal-open', openDialogs.size > 0)
+}
+
 // Prevent body scroll when modal is open and manage focus
 watch(
   () => props.show,
@@ -125,6 +135,7 @@ watch(
       previousActiveElement = document.activeElement as HTMLElement
       lock()
       lockedByMe = true
+      updateScrollLock(true)
 
       // 等待DOM更新后设置焦点到对话框
       await nextTick()
@@ -142,6 +153,7 @@ watch(
         unlock()
         lockedByMe = false
       }
+      updateScrollLock(false)
       // 恢复之前的焦点
       if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
         previousActiveElement.focus()
@@ -162,5 +174,6 @@ onUnmounted(() => {
     unlock()
     lockedByMe = false
   }
+  updateScrollLock(false)
 })
 </script>

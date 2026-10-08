@@ -150,6 +150,10 @@ func (r *paymentFulfillmentAffiliateRepoStub) TransferQuotaToBalance(context.Con
 	panic("unexpected TransferQuotaToBalance call")
 }
 
+func (r *paymentFulfillmentAffiliateRepoStub) WithdrawQuota(context.Context, int64, float64, string) (*AffiliateWithdrawResult, error) {
+	panic("unexpected WithdrawQuota call")
+}
+
 func (r *paymentFulfillmentAffiliateRepoStub) ListInvitees(context.Context, int64, int) ([]AffiliateInvitee, error) {
 	panic("unexpected ListInvitees call")
 }
@@ -836,7 +840,7 @@ func TestExecuteBalanceFulfillmentBypassesUserRedeemRateLimit(t *testing.T) {
 		return nil
 	}
 	cache := &paymentFulfillmentRedeemCacheStub{count: redeemMaxFailedAttempts}
-	redeemService := NewRedeemService(redeemRepo, userRepo, nil, cache, nil, client, nil, nil)
+	redeemService := NewRedeemService(redeemRepo, userRepo, nil, cache, nil, client, nil, nil, nil)
 	svc := &PaymentService{entClient: client, redeemService: redeemService, userRepo: userRepo}
 
 	require.NoError(t, svc.ExecuteBalanceFulfillment(ctx, order.ID))

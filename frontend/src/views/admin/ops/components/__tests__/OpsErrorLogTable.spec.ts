@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { afterAll, beforeAll, describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import OpsErrorLogTable from '../OpsErrorLogTable.vue'
 import zhLocale from '@/i18n/locales/zh'
@@ -11,6 +11,25 @@ vi.mock('vue-i18n', async (importOriginal) => {
     ...actual,
     useI18n: () => ({ t: (key: string) => key }),
   }
+})
+
+// These assertions exercise the desktop table. Keep the viewport contract local
+// to this spec so the shared jsdom setup can still cover the mobile branch.
+beforeAll(() => {
+  vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+    matches: query === '(min-width: 768px)',
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }) as unknown as MediaQueryList)
+})
+
+afterAll(() => {
+  vi.restoreAllMocks()
 })
 
 const TooltipStub = { template: '<div><slot /></div>' }
@@ -72,6 +91,37 @@ describe('OpsErrorLogTable user/api-key/account columns', () => {
 
     expect(wrapper.text()).toContain('old-key')
     expect(wrapper.text()).toContain('admin.ops.errorLog.keyDeletedBadge')
+  })
+})
+
+describe('OpsErrorLogTable column order', () => {
+  it('puts time and response content first for ops without changing time sorting', async () => {
+    const wrapper = mountTable({})
+    await wrapper.setProps({ summaryFirst: true })
+
+    const headers = wrapper.findAll('thead th')
+    expect(headers.slice(0, 3).map((header) => header.text())).toEqual([
+      'admin.ops.errorLog.time',
+      'admin.ops.errorLog.message',
+      'admin.ops.errorLog.user',
+    ])
+    expect(wrapper.findAll('tbody td')[1].text()).toBe('boom')
+
+    await headers[0].trigger('click')
+    expect(wrapper.emitted('sort')).toEqual([['created_at', 'asc']])
+    wrapper.unmount()
+  })
+
+  it('preserves the usage column order and visibility by default', async () => {
+    const wrapper = mountTable({})
+    await wrapper.setProps({ visibleColumnKeys: ['created_at', 'user', 'message'] })
+
+    expect(wrapper.findAll('thead th').map((header) => header.text())).toEqual([
+      'admin.ops.errorLog.user',
+      'admin.ops.errorLog.message',
+      'admin.ops.errorLog.time',
+    ])
+    wrapper.unmount()
   })
 })
 
