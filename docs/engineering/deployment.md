@@ -1,15 +1,15 @@
 # NanaFox 当前部署与运维
 
-最后核对：2026-09-09。本文是生产目标的唯一部署入口；历史日期文档、迁移前双生产模板不能覆盖本文。运行前再次检查宿主机与 Docker 状态。
+最后核对：2026-10-08。本文是生产目标的唯一部署入口；历史日期文档、迁移前双生产模板不能覆盖本文。运行前再次检查宿主机与 Docker 状态。
 
 ## 当前生产拓扑
 
-唯一生产主机：阿里云新加坡 Router 生产环境，`nio@43.106.8.109`，hostname `iZt4nfdwwipifuqc4q2v01Z`，实际 2 vCPU / 4 GiB（系统约 3.41 GiB）。`router` 和 `fx` 是同一 Router 服务的两个入口，不是两套生产。
+唯一生产主机：阿里云新加坡 Router 生产环境，`nio@43.106.8.109`，hostname `iZt4nfdwwipifuqc4q2v01Z`，实际 2 vCPU / 4 GiB（系统约 3.41 GiB）。历史 `router` 和 `fx` 指向同一 Router 服务，不是两套生产；2026-10-08 发布前已确认 `fx.nanafox.com` 为 NXDOMAIN，当前可用入口是 `router.nanafox.com`。不在普通应用发布中恢复历史 DNS。
 
 | 服务 | 域名 | 容器与宿主机回环端口 | 数据/配置 |
 |---|---|---|---|
-| Router v0.2.4 | router.nanafox.com、fx.nanafox.com | fx-production-router，18080 → 8080 | sub2api，role router_app |
-| Studio v0.13.0 | studio.nanafox.com；studio-fx 为临时别名 | fx-production-studio，18789 → 8788 | nanafox_studio_prod，role studio_app |
+| Router v0.2.14 | router.nanafox.com | fx-production-router，18080 → 8080 | sub2api，role router_app |
+| Studio（独立发布） | studio.nanafox.com | fx-production-studio，18789 → 8788 | nanafox_studio_prod，role studio_app |
 | PostgreSQL 18 | 仅内部网络 | fx-production-postgres | fx-production-pgdata |
 | Redis 8 | 仅内部网络 | fx-production-redis | fx-production-redisdata，AOF |
 | 图像创作插件 | Router /tools/image-playground/ | Caddy 静态文件 + Router 内置 API | /srv/nanafox/image-playground/prod-current，release 8bba7e8 |
@@ -63,7 +63,11 @@
 
 ## 已部署版本与回退边界
 
-当前生产版本：
+当前 Router 发布（2026-10-08）：源码 `1de7382df3a402063cad0729fe9b0039c4d17c51`，镜像 `sub2api:prod-v0.2.14-1de7382df`，服务器 image ID `sha256:03e0e0aae0417452768e897667fcfe7c5ee6df05009cf4ec9f7efbe0b0014d1a`，迁移 319 项（至 264）。Studio 本轮不变，其当前 image ID `sha256:ce5d240d3cfa69a07272ba005b8817255ecbf730746569133067c567bc482f4a`。回退容器 `fx-production-router-rollback-v0.2.8-b13ef536a-20261008` 停止且 restart=no，旧镜像 `sha256:6e9c747ed166fb67935cdfdec3b6edf02c80be2360b63b9984f5dddd5d0a0d4e` 保留。
+
+赠金促销未开启、TypeSafe 账号尚无；启用新功能/产生相应记录后，不能直接回退原 v0.2.8。回退前检查生产数据兼容性，仅恢复兼容应用与当前配置，不恢复旧数据库。发布前快照与运行参数私有保存在 `/home/nio/releases/router-v0.2.14-20261008`，详细验证范围和剩余缺口见 [v0.2.14 发布记录](../plans/2026-10-08-upstream-v0.2.14-execution.md)。
+
+以下是迁移后历史版本记录，不是当前版本：
 
 - Router 于 2026-09-09 部署源码 `8caa9e0c6173f70824006299248e9ea008de36fb`，服务器镜像 `sha256:9ba863606057cc1d58f97b933748425afe4d20d52ae4838a265d044bfdcaef0f`（tag `sub2api:prod-v0.2.4-8caa9e0c6`），数据库迁移至 `257_add_minimax_platform.sql`。切换前容器保留为 `fx-production-router-rollback-v0.2.1-7c1552fca`，其镜像为 `sha256:543d5975d7f60d633cd31e64998b1813d5086ed83c882a39149beb85f22db38a`。
 - Studio 源码 `7c69139d273da0feaf5a66339378cd0d3cee750b`，image `sha256:f5e7004ad8bb718499414db2860945436f4278b34847c6d3a77af2f21b2cf5d1`，schema 21。
@@ -80,7 +84,7 @@ Bucket `nanafox-postgres-backups`：
 - 新日常备份：`fx-production/<UTC时间>/`，NAS 北京时间 03:35 拉取两生产库、角色、配置、容器参数、证书和静态产物；不依赖旧生产机。
 - Router 生产环境 导出 `/home/nio/backups/fx-production/export-backup.py`；NAS `/home/Nio/.local/share/nanafox-fx-production-backup/backup.py`；cron `/etc/cron.d/nanafox-fx-production`。
 - NAS SSH key 仅允许固定 `backup-v1` 导出。只有全部上传和回读一致后才写 `last-success.json`；检查其时间和 MinIO 对象，不能用 cron 存在代替备份成功。
-- 2026-09-07 本次记录时首轮导出成功、传输缓慢，**新日常备份端到端尚未确认完成**。旧快照与补备已确认，不混淆两者。
+- 2026-09-07 首轮导出时传输缓慢，彼时尚未确认日常备份端到端完成；此为历史状态。2026-10-08 已核对最新 Router 快照 `20261007T193504Z`，本日 11:34 北京时间完成，6 对象 verified；MinIO manifest 回读与成功状态中的文件 SHA256/大小一致。本轮未重新回读全部 dump 或演练异机恢复。
 - 新任务不包含可恢复的 Redis AOF 快照、Docker 镜像层、Studio /data 卷或 R2 全量对象；原源 Redis 快照/应用镜像有迁移备份。账号以 PG 为准，会话可能重建；需要 Redis 恢复点或新镜像异机保全时另补验证。
 
 执行证据与时间线见 [迁移记录](../plans/2026-09-07-router-production-migration.md)。旧流程通过 Git 历史查阅，不复制回当前操作入口。
@@ -93,7 +97,7 @@ Bucket `nanafox-postgres-backups`：
 
 ## 后续核对项（不能标为已完成）
 
-- 新每日任务首轮完成与回读、传输时长能否满足每日窗口；目前无断点续传。
+- 每日备份目前有完成及回读记录；继续关注传输是否满足每日窗口，目前无断点续传。完整异机恢复演练未完成。
 - Redis AOF、Studio /data、R2 对象和后续镜像版本的独立恢复点；具体范围见备份说明。
 - 图像菜单域名：用户于 2026-09-07 明确确认已改回，此项完成（依据用户确认）。
 - Caddy 流式/SSE、缓存和客户端取消行为；已验证非流式调用不覆盖这些场景。
