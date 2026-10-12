@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -1968,6 +1969,37 @@ func TestAttachOpsRequestSnapshotToEntryIgnoresInvalidJSONBody(t *testing.T) {
 	require.NotNil(t, entry.RequestBodyBytes)
 	require.Equal(t, len(raw), *entry.RequestBodyBytes)
 	require.False(t, entry.RequestBodyTruncated)
+}
+
+func TestOpsErrorLoggerMiddlewareOversizedRequestQueuesMetadataOnly(t *testing.T) {
+	setupOpsErrorLogTestQueue(t, 2)
+	gin.SetMode(gin.TestMode)
+	ops := service.NewOpsService(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	raw := []byte(`{"api_key":"sk-large-request-sentinel","input":"` + strings.Repeat("x", 2*1024*1024) + `"}`)
+	original := bytes.Clone(raw)
+	router := gin.New()
+	router.Use(OpsErrorLoggerMiddleware(ops))
+	router.POST("/v1/responses", func(c *gin.Context) {
+		setOpsRequestBodySnapshot(c, raw)
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": gin.H{"type": "server_is_overloaded", "message": "busy"}})
+	})
+	recorder := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(raw))
+	req.Header.Set("authorization", "Bearer must-not-persist")
+	req.Header.Set("anthropic-version", "2023-06-01")
+	router.ServeHTTP(recorder, req)
+	require.Equal(t, http.StatusServiceUnavailable, recorder.Code)
+	require.Equal(t, int64(1), OpsErrorLogQueueLength())
+	job := <-opsErrorLogQueue
+	require.Equal(t, http.StatusServiceUnavailable, job.entry.StatusCode)
+	require.NotNil(t, job.entry.RequestBodyJSON)
+	require.JSONEq(t, `{"payload_truncated":true,"snapshot_omitted_reason":"request_body_too_large"}`, *job.entry.RequestBodyJSON)
+	require.True(t, job.entry.RequestBodyTruncated)
+	require.Equal(t, len(raw), *job.entry.RequestBodyBytes)
+	require.NotNil(t, job.entry.RequestHeadersJSON)
+	require.NotContains(t, *job.entry.RequestHeadersJSON, "must-not-persist")
+	require.Contains(t, *job.entry.RequestHeadersJSON, "2023-06-01")
+	require.Equal(t, original, raw)
 }
 
 func TestGetOpsAPIKeyFallsBackToOpsFallbackKey(t *testing.T) {
