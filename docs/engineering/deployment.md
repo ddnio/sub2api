@@ -8,7 +8,7 @@
 
 | 服务 | 域名 | 容器与宿主机回环端口 | 数据/配置 |
 |---|---|---|---|
-| Router v0.2.14 | router.nanafox.com | fx-production-router，18080 → 8080 | sub2api，role router_app |
+| Router v0.2.14 + snapshot1 hotfix | router.nanafox.com | fx-production-router，18080 → 8080 | sub2api，role router_app |
 | Studio（独立发布） | studio.nanafox.com | fx-production-studio，18789 → 8788 | nanafox_studio_prod，role studio_app |
 | PostgreSQL 18 | 仅内部网络 | fx-production-postgres | fx-production-pgdata |
 | Redis 8 | 仅内部网络 | fx-production-redis | fx-production-redisdata，AOF |
@@ -63,7 +63,9 @@
 
 ## 已部署版本与回退边界
 
-当前 Router 发布（2026-10-08）：源码 `1de7382df3a402063cad0729fe9b0039c4d17c51`，镜像 `sub2api:prod-v0.2.14-1de7382df`，服务器 image ID `sha256:03e0e0aae0417452768e897667fcfe7c5ee6df05009cf4ec9f7efbe0b0014d1a`，迁移 319 项（至 264）。Studio 本轮不变，其当前 image ID `sha256:ce5d240d3cfa69a07272ba005b8817255ecbf730746569133067c567bc482f4a`。回退容器 `fx-production-router-rollback-v0.2.8-b13ef536a-20261008` 停止且 restart=no，旧镜像 `sha256:6e9c747ed166fb67935cdfdec3b6edf02c80be2360b63b9984f5dddd5d0a0d4e` 保留。
+当前 Router 发布（2026-10-12 22:13）：v0.2.14 的 snapshot1 hotfix，应用源码 `d32154752f70e07c1ddd7a738a8e5ddf5e5514a4`，main 合并 `e315e4bc1bcbbee99846a70eca4ff02a3427d885`，镜像 `sub2api:prod-v0.2.14-snapshot1-d32154752`，服务器 image ID `sha256:841dd9d2b88a13922d8f7788608deff6433f37fad448acd6f33c09e348edd995`；应用版本仍显示 0.2.14，迁移仍为 319 项（至 264）。仅增加大请求错误快照入口保护。生产配置、资源额度及 Studio/PG/Redis 未变；功能验证通过，容量观察与剩余风险见 [本次发布记录](../ops/2026-10-12-ops-snapshot-guard-deployment.md)。
+
+直接回退入口是 `fx-production-router-rollback-v0.2.14-1de7382df-20261012-snapshot1`，停止且 restart=no，镜像 `sha256:03e0e0aae0417452768e897667fcfe7c5ee6df05009cf4ec9f7efbe0b0014d1a` 保留。Studio 当前 image ID 仍为 `sha256:ce5d240d3cfa69a07272ba005b8817255ecbf730746569133067c567bc482f4a`。更早的 `fx-production-router-rollback-v0.2.8-b13ef536a-20261008` 及镜像 `sha256:6e9c747ed166fb67935cdfdec3b6edf02c80be2360b63b9984f5dddd5d0a0d4e` 仍保留，仅作为历史回退材料。
 
 赠金促销未开启、TypeSafe 账号尚无；启用新功能/产生相应记录后，不能直接回退原 v0.2.8。回退前检查生产数据兼容性，仅恢复兼容应用与当前配置，不恢复旧数据库。发布前快照与运行参数私有保存在 `/home/nio/releases/router-v0.2.14-20261008`，详细验证范围和剩余缺口见 [v0.2.14 发布记录](../plans/2026-10-08-upstream-v0.2.14-execution.md)。
 
