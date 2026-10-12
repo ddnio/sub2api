@@ -19,8 +19,11 @@ import (
 var ErrOpsDisabled = infraerrors.NotFound("OPS_DISABLED", "Ops monitoring is disabled")
 
 const (
-	opsMaxStoredRequestBodyBytes = 256 * 1024
-	opsMaxStoredErrorBodyBytes   = 20 * 1024
+	// Bound request snapshot processing before decoding; the storage limit alone
+	// does not bound the allocations needed to sanitize a large request body.
+	opsMaxProcessedRequestBodyBytes = 1024 * 1024
+	opsMaxStoredRequestBodyBytes    = 256 * 1024
+	opsMaxStoredErrorBodyBytes      = 20 * 1024
 	// OpsErrorLogQueueBodyMaxBytes bounds attacker-controlled response data while
 	// it waits in the asynchronous error-log queue.
 	OpsErrorLogQueueBodyMaxBytes = 8 * 1024
@@ -34,6 +37,11 @@ const (
 func PrepareOpsRequestBodyForQueue(raw []byte) (requestBodyJSON *string, truncated bool, requestBodyBytes *int) {
 	if len(raw) == 0 {
 		return nil, false, nil
+	}
+	if len(raw) > opsMaxProcessedRequestBodyBytes {
+		out := `{"payload_truncated":true,"snapshot_omitted_reason":"request_body_too_large"}`
+		n := len(raw)
+		return &out, true, &n
 	}
 	sanitized, truncated, bytesLen := sanitizeAndTrimJSONPayload(raw, opsMaxStoredRequestBodyBytes)
 	if sanitized != "" {
