@@ -53,6 +53,7 @@ macOS arm64 / Go 1.27.0，同一合成 JSON fixture；fixture 构建不计入 be
 - 保留 1536 MiB / 内存加 swap 2048 MiB、1 CPU。生产配置及 inspect 已私有保存在 `/home/nio/releases/router-snapshot-guard-20261012`，不入库、不输出密钥。
 - 最新日常备份成功记录完成于 2026-10-12 12:03:48 北京时间，前缀 `fx-production/20261011T193505Z/`，包含两个数据库及六个对象的已验证记录；本次重新回读 MinIO manifest，大小和 SHA256 匹配。未重新回读约 1 GiB dump 全文或执行恢复演练。
 - 未发布前，正式域名真实 gpt-5.5 medium 短文本请求 `snapshot-baseline-20261012` 返回 `response.completed`，首个可见文本约 3.983 秒，总耗时 4.126 秒；这是当前基线，不是候选版本验证。
+- 21:25 收尾核对：原镜像、PID 908683、restart=0 均未变；正式 health 为 200 / 约 20 ms，内存约 303.5 MiB、swap 8 MiB。仅证明该核对时刻的服务状态，不代表大请求容量风险已解除。
 - 临时 NAS 测试容器自动删除，测试二进制和目录清理；保留本机验证制品及候选镜像以供审阅。
 
 ## 剩余边界

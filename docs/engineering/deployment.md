@@ -1,6 +1,6 @@
 # NanaFox 当前部署与运维
 
-最后核对：2026-10-08。本文是生产目标的唯一部署入口；历史日期文档、迁移前双生产模板不能覆盖本文。运行前再次检查宿主机与 Docker 状态。
+最后核对：2026-10-12。本文是生产目标的唯一部署入口；历史日期文档、迁移前双生产模板不能覆盖本文。运行前再次检查宿主机与 Docker 状态。
 
 ## 当前生产拓扑
 
@@ -21,7 +21,7 @@
 - Studio **实际 env 文件** `R/studio.production.env`；`studio.active.env` 是早期临时域名配置，不用于当前生产。
 - Studio `STUDIO_PUBLIC_ORIGIN=https://studio.nanafox.com`、`ROUTER_AUTH_BASE_URL=https://router.nanafox.com`。生图、支付均保持生产开启，保留原签名及密文解密密钥。
 - Router 网络 `fx-production-internal` + `fx-router-egress`；Studio 网络 `fx-production-internal` + `fx-studio-egress`，数据卷 `fx-production-studiodata:/data`。
-- 两应用当前均限内存 512 MiB / 1 CPU、no-new-privileges，Router nofile=100000，Studio stop-timeout=600。复用运行参数，不从旧模板重新猜测。
+- Router 在 2026-10-12 20:20 的 503 恢复中在线调整为内存 1536 MiB、内存与 swap 合计上限 2048 MiB / 1 CPU；调整前实际为 1024 MiB / 合计 1536 MiB。未重启、未替换镜像。Studio 仍限内存 512 MiB / 1 CPU。两应用 no-new-privileges，Router nofile=100000，Studio stop-timeout=600。后续启动延续实际 inspect，不恢复旧容量；本次是临时缓解，详情见 [延迟与 503 恢复记录](../ops/2026-10-12-router-latency-recovery.md)。
 - Logo 文件 `/srv/nanafox/fx-web-assets` 经 `/migration-assets/` 提供；不能漏备份或删除。
 - Caddy 当前文件 `/etc/caddy/Caddyfile`，只读运行快照 [当前快照](../../deploy/Caddyfile.router-production.reference)。先读实时配置并合并目标站点，验证后 reload；不能覆盖其他已有站点。
 
