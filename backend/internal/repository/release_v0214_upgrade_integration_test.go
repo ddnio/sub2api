@@ -40,14 +40,19 @@ func TestReleaseV0214UpgradePreservesV028Data(t *testing.T) {
 	// Existing migrations are unchanged; omitting only the new pair reproduces
 	// the v0.2.8 migration set without importing production data.
 	baseline := fstest.MapFS{}
+	release := fstest.MapFS{}
 	names, err := fs.Glob(migrations.FS, "*.sql")
 	require.NoError(t, err)
 	for _, name := range names {
-		if name == "263_add_payment_order_bonus_amount.sql" || name == "264_add_typesafe_platform.sql" {
+		if name >= "265_" {
 			continue
 		}
 		content, readErr := migrations.FS.ReadFile(name)
 		require.NoError(t, readErr)
+		release[name] = &fstest.MapFile{Data: content}
+		if name == "263_add_payment_order_bonus_amount.sql" || name == "264_add_typesafe_platform.sql" {
+			continue
+		}
 		baseline[name] = &fstest.MapFile{Data: content}
 	}
 	require.Len(t, baseline, 317)
@@ -69,8 +74,8 @@ func TestReleaseV0214UpgradePreservesV028Data(t *testing.T) {
 	require.NoError(t, db.QueryRowContext(ctx, `SELECT COUNT(*) FROM pg_constraint
 		WHERE conrelid = 'payment_orders'::regclass AND contype = 'f'`).Scan(&foreignKeysBefore))
 
-	require.NoError(t, ApplyMigrations(ctx, db))
-	require.NoError(t, ApplyMigrations(ctx, db))
+	require.NoError(t, applyMigrationsFS(ctx, db, release))
+	require.NoError(t, applyMigrationsFS(ctx, db, release))
 	var applied int
 	require.NoError(t, db.QueryRowContext(ctx, "SELECT COUNT(*) FROM schema_migrations").Scan(&applied))
 	require.Equal(t, 319, applied)

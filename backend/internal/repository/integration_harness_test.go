@@ -364,6 +364,18 @@ func (h prefixHook) prefixCmd(cmd redisclient.Cmder) {
 		for i := 0; i < numKeys && 3+i < len(args); i++ {
 			prefixOne(3 + i)
 		}
+		// These scripts construct an old snapshot key from an ARGV prefix.
+		// Namespace only those declared key arguments, never arbitrary payloads.
+		scriptHash := fmt.Sprint(args[1])
+		if !strings.Contains(strings.ToLower(cmd.Name()), "sha") {
+			scriptHash = redisclient.NewScript(scriptHash).Hash()
+		}
+		switch scriptHash {
+		case activateSnapshotScript.Hash():
+			prefixOne(3 + numKeys + 2)
+		case retireBucketScript.Hash(), reopenBucketScript.Hash():
+			prefixOne(3 + numKeys + 1)
+		}
 	case "scan":
 		for i := 2; i+1 < len(args); i++ {
 			if strings.EqualFold(fmt.Sprint(args[i]), "match") {
@@ -371,6 +383,44 @@ func (h prefixHook) prefixCmd(cmd redisclient.Cmder) {
 				break
 			}
 		}
+	}
+}
+
+func TestRedisPrefixHookNamespacesSchedulerScriptPrefixes(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		script    string
+		keyCount  int
+		arguments []any
+		prefixArg int
+	}{
+		{"activate", activateSnapshotScript.Hash(), 6, []any{"2", "3:gemini:single", "sched:snap:3:gemini:single:v", 60, 1}, 2},
+		{"retire", retireBucketScript.Hash(), 5, []any{"3:gemini:single", "sched:snap:3:gemini:single:v", 60}, 1},
+		{"reopen", reopenBucketScript.Hash(), 5, []any{"3:gemini:single", "sched:snap:3:gemini:single:v", 60}, 1},
+		{"unrelated", redisclient.NewScript("return ARGV[1]").Hash(), 1, []any{"unmodified-payload"}, -1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			args := []any{"evalsha", tc.script, tc.keyCount}
+			for i := 0; i < tc.keyCount; i++ {
+				args = append(args, fmt.Sprintf("key:%d", i))
+			}
+			args = append(args, tc.arguments...)
+			cmd := redisclient.NewCmd(context.Background(), args...)
+			hook := prefixHook{prefix: "test:"}
+			for range 2 {
+				hook.prefixCmd(cmd)
+			}
+			for i := 0; i < tc.keyCount; i++ {
+				require.Equal(t, fmt.Sprintf("test:key:%d", i), cmd.Args()[3+i])
+			}
+			for i, argument := range tc.arguments {
+				want := argument
+				if i == tc.prefixArg {
+					want = "test:" + fmt.Sprint(argument)
+				}
+				require.Equal(t, want, cmd.Args()[3+tc.keyCount+i])
+			}
+		})
 	}
 }
 
