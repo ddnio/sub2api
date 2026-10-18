@@ -1,6 +1,6 @@
 # NanaFox 当前部署与运维
 
-最后核对：2026-10-12。本文是生产目标的唯一部署入口；历史日期文档、迁移前双生产模板不能覆盖本文。运行前再次检查宿主机与 Docker 状态。
+最后核对：2026-10-18。本文是生产目标的唯一部署入口；历史日期文档、迁移前双生产模板不能覆盖本文。运行前再次检查宿主机与 Docker 状态。
 
 ## 当前生产拓扑
 
@@ -8,7 +8,7 @@
 
 | 服务 | 域名 | 容器与宿主机回环端口 | 数据/配置 |
 |---|---|---|---|
-| Router v0.2.14 + snapshot1 hotfix | router.nanafox.com | fx-production-router，18080 → 8080 | sub2api，role router_app |
+| Router v0.2.17（保留 snapshot1 hotfix） | router.nanafox.com | fx-production-router，18080 → 8080 | sub2api，role router_app |
 | Studio（独立发布） | studio.nanafox.com | fx-production-studio，18789 → 8788 | nanafox_studio_prod，role studio_app |
 | PostgreSQL 18 | 仅内部网络 | fx-production-postgres | fx-production-pgdata |
 | Redis 8 | 仅内部网络 | fx-production-redis | fx-production-redisdata，AOF |
@@ -63,14 +63,15 @@
 
 ## 已部署版本与回退边界
 
-当前 Router 发布（2026-10-12 22:13）：v0.2.14 的 snapshot1 hotfix，应用源码 `d32154752f70e07c1ddd7a738a8e5ddf5e5514a4`，main 合并 `e315e4bc1bcbbee99846a70eca4ff02a3427d885`，镜像 `sub2api:prod-v0.2.14-snapshot1-d32154752`，服务器 image ID `sha256:841dd9d2b88a13922d8f7788608deff6433f37fad448acd6f33c09e348edd995`；应用版本仍显示 0.2.14，迁移仍为 319 项（至 264）。仅增加大请求错误快照入口保护。生产配置、资源额度及 Studio/PG/Redis 未变；功能验证通过，容量观察与剩余风险见 [本次发布记录](../ops/2026-10-12-ops-snapshot-guard-deployment.md)。
+当前 Router 发布（2026-10-18 12:23）：v0.2.17，应用源码 `9d4bed3da5e1805c473b2e1abf64deee17123d6f`，镜像 tag `sub2api:prod-v0.2.17-9d4bed3da`，服务器 image ID `sha256:e6df74f02efd3fb4b0f4adb9794ca84ef92314bdc945c5e8981d476f0017ecbe`。迁移 324 项（至 269），原 319 项记录保持不变。继续保留 snapshot1 大请求快照入口保护；生产配置、资源额度及 Studio/PG/Redis 未变。用户接受上游 GPT-5.5 OAuth 退役，不静默替换模型。制品、备份、验收及切换中已有连接中断记录见 [v0.2.17 发布记录](../ops/2026-10-18-router-v0.2.17-deployment.md)。
 
-直接回退入口是 `fx-production-router-rollback-v0.2.14-1de7382df-20261012-snapshot1`，停止且 restart=no，镜像 `sha256:03e0e0aae0417452768e897667fcfe7c5ee6df05009cf4ec9f7efbe0b0014d1a` 保留。Studio 当前 image ID 仍为 `sha256:ce5d240d3cfa69a07272ba005b8817255ecbf730746569133067c567bc482f4a`。更早的 `fx-production-router-rollback-v0.2.8-b13ef536a-20261008` 及镜像 `sha256:6e9c747ed166fb67935cdfdec3b6edf02c80be2360b63b9984f5dddd5d0a0d4e` 仍保留，仅作为历史回退材料。
+最近回退材料是 `fx-production-router-rollback-v0.2.14-snapshot1-d32154752-20261018`，停止且 restart=no，镜像 `sha256:841dd9d2b88a13922d8f7788608deff6433f37fad448acd6f33c09e348edd995`。旧版只在没有新版显式缓存、未收敛退款预扣及 cline/command_code 新平台数据时完成回退演练；回退前先停止候选写入再查状态，不满足则禁止直接退旧镜像，改为兼容回退或前向修复。不得恢复旧库覆盖新写入。Studio 当前 image ID 仍为 `sha256:ce5d240d3cfa69a07272ba005b8817255ecbf730746569133067c567bc482f4a`。更早的回退容器和镜像保持保留，不自动启动。
 
 赠金促销未开启、TypeSafe 账号尚无；启用新功能/产生相应记录后，不能直接回退原 v0.2.8。回退前检查生产数据兼容性，仅恢复兼容应用与当前配置，不恢复旧数据库。发布前快照与运行参数私有保存在 `/home/nio/releases/router-v0.2.14-20261008`，详细验证范围和剩余缺口见 [v0.2.14 发布记录](../plans/2026-10-08-upstream-v0.2.14-execution.md)。
 
 以下是迁移后历史版本记录，不是当前版本：
 
+- 2026-10-12 的 v0.2.14 snapshot1 热修源码 `d32154752f70e07c1ddd7a738a8e5ddf5e5514a4`、镜像 `sha256:841dd9d2b88a13922d8f7788608deff6433f37fad448acd6f33c09e348edd995`；当时迁移 319 项至 264，详见 [snapshot1 发布记录](../ops/2026-10-12-ops-snapshot-guard-deployment.md)。
 - Router 于 2026-09-09 部署源码 `8caa9e0c6173f70824006299248e9ea008de36fb`，服务器镜像 `sha256:9ba863606057cc1d58f97b933748425afe4d20d52ae4838a265d044bfdcaef0f`（tag `sub2api:prod-v0.2.4-8caa9e0c6`），数据库迁移至 `257_add_minimax_platform.sql`。切换前容器保留为 `fx-production-router-rollback-v0.2.1-7c1552fca`，其镜像为 `sha256:543d5975d7f60d633cd31e64998b1813d5086ed83c882a39149beb85f22db38a`。
 - Studio 源码 `7c69139d273da0feaf5a66339378cd0d3cee750b`，image `sha256:f5e7004ad8bb718499414db2860945436f4278b34847c6d3a77af2f21b2cf5d1`，schema 21。
 - Landing deploy 产物 `c63fc7e7beb7ec3010a1f223dcd5bd7927c645fb`，43 文件逐一 SHA256 相同。
@@ -87,6 +88,7 @@ Bucket `nanafox-postgres-backups`：
 - Router 生产环境 导出 `/home/nio/backups/fx-production/export-backup.py`；NAS `/home/Nio/.local/share/nanafox-fx-production-backup/backup.py`；cron `/etc/cron.d/nanafox-fx-production`。
 - NAS SSH key 仅允许固定 `backup-v1` 导出。只有全部上传和回读一致后才写 `last-success.json`；检查其时间和 MinIO 对象，不能用 cron 存在代替备份成功。
 - 2026-09-07 首轮导出时传输缓慢，彼时尚未确认日常备份端到端完成；此为历史状态。2026-10-08 已核对最新 Router 快照 `20261007T193504Z`，本日 11:34 北京时间完成，6 对象 verified；MinIO manifest 回读与成功状态中的文件 SHA256/大小一致。本轮未重新回读全部 dump 或演练异机恢复。
+- 2026-10-18 发布前刷新：NAS Router 最近成功仍为 `20261014T193506Z`（10 月 15 日完成），新任务在传输 `20261017T193510Z`，未完成异机回读。当天完整源快照已在生产 `/home/nio/releases/router-v0.2.17-20261018/pre-release-backup` 保留，五文件大小/SHA256 及 PG 归档目录校验通过；这是同盘恢复点，不是新的异机备份，勿中断现有 NAS 任务或把传输中当作完成。Studio 独立备份本次已成功至 `20261017T194506Z`。
 - 新任务不包含可恢复的 Redis AOF 快照、Docker 镜像层、Studio /data 卷或 R2 全量对象；原源 Redis 快照/应用镜像有迁移备份。账号以 PG 为准，会话可能重建；需要 Redis 恢复点或新镜像异机保全时另补验证。
 
 执行证据与时间线见 [迁移记录](../plans/2026-09-07-router-production-migration.md)。旧流程通过 Git 历史查阅，不复制回当前操作入口。
