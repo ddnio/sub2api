@@ -314,7 +314,8 @@ func (h *ImageCreationHandler) AdminUploadAsset(c *gin.Context) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, service.ImageCreationAssetMaxBytes+1024*1024)
 	file, err := c.FormFile("file")
 	if err != nil {
-		if _, ok := extractMaxBytesError(err); ok {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
 			response.ErrorFrom(c, service.ErrImageCreationAssetTooLarge)
 			return
 		}

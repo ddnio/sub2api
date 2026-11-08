@@ -50,6 +50,7 @@ type Handlers struct {
 	Auth             *AuthHandler
 	StudioAuth       *StudioAuthHandler
 	User             *UserHandler
+	MCPOAuth         *MCPOAuthHandler
 	APIKey           *APIKeyHandler
 	ImageCreation    *ImageCreationSessionHandler
 	ImageCreationAPI *ImageCreationHandler
