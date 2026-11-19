@@ -17,7 +17,7 @@ fail() { printf '[FAIL] %s\n' "$1"; FAILURES=$((FAILURES + 1)); }
 echo "=== Sub2API Local Release Preflight ==="
 echo "Repo: $REPO_ROOT"
 
-# Include GOPATH/bin and nvm Node 24 if present
+# Include GOPATH/bin if present so Go-installed tools (golangci-lint, govulncheck) are found
 if command -v go >/dev/null 2>&1; then
   GOPATH_BIN="$(go env GOPATH 2>/dev/null)/bin"
   if [[ -d "$GOPATH_BIN" && ":$PATH:" != *":$GOPATH_BIN:"* ]]; then

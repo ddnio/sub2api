@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deterministic post-merge invariant checks for NanaFox fork of Sub2API.
-# Verifies migration numbering, hardcoded SQL filename references, VERSION alignment,
-# forbidden secret tracking, and lists both-sides-modified files for targeted review.
+# Verifies migration numbering, historical migration immutability, hardcoded SQL filename references,
+# VERSION alignment, forbidden secret tracking, and lists both-sides-modified files for targeted review.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -39,8 +39,19 @@ fail() { printf '[FAIL] %s\n' "$1"; FAILURES=$((FAILURES + 1)); }
 echo "=== Sub2API Merge Invariant Checks ==="
 echo "Repo: $REPO_ROOT | Base: $BASE_REF | Upstream: ${UPSTREAM_TAG:-<none>}"
 
-# 1. Check migration numbering against base
+# 1a. Check historical migrations in --base were NOT modified, deleted, or renamed (protects checksums)
 MIG_DIR="$REPO_ROOT/backend/migrations"
+MUTATED_MIGS=$(git -C "$REPO_ROOT" diff --name-only --diff-filter=MDR "$BASE_REF" -- 'backend/migrations/*.sql' || true)
+if [[ -z "$MUTATED_MIGS" ]]; then
+  pass "No historical migration SQL files modified, deleted, or renamed since $BASE_REF"
+else
+  while IFS= read -r m; do
+    [[ -z "$m" ]] && continue
+    fail "Historical migration mutated ($m) — breaks production schema_migrations checksum unless compatibility rule added"
+  done <<< "$MUTATED_MIGS"
+fi
+
+# 1b. Check newly added migration numbering against base max
 BASE_MAX_NUM=$(git -C "$REPO_ROOT" ls-tree --name-only "$BASE_REF" -- backend/migrations/ \
   | sed -n 's|^backend/migrations/\([0-9][0-9]*\)_.*\.sql$|\1|p' \
   | sort -n | tail -n 1 || echo "0")
@@ -57,14 +68,15 @@ while IFS= read -r relpath; do
       NEW_MIG_BAD=$((NEW_MIG_BAD + 1))
     fi
   fi
-done < <(git -C "$REPO_ROOT" diff --name-only --diff-filter=A "$BASE_REF" -- backend/migrations/)
+done < <(git -C "$REPO_ROOT" diff --name-only --diff-filter=A "$BASE_REF" -- 'backend/migrations/*.sql')
 
 if (( NEW_MIG_BAD == 0 )); then
   CURRENT_COUNT=$(find "$MIG_DIR" -maxdepth 1 -name '*.sql' | wc -l | tr -d ' ')
-  pass "Migration numbering OK (base max: $BASE_MAX_NUM, current total SQL files: $CURRENT_COUNT)"
+  pass "New migration numbering OK (base max: $BASE_MAX_NUM, current total SQL files: $CURRENT_COUNT)"
 fi
 
 # 2. Check hardcoded NNN_*.sql references introduced since --base still exist in backend/migrations/
+# NOTE: uses python3 -c (NOT heredoc) so git diff pipe reaches sys.stdin properly.
 MISSING_REFS=0
 while IFS= read -r ref_line; do
   [[ -z "$ref_line" ]] && continue
@@ -78,9 +90,9 @@ while IFS= read -r ref_line; do
     MISSING_REFS=$((MISSING_REFS + 1))
   fi
 done < <(
-  git -C "$REPO_ROOT" diff -U0 "$BASE_REF" -- 'backend/**/*.go' 'backend/*.go' | python3 - <<'PY'
+  git -C "$REPO_ROOT" diff -U0 "$BASE_REF" -- 'backend/**/*.go' 'backend/*.go' | python3 -c '
 import re, sys
-pat = re.compile(r'"(\d{3}_[a-zA-Z0-9_]+\.sql)"')
+pat = re.compile(r"\"(\d{3}_[a-zA-Z0-9_]+\.sql)\"")
 cur_file = ""
 seen = set()
 for line in sys.stdin:
@@ -92,7 +104,7 @@ for line in sys.stdin:
             if key not in seen:
                 seen.add(key)
                 print(key)
-PY
+'
 )
 if (( MISSING_REFS == 0 )); then
   pass "All newly added/modified SQL filename references in backend Go code resolve to existing files"
@@ -127,7 +139,7 @@ if [[ -n "$UPSTREAM_TAG" ]]; then
     SENSITIVE=$(comm -12 \
       <(git -C "$REPO_ROOT" diff --name-only "$MERGE_BASE" "$BASE_REF" | sort) \
       <(git -C "$REPO_ROOT" diff --name-only "$MERGE_BASE" "$UPSTREAM_TAG" | sort) \
-      | grep -E 'wxpay|payment|studio|referral|image|wire_gen|auth_service|gateway_claude_oauth_body|openai_gateway_handler|migrations_runner' || true)
+      | grep -E 'wxpay|payment|studio|referral|image_creation|async_image|wire_gen|auth_service|gateway_claude_oauth_body|openai_gateway_handler|migrations_runner' || true)
     if [[ -n "$SENSITIVE" ]]; then
       warn "High-risk fork files modified on both sides (review carefully):"
       printf '  - %s\n' $SENSITIVE

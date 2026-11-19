@@ -183,16 +183,21 @@ issues/
 /plugins/
 
 # NanaFox 发布脚本、发布文档与项目级 Skill（保留 .claude/worktrees/ 忽略）
-!deploy/release/
-!deploy/release/**
-!docs/plans/
-!docs/plans/**
-!docs/ops/
-!docs/ops/**
-!docs/engineering/
-!docs/engineering/**
-!.claude
-!.claude/
-.claude/*
-!.claude/skills/
-!.claude/skills/**
+!/deploy/release/
+!/deploy/release/*.sh
+!/docs/plans/
+!/docs/plans/**
+!/docs/ops/
+!/docs/ops/**
+!/docs/engineering/
+!/docs/engineering/**
+!/.claude/
+/.claude/*
+!/.claude/skills/
+!/.claude/skills/**
+
+# 重新忽略上述白名单目录下的本地杂项与敏感文件
+.DS_Store
+*.log
+*.env
+*.bak
