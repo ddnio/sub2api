@@ -438,6 +438,7 @@ func (h *OpenAIGatewayHandler) Responses(c *gin.Context) {
 		return
 	}
 
+	setOpsRequestBodySnapshot(c, body)
 	// Reject invalid UTF-8 before JSON transformation so malformed bytes do not
 	// become retryable upstream errors.
 	if !utf8.Valid(body) {
@@ -445,7 +446,6 @@ func (h *OpenAIGatewayHandler) Responses(c *gin.Context) {
 		return
 	}
 
-	setOpsRequestBodySnapshot(c, body)
 	setOpsRequestContext(c, "", false)
 	sessionHashBody := body
 	body, ok = h.normalizeOpenAIResponsesCompactRequest(c, reqLog, body)

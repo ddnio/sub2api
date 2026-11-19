@@ -31,6 +31,9 @@ func TestOpenAIResponses_RejectsInvalidUTF8BeforeRouting(t *testing.T) {
 				require.Equal(t, http.StatusBadRequest, w.Code)
 				require.Contains(t, w.Body.String(), "valid UTF-8 JSON")
 				require.Contains(t, w.Body.String(), "invalid_request_error")
+				snapshot, ok := c.Get(opsRequestBodySnapshotKey)
+				require.True(t, ok, "ops error log keeps the rejected body size")
+				require.Equal(t, body, snapshot)
 			})
 		}
 	}
