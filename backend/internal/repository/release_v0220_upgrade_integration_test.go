@@ -30,18 +30,23 @@ func TestReleaseV0220UpgradePreservesV0217Data(t *testing.T) {
 	t.Cleanup(func() { _ = db.Close() })
 
 	baseline := fstest.MapFS{}
+	release := fstest.MapFS{}
 	names, err := fs.Glob(migrations.FS, "*.sql")
 	require.NoError(t, err)
 	for _, name := range names {
-		if name >= "270_" {
+		if name >= "274_" {
 			continue
 		}
 		data, readErr := migrations.FS.ReadFile(name)
 		require.NoError(t, readErr)
+		release[name] = &fstest.MapFile{Data: data}
+		if name >= "270_" {
+			continue
+		}
 		baseline[name] = &fstest.MapFile{Data: data}
 	}
 	require.Len(t, baseline, 324)
-	require.Len(t, names, 328)
+	require.Len(t, release, 328)
 	require.NoError(t, applyMigrationsFS(ctx, db, baseline))
 	_, err = db.ExecContext(ctx, `
 		INSERT INTO users (id, email, password_hash, balance) VALUES (1, 'upgrade@example.test', 'test-only', 123.45);
@@ -68,8 +73,8 @@ func TestReleaseV0220UpgradePreservesV0217Data(t *testing.T) {
 		return value
 	}
 	before := snapshot()
-	require.NoError(t, ApplyMigrations(ctx, db))
-	require.NoError(t, ApplyMigrations(ctx, db))
+	require.NoError(t, applyMigrationsFS(ctx, db, release))
+	require.NoError(t, applyMigrationsFS(ctx, db, release))
 	require.JSONEq(t, before, snapshot())
 	var applied int
 	require.NoError(t, db.QueryRowContext(ctx, "SELECT COUNT(*) FROM schema_migrations").Scan(&applied))
