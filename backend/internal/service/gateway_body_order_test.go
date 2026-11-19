@@ -155,6 +155,16 @@ func TestNormalizeClaudeOAuthRequestBody_StripsSamplingParametersForOpus47(t *te
 	require.False(t, gjson.GetBytes(result, "top_k").Exists())
 }
 
+func TestNormalizeClaudeOAuthRequestBody_DoesNotDefaultTemperatureForFableMythos52(t *testing.T) {
+	for _, model := range []string{"claude-fable-5-2", "claude-mythos-5-2"} {
+		body := []byte(`{"model":"` + model + `","messages":[]}`)
+
+		result, _ := normalizeClaudeOAuthRequestBody(body, model, claudeOAuthNormalizeOptions{})
+
+		require.False(t, gjson.GetBytes(result, "temperature").Exists(), "model %s must not gain temperature", model)
+	}
+}
+
 func TestNormalizeClaudeOAuthRequestBody_PreservesToolChoiceWhenToolsPresent(t *testing.T) {
 	body := []byte(`{"model":"claude-3-5-sonnet-latest","messages":[],"tools":[{"name":"sessions_list","input_schema":{}}],"tool_choice":{"type":"tool","name":"sessions_list"}}`)
 
