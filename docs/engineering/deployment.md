@@ -1,6 +1,6 @@
 # NanaFox 当前部署与运维
 
-最后核对：2026-11-15。本文是生产目标的唯一部署入口；历史日期文档、迁移前模板不能覆盖本文。运行前再次检查宿主机与 Docker 状态。
+最后核对：2026-11-19。本文是生产目标的唯一部署入口；历史日期文档、迁移前模板不能覆盖本文。运行前再次检查宿主机与 Docker 状态。
 
 主机级配置（Caddyfile、compose 文件、备份脚本、监控）统一放在私有仓库 `nana-fox/nanafox-ops`，本仓库不再保留副本。改主机配置先改那里，再同步到服务器。
 
@@ -12,7 +12,7 @@
 
 | 服务 | 域名 | 容器与宿主机回环端口 | 数据/配置 |
 |---|---|---|---|
-| Router v0.2.20 | router.nanafox.com | nanafox-router-formal-router，127.0.0.1:18083 → 8080 | 卷 nanafox-router-formal_routerdata |
+| Router v0.2.23 | router.nanafox.com | nanafox-router-formal-router，127.0.0.1:18083 → 8080 | 卷 nanafox-router-formal_routerdata |
 | Router PostgreSQL 18 | 仅内部网络 | nanafox-router-formal-postgres（网络别名 fx-production-postgres） | 卷 nanafox-router-formal_pgdata |
 | Router Redis 8 | 仅内部网络 | nanafox-router-formal-redis（网络别名 fx-production-redis） | 卷 nanafox-router-formal_redisdata |
 | Studio | studio.nanafox.com | nanafox-studio-formal-app，127.0.0.1:18790 → 8788 | 卷 nanafox-studio-formal-data-20261110T021929Z |
@@ -84,7 +84,7 @@
 
 ### 回退
 
-- 应用回退：把 compose 文件里的 `image` 改回上一个 image ID，再执行同一条只重建命令。当前 Router image ID `sha256:183fac4972a13a6784f38a643d97486f43daa3a4fb695b0b7fde844d220fdb69`（tag `sub2api:prod-v0.2.20-a9367cc4c`），Studio `sha256:ce5d240d3cfa69a07272ba005b8817255ecbf730746569133067c567bc482f4a`。新主机上目前没有 v0.2.17 镜像；需要退到更旧版本时先从备份或旧机导出镜像。
+- 应用回退：把 compose 文件里的 `image` 改回上一个 image ID，再执行同一条只重建命令。当前 Router image ID `sha256:053a14a3d4a30f8253a145b3c8241fcf417283f18e532522926629bbf13694dc`（tag `sub2api:prod-v0.2.23-1177a0df6`），上一版（回退目标）`sha256:183fac4972a13a6784f38a643d97486f43daa3a4fb695b0b7fde844d220fdb69`（tag `sub2api:prod-v0.2.20-a9367cc4c`，旧版可在 v0.2.23 迁移后的库上运行），Studio `sha256:ce5d240d3cfa69a07272ba005b8817255ecbf730746569133067c567bc482f4a`。新主机上目前没有 v0.2.17 镜像；需要退到更旧版本时先从备份或旧机导出镜像。
 - 只回退 compose 配置：2026-11-15 改限制前的原文件私有保存在 `/srv/nanafox-ops/window-20261115/compose.json.orig`。
 - 网关回退：先 `caddy validate` 再 `reload`；失败时恢复上一份 Caddyfile 再 reload。
 - 数据库：迁移后已有新写入，不能用旧快照覆盖生产库。v0.2.20 回退边界（新管理密钥/MCP 授权、按张计费、邮箱黑名单产生后禁止直接退旧镜像）见 [v0.2.20 发布记录](../ops/2026-11-08-router-v0.2.20-deployment.md)。
@@ -116,6 +116,7 @@
 
 ## 历史版本记录（不是当前状态）
 
+- 2026-11-19 v0.2.23：源码 `1177a0df6e6215169e200626d5199a0cc2a30e9d`，镜像 tag `sub2api:prod-v0.2.23-1177a0df6`，迁移 333 项（至 278）；以上一版生产镜像为底只替换程序和 resources，在主机上叠加构建。见 [v0.2.23 发布记录](../ops/2026-11-19-router-v0.2.23-deployment.md)。
 - 2026-11-10 迁到 TmhHost，Router/Studio 镜像与迁移前一致。
 - 2026-11-08 v0.2.20：源码 `a9367cc4c45d4e59bc97e31ea400f103cc7ebc75`，镜像 tag `sub2api:prod-v0.2.20-a9367cc4c`，迁移 328 项（至 273）；在旧主机容器 `fx-production-router`（回环 18080）上发布，Studio 当时为 `fx-production-studio`（18789）。见 [v0.2.20 发布记录](../ops/2026-11-08-router-v0.2.20-deployment.md)。
 - 2026-10-18 v0.2.17：源码 `9d4bed3da5e1805c473b2e1abf64deee17123d6f`、镜像 `sha256:e6df74f02efd3fb4b0f4adb9794ca84ef92314bdc945c5e8981d476f0017ecbe`，见 [v0.2.17 发布记录](../ops/2026-10-18-router-v0.2.17-deployment.md)。
