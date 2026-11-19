@@ -79,7 +79,8 @@ cd backend && go generate ./ent/...
 ## 上游同步
 
 - 上游仓库：`upstream` remote → `https://github.com/Wei-Shaw/sub2api.git`
-- 上次同步：2026-03-29，完整 merge upstream/main（v0.1.105），含 TLS 指纹、Privacy 模式、requested_model、Responses↔Anthropic 双向转换等
+- 上次同步：2026-11-19，merge 上游固定 tag v0.2.23（覆盖 v0.2.21～v0.2.23），同日上线生产。做法：先 merge 再解冲突，最后全量验证、回滚演练、外部审查，见 `docs/plans/2026-11-19-upstream-v0.2.23-*.md`
+- **新上游 migration 要改编号**：我们的编号已经排到上游前面，上游新文件需改到我们最大编号之后（v0.2.23 把上游 249～252 改成 274～278），SQL 内容不动；引用文件名的代码和测试（如 `migrations_runner.go` 里修复半成品索引的常量）要一起改
 - **migration 编号说明**：`schema_migrations` 以 filename 为主键，077/078 号存在同号不同内容（我们的 payment + 上游的 requested_model），字典序排列，可安全并存
 - **ent 冲突策略**：merge 时接受 upstream 所有 ent 非 schema 生成文件，手工合并 `ent/schema/`，然后运行 `go generate ./ent/...` 重新生成全部
 
