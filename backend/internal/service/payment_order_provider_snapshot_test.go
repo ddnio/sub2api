@@ -100,6 +100,7 @@ func TestCreateOrderInTx_WritesProviderSnapshot(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+	require.Equal(t, "PAY-"+order.OutTradeNo, order.RechargeCode, "recharge code must not embed the internal order ID")
 	require.Equal(t, strconv.FormatInt(instance.ID, 10), valueOrEmpty(order.ProviderInstanceID))
 	require.Equal(t, payment.TypeAlipay, valueOrEmpty(order.ProviderKey))
 	require.Equal(t, float64(2), order.ProviderSnapshot["schema_version"])

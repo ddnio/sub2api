@@ -510,6 +510,16 @@ func (s *PaymentService) dispatchPaymentFulfillmentNotification(o *dbent.Payment
 	}()
 }
 
+// paymentOrderDisplayNo returns the user-facing order number. The auto-increment
+// ID is never shown to users because it reveals total order volume.
+func paymentOrderDisplayNo(o *dbent.PaymentOrder) string {
+	if no := strings.TrimSpace(o.OutTradeNo); no != "" {
+		return no
+	}
+	slog.Warn("payment order missing out_trade_no", "order_id", o.ID)
+	return "-"
+}
+
 func (s *PaymentService) sendBalanceRechargeSuccessNotification(ctx context.Context, o *dbent.PaymentOrder) error {
 	currentBalance := ""
 	if s.userRepo != nil {
@@ -527,7 +537,7 @@ func (s *PaymentService) sendBalanceRechargeSuccessNotification(ctx context.Cont
 		Variables: map[string]string{
 			"recharge_amount": fmt.Sprintf("%.2f", o.Amount),
 			"current_balance": currentBalance,
-			"order_id":        strconv.FormatInt(o.ID, 10),
+			"order_id":        paymentOrderDisplayNo(o),
 		},
 	})
 }
@@ -537,7 +547,7 @@ func (s *PaymentService) sendSubscriptionPurchaseSuccessNotification(ctx context
 		"subscription_group": "Subscription",
 		"subscription_days":  "",
 		"expiry_time":        "",
-		"order_id":           strconv.FormatInt(o.ID, 10),
+		"order_id":           paymentOrderDisplayNo(o),
 	}
 	if o.SubscriptionDays != nil {
 		variables["subscription_days"] = strconv.Itoa(*o.SubscriptionDays)
