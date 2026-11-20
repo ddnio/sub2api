@@ -244,7 +244,7 @@ func (s *PaymentService) PrepareRefund(ctx context.Context, oid int64, amt float
 		rr = *o.RefundRequestReason
 	}
 	if rr == "" {
-		rr = fmt.Sprintf("refund order:%d", o.ID)
+		rr = "refund order:" + paymentOrderDisplayNo(o)
 	}
 	p := &RefundPlan{OrderID: oid, Order: o, RefundAmount: amt, GatewayAmount: ga, Reason: rr, Force: force, DeductBalance: deduct, DeductionType: payment.DeductionTypeNone}
 	if deduct {
@@ -531,7 +531,7 @@ func (s *PaymentService) refundFinalizePlan(o *dbent.PaymentOrder) *RefundPlan {
 	refundAmount := o.RefundAmount
 	reason := strings.TrimSpace(psStringValue(o.RefundReason))
 	if reason == "" {
-		reason = fmt.Sprintf("refund order:%d", o.ID)
+		reason = "refund order:" + paymentOrderDisplayNo(o)
 	}
 	return &RefundPlan{
 		OrderID:       o.ID,
