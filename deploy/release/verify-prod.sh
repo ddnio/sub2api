@@ -10,6 +10,7 @@ MODE="${1:-}"
 shift || true
 
 SSH_HOST="tmhhost"
+DB_NAME="sub2api"
 LOCAL_DIST="$REPO_ROOT/backend/internal/web/dist"
 BASELINE_FILE="/tmp/sub2api-prod-baseline.json"
 SKIP_JS_CHECK=0
@@ -19,8 +20,8 @@ STUDIO_URL="https://studio.nanafox.com"
 usage() {
   cat <<'EOF'
 Usage:
-  verify-prod.sh preflight [--host tmhhost] [--baseline /tmp/sub2api-prod-baseline.json]
-  verify-prod.sh post-switch [--host tmhhost] [--baseline /tmp/sub2api-prod-baseline.json] [--local-dist <path>] [--skip-js-check]
+  verify-prod.sh preflight [--host tmhhost] [--db sub2api] [--baseline /tmp/sub2api-prod-baseline.json]
+  verify-prod.sh post-switch [--host tmhhost] [--db sub2api] [--baseline /tmp/sub2api-prod-baseline.json] [--local-dist <path>] [--skip-js-check]
 
 Modes:
   preflight     Read-only: runs check-router-production.py, prints disk/memory/allowlisted env/revision,
@@ -36,6 +37,7 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --host) SSH_HOST="$2"; shift 2 ;;
+    --db) DB_NAME="$2"; shift 2 ;;
     --local-dist) LOCAL_DIST="$2"; shift 2 ;;
     --baseline) BASELINE_FILE="$2"; shift 2 ;;
     --skip-js-check) SKIP_JS_CHECK=1; shift ;;
@@ -51,27 +53,26 @@ fi
 
 run_remote_check_script() {
   echo "[1] Running deploy/check-router-production.py on $SSH_HOST ..."
-  ssh "$SSH_HOST" 'python3 -' < "$REPO_ROOT/deploy/check-router-production.py"
+  # Docker on the host requires root; sudo -n fails fast instead of prompting.
+  ssh "$SSH_HOST" 'sudo -n python3 -' < "$REPO_ROOT/deploy/check-router-production.py"
 }
 
 collect_remote_snapshot_json() {
   local out_file="$1"
-  ssh "$SSH_HOST" 'bash -s' <<'REMOTE_EOF' > "$out_file"
+  ssh "$SSH_HOST" "sudo -n bash -s -- '$DB_NAME'" <<'REMOTE_EOF' > "$out_file"
 set -euo pipefail
+DB_NAME="$1"
 
 DISK_FREE=$(df -h / | awk 'NR==2 {print $4}')
 CONTAINER_JSON=$(docker inspect nanafox-router-formal-router --format '{{json .}}')
 STATS_LINE=$(docker stats --no-stream --format '{{.MemUsage}}|{{.MemPerc}}|{{.CPUPerc}}' nanafox-router-formal-router)
 
 DB_USER=$(docker exec nanafox-router-formal-postgres sh -c 'printf "%s" "${POSTGRES_USER:-postgres}"')
-DB_NAME=$(docker exec nanafox-router-formal-postgres sh -c 'printf "%s" "${POSTGRES_DB:-}"')
-if [[ -z "$DB_NAME" ]]; then
-  DB_NAME=$(docker exec nanafox-router-formal-postgres psql -U "$DB_USER" -d postgres -tAc \
-    "SELECT datname FROM pg_database WHERE datistemplate = false AND datname NOT IN ('postgres') ORDER BY datname LIMIT 1")
-fi
+# POSTGRES_DB on this container is migration_admin, not the Router database,
+# so the database name is explicit (--db, default sub2api).
 
 # NOTE: docker exec -i is REQUIRED so psql receives the SQL heredoc on stdin.
-DB_JSON=$(docker exec -i nanafox-router-formal-postgres psql -U "$DB_USER" -d "$DB_NAME" -tAc -v ON_ERROR_STOP=1 <<'SQL'
+DB_JSON=$(docker exec -i nanafox-router-formal-postgres psql -U "$DB_USER" -d "$DB_NAME" -tAq -v ON_ERROR_STOP=1 <<'SQL'
 SET default_transaction_read_only = on;
 SELECT json_build_object(
   'db_name', current_database(),
@@ -182,7 +183,7 @@ print("[PASS] Container health (running=true, restarts=0, oom_killed=false) & DB
 PY
 
 echo "[4] Checking Router recent logs for fatal/panic/migration errors ..."
-ERR_COUNT=$(ssh "$SSH_HOST" "docker logs --since 15m nanafox-router-formal-router 2>&1 | grep -ciE '\"level\"\\s*:\\s*\"(fatal|panic)\"|\\bpanic:|checksum mismatch|migration failed' || true")
+ERR_COUNT=$(ssh "$SSH_HOST" "sudo -n docker logs --since 15m nanafox-router-formal-router 2>&1 | grep -ciE '\"level\"\\s*:\\s*\"(fatal|panic)\"|\\bpanic:|checksum mismatch|migration failed' || true")
 echo "Fatal/panic/migration error lines in last 15m: $ERR_COUNT"
 if [[ "$ERR_COUNT" != "0" ]]; then
   echo "[FAIL] Non-zero error lines in Router logs" >&2
