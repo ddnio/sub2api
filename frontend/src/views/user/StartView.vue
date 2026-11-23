@@ -183,6 +183,7 @@ import {
   markStartDone,
   pickGroupForUseCase,
   platformForUseCase,
+  rememberedUseCase,
   useCaseFromQuery,
   type StartUseCase
 } from './startOnboarding'
@@ -197,7 +198,7 @@ const user = computed(() => authStore.user)
 const loading = ref(true)
 const groups = ref<Group[]>([])
 const publicSettings = ref<PublicSettings | null>(null)
-const useCase = ref<StartUseCase>(useCaseFromQuery(route.query.use) ?? 'code')
+const useCase = ref<StartUseCase>(useCaseFromQuery(route.query.use) ?? rememberedUseCase() ?? 'code')
 const createdKey = ref<ApiKey | null>(null)
 const creating = ref(false)
 const showUseKeyModal = ref(false)

@@ -67,6 +67,27 @@ export function useCaseFromQuery(value: unknown): StartUseCase | null {
   return typeof v === 'string' && (START_USE_CASES as string[]).includes(v) ? (v as StartUseCase) : null
 }
 
+const START_USE_KEY = 'nf_start_use'
+
+// 本标签页内记住推广链接里的用途（注册、验证邮箱、GitHub 登录都会换页，query 会丢）
+export function rememberUseCase(value: unknown): void {
+  const useCase = useCaseFromQuery(value)
+  if (!useCase) return
+  try {
+    window.sessionStorage.setItem(START_USE_KEY, useCase)
+  } catch {
+    // 存不了就不预选，不影响使用
+  }
+}
+
+export function rememberedUseCase(): StartUseCase | null {
+  try {
+    return useCaseFromQuery(window.sessionStorage.getItem(START_USE_KEY))
+  } catch {
+    return null
+  }
+}
+
 // Claude 只走 ClaudeCode专用（Anthropic 协议）；其余用途一律 OpenAI GPT
 export function platformForUseCase(useCase: StartUseCase): 'anthropic' | 'openai' {
   return useCase === 'claude' ? 'anthropic' : 'openai'

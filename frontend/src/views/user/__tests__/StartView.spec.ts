@@ -55,6 +55,7 @@ function mountView() {
 describe('StartView', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
     vi.clearAllMocks()
     routeQuery.value = {}
     listKeys.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 1, pages: 0 })
@@ -105,6 +106,16 @@ describe('StartView', () => {
     expect(modal.attributes('data-platform')).toBe('anthropic')
     expect(modal.attributes('data-key')).toBe('sk-test-123')
     expect(localStorage.getItem(startDoneKey(7))).toBe('1')
+  })
+
+  it('falls back to the use case remembered from the signup link', async () => {
+    sessionStorage.setItem('nf_start_use', 'claude')
+    createKey.mockResolvedValue({ id: 9, name: 'k', key: 'sk-a' })
+    const w = mountView()
+    await flushPromises()
+    await w.get('[data-testid="start-create"]').trigger('click')
+    await flushPromises()
+    expect(createKey).toHaveBeenCalledWith('我的第一个 key', 4)
   })
 
   it('switching use case before creating changes the group', async () => {
