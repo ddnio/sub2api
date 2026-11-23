@@ -12,6 +12,15 @@ export default {
       apiUsage: 'API Usage',
       faq: 'Billing & FAQ'
     },
+    seo: {
+      quickStart: 'Connect to NanaFox Router in three steps: create an API key in the right group, add it to Claude Code, Codex, Cursor and more, then send a test message.',
+      claudeCode: 'Claude Code setup: install, set ANTHROPIC_BASE_URL and your API key, and verify the connection. No /v1 in the base URL.',
+      codexCli: 'Codex CLI setup: install Node.js and Codex CLI, write config.toml and auth.json, and use GPT models.',
+      clients: 'Settings for Cursor, Cherry Studio, Chatbox, LobeChat, Cline and Roo Code, with separate GPT and Claude configs.',
+      opencode: 'OpenCode setup: opencode.json example, GPT over the OpenAI-compatible protocol and Claude via an Anthropic provider.',
+      apiUsage: 'Python, cURL and Node.js examples for GPT with the OpenAI SDK and Claude with the Anthropic SDK.',
+      faq: 'Billing, WeChat top-up and monthly plans, plus fixes for 401, 403, 404 and model-not-found errors.'
+    },
     shared: {
       copy: 'Copy',
       copied: 'Copied',

@@ -3,18 +3,17 @@
   <!-- Desktop sidebar -->
   <nav class="hidden lg:block w-56 shrink-0">
     <div class="sticky top-24 space-y-1">
-      <button
+      <RouterLink
         v-for="item in navItems"
         :key="item.section"
-        type="button"
+        :to="{ path: docsSectionPath(item.section), query: route.query }"
         class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
         :class="active === item.section
           ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
           : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white'"
-        @click="$emit('navigate', item.section)"
       >
         {{ item.label }}
-      </button>
+      </RouterLink>
     </div>
   </nav>
 
@@ -35,7 +34,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { DocsSection } from '@/composables/useDocsSectionRoute'
+import { useRoute } from 'vue-router'
+import { docsSectionPath, type DocsSection } from '@/composables/useDocsSectionRoute'
 
 defineProps<{
   active: DocsSection
@@ -46,6 +46,7 @@ defineEmits<{
 }>()
 
 const { t } = useI18n()
+const route = useRoute()
 
 interface NavItem {
   section: DocsSection
