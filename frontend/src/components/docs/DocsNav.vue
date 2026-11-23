@@ -6,7 +6,7 @@
       <RouterLink
         v-for="item in navItems"
         :key="item.section"
-        :to="docsSectionPath(item.section)"
+        :to="{ path: docsSectionPath(item.section), query: route.query }"
         class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
         :class="active === item.section
           ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
@@ -34,6 +34,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { docsSectionPath, type DocsSection } from '@/composables/useDocsSectionRoute'
 
 defineProps<{
@@ -45,6 +46,7 @@ defineEmits<{
 }>()
 
 const { t } = useI18n()
+const route = useRoute()
 
 interface NavItem {
   section: DocsSection

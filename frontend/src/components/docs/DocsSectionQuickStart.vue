@@ -62,7 +62,7 @@
       <RouterLink
         v-for="tool in tools"
         :key="tool.section"
-        :to="docsSectionPath(tool.section)"
+        :to="{ path: docsSectionPath(tool.section), query: route.query }"
         class="rounded-xl border border-gray-200/80 bg-white p-4 block text-left shadow-sm transition-colors hover:border-primary-300 hover:bg-primary-50/50 dark:border-dark-700 dark:bg-dark-900 dark:hover:border-primary-700 dark:hover:bg-primary-900/10"
       >
         <h4 class="font-semibold text-gray-900 dark:text-white">{{ tool.title }}</h4>
@@ -75,12 +75,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { useAppStore } from '@/stores'
 import { docsSectionPath, type DocsSection } from '@/composables/useDocsSectionRoute'
 
 defineEmits<{ (e: 'navigate', section: DocsSection): void }>()
 
 const { t } = useI18n()
+const route = useRoute()
 const appStore = useAppStore()
 
 const apiBase = computed(() =>

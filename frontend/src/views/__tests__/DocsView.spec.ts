@@ -1,11 +1,14 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
+import { h } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
-import { createMemoryHistory, createRouter } from 'vue-router'
+import { RouterView, createMemoryHistory, createRouter } from 'vue-router'
 import DocsView from '@/views/DocsView.vue'
 import i18n, { loadLocaleMessages } from '@/i18n'
 import { useAppStore } from '@/stores/app'
 import { DOCS_SECTION_ROUTE_PATH, redirectLegacyDocsHash } from '@/router/docsSections'
+
+const mounted: VueWrapper[] = []
 
 async function createWrapper(startPath = '/docs') {
   const router = createRouter({
@@ -23,7 +26,8 @@ async function createWrapper(startPath = '/docs') {
   await router.push(startPath)
   await router.isReady()
 
-  const wrapper = mount(DocsView, {
+  // 通过 RouterView 挂载，和线上一样，页面内的路由钩子才会生效
+  const wrapper = mount({ render: () => h(RouterView) }, {
     global: {
       plugins: [router, i18n],
       stubs: {
@@ -33,11 +37,16 @@ async function createWrapper(startPath = '/docs') {
   })
 
   await flushPromises()
+  mounted.push(wrapper)
 
   return { wrapper, router }
 }
 
 describe('DocsView', () => {
+  afterEach(() => {
+    mounted.splice(0).forEach(w => w.unmount())
+  })
+
   beforeEach(async () => {
     setActivePinia(createPinia())
     await loadLocaleMessages('zh')
@@ -203,8 +212,52 @@ describe('DocsView', () => {
 
   it('removes docs head tags when leaving the page', async () => {
     const { wrapper } = await createWrapper('/docs/faq')
+    mounted.splice(mounted.indexOf(wrapper), 1)
     wrapper.unmount()
 
     expect(document.head.querySelector('link[rel="canonical"]')).toBeNull()
+  })
+
+  it('redirects legacy hash links while already on the docs page', async () => {
+    const { router } = await createWrapper('/docs/clients')
+
+    await router.push('/docs#faq')
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/docs/faq')
+
+    await router.push('/docs#quick-start')
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/docs')
+  })
+
+  it('keeps the query string when following nav links', async () => {
+    const { wrapper } = await createWrapper('/docs?utm_source=mail')
+
+    expect(wrapper.find('nav a[href="/docs/faq?utm_source=mail"]').exists()).toBe(true)
+  })
+
+  it('updates the description when the locale changes', async () => {
+    const { wrapper } = await createWrapper('/docs/faq')
+    await loadLocaleMessages('en')
+    i18n.global.locale.value = 'en'
+    await wrapper.vm.$nextTick()
+
+    expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toContain('Billing')
+  })
+
+  it('restores a pre-existing description when leaving', async () => {
+    const meta = document.createElement('meta')
+    meta.setAttribute('name', 'description')
+    meta.setAttribute('content', 'site description')
+    document.head.appendChild(meta)
+
+    const { wrapper } = await createWrapper('/docs/faq')
+    expect(meta.getAttribute('content')).toContain('401')
+    mounted.splice(mounted.indexOf(wrapper), 1)
+    wrapper.unmount()
+
+    expect(meta.getAttribute('content')).toBe('site description')
+    expect(document.head.querySelectorAll('meta[name="description"]')).toHaveLength(1)
+    meta.remove()
   })
 })

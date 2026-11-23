@@ -23,7 +23,7 @@ export function toDocsSection(value: unknown): DocsSection | null {
 export function redirectLegacyDocsHash(to: RouteLocationNormalized) {
   if (to.params.section) return true
   const section = toDocsSection(to.hash)
-  if (!section || section === DEFAULT_DOCS_SECTION) return true
+  if (!section) return true
   return { path: docsSectionPath(section), query: to.query, hash: '', replace: true }
 }
 
