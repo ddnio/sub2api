@@ -21,7 +21,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200/80 dark:divide-dark-700">
-          <tr v-for="row in groupRows" :key="row.group" class="text-gray-700 dark:text-dark-300">
+          <tr v-for="row in groupRows" :key="row.id" class="text-gray-700 dark:text-dark-300">
             <td class="px-4 py-3">{{ row.tools }}</td>
             <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">{{ row.group }}</td>
             <td class="px-4 py-3"><code class="font-mono text-primary-600 dark:text-primary-400">{{ row.base }}</code></td>
@@ -89,8 +89,8 @@ const apiBase = computed(() =>
 )
 
 const groupRows = computed(() => [
-  { tools: t('docs.groups.anthropicTools'), group: t('docs.groups.anthropicName'), base: apiBase.value },
-  { tools: t('docs.groups.openaiTools'), group: t('docs.groups.openaiName'), base: `${apiBase.value}/v1` }
+  { id: 'anthropic', tools: t('docs.groups.anthropicTools'), group: t('docs.groups.anthropicName'), base: apiBase.value },
+  { id: 'openai', tools: t('docs.groups.openaiTools'), group: t('docs.groups.openaiName'), base: `${apiBase.value}/v1` }
 ])
 
 const tools = computed(() => [

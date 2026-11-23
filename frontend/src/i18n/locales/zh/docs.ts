@@ -30,18 +30,20 @@ export default {
       colGroup: '创建 Key 时选的分组',
       colBase: '填写的地址',
       anthropicHint: '用 Claude 模型：创建 API Key 时选「ClaudeCode专用」分组，地址填 {base}（不要加 /v1）。',
+      openaiKeyOnlyHint: '用 GPT 模型：创建 API Key 时选「OpenAI GPT」或对应的 GPT 月卡分组。地址照下面生成的配置填即可。',
       openaiHint: '用 GPT 模型：创建 API Key 时选「OpenAI GPT」或对应的 GPT 月卡分组，地址填 {base}（要带 /v1）。'
     },
     clients: {
       title: '图形客户端接入',
       subtitle: 'Cursor、Cherry Studio、Chatbox、LobeChat、Cline、Roo Code 等客户端，只要能填自定义地址和 Key 就能用。下面是各客户端里要填的字段。',
-      openaiKey: '「OpenAI GPT」分组的 Key',
+      openaiKey: '「OpenAI GPT」或 GPT 月卡分组的 Key',
       anthropicKey: '「ClaudeCode专用」分组的 Key',
       providerType: '服务商类型',
       customBaseUrl: '勾选「使用自定义 Base URL」',
       cursorDesc: 'Cursor 只支持 OpenAI 兼容方式，所以这里只能用 GPT 模型。',
       cursorNote: '打开 Override OpenAI Base URL 后，Cursor 自带的部分功能（如 Tab 补全）仍走官方，不受影响。',
       cherryDesc: '新建一个服务商：用 GPT 选 OpenAI 类型，用 Claude 选 Anthropic 类型。两种类型要用不同分组的 Key。',
+      anthropicNote: '用 Anthropic 类型时，如果填根地址后报 404，说明这个客户端不会自己拼 /v1，在地址后面加上 /v1 即可。',
       clineDesc: '在插件设置里选择 API Provider：GPT 用 OpenAI Compatible，Claude 用 Anthropic 并填自定义地址。'
     },
     claudeCode: {
@@ -74,7 +76,7 @@ export default {
       installDescription: '通过 npm、Homebrew 或 curl 安装 OpenCode CLI。',
       configTitle: '创建配置文件',
       configDescription: '在项目根目录创建 opencode.json 文件。配置中包含 provider 信息、模型列表和 API 连接参数。',
-      configNote: '将 model 字段改为你需要使用的模型（格式：provider_id/model_id）。这份配置走 OpenAI 兼容协议，只能用 GPT 模型；要在 OpenCode 里用 Claude，需另加一个 {\'@\'}ai-sdk/anthropic 类型的 provider，地址不加 /v1，并使用「ClaudeCode专用」分组的 Key。',
+      configNote: '将 model 字段改为你需要使用的模型（格式：provider_id/model_id）。这份配置走 OpenAI 兼容协议，只能用 GPT 模型；要在 OpenCode 里用 Claude，需另加一个 {\'@\'}ai-sdk/anthropic 类型的 provider，并使用「ClaudeCode专用」分组的 Key。注意这个 provider 的 baseURL 要带 /v1（和 Claude Code、Anthropic 官方 SDK 不同）。',
       verifyTitle: '验证并启动',
       verifyDescription: '检查安装是否成功，然后在项目目录下启动 OpenCode。',
       tipsTitle: '配置提示',

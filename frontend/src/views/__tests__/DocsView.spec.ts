@@ -95,6 +95,28 @@ describe('DocsView', () => {
     expect(wrapper.find('[data-docs-group-hint="anthropic"]').text()).toContain('不要加 /v1')
     expect(wrapper.find('[data-docs-group-hint="openai"]').text()).toContain('https://relay.sub2api.test/v1')
     expect(wrapper.find('[data-docs-client="cursor"]').text()).toContain('gpt-6.1-sol')
+
+    const cherry = wrapper.find('[data-docs-client="cherry-studio"]')
+    await cherry.findAll('button').find(b => b.text() === 'Claude')!.trigger('click')
+    expect(cherry.find('pre').text()).toContain('claude-sonnet-5-5')
+    expect(cherry.find('pre').text()).toMatch(/Base URL\s+https:\/\/relay\.sub2api\.test\n/)
+  })
+
+  it('does not tell codex users to append /v1 above the generated config', async () => {
+    const { wrapper } = await createWrapper('/docs#codex-cli')
+
+    const hint = wrapper.find('[data-docs-group-hint="openai"]').text()
+    expect(hint).toContain('OpenAI GPT')
+    expect(hint).not.toContain('/v1')
+  })
+
+  it('renders escaped @ in english copy', async () => {
+    await loadLocaleMessages('en')
+    i18n.global.locale.value = 'en'
+    const { wrapper } = await createWrapper('/docs#opencode')
+
+    expect(wrapper.text()).toContain('@ai-sdk/anthropic provider')
+    expect(wrapper.text()).toContain('must include /v1')
   })
 
   it('keeps claude models out of the openai-compatible opencode config', async () => {

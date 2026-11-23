@@ -7,7 +7,7 @@
       <p class="mt-3 text-sm leading-7 text-gray-600 dark:text-dark-400">{{ guideCopy.subtitle }}</p>
     </div>
 
-    <DocsGroupHint platform="openai" />
+    <DocsGroupHint platform="openai" key-only />
 
     <!-- Platform selector -->
     <div class="inline-flex rounded-full border border-gray-200 bg-gray-50 p-1 dark:border-dark-700 dark:bg-dark-950">

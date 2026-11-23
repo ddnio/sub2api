@@ -30,18 +30,20 @@ export default {
       colGroup: 'Group for the API key',
       colBase: 'Base URL',
       anthropicHint: 'For Claude models: create the API key in the "ClaudeCode专用" group and use {base} (no /v1).',
+      openaiKeyOnlyHint: 'For GPT models: create the API key in the "OpenAI GPT" group or a matching GPT monthly-plan group. Use the base URL from the generated config below.',
       openaiHint: 'For GPT models: create the API key in the "OpenAI GPT" group or a matching GPT monthly-plan group and use {base} (with /v1).'
     },
     clients: {
       title: 'Desktop Client Setup',
       subtitle: 'Cursor, Cherry Studio, Chatbox, LobeChat, Cline, Roo Code and other clients work as long as they accept a custom base URL and key. Below are the fields to fill in for each.',
-      openaiKey: 'key from the "OpenAI GPT" group',
+      openaiKey: 'key from "OpenAI GPT" or a GPT monthly-plan group',
       anthropicKey: 'key from the "ClaudeCode专用" group',
       providerType: 'Provider type',
       customBaseUrl: 'enable "Use custom base URL"',
       cursorDesc: 'Cursor only supports the OpenAI-compatible mode, so only GPT models work here.',
       cursorNote: 'With Override OpenAI Base URL enabled, some built-in Cursor features (such as Tab completion) still use the official service and are unaffected.',
       cherryDesc: 'Add a new provider: choose the OpenAI type for GPT, or the Anthropic type for Claude. The two types need keys from different groups.',
+      anthropicNote: 'With the Anthropic type, if the root URL returns 404, the client does not append /v1 itself; add /v1 to the end of the base URL.',
       clineDesc: 'Pick the API Provider in the extension settings: OpenAI Compatible for GPT, or Anthropic with a custom base URL for Claude.'
     },
     claudeCode: {
@@ -74,7 +76,7 @@ export default {
       installDescription: 'Install the OpenCode CLI via npm, Homebrew, or curl.',
       configTitle: 'Create Config File',
       configDescription: 'Create opencode.json in your project root. The config includes provider info, model list, and API connection parameters.',
-      configNote: 'Change the model field to the model you want to use (format: provider_id/model_id). This config uses the OpenAI-compatible protocol, so only GPT models work. To use Claude in OpenCode, add a separate {\'@\'}ai-sdk/anthropic provider with the base URL without /v1 and a key from the "ClaudeCode专用" group.',
+      configNote: 'Change the model field to the model you want to use (format: provider_id/model_id). This config uses the OpenAI-compatible protocol, so only GPT models work. To use Claude in OpenCode, add a separate {\'@\'}ai-sdk/anthropic provider with a key from the "ClaudeCode专用" group. Note that the baseURL of this provider must include /v1 (unlike Claude Code and the official Anthropic SDK).',
       verifyTitle: 'Verify & Start',
       verifyDescription: 'Check that the installation succeeded, then start OpenCode in your project directory.',
       tipsTitle: 'Configuration Tips',

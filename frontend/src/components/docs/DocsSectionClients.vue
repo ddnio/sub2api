@@ -92,7 +92,7 @@ const clients = computed(() => [
     id: 'cherry-studio',
     title: 'Cherry Studio / Chatbox / LobeChat',
     desc: t('docs.clients.cherryDesc'),
-    note: '',
+    note: t('docs.clients.anthropicNote'),
     tabs: [
       gptTab('gpt', 'GPT', t('docs.clients.providerType'), 'OpenAI'),
       claudeTab('claude', 'Claude', t('docs.clients.providerType'), 'Anthropic')
@@ -102,7 +102,7 @@ const clients = computed(() => [
     id: 'cline',
     title: 'Cline / Roo Code',
     desc: t('docs.clients.clineDesc'),
-    note: '',
+    note: t('docs.clients.anthropicNote'),
     tabs: [
       gptTab('gpt', 'GPT', 'API Provider', 'OpenAI Compatible'),
       claudeTab('claude', 'Claude', 'API Provider', `Anthropic  # ${t('docs.clients.customBaseUrl')}`)
