@@ -38,3 +38,11 @@
 
 - 把 `/srv/nanafox-router-formal/compose.json` 里的 `image` 改回 `sha256:81719120553b9609a84f78580dcbbed11002b15ce104c5c80ad1494cc2eae18c`（tag `sub2api:prod-v0.2.23-adcf2f2f3`），再执行同一条只重建命令。旧镜像已保留在主机上。
 - 本次无数据库迁移，回退不涉及数据结构变更；回退后不要用旧库快照覆盖生产库。
+
+## 补记：同日下午 d6ea0a51c（PR #75）
+
+- 改动：路由守卫把推广链接里的 `?use=` 存进 sessionStorage，/start 在 URL 没带时读取。只改前端，无数据库迁移。外部审查（agy）无阻塞问题；前端全量 410 文件 / 3261 测试通过。
+- 程序 SHA256 `c22215a2a86c2afd8f8fd3b84fe4fe6632db47bf81d612d790f1b812a714e9c4`，构建时间 `2026-11-23T07:25:02Z`；以 `sub2api:prod-v0.2.23-5b911fe7c` 为底叠加构建，镜像 `sub2api:prod-v0.2.23-d6ea0a51c`，ID `sha256:61cbb116435c2d9d5d41f7eb1ff8a64cd30a3280a09674c273b397efec8dd473`，镜像内程序哈希与本机一致。
+- 预检通过；NAS 最新完整备份 `20261122T193511Z`；恢复点 `/home/nio/releases/router-d6ea0a5-20261123/`（`pg_dump -Fc` 219,171,010 字节，SHA256 `74d9c121e63056f73a770f06e0fd77fcd13e4d8908fd9143999b724b312d20d1`，112 张表数据可读，另有 compose 和 inspect）。
+- 07:30:05Z 切换镜像（compose diff 仅 image 一行），07:30:18Z 恢复 healthy。post-switch 验收通过：迁移 333 不变，入口 JS `/assets/index-NaGcmd-b.js` 与本机一致，带标记 `probe=verify-d6ea0a5-20261123` 的请求在网关日志命中。切换前后新注册 2 人，余额合计随之增加，订单数不变。
+- 回退目标：`sha256:eb06963c35d2f3021fefbe05c28be6e38c160f93788b944b5db676f9da2163bb`（tag `sub2api:prod-v0.2.23-5b911fe7c`）。
