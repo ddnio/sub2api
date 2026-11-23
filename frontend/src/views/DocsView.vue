@@ -38,6 +38,7 @@ import DocsNav from '@/components/docs/DocsNav.vue'
 import DocsSectionQuickStart from '@/components/docs/DocsSectionQuickStart.vue'
 import DocsSectionClaudeCode from '@/components/docs/DocsSectionClaudeCode.vue'
 import DocsSectionCodexCli from '@/components/docs/DocsSectionCodexCli.vue'
+import DocsSectionClients from '@/components/docs/DocsSectionClients.vue'
 import DocsSectionOpenCode from '@/components/docs/DocsSectionOpenCode.vue'
 import DocsSectionApiUsage from '@/components/docs/DocsSectionApiUsage.vue'
 import DocsSectionFaq from '@/components/docs/DocsSectionFaq.vue'
@@ -52,6 +53,7 @@ const sectionComponents: Record<DocsSection, any> = {
   'quick-start': DocsSectionQuickStart,
   'claude-code': DocsSectionClaudeCode,
   'codex-cli': DocsSectionCodexCli,
+  'clients': DocsSectionClients,
   'opencode': DocsSectionOpenCode,
   'api-usage': DocsSectionApiUsage,
   'faq': DocsSectionFaq,

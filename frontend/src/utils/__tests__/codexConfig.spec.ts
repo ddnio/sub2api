@@ -12,8 +12,8 @@ describe('createCodexCliFiles', () => {
 
     expect(files[0].path).toBe('~/.codex/config.toml')
     expect(files[0].content).toContain('model_provider = "sub2api"')
-    expect(files[0].content).toContain('model = "gpt-5.5"')
-    expect(files[0].content).toContain('review_model = "gpt-5.5"')
+    expect(files[0].content).toContain('model = "gpt-6.1-sol"')
+    expect(files[0].content).toContain('review_model = "gpt-6.1-sol"')
     expect(files[0].content).toContain('[features]\ngoals = true')
     expect(files[0].content).toContain('[model_providers.sub2api]')
     expect(files[0].content).toContain('name = "Sub2API"')

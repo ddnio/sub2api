@@ -40,8 +40,8 @@ export function createCodexCliFiles(options: CreateCodexCliFilesOptions): CodexC
     ? 'requires_openai_auth = false\nhttp_headers = { "x-openai-actor-authorization" = "local-image-extension" }'
     : 'requires_openai_auth = true'
   const standardConfig = `model_provider = "${providerKey}"
-model = "gpt-5.5"
-review_model = "gpt-5.5"
+model = "gpt-6.1-sol"
+review_model = "gpt-6.1-sol"
 model_reasoning_effort = "xhigh"
 network_access = "enabled"
 disable_response_storage = true

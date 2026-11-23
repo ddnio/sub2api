@@ -78,9 +78,49 @@ describe('DocsView', () => {
     expect(wrapper.find('[data-docs-mode="api"]').exists()).toBe(false)
     expect(wrapper.find('[data-docs-mode="codex"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('快速开始')
-    expect(wrapper.text()).toContain('选择你使用的工具')
+    expect(wrapper.text()).toContain('三步接入')
     expect(wrapper.text()).toContain('https://relay.sub2api.test')
     expect(wrapper.text()).toContain('Codex CLI')
+
+    const table = wrapper.find('[data-docs-group-table]')
+    expect(table.text()).toContain('ClaudeCode专用')
+    expect(table.text()).toContain('https://relay.sub2api.test/v1')
+  })
+
+  it('renders the desktop clients section with group-specific keys', async () => {
+    const { wrapper } = await createWrapper('/docs#clients')
+
+    expect(wrapper.find('[data-docs-client="cursor"]').exists()).toBe(true)
+    expect(wrapper.find('[data-docs-client="cherry-studio"]').exists()).toBe(true)
+    expect(wrapper.find('[data-docs-group-hint="anthropic"]').text()).toContain('不要加 /v1')
+    expect(wrapper.find('[data-docs-group-hint="openai"]').text()).toContain('https://relay.sub2api.test/v1')
+    expect(wrapper.find('[data-docs-client="cursor"]').text()).toContain('gpt-6.1-sol')
+  })
+
+  it('keeps claude models out of the openai-compatible opencode config', async () => {
+    const { wrapper } = await createWrapper('/docs#opencode')
+
+    expect(wrapper.text()).toContain('gpt-6.1-sol')
+    const configText = wrapper.findAll('pre').map(pre => pre.text()).join('\n')
+    expect(configText).not.toContain('claude-sonnet')
+  })
+
+  it('shows both openai and anthropic api examples', async () => {
+    const { wrapper } = await createWrapper('/docs#api-usage')
+
+    expect(wrapper.text()).toContain('gpt-6.1-sol')
+    expect(wrapper.text()).not.toContain('gpt-4o')
+    const anthropic = wrapper.find('[data-docs-anthropic-example]')
+    expect(anthropic.text()).toContain('claude-sonnet-5-5')
+    expect(anthropic.text()).toContain('base_url="https://relay.sub2api.test"')
+  })
+
+  it('shows billing, error codes and contact in the faq', async () => {
+    const { wrapper } = await createWrapper('/docs#faq')
+
+    expect(wrapper.find('[data-docs-faq-billing]').text()).toContain('微信支付')
+    expect(wrapper.find('[data-docs-faq-errors]').text()).toContain('401')
+    expect(wrapper.find('[data-docs-faq-contact]').text()).toContain('nanafox-hi')
   })
 
   it('supports direct deep links while still rendering the same guide', async () => {

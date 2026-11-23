@@ -10,6 +10,8 @@
       </p>
     </div>
 
+    <DocsGroupHint platform="anthropic" />
+
     <!-- Step 1: Install -->
     <section class="space-y-3">
       <div class="flex items-start gap-3">
@@ -96,6 +98,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores'
 import DocsCodeBlock from './DocsCodeBlock.vue'
+import DocsGroupHint from './DocsGroupHint.vue'
 import type { CodeTab } from './DocsCodeBlock.vue'
 import {
   generateClaudeCodeInstallSnippet,
