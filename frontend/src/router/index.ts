@@ -13,6 +13,7 @@ import { useRoutePrefetch } from '@/composables/useRoutePrefetch'
 import { getSetupStatus } from '@/api/setup'
 import { resolveCompletedSetupRedirectPath } from './setupRedirect'
 import { resolveRouteDocumentTitle } from './title'
+import { shouldOfferStart } from '@/views/user/startOnboarding'
 
 /**
  * Route definitions with lazy loading
@@ -211,6 +212,17 @@ const routes: RouteRecordRaw[] = [
       title: 'Dashboard',
       titleKey: 'dashboard.title',
       descriptionKey: 'dashboard.welcomeMessage'
+    }
+  },
+  // NanaFox fork: 注册后“开始使用”引导页
+  {
+    path: '/start',
+    name: 'Start',
+    component: () => import('@/views/user/StartView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: '开始使用'
     }
   },
   {
@@ -1058,6 +1070,12 @@ router.beforeEach(async (to, _from, next) => {
       next('/login')
       return
     }
+  }
+
+  // NanaFox fork: 注册 7 天内、本浏览器没看过引导的用户，去控制台时先带到 /start
+  if (to.path === '/dashboard' && authStore.isAuthenticated && shouldOfferStart(authStore.user)) {
+    next('/start')
+    return
   }
 
   // All checks passed, allow navigation
