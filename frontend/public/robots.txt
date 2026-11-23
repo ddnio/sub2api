@@ -1,0 +1,9 @@
+# NanaFox fork: 中转站自己提供 robots.txt，避免 SPA 把首页当成 robots.txt 返回。
+# 线上可在 data/public/robots.txt 放同名文件覆盖。
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /v1/
+Disallow: /admin
+
+Sitemap: https://router.nanafox.com/sitemap.xml

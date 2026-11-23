@@ -7,6 +7,8 @@ vi.mock('@/i18n', () => {
     'nav.recharge': '充值',
     'nav.subscribe': '订阅',
     'nav.buySubscription': '充值/订阅',
+    'docs.title': '文档',
+    'docs.clients.title': '图形客户端接入',
   }
   return { i18n: { global: { t: (key: string) => messages[key] ?? key } } }
 })
@@ -133,5 +135,13 @@ describe('resolveRouteDocumentTitle 站点类型', () => {
   it('充值 & 订阅时保留原标题', () => {
     const title = resolveRouteDocumentTitle(purchaseRoute, 'EzouAPI', [], { billingMode: 'recharge_and_subscription' })
     expect(title).toBe('充值/订阅 - EzouAPI')
+  })
+})
+
+describe('resolveRouteDocumentTitle /docs 小节', () => {
+  it('小节地址用小节自己的标题，/docs 本身保留「文档」', () => {
+    const meta = { title: 'Documentation', titleKey: 'docs.title' }
+    expect(resolveRouteDocumentTitle({ name: 'Docs', params: { section: 'clients' }, meta }, 'NanaFox')).toBe('图形客户端接入 - NanaFox')
+    expect(resolveRouteDocumentTitle({ name: 'Docs', params: {}, meta }, 'NanaFox')).toBe('文档 - NanaFox')
   })
 })

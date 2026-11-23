@@ -2,6 +2,7 @@ import { i18n } from '@/i18n'
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import type { CustomMenuItem } from '@/types'
 import type { SiteBillingMode } from '@/utils/siteBillingMode'
+import { DOCS_ROUTE_NAME, resolveDocsSectionMetaKeys } from './docsSections'
 
 /**
  * 统一生成页面标题，避免多处写入 document.title 产生覆盖冲突。
@@ -73,7 +74,10 @@ export function resolveRouteDocumentTitle(
     ? customMenuItems.find((item) => item.id === id)
     : undefined
   const menuTitle = menuItem?.label.trim()
-  const { titleKey } = resolveRouteMetaKeys(route, options)
+  // NanaFox fork: /docs/<小节> 用各小节自己的标题
+  const { titleKey } = route.name === DOCS_ROUTE_NAME
+    ? resolveDocsSectionMetaKeys(route.params.section)
+    : resolveRouteMetaKeys(route, options)
 
   return resolveDocumentTitle(menuTitle || route.meta.title, siteName, menuTitle ? undefined : titleKey)
 }

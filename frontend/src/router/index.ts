@@ -14,6 +14,7 @@ import { getSetupStatus } from '@/api/setup'
 import { resolveCompletedSetupRedirectPath } from './setupRedirect'
 import { resolveRouteDocumentTitle } from './title'
 import { rememberUseCase, shouldOfferStart } from '@/views/user/startOnboarding'
+import { DOCS_ROUTE_NAME, DOCS_SECTION_ROUTE_PATH, redirectLegacyDocsHash } from './docsSections'
 
 /**
  * Route definitions with lazy loading
@@ -41,9 +42,10 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/docs',
-    name: 'Docs',
+    path: DOCS_SECTION_ROUTE_PATH,
+    name: DOCS_ROUTE_NAME,
     component: () => import('@/views/DocsView.vue'),
+    beforeEnter: redirectLegacyDocsHash,
     meta: {
       requiresAuth: false,
       title: 'Documentation',

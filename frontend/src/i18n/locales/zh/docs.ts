@@ -12,6 +12,15 @@ export default {
       apiUsage: 'API 调用',
       faq: '计费与常见问题'
     },
+    seo: {
+      quickStart: '三步接入 NanaFox Router：按工具选对分组创建 API Key，填进 Claude Code、Codex、Cursor 等工具，发一句话测试。',
+      claudeCode: 'Claude Code 接入教程：安装、配置 ANTHROPIC_BASE_URL 和 API Key、验证连通，地址不加 /v1。',
+      codexCli: 'Codex CLI 接入教程：安装 Node.js 和 Codex CLI，写入 config.toml 与 auth.json，使用 GPT 模型。',
+      clients: 'Cursor、Cherry Studio、Chatbox、LobeChat、Cline、Roo Code 接入填法，GPT 与 Claude 分别配置。',
+      opencode: 'OpenCode 接入教程：opencode.json 配置示例，GPT 走 OpenAI 兼容，Claude 走 Anthropic provider。',
+      apiUsage: '用 OpenAI SDK 调用 GPT、用 Anthropic SDK 调用 Claude 的 Python、cURL、Node.js 示例。',
+      faq: '计费方式、微信充值、月卡说明，以及 401、403、404、模型不存在等常见报错的排查方法。'
+    },
     shared: {
       copy: '复制',
       copied: '已复制',

@@ -5,13 +5,15 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import DocsView from '@/views/DocsView.vue'
 import i18n, { loadLocaleMessages } from '@/i18n'
 import { useAppStore } from '@/stores/app'
+import { DOCS_SECTION_ROUTE_PATH, redirectLegacyDocsHash } from '@/router/docsSections'
 
 async function createWrapper(startPath = '/docs') {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
       { path: '/home', component: { template: '<div>home</div>' } },
-      { path: '/docs', component: DocsView },
+      { path: DOCS_SECTION_ROUTE_PATH, name: 'Docs', component: DocsView, beforeEnter: redirectLegacyDocsHash },
+      { path: '/batch-image', name: 'BatchImageGuide', alias: '/docs/batch-image', component: { template: '<div>batch</div>' } },
       { path: '/key-usage', component: { template: '<div>usage</div>' } },
       { path: '/login', component: { template: '<div>login</div>' } },
       { path: '/payment', component: { template: '<div>payment</div>' } }
@@ -160,5 +162,49 @@ describe('DocsView', () => {
 
     expect(router.currentRoute.value.query.mode).toBe('api')
     expect(wrapper.text()).toContain('快速开始')
+  })
+
+  it('serves each section on its own path with canonical and description', async () => {
+    const { wrapper, router } = await createWrapper('/docs/faq')
+
+    expect(router.currentRoute.value.path).toBe('/docs/faq')
+    expect(wrapper.find('[data-docs-faq-billing]').exists()).toBe(true)
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(`${window.location.origin}/docs/faq`)
+    expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toContain('401')
+  })
+
+  it('redirects legacy hash links to the section path', async () => {
+    const { router } = await createWrapper('/docs#clients')
+
+    expect(router.currentRoute.value.path).toBe('/docs/clients')
+    expect(router.currentRoute.value.hash).toBe('')
+  })
+
+  it('renders crawlable nav links and navigates between sections', async () => {
+    const { wrapper, router } = await createWrapper('/docs')
+
+    const hrefs = wrapper.findAll('nav a').map(a => a.attributes('href'))
+    expect(hrefs).toContain('/docs')
+    expect(hrefs).toContain('/docs/clients')
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(`${window.location.origin}/docs`)
+
+    await wrapper.find('nav a[href="/docs/opencode"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/docs/opencode')
+    expect(wrapper.text()).toContain('opencode.json')
+  })
+
+  it('keeps /docs/batch-image on its own route and rejects unknown sections', async () => {
+    const { router } = await createWrapper('/docs')
+
+    expect(router.resolve('/docs/batch-image').name).toBe('BatchImageGuide')
+    expect(router.resolve('/docs/unknown').matched).toHaveLength(0)
+  })
+
+  it('removes docs head tags when leaving the page', async () => {
+    const { wrapper } = await createWrapper('/docs/faq')
+    wrapper.unmount()
+
+    expect(document.head.querySelector('link[rel="canonical"]')).toBeNull()
   })
 })

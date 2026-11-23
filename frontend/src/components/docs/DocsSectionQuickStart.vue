@@ -59,16 +59,15 @@
 
     <!-- Tool cards -->
     <div class="grid gap-3 sm:grid-cols-2">
-      <button
+      <RouterLink
         v-for="tool in tools"
         :key="tool.section"
-        type="button"
-        class="rounded-xl border border-gray-200/80 bg-white p-4 text-left shadow-sm transition-colors hover:border-primary-300 hover:bg-primary-50/50 dark:border-dark-700 dark:bg-dark-900 dark:hover:border-primary-700 dark:hover:bg-primary-900/10"
-        @click="$emit('navigate', tool.section)"
+        :to="docsSectionPath(tool.section)"
+        class="rounded-xl border border-gray-200/80 bg-white p-4 block text-left shadow-sm transition-colors hover:border-primary-300 hover:bg-primary-50/50 dark:border-dark-700 dark:bg-dark-900 dark:hover:border-primary-700 dark:hover:bg-primary-900/10"
       >
         <h4 class="font-semibold text-gray-900 dark:text-white">{{ tool.title }}</h4>
         <p class="mt-1 text-xs text-gray-500 dark:text-dark-400">{{ tool.desc }}</p>
-      </button>
+      </RouterLink>
     </div>
   </div>
 </template>
@@ -77,7 +76,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores'
-import type { DocsSection } from '@/composables/useDocsSectionRoute'
+import { docsSectionPath, type DocsSection } from '@/composables/useDocsSectionRoute'
 
 defineEmits<{ (e: 'navigate', section: DocsSection): void }>()
 
