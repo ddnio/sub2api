@@ -8,6 +8,8 @@ import {
   extractReply,
   markStartDone,
   pickGroupForUseCase,
+  rememberUseCase,
+  rememberedUseCase,
   shouldOfferStart,
   startDoneKey,
   useCaseFromQuery
@@ -166,5 +168,19 @@ describe('useCaseFromQuery', () => {
     expect(useCaseFromQuery(['codex'])).toBe('codex')
     expect(useCaseFromQuery('evil')).toBeNull()
     expect(useCaseFromQuery(undefined)).toBeNull()
+  })
+})
+
+describe('rememberUseCase', () => {
+  beforeEach(() => sessionStorage.clear())
+
+  it('keeps a valid use= for later and ignores junk', () => {
+    expect(rememberedUseCase()).toBeNull()
+    rememberUseCase('evil')
+    expect(rememberedUseCase()).toBeNull()
+    rememberUseCase(['claude'])
+    expect(rememberedUseCase()).toBe('claude')
+    rememberUseCase(undefined)
+    expect(rememberedUseCase()).toBe('claude')
   })
 })

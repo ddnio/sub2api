@@ -13,7 +13,7 @@ import { useRoutePrefetch } from '@/composables/useRoutePrefetch'
 import { getSetupStatus } from '@/api/setup'
 import { resolveCompletedSetupRedirectPath } from './setupRedirect'
 import { resolveRouteDocumentTitle } from './title'
-import { shouldOfferStart } from '@/views/user/startOnboarding'
+import { rememberUseCase, shouldOfferStart } from '@/views/user/startOnboarding'
 
 /**
  * Route definitions with lazy loading
@@ -882,6 +882,9 @@ router.beforeEach(async (to, _from, next) => {
   navigationLoading.startNavigation()
 
   const authStore = useAuthStore()
+
+  // NanaFox fork: 推广链接带的 ?use= 先记下，经过注册/验证/登录后 /start 还能预选
+  rememberUseCase(to.query?.use)
 
   // Restore auth state from localStorage on first navigation (page refresh)
   if (!authInitialized) {
