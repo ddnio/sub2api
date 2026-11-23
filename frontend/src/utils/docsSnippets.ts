@@ -7,6 +7,14 @@ export interface SnippetFile {
   hint?: string
 }
 
+// NanaFox fork: 文档示例统一用的模型名。Claude 只走 Anthropic 协议（ClaudeCode专用分组），
+// OpenAI 兼容写法只给 GPT。
+export const DOCS_MODELS = {
+  openai: 'gpt-6.1-sol',
+  openaiAlt: 'gpt-6.2-sol',
+  anthropic: 'claude-sonnet-5-5'
+} as const
+
 // ---------- Claude Code ----------
 
 export function generateClaudeCodeEnvSnippet(
@@ -159,7 +167,7 @@ export function generateOpenCodeEnhancedSnippet(
 ): SnippetFile {
   const config = {
     $schema: 'https://opencode.ai/config.json',
-    model: 'openai/gpt-4o',
+    model: `openai/${DOCS_MODELS.openai}`,
     provider: {
       openai: {
         npm: '@ai-sdk/openai-compatible',
@@ -169,8 +177,8 @@ export function generateOpenCodeEnhancedSnippet(
           apiKey: apiKey
         },
         models: {
-          'gpt-4o': { name: 'GPT-4o' },
-          'claude-sonnet-4-6': { name: 'Claude Sonnet 4.6' }
+          [DOCS_MODELS.openai]: { name: 'GPT-6.1 Sol' },
+          [DOCS_MODELS.openaiAlt]: { name: 'GPT-6.2 Sol' }
         }
       }
     }
@@ -203,7 +211,7 @@ client = OpenAI(
 )
 
 stream = client.chat.completions.create(
-    model="gpt-4o",
+    model="${DOCS_MODELS.openai}",
     messages=[{"role": "user", "content": "Hello"}],
     stream=True,
 )
@@ -218,7 +226,7 @@ for chunk in stream:
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer ${apiKey}" \\
   -d '{
-    "model": "gpt-4o",
+    "model": "${DOCS_MODELS.openai}",
     "messages": [{"role": "user", "content": "Hello"}],
     "stream": true
   }'`
@@ -234,7 +242,7 @@ const client = new OpenAI({
 });
 
 const stream = await client.chat.completions.create({
-  model: "gpt-4o",
+  model: "${DOCS_MODELS.openai}",
   messages: [{ role: "user", content: "Hello" }],
   stream: true,
 });
@@ -268,7 +276,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="gpt-5.4",
+    model="${DOCS_MODELS.openai}",
     messages=[{"role": "user", "content": "Hello"}],
 )
 print(response.choices[0].message.content)`
@@ -280,7 +288,7 @@ print(response.choices[0].message.content)`
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer ${apiKey}" \\
   -d '{
-    "model": "gpt-5.4",
+    "model": "${DOCS_MODELS.openai}",
     "messages": [{"role": "user", "content": "Hello"}]
   }'`
       }
@@ -295,10 +303,71 @@ const client = new OpenAI({
 });
 
 const response = await client.chat.completions.create({
-  model: "gpt-5.4",
+  model: "${DOCS_MODELS.openai}",
   messages: [{ role: "user", content: "Hello" }],
 });
 console.log(response.choices[0].message.content);`
+      }
+  }
+}
+
+// ---------- Anthropic API Examples (NanaFox fork) ----------
+// Claude 走 Anthropic 协议：地址不加 /v1（SDK 自己拼 /v1/messages），key 要建在 ClaudeCode专用分组
+
+export function generateAnthropicApiExample(
+  baseUrl: string,
+  apiKey: string,
+  language: ApiLanguage
+): SnippetFile {
+  const base = baseUrl.replace(/\/+$/, '').replace(/\/v1$/, '')
+
+  switch (language) {
+    case 'python':
+      return {
+        path: 'Python (Anthropic SDK)',
+        content: `from anthropic import Anthropic
+
+client = Anthropic(
+    base_url="${base}",
+    api_key="${apiKey}",
+)
+
+message = client.messages.create(
+    model="${DOCS_MODELS.anthropic}",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Hello"}],
+)
+print(message.content[0].text)`
+      }
+    case 'curl':
+      return {
+        path: 'cURL (Anthropic)',
+        content: `curl ${base}/v1/messages \\
+  -H "Content-Type: application/json" \\
+  -H "x-api-key: ${apiKey}" \\
+  -H "anthropic-version: 2023-06-01" \\
+  -d '{
+    "model": "${DOCS_MODELS.anthropic}",
+    "max_tokens": 1024,
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'`
+      }
+    case 'nodejs':
+      return {
+        path: 'Node.js (Anthropic SDK)',
+        content: `import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic({
+  baseURL: "${base}",
+  apiKey: "${apiKey}",
+});
+
+const message = await client.messages.create({
+  model: "${DOCS_MODELS.anthropic}",
+  max_tokens: 1024,
+  messages: [{ role: "user", content: "Hello" }],
+});
+console.log(message.content[0].text);`
       }
   }
 }

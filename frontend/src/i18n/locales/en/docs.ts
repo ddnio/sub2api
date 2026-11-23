@@ -7,9 +7,10 @@ export default {
       quickStart: 'Quick Start',
       claudeCode: 'Claude Code',
       codexCli: 'Codex CLI',
+      clients: 'Desktop Clients',
       opencode: 'OpenCode',
       apiUsage: 'API Usage',
-      faq: 'FAQ'
+      faq: 'Billing & FAQ'
     },
     shared: {
       copy: 'Copy',
@@ -19,6 +20,31 @@ export default {
       viewFullGuide: 'View full guide',
       replaceKeyHint: 'Replace your-api-key-here with the API key from your dashboard.',
       baseUrlHint: 'Replace the base URL below with your actual site address.'
+    },
+    groups: {
+      anthropicName: 'ClaudeCode专用',
+      openaiName: 'OpenAI GPT (or the matching GPT monthly-plan group)',
+      anthropicTools: 'Claude Code, Anthropic SDK, Claude in desktop clients',
+      openaiTools: 'Codex CLI, Cursor, OpenCode, OpenAI SDK, GPT in desktop clients',
+      colTool: 'Your tool',
+      colGroup: 'Group for the API key',
+      colBase: 'Base URL',
+      anthropicHint: 'For Claude models: create the API key in the "ClaudeCode专用" group and use {base} (no /v1).',
+      openaiKeyOnlyHint: 'For GPT models: create the API key in the "OpenAI GPT" group or a matching GPT monthly-plan group. Use the base URL from the generated config below.',
+      openaiHint: 'For GPT models: create the API key in the "OpenAI GPT" group or a matching GPT monthly-plan group and use {base} (with /v1).'
+    },
+    clients: {
+      title: 'Desktop Client Setup',
+      subtitle: 'Cursor, Cherry Studio, Chatbox, LobeChat, Cline, Roo Code and other clients work as long as they accept a custom base URL and key. Below are the fields to fill in for each.',
+      openaiKey: 'key from "OpenAI GPT" or a GPT monthly-plan group',
+      anthropicKey: 'key from the "ClaudeCode专用" group',
+      providerType: 'Provider type',
+      customBaseUrl: 'enable "Use custom base URL"',
+      cursorDesc: 'Cursor only supports the OpenAI-compatible mode, so only GPT models work here.',
+      cursorNote: 'With Override OpenAI Base URL enabled, some built-in Cursor features (such as Tab completion) still use the official service and are unaffected.',
+      cherryDesc: 'Add a new provider: choose the OpenAI type for GPT, or the Anthropic type for Claude. The two types need keys from different groups.',
+      anthropicNote: 'With the Anthropic type, if the root URL returns 404, the client does not append /v1 itself; add /v1 to the end of the base URL.',
+      clineDesc: 'Pick the API Provider in the extension settings: OpenAI Compatible for GPT, or Anthropic with a custom base URL for Claude.'
     },
     claudeCode: {
       title: 'Claude Code Setup',
@@ -50,7 +76,7 @@ export default {
       installDescription: 'Install the OpenCode CLI via npm, Homebrew, or curl.',
       configTitle: 'Create Config File',
       configDescription: 'Create opencode.json in your project root. The config includes provider info, model list, and API connection parameters.',
-      configNote: 'Change the model field to the model you want to use (format: provider_id/model_id). List available model names in the models object.',
+      configNote: 'Change the model field to the model you want to use (format: provider_id/model_id). This config uses the OpenAI-compatible protocol, so only GPT models work. To use Claude in OpenCode, add a separate {\'@\'}ai-sdk/anthropic provider with a key from the "ClaudeCode专用" group. Note that the baseURL of this provider must include /v1 (unlike Claude Code and the official Anthropic SDK).',
       verifyTitle: 'Verify & Start',
       verifyDescription: 'Check that the installation succeeded, then start OpenCode in your project directory.',
       tipsTitle: 'Configuration Tips',
@@ -62,29 +88,47 @@ export default {
     },
     quickStart: {
       title: 'Quick Start',
-      subtitle: 'Choose your tool below and follow the setup guide to connect.',
-      baseUrlLabel: 'Platform Base URL',
-      getKeyStep: 'Create an API Key',
-      getKeyDesc: 'Sign up, log in, and create a new API key in the dashboard.',
-      chooseToolStep: 'Choose Your Tool',
-      chooseToolDesc: 'Select the tool you use below to see the setup instructions.',
+      subtitle: 'Three steps: create a key in the right group for your tool, put the config into the tool, and send one test message. New users are taken to the onboarding guide automatically after signing in.',
+      getKeyStep: 'Create an API key in the right group',
+      getKeyDesc: 'Create a key on the dashboard API Keys page and pick the group from the table above. The group decides which models you can use; a wrong group shows a "model not found" error.',
+      useKeyStep: 'Put the config into your tool',
+      useKeyDesc: 'Click "Use Key" in the key list to see a config with your real base URL and key filled in. CC Switch users can click "Import to CCS". You can also follow the per-tool guides below.',
+      testKeyStep: 'Send a test message',
+      testKeyDesc: 'Ask anything in your tool. A normal reply means you are connected. For errors, see the error table in Billing & FAQ.',
       toolCards: {
         claudeCode: 'Quick setup via environment variables for Claude Code users.',
         codexCli: 'Full Codex CLI installation and configuration guide.',
+        clients: 'Settings for Cursor, Cherry Studio, Cline and more.',
         opencode: 'Connect with a single JSON config file.',
         apiUsage: 'Call the API directly with Python, cURL, or Node.js.'
       }
     },
     faq: {
-      title: 'FAQ',
+      title: 'Billing & FAQ',
+      billingTitle: 'Billing',
+      billing: {
+        payg: 'Usage is deducted from your balance as you go. Per-request usage and cost are shown in the dashboard.',
+        topup: 'When your balance runs low, top up in CNY via WeChat Pay on the dashboard top-up page.',
+        monthly: 'Heavy GPT users can also buy a monthly plan. See the top-up page for available plans and prices.'
+      },
+      errorsTitle: 'Common errors',
+      errors: {
+        notFound: 'Wrong base URL. Claude tools use the base URL without /v1; GPT tools and the OpenAI SDK need /v1.',
+        unauthorized: 'Wrong API key: check it was copied in full and has not been deleted or disabled.',
+        forbidden: 'Insufficient balance or the key quota is used up. Top up and retry.',
+        model: 'Wrong group: Claude models need a key from the "ClaudeCode专用" group; GPT models need a key from "OpenAI GPT" or a GPT monthly-plan group.'
+      },
+      contactTitle: 'Contact',
+      contactDesc: 'Need help? Reach us at {contact} or email {email}.',
+      contactFallback: 'WeChat: nanafox-hi',
       generalTitle: 'General',
       items: {
         compatibilityQ: 'Do I need to change the SDK or request format?',
-        compatibilityA: 'Usually no. This platform is OpenAI-compatible — just swap base_url and api_key.',
+        compatibilityA: 'Usually no. GPT uses the OpenAI protocol and Claude uses the Anthropic protocol; just swap the base URL and key.',
         multiToolQ: 'Can I use multiple tools at the same time?',
-        multiToolA: 'Yes. Each tool is configured independently and shares the same API key.',
+        multiToolA: 'Yes. Tools using the same model family can share a key. To use both Claude and GPT, create one key in each group.',
         modelsQ: 'Which models are supported?',
-        modelsA: 'GPT and Claude full model lineup. Check the dashboard for currently available models.'
+        modelsA: 'GPT models (such as gpt-6.1-sol) and Claude models (such as claude-sonnet-5-5). The key group decides which models you get: Claude is only in the "ClaudeCode专用" group over the Anthropic protocol; GPT is in "OpenAI GPT" and GPT monthly-plan groups over the OpenAI protocol.'
       }
     },
     mode: {
@@ -93,20 +137,23 @@ export default {
     },
     api: {
       title: 'Generic API Access',
-      subtitle: 'Keep the same OpenAI SDK request shape. Replace the base URL with this site’s `/v1` endpoint and use your generated API key.',
+      subtitle: 'For GPT, keep the same OpenAI SDK request shape and point the base URL at this site’s `/v1` endpoint. For Claude, use the Anthropic SDK; see the example below.',
       baseUrlLabel: 'Recommended base URL',
       examplesTitle: 'Request Examples',
       authTitle: 'Authentication',
-      authDescription: 'All requests use standard Bearer token auth. Put the API key from your dashboard into the `Authorization` header.',
+      authDescription: 'OpenAI-protocol requests send the key in the `Authorization: Bearer` header; Anthropic-protocol requests send it in the `x-api-key` header. The official SDKs handle this once api_key is set.',
       endpointsTitle: 'Supported Endpoints',
       endpoints: {
         chat: 'OpenAI-compatible Chat Completions endpoint for direct drop-in replacement.',
+        messages: 'Anthropic Messages-compatible endpoint for Claude models.',
         models: 'Lists currently available models so SDKs and frontends can render them dynamically.'
       },
       sdkTitle: 'Install SDK',
       sdkDescription: 'The OpenAI official SDK is the easiest way to call the API. Install the package for your language.',
       streamingTitle: 'Streaming Responses',
       streamingDescription: 'Enable stream mode to receive model output in real time — ideal for chat UIs and other scenarios that benefit from instant feedback.',
+      anthropicTitle: 'Calling Claude (Anthropic protocol)',
+      anthropicDescription: 'Install the official Anthropic SDK (pip install anthropic or npm install {\'@\'}anthropic-ai/sdk). Use the site root as the base URL; the SDK appends /v1/messages itself.',
       faqTitle: 'FAQ',
       quickStart: {
         registerTitle: 'Create an Account',
@@ -163,7 +210,7 @@ export default {
           commandTitle: 'Verify the CLI is installed',
           commandDesc: 'Run `node --version`, `npm --version`, and `codex --version` first to confirm the environment and CLI are actually available.',
           connectionTitle: 'Verify the base URL',
-          connectionDesc: 'If the CLI cannot connect, first confirm the base URL is correct, includes `/v1`, and the API key is still valid.',
+          connectionDesc: 'If the CLI cannot connect, first check that base_url in config.toml is the site address, the API key is still valid, and the key belongs to a GPT group.',
           updateTitle: 'Upgrade the CLI and retry',
           updateDesc: 'If the command runs but behaves incorrectly, upgrade the Codex CLI package first and reload the config before testing again.'
         }

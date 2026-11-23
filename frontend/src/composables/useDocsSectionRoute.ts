@@ -4,9 +4,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores'
 
-export type DocsSection = 'quick-start' | 'claude-code' | 'codex-cli' | 'opencode' | 'api-usage' | 'faq'
+export type DocsSection = 'quick-start' | 'claude-code' | 'codex-cli' | 'clients' | 'opencode' | 'api-usage' | 'faq'
 
-const VALID_SECTIONS: DocsSection[] = ['quick-start', 'claude-code', 'codex-cli', 'opencode', 'api-usage', 'faq']
+const VALID_SECTIONS: DocsSection[] = ['quick-start', 'claude-code', 'codex-cli', 'clients', 'opencode', 'api-usage', 'faq']
 const DEFAULT_SECTION: DocsSection = 'quick-start'
 
 function parseHash(hash: string): DocsSection {
@@ -19,6 +19,7 @@ const SECTION_TITLE_KEYS: Record<DocsSection, string> = {
   'quick-start': 'docs.nav.quickStart',
   'claude-code': 'docs.nav.claudeCode',
   'codex-cli': 'docs.nav.codexCli',
+  'clients': 'docs.nav.clients',
   'opencode': 'docs.nav.opencode',
   'api-usage': 'docs.nav.apiUsage',
   'faq': 'docs.nav.faq'

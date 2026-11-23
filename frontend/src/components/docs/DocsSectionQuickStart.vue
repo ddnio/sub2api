@@ -10,12 +10,24 @@
       </p>
     </div>
 
-    <!-- Base URL -->
-    <div class="rounded-xl border border-gray-200/80 bg-gray-50 p-4 dark:border-dark-700 dark:bg-dark-900">
-      <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-dark-400">
-        {{ t('docs.quickStart.baseUrlLabel') }}
-      </p>
-      <code class="mt-2 block text-sm font-mono text-primary-600 dark:text-primary-400">{{ apiBase }}/v1</code>
+    <!-- NanaFox fork: 工具 → 分组 → 地址 对照表 -->
+    <div class="overflow-x-auto rounded-xl border border-gray-200/80 dark:border-dark-700" data-docs-group-table>
+      <table class="w-full text-left text-sm">
+        <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 dark:bg-dark-900 dark:text-dark-400">
+          <tr>
+            <th class="px-4 py-2 font-semibold">{{ t('docs.groups.colTool') }}</th>
+            <th class="px-4 py-2 font-semibold">{{ t('docs.groups.colGroup') }}</th>
+            <th class="px-4 py-2 font-semibold">{{ t('docs.groups.colBase') }}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200/80 dark:divide-dark-700">
+          <tr v-for="row in groupRows" :key="row.id" class="text-gray-700 dark:text-dark-300">
+            <td class="px-4 py-3">{{ row.tools }}</td>
+            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">{{ row.group }}</td>
+            <td class="px-4 py-3"><code class="font-mono text-primary-600 dark:text-primary-400">{{ row.base }}</code></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Steps -->
@@ -31,8 +43,16 @@
       <div class="flex items-start gap-3">
         <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary-700 dark:bg-primary-900/20 dark:text-primary-300">2</span>
         <div>
-          <h3 class="font-semibold text-gray-900 dark:text-white">{{ t('docs.quickStart.chooseToolStep') }}</h3>
-          <p class="mt-1 text-sm text-gray-600 dark:text-dark-400">{{ t('docs.quickStart.chooseToolDesc') }}</p>
+          <h3 class="font-semibold text-gray-900 dark:text-white">{{ t('docs.quickStart.useKeyStep') }}</h3>
+          <p class="mt-1 text-sm text-gray-600 dark:text-dark-400">{{ t('docs.quickStart.useKeyDesc') }}</p>
+        </div>
+      </div>
+
+      <div class="flex items-start gap-3">
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary-700 dark:bg-primary-900/20 dark:text-primary-300">3</span>
+        <div>
+          <h3 class="font-semibold text-gray-900 dark:text-white">{{ t('docs.quickStart.testKeyStep') }}</h3>
+          <p class="mt-1 text-sm text-gray-600 dark:text-dark-400">{{ t('docs.quickStart.testKeyDesc') }}</p>
         </div>
       </div>
     </div>
@@ -68,9 +88,15 @@ const apiBase = computed(() =>
   (appStore.apiBaseUrl || window.location.origin).replace(/\/v1\/?$/, '').replace(/\/+$/, '')
 )
 
+const groupRows = computed(() => [
+  { id: 'anthropic', tools: t('docs.groups.anthropicTools'), group: t('docs.groups.anthropicName'), base: apiBase.value },
+  { id: 'openai', tools: t('docs.groups.openaiTools'), group: t('docs.groups.openaiName'), base: `${apiBase.value}/v1` }
+])
+
 const tools = computed(() => [
   { section: 'claude-code' as DocsSection, title: 'Claude Code', desc: t('docs.quickStart.toolCards.claudeCode') },
   { section: 'codex-cli' as DocsSection, title: 'Codex CLI', desc: t('docs.quickStart.toolCards.codexCli') },
+  { section: 'clients' as DocsSection, title: t('docs.nav.clients'), desc: t('docs.quickStart.toolCards.clients') },
   { section: 'opencode' as DocsSection, title: 'OpenCode', desc: t('docs.quickStart.toolCards.opencode') },
   { section: 'api-usage' as DocsSection, title: t('docs.nav.apiUsage'), desc: t('docs.quickStart.toolCards.apiUsage') },
 ])
