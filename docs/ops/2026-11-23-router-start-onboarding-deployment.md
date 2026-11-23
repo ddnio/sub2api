@@ -46,3 +46,11 @@
 - 预检通过；NAS 最新完整备份 `20261122T193511Z`；恢复点 `/home/nio/releases/router-d6ea0a5-20261123/`（`pg_dump -Fc` 219,171,010 字节，SHA256 `74d9c121e63056f73a770f06e0fd77fcd13e4d8908fd9143999b724b312d20d1`，112 张表数据可读，另有 compose 和 inspect）。
 - 07:30:05Z 切换镜像（compose diff 仅 image 一行），07:30:18Z 恢复 healthy。post-switch 验收通过：迁移 333 不变，入口 JS `/assets/index-NaGcmd-b.js` 与本机一致，带标记 `probe=verify-d6ea0a5-20261123` 的请求在网关日志命中。切换前后新注册 2 人，余额合计随之增加，订单数不变。
 - 回退目标：`sha256:eb06963c35d2f3021fefbe05c28be6e38c160f93788b944b5db676f9da2163bb`（tag `sub2api:prod-v0.2.23-5b911fe7c`）。
+
+## 补记：同日晚 c3d50c2a3（PR #77，/docs 收口）
+
+- 改动：公开文档 /docs 收口为唯一教程来源——新增「图形客户端」一节、各节分组提示、快速开始分组对照表、Anthropic SDK 示例、计费与报错对照、示例模型更新。只改前端，无数据库迁移。外部审查（agy）2 处必须改已修；前端全量 411 文件 / 3270 测试通过。
+- 程序 SHA256 `4b82ec25893f39d66b46d3c29f929ae294a38c2a8bca5522aecb82a2ae982180`，构建时间 `2026-11-23T10:15:58Z`；以 `sub2api:prod-v0.2.23-d6ea0a51c` 为底叠加构建，镜像 `sub2api:prod-v0.2.23-c3d50c2a3`，ID `sha256:f84484dc1288f7fbea52f44c2c326bc650c755e0a8a7978363f771011becdacb`，镜像内程序哈希与本机一致。构建上下文 SHA256 `8447737b33d941331e9cd45d23ebfc325eff20dcc69531d7ff7673faf86db5c7`，上传前后一致。
+- 预检通过；NAS 最新完整备份 `20261122T193511Z`；恢复点 `/home/nio/releases/router-c3d50c2-20261123/`（`pg_dump -Fc` 220,123,766 字节，SHA256 `361cac0bb705fd685ef4886d29da5143b44d587d555b76ec2faa9075e6007934`，112 张表数据可读，另有 compose 和 inspect）。
+- 10:18:55Z 切换镜像（compose diff 仅 image 一行），10:19:11Z 恢复 healthy。post-switch 验收通过：迁移 333 不变，用户 276 → 276，订单 212 → 212，余额随正常调用扣费小幅下降；入口 JS `/assets/index-C2c2jRXs.js` 与本机一致。浏览器打开线上 `/docs#clients`、`#quick-start`、`#faq`（带标记 `probe=verify-c3d50c2-20261123`）内容为新版，地址与联系方式取自线上设置。
+- 回退目标：`sha256:61cbb116435c2d9d5d41f7eb1ff8a64cd30a3280a09674c273b397efec8dd473`（tag `sub2api:prod-v0.2.23-d6ea0a51c`）。
