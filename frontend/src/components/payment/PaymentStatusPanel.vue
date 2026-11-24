@@ -34,6 +34,7 @@
           <button class="btn btn-primary" @click="handleDone">{{ t('common.confirm') }}</button>
         </div>
       </div>
+      <PaymentSuccessReferralCard />
     </template>
 
     <!-- Cancelled -->
@@ -229,6 +230,7 @@ import { getPaymentPopupFeatures, isBuiltInAlipayMethod, isBuiltInWxpayMethod } 
 import { currencySymbol, formatPaymentAmount, normalizePaymentCurrency } from '@/components/payment/currency'
 import type { PaymentOrder } from '@/types/payment'
 import Icon from '@/components/icons/Icon.vue'
+import PaymentSuccessReferralCard from '@/components/user/PaymentSuccessReferralCard.vue'
 import QRCode from 'qrcode'
 import alipayIcon from '@/assets/icons/alipay.svg'
 import wxpayIcon from '@/assets/icons/wxpay.svg'

@@ -400,4 +400,17 @@ describe('RegisterView', () => {
     await flushPromises()
     expect(wrapper.find('email-o-auth-buttons-stub').attributes('defaultredirect')).toBe('/start?use=claude&from=oauth')
   })
+
+  it('preserves both ?use=codex and ?aff=<code> together on registration page', async () => {
+    routeQuery.use = 'codex'
+    routeQuery.aff = 'REF2026'
+    getPublicSettingsMock.mockResolvedValueOnce({ ...publicSettings, github_oauth_enabled: true })
+    const wrapper = mountRegister()
+    await flushPromises()
+
+    const oauthBtn = wrapper.find('email-o-auth-buttons-stub')
+    expect(oauthBtn.attributes('defaultredirect')).toBe('/start?use=codex&from=oauth')
+    expect(oauthBtn.attributes('affcode')).toBe('REF2026')
+    expect((wrapper.get('#affiliate_code').element as HTMLInputElement).value).toBe('REF2026')
+  })
 })

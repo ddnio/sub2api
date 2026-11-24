@@ -7,6 +7,7 @@ import DocsView from '@/views/DocsView.vue'
 import i18n, { loadLocaleMessages } from '@/i18n'
 import { useAppStore } from '@/stores/app'
 import { DOCS_SECTION_ROUTE_PATH, redirectLegacyDocsHash } from '@/router/docsSections'
+import { buildOpenAICodexConfigToml } from '@/utils/codexAuthConfig'
 
 const mounted: VueWrapper[] = []
 
@@ -295,5 +296,22 @@ describe('DocsView', () => {
     expect(card.text()).toContain('CC Switch')
     expect(card.html()).toContain('step=config')
     expect(card.html()).toContain('use=codex')
+  })
+
+  it('renders the Codex common errors FAQ using the shared codexAuthConfig generator', async () => {
+    const { wrapper } = await createWrapper('/docs/faq')
+    const codexFaq = wrapper.find('[data-docs-faq-codex-errors]')
+    expect(codexFaq.exists()).toBe(true)
+    expect(codexFaq.text()).toContain('Codex 常见报错')
+    expect(codexFaq.text()).toContain('DAILY_LIMIT_EXCEEDED')
+    expect(codexFaq.text()).toContain('No active subscription found for this group')
+    expect(codexFaq.text()).toContain('429 rate_limit_error (gateway_concurrency_limit)')
+    expect(codexFaq.text()).toContain('previous_response_id')
+
+    const expectedToml = buildOpenAICodexConfigToml({
+      baseUrl: 'https://relay.sub2api.test',
+      apiKey: 'your-api-key-here'
+    })
+    expect(codexFaq.find('pre').text()).toBe(expectedToml)
   })
 })

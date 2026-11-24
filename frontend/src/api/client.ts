@@ -4,6 +4,12 @@
  */
 
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios'
+
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    skipAuthRedirect?: boolean
+  }
+}
 import type { ApiResponse } from '@/types'
 import { getLocale } from '@/i18n'
 import {
@@ -169,7 +175,7 @@ apiClient.interceptors.response.use(
 
       // 401: Try to refresh the token if we have a refresh token
       // This handles TOKEN_EXPIRED, INVALID_TOKEN, TOKEN_REVOKED, etc.
-      if (status === 401 && !originalRequest._retry) {
+      if (status === 401 && !originalRequest?._retry && !originalRequest?.skipAuthRedirect) {
         const refreshToken = localStorage.getItem('refresh_token')
         const isAuthEndpoint =
           url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/refresh')

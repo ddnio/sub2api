@@ -8,6 +8,10 @@ export default {
     inviteDesc: '好友通过你的邀请链接注册，之后每笔充值你都得 {rate}% 返佣，可转入余额。',
     copyLink: '复制邀请链接',
     linkCopied: '邀请链接已复制',
+    copyShareText: '一键复制推荐语',
+    shareTextCopied: '推荐语和邀请链接已复制',
+    paymentSuccessInviteTitle: '邀请同事一起用',
+    paymentSuccessInviteDesc: '觉得用得顺手，可以把推荐语和专属链接发给同事或开发群。',
     details: '查看详情'
   },
   githubQuick: {
