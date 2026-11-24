@@ -84,7 +84,7 @@
 
 ### 回退
 
-- 应用回退：把 compose 文件里的 `image` 改回上一个 image ID，再执行同一条只重建命令。当前 Router image ID `sha256:f587ce9db62cc83deb001c1887acbe749bfa01d42f3249a75b121934eb8c4a4a`（tag `sub2api:prod-v0.2.23-e59e0a6c8`），上一版（回退目标）`sha256:b9db12acf3eeaf724e6ac84a7c1625e5c66f8272cfc07aa8f67b4d24ff13a478`（tag `sub2api:prod-v0.2.23-c48de501d`，本次无数据库迁移，可直接回退），Studio `sha256:ce5d240d3cfa69a07272ba005b8817255ecbf730746569133067c567bc482f4a`。新主机上目前没有 v0.2.17 镜像；需要退到更旧版本时先从备份或旧机导出镜像。
+- 应用回退：把 compose 文件里的 `image` 改回上一个 image ID，再执行同一条只重建命令。当前 Router image ID `sha256:62ee784f8733bd0de47c42d08ba0c82a2ab093db91777b31e173e326500ed199`（tag `sub2api:prod-v0.2.23-34e75467c`），上一版（回退目标）`sha256:f587ce9db62cc83deb001c1887acbe749bfa01d42f3249a75b121934eb8c4a4a`（tag `sub2api:prod-v0.2.23-e59e0a6c8`，本次无数据库迁移，可直接回退），Studio `sha256:ce5d240d3cfa69a07272ba005b8817255ecbf730746569133067c567bc482f4a`。新主机上目前没有 v0.2.17 镜像；需要退到更旧版本时先从备份或旧机导出镜像。
 - 只回退 compose 配置：2026-11-15 改限制前的原文件私有保存在 `/srv/nanafox-ops/window-20261115/compose.json.orig`。
 - 网关回退：先 `caddy validate` 再 `reload`；失败时恢复上一份 Caddyfile 再 reload。
 - 数据库：迁移后已有新写入，不能用旧快照覆盖生产库。v0.2.20 回退边界（新管理密钥/MCP 授权、按张计费、邮箱黑名单产生后禁止直接退旧镜像）见 [v0.2.20 发布记录](../ops/2026-11-08-router-v0.2.20-deployment.md)。
@@ -122,6 +122,7 @@
 - 2026-11-23 晚 v0.2.23 小版本（/docs 收口为公开教程唯一来源）：源码 `c3d50c2a3c19851c77ae330ab03d8692a3930aba`（PR #77），镜像 tag `sub2api:prod-v0.2.23-c3d50c2a3`，只改前端，无数据库迁移。见 [2026-11-23 发布记录](../ops/2026-11-23-router-start-onboarding-deployment.md) 第二则补记。
 - 2026-11-24 v0.2.23 小版本（/docs 小节独立地址 + robots.txt / sitemap.xml）：源码 `c48de501d28ff36c0f4d8fb56764bdb05d5b1913`（PR #79），镜像 tag `sub2api:prod-v0.2.23-c48de501d`，只改前端，无数据库迁移。见 [2026-11-24 发布记录](../ops/2026-11-24-router-docs-seo-deployment.md)。
 - 2026-11-24 v0.2.23 小版本（/docs 各小节预渲染 HTML）：源码 `e59e0a6c8c63a1c37a6bd01ad23a5421597462c5`（PR #81），镜像 tag `sub2api:prod-v0.2.23-e59e0a6c8`，前端构建多一步预渲染，后端按设置填占位符，无数据库迁移。见 [2026-11-24 发布记录](../ops/2026-11-24-router-docs-seo-deployment.md) 补记。
+- 2026-11-24 上午 v0.2.23 小版本（首单引导：余额不足报错带中文与充值链接、注册页「注册，领 $5」、低余额横幅、返佣入口）：源码 `34e75467c2ca1c86beae24eb04717b09cad328fe`（PR #83），镜像 tag `sub2api:prod-v0.2.23-34e75467c`，前后端都有改动，无数据库迁移。同日后台低余额提醒阈值 0 → 1。见 [2026-11-24 首单引导发布记录](../ops/2026-11-24-router-first-pay-nudges-deployment.md)。
 - 2026-11-19 v0.2.23：源码 `1177a0df6e6215169e200626d5199a0cc2a30e9d`，镜像 tag `sub2api:prod-v0.2.23-1177a0df6`，迁移 333 项（至 278）；以上一版生产镜像为底只替换程序和 resources，在主机上叠加构建。见 [v0.2.23 发布记录](../ops/2026-11-19-router-v0.2.23-deployment.md)。
 - 2026-11-10 迁到 TmhHost，Router/Studio 镜像与迁移前一致。
 - 2026-11-08 v0.2.20：源码 `a9367cc4c45d4e59bc97e31ea400f103cc7ebc75`，镜像 tag `sub2api:prod-v0.2.20-a9367cc4c`，迁移 328 项（至 273）；在旧主机容器 `fx-production-router`（回环 18080）上发布，Studio 当时为 `fx-production-studio`（18789）。见 [v0.2.20 发布记录](../ops/2026-11-08-router-v0.2.20-deployment.md)。
