@@ -107,6 +107,7 @@ export function resetFirstCallBannerMemoryForTest(): void {
 
 export interface FirstCallBannerStats {
   total_api_keys?: number
+  active_api_keys?: number
   total_requests?: number
 }
 
@@ -120,7 +121,7 @@ function hasActiveSubscription(user: User): boolean {
   return user.subscriptions.some((s) => !s.status || s.status === 'active')
 }
 
-// 控制台顶部轻提醒：注册 7 天内、未订阅/未充值、有 Key、从没成功调用过、且未关闭横幅时显示
+// 控制台顶部轻提醒：注册 7 天内、未订阅/未充值、有有效 Key、从没成功调用过、且未关闭横幅时显示
 export function shouldShowFirstCallBanner(
   user: User | null | undefined,
   stats: FirstCallBannerStats | null | undefined,
@@ -136,24 +137,41 @@ export function shouldShowFirstCallBanner(
   if (hasActiveSubscription(user)) return false
   if (
     typeof options.defaultSignupBalance === 'number' &&
-    options.defaultSignupBalance > 0 &&
+    options.defaultSignupBalance >= 0 &&
     typeof user.balance === 'number' &&
     user.balance > options.defaultSignupBalance + 1e-6
   ) {
     return false
   }
-  if ((stats.total_api_keys ?? 0) <= 0) return false
+  const usableKeys = stats.active_api_keys ?? stats.total_api_keys ?? 0
+  if (usableKeys <= 0) return false
   if ((stats.total_requests ?? 0) > 0) return false
   return !isFirstCallBannerDismissed(user.id)
 }
 
-// 横幅/文档带 ?step=config 回到 /start 时，按用途找一把状态为 active 且平台匹配的 Key；找不到就返回 null 停在建 Key 步骤
-export function pickExistingKeyForUseCase(keys: ApiKey[], useCase: StartUseCase): ApiKey | null {
+function isApiKeyUsable(key: ApiKey, now: number): boolean {
+  if (key.status !== 'active') return false
+  if (key.expires_at) {
+    const expiresAt = Date.parse(key.expires_at)
+    if (!Number.isNaN(expiresAt) && expiresAt <= now) return false
+  }
+  if (typeof key.quota === 'number' && key.quota > 0 && (key.quota_used ?? 0) >= key.quota) {
+    return false
+  }
+  return true
+}
+
+// 横幅/文档带 ?step=config 回到 /start 时，按用途找一把有效（active、未过期、未耗尽）且平台匹配的 Key；找不到就返回 null 停在建 Key 步骤
+export function pickExistingKeyForUseCase(
+  keys: ApiKey[],
+  useCase: StartUseCase,
+  now: number = Date.now()
+): ApiKey | null {
   const platform = platformForUseCase(useCase)
   return (
     keys.find(
       (k) =>
-        k.status === 'active' &&
+        isApiKeyUsable(k, now) &&
         k.group?.platform === platform &&
         (useCase === 'claude' || !k.group?.claude_code_only)
     ) ?? null

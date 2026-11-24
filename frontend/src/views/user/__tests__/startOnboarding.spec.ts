@@ -238,7 +238,16 @@ describe('shouldShowFirstCallBanner', () => {
     expect(shouldShowFirstCallBanner(null, { total_api_keys: 1, total_requests: 0 }, NOW)).toBe(false)
   })
 
-  it('hides for subscribed or topped-up users', () => {
+  it('hides when only disabled keys exist (active_api_keys === 0)', () => {
+    expect(
+      shouldShowFirstCallBanner(user(), { total_api_keys: 2, active_api_keys: 0, total_requests: 0 }, NOW)
+    ).toBe(false)
+    expect(
+      shouldShowFirstCallBanner(user(), { total_api_keys: 2, active_api_keys: 1, total_requests: 0 }, NOW)
+    ).toBe(true)
+  })
+
+  it('hides for subscribed or topped-up users (including when defaultSignupBalance is 0)', () => {
     expect(
       shouldShowFirstCallBanner(
         user({ subscriptions: [{ id: 1, status: 'active' } as any] }),
@@ -255,6 +264,13 @@ describe('shouldShowFirstCallBanner', () => {
     ).toBe(false)
     expect(
       shouldShowFirstCallBanner(
+        user({ balance: 10 }),
+        { total_api_keys: 1, total_requests: 0 },
+        { now: NOW, defaultSignupBalance: 0 }
+      )
+    ).toBe(false)
+    expect(
+      shouldShowFirstCallBanner(
         user({ balance: 5 }),
         { total_api_keys: 1, total_requests: 0 },
         { now: NOW, defaultSignupBalance: 5 }
@@ -267,14 +283,16 @@ describe('pickExistingKeyForUseCase', () => {
   const openaiGroup = group({ id: 3, name: 'OpenAI GPT', platform: 'openai' })
   const claudeGroup = group({ id: 4, name: 'ClaudeCode专用', platform: 'anthropic' })
 
-  it('picks only an active key matching the selected platform', () => {
+  it('picks only an active, unexpired, non-exhausted key matching the selected platform', () => {
     const keys = [
       { id: 1, key: 'sk-inactive', status: 'inactive', group: openaiGroup },
-      { id: 2, key: 'sk-claude', status: 'active', group: claudeGroup },
-      { id: 3, key: 'sk-openai-ok', status: 'active', group: openaiGroup }
+      { id: 2, key: 'sk-expired', status: 'active', expires_at: '2026-11-20T00:00:00Z', group: openaiGroup },
+      { id: 3, key: 'sk-exhausted', status: 'active', quota: 10, quota_used: 10, group: openaiGroup },
+      { id: 4, key: 'sk-claude', status: 'active', group: claudeGroup },
+      { id: 5, key: 'sk-openai-ok', status: 'active', quota: 10, quota_used: 2, group: openaiGroup }
     ] as ApiKey[]
-    expect(pickExistingKeyForUseCase(keys, 'codex')?.key).toBe('sk-openai-ok')
-    expect(pickExistingKeyForUseCase(keys, 'claude')?.key).toBe('sk-claude')
+    expect(pickExistingKeyForUseCase(keys, 'codex', NOW)?.key).toBe('sk-openai-ok')
+    expect(pickExistingKeyForUseCase(keys, 'claude', NOW)?.key).toBe('sk-claude')
   })
 
   it('returns null when only wrong-platform or inactive keys exist', () => {

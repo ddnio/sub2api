@@ -127,10 +127,11 @@ describe('StartView', () => {
     const safetyHint = w.get('[data-testid="start-codex-safety-hint"]').text()
     expect(safetyHint).toContain('自动备份')
     expect(safetyHint).toContain('不要发给别人')
+    expect(safetyHint).toContain('公司受监控的电脑')
 
     await w.get('[data-testid="start-codex-shell-powershell"]').trigger('click')
     const psCmd = w.get('[data-testid="start-codex-command"]').text()
-    expect(psCmd).toContain('Set-Content -Encoding UTF8')
+    expect(psCmd).toContain('Set-Content -LiteralPath $t -Encoding UTF8')
     expect(psCmd).toContain(expectedToml)
 
     // Cross-check directly against UseKeyModal's rendered OpenAI Codex config
@@ -184,9 +185,35 @@ describe('StartView', () => {
     })
     const w = mountView()
     await flushPromises()
+    expect(listKeys).toHaveBeenCalledWith(1, 50, { status: 'active' })
     expect(replace).not.toHaveBeenCalled()
     expect(w.get('[data-testid="start-key"]').text()).toBe('sk-existing-999')
     expect(w.get('[data-testid="start-codex-command"]').text()).toContain('sk-existing-999')
+  })
+
+  it('continues past page 1 when ?step=config finds matching active key on page 2', async () => {
+    routeQuery.value = { step: 'config', use: 'codex' }
+    const page1Items = Array.from({ length: 50 }, (_, i) => ({
+      id: i + 1,
+      name: `claude-${i}`,
+      key: `sk-claude-${i}`,
+      status: 'active',
+      group: GROUPS[1]
+    }))
+    listKeys
+      .mockResolvedValueOnce({ items: page1Items, total: 51, page: 1, page_size: 50, pages: 2 })
+      .mockResolvedValueOnce({
+        items: [{ id: 51, name: 'codex-page2', key: 'sk-codex-page2', status: 'active', group: GROUPS[0] }],
+        total: 51,
+        page: 2,
+        page_size: 50,
+        pages: 2
+      })
+    const w = mountView()
+    await flushPromises()
+    expect(listKeys).toHaveBeenNthCalledWith(1, 1, 50, { status: 'active' })
+    expect(listKeys).toHaveBeenNthCalledWith(2, 2, 50, { status: 'active' })
+    expect(w.get('[data-testid="start-key"]').text()).toBe('sk-codex-page2')
   })
 
   it('stays at key creation step when ?step=config&use=codex has only Claude or inactive keys', async () => {

@@ -168,7 +168,7 @@
                   <pre class="overflow-x-auto p-4 font-mono text-xs text-gray-100"><code data-testid="start-codex-command">{{ codexQuickCommand }}</code></pre>
                 </div>
                 <p class="text-xs text-gray-500 dark:text-dark-400" data-testid="start-codex-safety-hint">
-                  已有配置会先自动备份为 <code>config.toml.bak-时间戳</code>（优先写入 <code>CODEX_HOME</code>，否则写入 <code>~/.codex</code>）。命令里含你的 Key，不要发给别人。
+                  已有配置会先自动备份（优先写入 <code>CODEX_HOME</code>，否则写入 <code>~/.codex</code>）。命令里含你的 Key，不要发给别人，也不要在公司受监控的电脑上使用一键命令（可改用 CC Switch 导入或手动复制配置）。
                 </p>
               </div>
             </div>
@@ -400,10 +400,12 @@ async function runTest() {
 onMounted(async () => {
   try {
     const resumeConfig = route.query.step === 'config'
-    const existing = await keysAPI.list(1, resumeConfig ? 20 : 1)
-    if ((existing?.total ?? 0) > 0 && !resumeConfig) {
-      goDashboard()
-      return
+    if (!resumeConfig) {
+      const existing = await keysAPI.list(1, 1)
+      if ((existing?.total ?? 0) > 0) {
+        goDashboard()
+        return
+      }
     }
     const [g, s] = await Promise.all([
       userGroupsAPI.getAvailable(),
@@ -411,8 +413,20 @@ onMounted(async () => {
     ])
     groups.value = g || []
     publicSettings.value = s
-    if (resumeConfig && existing?.items?.length) {
-      createdKey.value = pickExistingKeyForUseCase(existing.items, useCase.value)
+    if (resumeConfig) {
+      const pageSize = 50
+      const maxPages = 3
+      for (let page = 1; page <= maxPages; page += 1) {
+        const res = await keysAPI.list(page, pageSize, { status: 'active' })
+        const matched = pickExistingKeyForUseCase(res?.items || [], useCase.value)
+        if (matched) {
+          createdKey.value = matched
+          break
+        }
+        if ((res?.pages ?? 1) <= page || (res?.items?.length ?? 0) < pageSize) {
+          break
+        }
+      }
     }
   } catch (error: any) {
     appStore.showError(error?.message || '加载失败，可以先跳过，到「API 密钥」里手动创建')
