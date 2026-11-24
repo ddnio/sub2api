@@ -351,4 +351,40 @@ describe('RegisterView', () => {
     )
     expect(showErrorMock).not.toHaveBeenCalled()
   })
+
+  it('puts GitHub sign-up above the email form and does not repeat it below', async () => {
+    getPublicSettingsMock.mockResolvedValueOnce({ ...publicSettings, github_oauth_enabled: true, default_balance: 5 })
+    const wrapper = mountRegister()
+    await flushPromises()
+
+    const top = wrapper.find('[data-testid="github-signup-top"]')
+    expect(top.exists()).toBe(true)
+    const html = wrapper.html()
+    expect(html.indexOf('github-signup-top')).toBeLessThan(html.indexOf('<form'))
+    const buttons = wrapper.findAll('email-o-auth-buttons-stub')
+    expect(buttons[0].attributes('label')).toBe('githubQuick.registerWithBonus')
+    expect(buttons[0].attributes('githubenabled')).toBe('true')
+    for (const b of buttons.slice(1)) expect(b.attributes('githubenabled')).toBe('false')
+  })
+
+  it('keeps GitHub out of the top when GitHub login or registration is off', async () => {
+    getPublicSettingsMock.mockResolvedValueOnce({ ...publicSettings, github_oauth_enabled: false })
+    let wrapper = mountRegister()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="github-signup-top"]').exists()).toBe(false)
+
+    getPublicSettingsMock.mockResolvedValueOnce({ ...publicSettings, github_oauth_enabled: true, registration_enabled: false })
+    wrapper = mountRegister()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="github-signup-top"]').exists()).toBe(false)
+    expect(wrapper.find('form').exists()).toBe(false)
+    expect(wrapper.find('email-o-auth-buttons-stub').attributes('githubenabled')).toBe('true')
+  })
+
+  it('falls back to plain GitHub sign-up text when there is no signup bonus', async () => {
+    getPublicSettingsMock.mockResolvedValueOnce({ ...publicSettings, github_oauth_enabled: true, default_balance: 0 })
+    const wrapper = mountRegister()
+    await flushPromises()
+    expect(wrapper.find('email-o-auth-buttons-stub').attributes('label')).toBe('githubQuick.register')
+  })
 })

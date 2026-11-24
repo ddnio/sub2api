@@ -10,6 +10,25 @@
           {{ t('auth.signInToAccount') }}
         </p>
       </div>
+      <!-- NanaFox fork: GitHub 一键登录放在表单上面 -->
+      <div v-if="showGithubTop" data-testid="github-login-top" class="space-y-3">
+        <EmailOAuthButtons
+          :disabled="authActionDisabled"
+          :github-enabled="true"
+          :google-enabled="false"
+          :show-divider="false"
+          :label="t('githubQuick.login')"
+          prominent
+          @start="handleOAuthStart"
+        />
+        <div class="flex items-center gap-3">
+          <div class="h-px flex-1 bg-gray-200 dark:bg-dark-700"></div>
+          <span class="text-xs text-gray-500 dark:text-dark-400">
+            {{ t('githubQuick.orEmailLogin') }}
+          </span>
+          <div class="h-px flex-1 bg-gray-200 dark:bg-dark-700"></div>
+        </div>
+      </div>
       <!-- Login Form -->
       <form @submit.prevent="handleLogin" class="space-y-5">
         <!-- Email Input -->
@@ -139,7 +158,7 @@
           @open="showAgreementModal = true"
         />
 
-        <div v-if="showPasskeyLogin || showOAuthLogin" class="space-y-3 pt-1">
+        <div v-if="showPasskeyLogin || showBottomOAuth" class="space-y-3 pt-1">
           <div class="flex items-center gap-3">
             <div class="h-px flex-1 bg-gray-200 dark:bg-dark-700"></div>
             <span class="text-xs text-gray-500 dark:text-dark-400">
@@ -161,7 +180,7 @@
 
           <EmailOAuthButtons
             :disabled="authActionDisabled"
-            :github-enabled="githubOAuthEnabled"
+            :github-enabled="false"
             :google-enabled="googleOAuthEnabled"
             :show-divider="false"
             @start="handleOAuthStart"
@@ -352,14 +371,15 @@ const showPasskeyLogin = computed(
   () => passkeyEnabled.value && typeof window.PublicKeyCredential !== 'undefined'
 )
 
-const showOAuthLogin = computed(
+// NanaFox fork: GitHub 按钮挪到表单上面，表单下面的第三方登录不再重复 GitHub
+const showGithubTop = computed(() => !backendModeEnabled.value && githubOAuthEnabled.value)
+const showBottomOAuth = computed(
   () =>
     !backendModeEnabled.value &&
     (linuxdoOAuthEnabled.value ||
       dingtalkOAuthEnabled.value ||
       wechatOAuthEnabled.value ||
       oidcOAuthEnabled.value ||
-      githubOAuthEnabled.value ||
       googleOAuthEnabled.value)
 )
 
