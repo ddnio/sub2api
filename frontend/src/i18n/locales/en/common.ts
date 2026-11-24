@@ -231,6 +231,7 @@ export default {
     createAccount: 'Create Account',
     signUpToStart: 'Sign up to start using {siteName}',
     signupBonusHint: 'Get {amount} free credit when you sign up',
+    haveInvitationCode: 'Have an invitation code?',
     registerWithBonus: 'Sign up & get {amount}',
     signUp: 'Sign up',
     processing: 'Processing...',

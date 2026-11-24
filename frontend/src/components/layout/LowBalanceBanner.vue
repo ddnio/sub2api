@@ -13,7 +13,7 @@
     <router-link v-if="internalPath" :to="internalPath" class="btn btn-primary btn-sm flex-shrink-0 text-center">
       {{ t('firstPayNudges.recharge') }}
     </router-link>
-    <a v-else :href="rechargeURL" class="btn btn-primary btn-sm flex-shrink-0 text-center">
+    <a v-else :href="rechargeURL" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm flex-shrink-0 text-center">
       {{ t('firstPayNudges.recharge') }}
     </a>
   </div>
@@ -22,13 +22,15 @@
 <script setup lang="ts">
 // NanaFox fork: 余额用完或低于后台「低余额提醒」默认阈值时，在控制台顶部提示去充值。
 // 阈值和充值地址跟提醒邮件用同一组设置；管理员和有生效中订阅的用户不提示。
-import { computed } from 'vue'
+// 设置和订阅状态都拿到之后才判断，避免订阅用户刷新时闪一下「余额已用完」。
+import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useAppStore } from '@/stores'
 import { useAuthStore } from '@/stores/auth'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import Icon from '@/components/icons/Icon.vue'
+import { FeatureFlags, isFeatureFlagEnabled } from '@/utils/featureFlags'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -38,12 +40,25 @@ const subscriptionStore = useSubscriptionStore()
 
 const balance = computed(() => Number(authStore.user?.balance ?? 0))
 const balanceText = computed(() => `$${balance.value.toFixed(2)}`)
-const threshold = computed(() => Number(appStore.cachedPublicSettings?.balance_low_notify_threshold) || 0)
+const threshold = computed(() => {
+  const settings = appStore.cachedPublicSettings
+  if (!settings?.balance_low_notify_enabled) return 0
+  return Number(settings.balance_low_notify_threshold) || 0
+})
+const subscriptionFeatureEnabled = computed(() => isFeatureFlagEnabled(FeatureFlags.subscription))
 
 const rechargeURL = computed(() => {
   const configured = appStore.cachedPublicSettings?.balance_low_notify_recharge_url?.trim() || ''
-  return /^https?:\/\//i.test(configured) ? configured : '/purchase'
+  try {
+    const url = new URL(configured)
+    if ((url.protocol === 'http:' || url.protocol === 'https:') && url.hostname) return configured
+  } catch {
+    // 没配或格式不对，走默认充值页
+  }
+  return '/purchase'
 })
+
+const stripTrailingSlash = (path: string) => (path.length > 1 ? path.replace(/\/+$/, '') : path)
 
 // 充值页在本站时走前端路由，不整页刷新
 const internalPath = computed(() => {
@@ -58,8 +73,15 @@ const internalPath = computed(() => {
 
 const visible = computed(() => {
   if (!authStore.user || authStore.user.role === 'admin') return false
-  if (subscriptionStore.hasActiveSubscriptions) return false
-  if (internalPath.value && route.path === internalPath.value.split(/[?#]/)[0]) return false
+  if (!appStore.publicSettingsLoaded) return false
+  if (subscriptionFeatureEnabled.value && (!subscriptionStore.loaded || subscriptionStore.hasActiveSubscriptions)) return false
+  if (internalPath.value && stripTrailingSlash(route.path) === stripTrailingSlash(internalPath.value.split(/[?#]/)[0])) return false
   return balance.value <= 0 || (threshold.value > 0 && balance.value < threshold.value)
+})
+
+onMounted(() => {
+  if (authStore.user && subscriptionFeatureEnabled.value && !subscriptionStore.loaded) {
+    subscriptionStore.fetchActiveSubscriptions().catch(() => {})
+  }
 })
 </script>

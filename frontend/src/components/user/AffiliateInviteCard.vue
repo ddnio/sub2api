@@ -20,7 +20,7 @@
 
 <script setup lang="ts">
 // NanaFox fork: 在控制台和充值页露出邀请返佣入口；比例取接口里实际生效的返佣比例，不写死。
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores'
 import { userAPI } from '@/api/user'
@@ -43,11 +43,17 @@ async function copyLink(): Promise<void> {
   if (inviteLink.value) await copyToClipboard(inviteLink.value, t('firstPayNudges.linkCopied'))
 }
 
+let unmounted = false
+onBeforeUnmount(() => {
+  unmounted = true
+})
+
 onMounted(async () => {
   const settings = await appStore.fetchPublicSettings().catch(() => null)
-  if (!settings?.affiliate_enabled) return
+  if (unmounted || !settings?.affiliate_enabled) return
   try {
-    detail.value = await userAPI.getAffiliateDetail()
+    const result = await userAPI.getAffiliateDetail()
+    if (!unmounted) detail.value = result
   } catch {
     // 拿不到就不显示，不打扰用户
   }

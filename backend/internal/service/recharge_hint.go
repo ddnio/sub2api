@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"strings"
 	"sync/atomic"
@@ -29,8 +30,15 @@ func (s *SettingService) GetRechargeURL(ctx context.Context) string {
 	dbCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
 	defer cancel()
 	value := ""
-	if raw, err := s.settingRepo.GetValue(dbCtx, SettingKeyBalanceLowNotifyRechargeURL); err == nil {
+	raw, err := s.settingRepo.GetValue(dbCtx, SettingKeyBalanceLowNotifyRechargeURL)
+	switch {
+	case err == nil:
 		value = normalizeRechargeURL(raw)
+	case !errors.Is(err, ErrSettingNotFound):
+		// 数据库临时出错：沿用上一次的地址
+		if cached := rechargeURLCache.Load(); cached != nil {
+			value = cached.value
+		}
 	}
 	rechargeURLCache.Store(&cachedRechargeURL{value: value, expiresAt: now.Add(rechargeURLCacheTTL).UnixNano()})
 	return value

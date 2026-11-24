@@ -174,7 +174,16 @@
         </div>
 
         <!-- Affiliate Invitation Code Input (Optional) -->
-        <div v-else-if="affiliateEnabled && hasAffiliateReferral" data-testid="affiliate-invitation-field">
+        <button
+          v-else-if="affiliateEnabled && !hasAffiliateReferral && !showAffiliateField"
+          type="button"
+          data-testid="affiliate-invitation-toggle"
+          class="text-sm text-gray-500 hover:text-primary-600 dark:text-dark-400 dark:hover:text-primary-400"
+          @click="showAffiliateField = true"
+        >
+          {{ t('auth.haveInvitationCode') }}
+        </button>
+        <div v-else-if="affiliateEnabled" data-testid="affiliate-invitation-field">
           <label for="affiliate_code" class="input-label">
             {{ t('auth.invitationCodeLabel') }}
             <span class="ml-1 text-xs font-normal text-gray-400 dark:text-dark-500">({{ t('common.optional') }})</span>
@@ -442,11 +451,13 @@ const invitationCodeEnabled = ref<boolean>(false)
 const affiliateEnabled = ref<boolean>(false)
 // NanaFox fork: 只有带邀请参数（或之前存过邀请码）进来时才显示选填邀请码框，免得普通访客犹豫
 const hasAffiliateReferral = ref<boolean>(false)
+const showAffiliateField = ref<boolean>(false)
 // NanaFox fork: 新用户注册赠送的余额，用于按钮「注册，领 $5」
 const signupBonus = ref<number>(0)
-const signupBonusText = computed(() =>
-  signupBonus.value > 0 ? `$${Number(signupBonus.value.toFixed(2))}` : ''
-)
+const signupBonusText = computed(() => {
+  const amount = Number(signupBonus.value.toFixed(2))
+  return amount > 0 ? `$${amount}` : ''
+})
 const turnstileEnabled = ref<boolean>(false)
 const turnstileSiteKey = ref<string>('')
 const tencentCaptchaEnabled = ref<boolean>(false)

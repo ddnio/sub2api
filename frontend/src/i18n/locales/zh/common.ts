@@ -231,6 +231,7 @@ export default {
     createAccount: '创建账户',
     signUpToStart: '注册以开始使用 {siteName}',
     signupBonusHint: '注册即送 {amount} 体验额度',
+    haveInvitationCode: '有邀请码？',
     registerWithBonus: '注册，领 {amount}',
     signUp: '注册',
     processing: '处理中...',

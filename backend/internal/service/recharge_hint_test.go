@@ -4,6 +4,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,6 +27,14 @@ func TestGetRechargeURLCachesLookup(t *testing.T) {
 	require.Equal(t, "https://router.nanafox.com/purchase", svc.GetRechargeURL(context.Background()))
 	require.Equal(t, "https://router.nanafox.com/purchase", svc.GetRechargeURL(context.Background()))
 	require.Equal(t, 1, repo.getValueCalls)
+}
+
+func TestGetRechargeURLKeepsLastValueOnDBError(t *testing.T) {
+	rechargeURLCache.Store(&cachedRechargeURL{value: "https://router.nanafox.com/purchase"})
+	t.Cleanup(func() { rechargeURLCache.Store(nil) })
+
+	svc := &SettingService{settingRepo: &settingRepoStub{err: errors.New("db down")}}
+	require.Equal(t, "https://router.nanafox.com/purchase", svc.GetRechargeURL(context.Background()))
 }
 
 func TestGetRechargeURLMissingSetting(t *testing.T) {

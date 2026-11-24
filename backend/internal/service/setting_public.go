@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/url"
 	"strconv"
 	"strings"
@@ -302,9 +303,9 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 
 	// NanaFox fork: 注册页展示「注册即送 $X」，取后台的新用户默认余额
 	var defaultBalance float64
-	if v, err := strconv.ParseFloat(settings[SettingKeyDefaultBalance], 64); err == nil && v >= 0 {
+	if v, err := strconv.ParseFloat(settings[SettingKeyDefaultBalance], 64); err == nil && v >= 0 && !math.IsInf(v, 0) {
 		defaultBalance = v
-	} else if s.cfg != nil {
+	} else if s.cfg != nil && s.cfg.Default.UserBalance >= 0 && !math.IsInf(s.cfg.Default.UserBalance, 0) {
 		defaultBalance = s.cfg.Default.UserBalance
 	}
 

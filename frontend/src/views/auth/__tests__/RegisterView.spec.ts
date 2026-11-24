@@ -218,6 +218,9 @@ describe('RegisterView', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="affiliate-invitation-field"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="affiliate-invitation-toggle"]').trigger('click')
+    expect(wrapper.get('[data-testid="affiliate-invitation-field"] input').attributes('id')).toBe('affiliate_code')
   })
 
   it('shows the signup bonus on the submit button when new users get credit', async () => {
