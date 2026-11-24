@@ -42,8 +42,9 @@ type prerenderedPages struct {
 	manifest prerenderManifest
 	base     map[string][]byte // 路由地址 -> 带占位符的 HTML
 
-	mu         sync.Mutex
+	mu         sync.RWMutex
 	siteOrigin string
+	generation uint64            // 设置或站点地址变更时加一，防止旧结果覆盖新结果
 	ready      bool              // rendered 对当前设置有效
 	rendered   map[string][]byte // 填好的页面；缺值时为空
 }
@@ -84,13 +85,17 @@ func (p *prerenderedPages) setSiteOrigin(frontendURL string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.siteOrigin = origin
-	p.ready = false
-	p.rendered = nil
+	p.resetLocked()
 }
 
 func (p *prerenderedPages) invalidate() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	p.resetLocked()
+}
+
+func (p *prerenderedPages) resetLocked() {
+	p.generation++
 	p.ready = false
 	p.rendered = nil
 }
@@ -100,28 +105,40 @@ func (p *prerenderedPages) page(ctx context.Context, route string, settings Publ
 	if _, ok := p.base[route]; !ok {
 		return nil
 	}
+	p.mu.RLock()
+	if p.ready {
+		content := p.rendered[route]
+		p.mu.RUnlock()
+		return content
+	}
+	generation, siteOrigin := p.generation, p.siteOrigin
+	p.mu.RUnlock()
+
+	// 读设置不持锁，避免数据库慢时所有文档请求排队
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	data, err := settings.GetPublicSettingsForInjection(ctx)
+	if err != nil {
+		return nil // 不缓存，下次再试
+	}
+	settingsJSON, err := json.Marshal(data)
+	if err != nil {
+		return nil
+	}
+	rendered := p.renderAll(siteOrigin, settingsJSON)
+
 	p.mu.Lock()
-	defer p.mu.Unlock()
-	if !p.ready {
-		ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-		defer cancel()
-		data, err := settings.GetPublicSettingsForInjection(ctx)
-		if err != nil {
-			return nil // 不缓存，下次再试
-		}
-		settingsJSON, err := json.Marshal(data)
-		if err != nil {
-			return nil
-		}
-		p.rendered = p.renderAll(settingsJSON)
+	if p.generation == generation {
+		p.rendered = rendered
 		p.ready = true
 	}
-	return p.rendered[route]
+	p.mu.Unlock()
+	return rendered[route]
 }
 
 var trailingV1 = regexp.MustCompile(`/v1/?$`)
 
-func (p *prerenderedPages) renderAll(settingsJSON []byte) map[string][]byte {
+func (p *prerenderedPages) renderAll(siteOrigin string, settingsJSON []byte) map[string][]byte {
 	var cfg struct {
 		SiteName    string `json:"site_name"`
 		APIBaseURL  string `json:"api_base_url"`
@@ -133,19 +150,24 @@ func (p *prerenderedPages) renderAll(settingsJSON []byte) map[string][]byte {
 	}
 	siteName := strings.TrimSpace(cfg.SiteName)
 	contact := strings.TrimSpace(cfg.ContactInfo)
-	if p.siteOrigin == "" || siteName == "" || contact == "" {
+	if siteOrigin == "" || siteName == "" || contact == "" {
+		log.Printf("Warning: docs prerender disabled: server.frontend_url, site_name or contact_info is empty")
 		return rendered
 	}
 	// 和前端文档页一致：(api_base_url || 站点地址) 去掉结尾的 /v1 和斜杠
 	apiBase := strings.TrimSpace(cfg.APIBaseURL)
 	if apiBase == "" {
-		apiBase = p.siteOrigin
+		apiBase = siteOrigin
 	}
 	apiBase = strings.TrimRight(trailingV1.ReplaceAllString(apiBase, ""), "/")
+	if u, err := url.Parse(apiBase); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		log.Printf("Warning: docs prerender disabled: api_base_url is not an http(s) URL")
+		return rendered
+	}
 
 	ph := p.manifest.Placeholders
 	replacer := strings.NewReplacer(
-		ph.SiteOrigin, htmlpkg.EscapeString(p.siteOrigin),
+		ph.SiteOrigin, htmlpkg.EscapeString(siteOrigin),
 		ph.APIBase, htmlpkg.EscapeString(apiBase),
 		ph.SiteName, htmlpkg.EscapeString(siteName),
 		ph.Contact, htmlpkg.EscapeString(contact),
@@ -161,16 +183,16 @@ func (p *prerenderedPages) renderAll(settingsJSON []byte) map[string][]byte {
 	return rendered
 }
 
-// tryServePrerendered 命中预渲染地址时返回填好的页面；原始模板目录不直接对外。
+// tryServePrerendered 命中预渲染地址时返回填好的页面；原始模板目录始终不直接对外。
 func (s *FrontendServer) tryServePrerendered(c *gin.Context, requestPath string) bool {
-	if s.prerender == nil {
-		return false
-	}
-	if requestPath == "/"+prerenderDir || strings.HasPrefix(requestPath, "/"+prerenderDir+"/") {
+	route := path.Clean("/" + requestPath)
+	if route == "/"+prerenderDir || strings.HasPrefix(route, "/"+prerenderDir+"/") {
 		s.serveIndexHTML(c)
 		return true
 	}
-	route := strings.TrimSuffix(requestPath, "/")
+	if s.prerender == nil {
+		return false
+	}
 	content := s.prerender.page(c.Request.Context(), route, s.settings)
 	if content == nil {
 		return false

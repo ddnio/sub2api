@@ -3,6 +3,7 @@
 package web
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -162,6 +163,52 @@ func TestPrerender_DisabledWithoutManifest(t *testing.T) {
 	s := newPrerenderTestServer(t, liveSettings(), fstest.MapFS{"prerender/manifest.json": nil})
 	assert.Nil(t, s.prerender)
 	assert.NotContains(t, servePrerenderTest(s, "/docs/faq").Body.String(), "FAQ -")
+	// 功能关闭时原始模板也不能被直接读到
+	for _, p := range []string{"/prerender/faq.html", "/prerender/../prerender/faq.html", "/prerender"} {
+		assert.NotContains(t, servePrerenderTest(s, p).Body.String(), "__PRERENDER_", p)
+	}
+}
+
+func TestPrerender_RejectsNonHTTPAPIBase(t *testing.T) {
+	settings := liveSettings()
+	settings.settings.(map[string]any)["api_base_url"] = "javascript:alert(1)"
+	s := newPrerenderTestServer(t, settings, nil)
+
+	body := servePrerenderTest(s, "/docs/faq").Body.String()
+	assert.NotContains(t, body, "FAQ -")
+	assert.NotContains(t, body, "<pre>javascript:")
+}
+
+// 读设置期间设置又变了：旧结果不能写进缓存
+func TestPrerender_StaleRenderIsNotCached(t *testing.T) {
+	settings := &invalidatingSettings{mockSettingsProvider: liveSettings()}
+	s := newPrerenderTestServer(t, settings.mockSettingsProvider, nil)
+	s.settings = settings
+	settings.onFetch = func() {
+		s.InvalidateCache()
+		settings.settings.(map[string]any)["contact_info"] = "QQ 群 123"
+		settings.onFetch = nil
+	}
+
+	assert.Contains(t, servePrerenderTest(s, "/docs/faq").Body.String(), "nanafox-hi")
+	assert.Contains(t, servePrerenderTest(s, "/docs/faq").Body.String(), "QQ 群 123")
+}
+
+type invalidatingSettings struct {
+	*mockSettingsProvider
+	onFetch func()
+}
+
+func (m *invalidatingSettings) GetPublicSettingsForInjection(ctx context.Context) (any, error) {
+	data, err := m.mockSettingsProvider.GetPublicSettingsForInjection(ctx)
+	copied := map[string]any{}
+	for k, v := range data.(map[string]any) {
+		copied[k] = v
+	}
+	if m.onFetch != nil {
+		m.onFetch()
+	}
+	return copied, err
 }
 
 // 用真实构建产物走一遍：每个预渲染页都能填干净，标题和规范地址是各自小节的

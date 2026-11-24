@@ -5,8 +5,7 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { expect, it } from 'vitest'
-import { h } from 'vue'
-import { createApp } from 'vue'
+import { createApp, h, nextTick } from 'vue'
 import { createPinia } from 'pinia'
 import { RouterView } from 'vue-router'
 import { DOCS_SECTIONS, docsSectionPath } from '@/router/docsSections'
@@ -24,6 +23,8 @@ it('prerenders every docs section', async () => {
   window.scrollTo = () => {} // jsdom 没实现，路由切换时会调用
   const indexHtml = readFileSync(resolve(distDir, 'index.html'), 'utf8')
   expect(indexHtml).toContain(APP_MOUNT)
+  expect(indexHtml).toMatch(/<title>[^<]*<\/title>/)
+  expect(indexHtml).not.toMatch(/<meta name="description"|rel="canonical"/)
 
   // 和 main.ts 一样：先装 pinia、读注入的设置，再装路由和多语言
   window.__APP_CONFIG__ = {
@@ -55,17 +56,21 @@ it('prerenders every docs section', async () => {
     await router.push(path)
     await router.isReady()
     if (!root.hasChildNodes()) app.mount(root)
+    await nextTick()
     await new Promise(r => setTimeout(r, 0))
     expect(router.currentRoute.value.path).toBe(path)
+    expect(root.textContent?.length ?? 0, `${path} has no content`).toBeGreaterThan(500)
+    expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBeTruthy()
 
     const head = Array.from(document.head.querySelectorAll('meta[name="description"], link[rel="canonical"]'))
       .map(el => el.outerHTML)
       .join('')
     expect(head).toContain(`${PRERENDER_SITE_ORIGIN}${path}"`)
 
+    // 用回调替换：正文里的 $' $& 之类不能被当成替换语法
     const html = indexHtml
-      .replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(document.title)}</title>${head}`)
-      .replace(APP_MOUNT, `<div id="app">${root.innerHTML}</div>`)
+      .replace(/<title>[^<]*<\/title>/, () => `<title>${escapeHtml(document.title)}</title>${head}`)
+      .replace(APP_MOUNT, () => `<div id="app">${root.innerHTML}</div>`)
     // 占位符只能原样出现；被转码或拼接后后端就替换不到了
     const stripped = Object.values(PRERENDER_PLACEHOLDERS).reduce((s, p) => s.split(p).join(''), html)
     expect(stripped, `${path} has transformed placeholders`).not.toMatch(/prerender\.invalid|__PRERENDER_/)
