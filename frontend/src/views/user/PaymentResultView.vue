@@ -86,6 +86,8 @@
             </div>
           </div>
         </div>
+        <!-- Referral prompt (shown once on payment success, dismissible) -->
+        <PaymentSuccessReferralCard v-if="isSuccess" />
         <!-- Actions -->
         <div class="flex gap-3">
           <button class="btn btn-secondary flex-1" @click="router.push('/purchase')">{{ t('payment.result.backToRecharge') }}</button>
@@ -101,6 +103,7 @@ import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import OrderStatusBadge from '@/components/payment/OrderStatusBadge.vue'
+import PaymentSuccessReferralCard from '@/components/user/PaymentSuccessReferralCard.vue'
 import {
   PAYMENT_RECOVERY_STORAGE_KEY,
   clearPaymentRecoverySnapshot,

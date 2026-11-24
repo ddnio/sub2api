@@ -8,6 +8,10 @@ export default {
     inviteDesc: 'Friends who sign up with your link earn you {rate}% of every top-up, transferable to your balance.',
     copyLink: 'Copy invite link',
     linkCopied: 'Invite link copied',
+    copyShareText: 'Copy share message',
+    shareTextCopied: 'Share message and invite link copied',
+    paymentSuccessInviteTitle: 'Invite colleagues to try it',
+    paymentSuccessInviteDesc: 'If it works well for you, share a ready-to-send note and your invite link with colleagues or dev groups.',
     details: 'Details'
   },
   githubQuick: {
