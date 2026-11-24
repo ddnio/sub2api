@@ -25,3 +25,13 @@
 ## 回退
 
 - 把 compose 里 `image` 改回 `sha256:62ee784f8733bd0de47c42d08ba0c82a2ab093db91777b31e173e326500ed199`（tag `sub2api:prod-v0.2.23-34e75467c`），再执行同一条只重建命令。无数据库迁移；不要用恢复点覆盖生产库。
+
+## 补记：网关计费预检余额不足也带中文提示（PR #86）
+
+- 源码 `main` 合并提交 `7c965752b15af9bd00a22948ccfb2da5a93c3c97`（PR #86），**只改后端，无数据库迁移**。
+  - 提示文案挪到共享小包 `internal/pkg/rechargehint`；鉴权层（余额 ≤ 0）和网关计费预检（余额只剩一点、扣不出这次请求，403 `billing_error`，英文 `insufficient balance`）都在英文后面补「余额不足，请到 <充值页> 充值后继续使用。」。英文开头不变，运维按 `insufficient balance` 统计不受影响。
+  - 按 agy 审查意见：读取充值地址限时 2 秒；英文为空时只给中文；去掉英文末尾多余句号；空白地址退回通用提示。
+- 程序 SHA256 `c29b77eb26407e5d2285f67129a43e4be73487159f66f68ccd5e405310fd5dee`，构建时间 `2026-11-24T03:18:28Z`；以 `sub2api:prod-v0.2.23-e960b70a9` 为底，镜像 `sub2api:prod-v0.2.23-7c965752b`，ID `sha256:3d3dabb7070d06f77506f4829304ce6eacc5770f83f2d852020c8614b3c09b59`，镜像内程序与本机一致。
+- 预检通过；恢复点 `/home/nio/releases/router-7c96575-20261124/`（dump 223,062,847 字节，SHA256 `c5dbaeea…`，112 张表可读）。
+- 03:23:08Z 切换（compose diff 仅 image 一行），03:23:21Z `healthy`；`post-switch` 通过（迁移/用户/订单/余额不变，0 fatal，入口 JS 一致），探针 `probe=verify-7c96575-20261124` 命中。
+- 回退目标：`sha256:b3123d151ce80c8aaa5fee949869f813f38af4652dc41b42bb454e6ad63954b8`（tag `sub2api:prod-v0.2.23-e960b70a9`）。
