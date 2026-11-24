@@ -13,6 +13,7 @@
 
         <!-- Right content -->
         <div class="min-w-0 flex-1">
+          <DocsSignupCta />
           <KeepAlive>
             <component
               :is="currentSectionComponent"
@@ -35,6 +36,7 @@ import { useDocsSectionRoute, type DocsSection } from '@/composables/useDocsSect
 import HomeFooter from '@/components/home/HomeFooter.vue'
 import HomeHeader from '@/components/home/HomeHeader.vue'
 import DocsNav from '@/components/docs/DocsNav.vue'
+import DocsSignupCta from '@/components/docs/DocsSignupCta.vue'
 import DocsSectionQuickStart from '@/components/docs/DocsSectionQuickStart.vue'
 import DocsSectionClaudeCode from '@/components/docs/DocsSectionClaudeCode.vue'
 import DocsSectionCodexCli from '@/components/docs/DocsSectionCodexCli.vue'

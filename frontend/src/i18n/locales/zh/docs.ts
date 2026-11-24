@@ -1,5 +1,12 @@
 export default {
     title: '文档',
+    signupCta: {
+      title: '还没有账号？先注册获取 API Key',
+      titleWithBonus: '注册即送 {amount} 体验额度，照着文档马上用',
+      desc: '一个 API Key 接入 Claude Code、Codex、Cursor 等客户端。',
+      button: '免费注册',
+      buttonWithBonus: '注册，领 {amount}'
+    },
     backToHome: '返回首页',
     copy: '复制',
     copied: '已复制',
