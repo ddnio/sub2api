@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import RegisterView from '@/views/auth/RegisterView.vue'
+import { clearAffiliateReferralCode } from '@/utils/oauthAffiliate'
 
 const {
   getPublicSettingsMock,
@@ -8,8 +9,10 @@ const {
   showErrorMock,
   pushMock,
   verifyActionMock,
-  appStoreMock
+  appStoreMock,
+  routeQuery
 } = vi.hoisted(() => ({
+  routeQuery: {} as Record<string, string>,
   getPublicSettingsMock: vi.fn(),
   registerMock: vi.fn(),
   showErrorMock: vi.fn(),
@@ -42,7 +45,7 @@ const publicSettings = {
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: pushMock }),
-  useRoute: () => ({ query: {} })
+  useRoute: () => ({ query: routeQuery })
 }))
 
 vi.mock('vue-i18n', () => ({
@@ -103,6 +106,8 @@ describe('RegisterView', () => {
     pushMock.mockReset()
     verifyActionMock.mockReset()
     appStoreMock.cachedPublicSettings = null
+    for (const key of Object.keys(routeQuery)) delete routeQuery[key]
+    clearAffiliateReferralCode()
     sessionStorage.removeItem('register_data')
     verifyActionMock.mockResolvedValue({ token: 'ticket', randstr: 'randstr' })
     getPublicSettingsMock.mockResolvedValue(publicSettings)
@@ -208,7 +213,28 @@ describe('RegisterView', () => {
     expect(registerMock).not.toHaveBeenCalled()
   })
 
+  it('hides the optional affiliate invitation field without a referral link', async () => {
+    const wrapper = mountRegister()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="affiliate-invitation-field"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="affiliate-invitation-toggle"]').trigger('click')
+    expect(wrapper.get('[data-testid="affiliate-invitation-field"] input').attributes('id')).toBe('affiliate_code')
+  })
+
+  it('shows the signup bonus on the submit button when new users get credit', async () => {
+    getPublicSettingsMock.mockResolvedValueOnce({ ...publicSettings, default_balance: 5 })
+
+    const wrapper = mountRegister()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="signup-bonus-hint"]').text()).toBe('auth.signupBonusHint')
+    expect(wrapper.get('button[type="submit"]').text()).toContain('auth.registerWithBonus')
+  })
+
   it('keeps the optional affiliate invitation field before Turnstile', async () => {
+    routeQuery.aff = 'FRIEND123'
     const wrapper = mountRegister()
     await flushPromises()
 

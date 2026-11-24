@@ -6,7 +6,14 @@
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
           {{ t('auth.createAccount') }}
         </h2>
-        <p class="mt-2 text-sm text-gray-500 dark:text-dark-400">
+        <p
+          v-if="signupBonusText"
+          data-testid="signup-bonus-hint"
+          class="mt-2 text-sm font-medium text-primary-600 dark:text-primary-400"
+        >
+          {{ t('auth.signupBonusHint', { amount: signupBonusText }) }}
+        </p>
+        <p v-else class="mt-2 text-sm text-gray-500 dark:text-dark-400">
           {{ t('auth.signUpToStart', { siteName }) }}
         </p>
       </div>
@@ -167,6 +174,15 @@
         </div>
 
         <!-- Affiliate Invitation Code Input (Optional) -->
+        <button
+          v-else-if="affiliateEnabled && !hasAffiliateReferral && !showAffiliateField"
+          type="button"
+          data-testid="affiliate-invitation-toggle"
+          class="text-sm text-gray-500 hover:text-primary-600 dark:text-dark-400 dark:hover:text-primary-400"
+          @click="showAffiliateField = true"
+        >
+          {{ t('auth.haveInvitationCode') }}
+        </button>
         <div v-else-if="affiliateEnabled" data-testid="affiliate-invitation-field">
           <label for="affiliate_code" class="input-label">
             {{ t('auth.invitationCodeLabel') }}
@@ -296,9 +312,11 @@
           {{
             isLoading
               ? t('auth.processing')
-              : emailVerifyEnabled
-                ? t('auth.continue')
-                : t('auth.createAccount')
+              : signupBonusText
+                ? t('auth.registerWithBonus', { amount: signupBonusText })
+                : emailVerifyEnabled
+                  ? t('auth.continue')
+                  : t('auth.createAccount')
           }}
         </button>
 
@@ -431,6 +449,15 @@ const promoCodeEnabled = ref<boolean>(
 )
 const invitationCodeEnabled = ref<boolean>(false)
 const affiliateEnabled = ref<boolean>(false)
+// NanaFox fork: 只有带邀请参数（或之前存过邀请码）进来时才显示选填邀请码框，免得普通访客犹豫
+const hasAffiliateReferral = ref<boolean>(false)
+const showAffiliateField = ref<boolean>(false)
+// NanaFox fork: 新用户注册赠送的余额，用于按钮「注册，领 $5」
+const signupBonus = ref<number>(0)
+const signupBonusText = computed(() => {
+  const amount = Number(signupBonus.value.toFixed(2))
+  return amount > 0 ? `$${amount}` : ''
+})
 const turnstileEnabled = ref<boolean>(false)
 const turnstileSiteKey = ref<string>('')
 const tencentCaptchaEnabled = ref<boolean>(false)
@@ -553,6 +580,7 @@ function syncAffiliateReferralCode(): string {
   if (code) {
     formData.aff_code = code
   }
+  hasAffiliateReferral.value = !!code
   return code
 }
 
@@ -578,6 +606,7 @@ onMounted(async () => {
     aliyunCaptchaPrefix.value = settings.aliyun_captcha_prefix || ''
     aliyunCaptchaRegion.value = settings.aliyun_captcha_region || 'cn'
     siteName.value = settings.site_name || 'Sub2API'
+    signupBonus.value = Number(settings.default_balance) || 0
     linuxdoOAuthEnabled.value = settings.linuxdo_oauth_enabled
     wechatOAuthEnabled.value = isWeChatWebOAuthEnabled(settings)
     oidcOAuthEnabled.value = settings.oidc_oauth_enabled

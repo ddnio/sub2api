@@ -248,6 +248,7 @@
             <div v-if="checkout.help_text" class="markdown-body w-full overflow-x-auto break-words" v-html="renderedHelpText"></div>
           </div>
         </div>
+        <AffiliateInviteCard v-if="paymentPhase === 'select'" />
       </template>
     </div>
     <!-- Renewal Plan Selection Modal -->
@@ -282,6 +283,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { marked } from 'marked'
+import AffiliateInviteCard from '@/components/user/AffiliateInviteCard.vue'
 import DOMPurify from 'dompurify'
 import '@/styles/announcement-markdown.css'
 import { useRoute, useRouter } from 'vue-router'

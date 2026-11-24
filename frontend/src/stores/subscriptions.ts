@@ -129,6 +129,7 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     // State
     activeSubscriptions,
     loading,
+    loaded,
     hasActiveSubscriptions,
 
     // Actions
