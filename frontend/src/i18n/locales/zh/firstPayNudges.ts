@@ -9,5 +9,13 @@ export default {
     copyLink: '复制邀请链接',
     linkCopied: '邀请链接已复制',
     details: '查看详情'
+  },
+  githubQuick: {
+    registerWithBonus: '用 GitHub 注册，领 {amount}',
+    register: '用 GitHub 一键注册',
+    login: '用 GitHub 登录',
+    hint: '不用收邮箱验证码，授权后直接开始',
+    orEmailRegister: '或用邮箱注册',
+    orEmailLogin: '或用邮箱登录'
   }
 }

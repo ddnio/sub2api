@@ -9,5 +9,13 @@ export default {
     copyLink: 'Copy invite link',
     linkCopied: 'Invite link copied',
     details: 'Details'
+  },
+  githubQuick: {
+    registerWithBonus: 'Sign up with GitHub, get {amount}',
+    register: 'Sign up with GitHub',
+    login: 'Sign in with GitHub',
+    hint: 'No email code needed — authorize and start right away',
+    orEmailRegister: 'or sign up with email',
+    orEmailLogin: 'or sign in with email'
   }
 }

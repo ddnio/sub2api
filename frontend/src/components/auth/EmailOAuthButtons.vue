@@ -14,10 +14,15 @@
         :key="provider"
         type="button"
         :disabled="disabled"
-        class="btn btn-secondary h-12 w-full justify-center gap-2"
+        :class="prominent
+          ? 'btn h-12 w-full justify-center gap-2 bg-gray-900 text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100'
+          : 'btn btn-secondary h-12 w-full justify-center gap-2'"
         @click="startLogin(provider)"
       >
-        <GitHubMark v-if="provider === 'github'" class="h-5 w-5 text-gray-800 dark:text-gray-100" />
+        <GitHubMark
+          v-if="provider === 'github'"
+          :class="prominent ? 'h-5 w-5 text-white dark:text-gray-900' : 'h-5 w-5 text-gray-800 dark:text-gray-100'"
+        />
         <GoogleMark v-else class="h-5 w-5" />
         <span class="font-medium">{{ providerLabel(provider) }}</span>
       </button>
@@ -44,6 +49,9 @@ const props = withDefaults(defineProps<{
   githubEnabled?: boolean
   googleEnabled?: boolean
   showDivider?: boolean
+  // NanaFox fork: 注册/登录页顶部的 GitHub 一键按钮用自定义文案和醒目样式
+  label?: string
+  prominent?: boolean
 }>(), {
   showDivider: true
 })
@@ -71,6 +79,7 @@ const providerGridClass = computed(() => [
 ])
 
 function providerLabel(provider: EmailOAuthProvider): string {
+  if (props.label) return props.label
   const name = provider === 'github' ? 'GitHub' : 'Google'
   return hasMultipleProviders.value ? name : t('auth.emailOAuth.signIn', { providerName: name })
 }

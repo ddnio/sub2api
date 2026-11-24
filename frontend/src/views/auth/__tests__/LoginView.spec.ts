@@ -115,4 +115,36 @@ describe('LoginView registration entry', () => {
 
     expect(wrapper.text()).not.toContain('auth.signUp')
   })
+
+describe('LoginView GitHub quick login', () => {
+  beforeEach(() => {
+    getPublicSettingsMock.mockReset()
+    getPublicSettingsMock.mockResolvedValue(publicSettings)
+  })
+
+  it('shows GitHub login above the form and not again inside it', async () => {
+    getPublicSettingsMock.mockResolvedValueOnce({ ...publicSettings, github_oauth_enabled: true })
+    const wrapper = mountLogin()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="github-login-top"]').exists()).toBe(true)
+    const html = wrapper.html()
+    expect(html.indexOf('github-login-top')).toBeLessThan(html.indexOf('<form'))
+    const buttons = wrapper.findAll('email-o-auth-buttons-stub')
+    expect(buttons).toHaveLength(1)
+    expect(buttons[0].attributes('label')).toBe('githubQuick.login')
+  })
+
+  it('hides the GitHub button when GitHub login is off or backend mode is on', async () => {
+    getPublicSettingsMock.mockResolvedValueOnce({ ...publicSettings, github_oauth_enabled: false })
+    let wrapper = mountLogin()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="github-login-top"]').exists()).toBe(false)
+
+    getPublicSettingsMock.mockResolvedValueOnce({ ...publicSettings, github_oauth_enabled: true, backend_mode_enabled: true })
+    wrapper = mountLogin()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="github-login-top"]').exists()).toBe(false)
+  })
+})
 })
