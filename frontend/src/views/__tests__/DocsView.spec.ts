@@ -293,5 +293,7 @@ describe('DocsView', () => {
     expect(card.exists()).toBe(true)
     expect(card.text()).toContain('第 3 步')
     expect(card.text()).toContain('CC Switch')
+    expect(card.html()).toContain('step=config')
+    expect(card.html()).toContain('use=codex')
   })
 })

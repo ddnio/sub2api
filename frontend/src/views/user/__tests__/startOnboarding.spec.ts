@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { Group, User } from '@/types'
+import type { ApiKey, Group, User } from '@/types'
 import {
   DEFAULT_START_USE_CASE,
   START_USE_CASES,
@@ -11,11 +11,13 @@ import {
   extractReply,
   firstCallBannerDismissKey,
   markStartDone,
+  pickExistingKeyForUseCase,
   pickGroupForUseCase,
   rememberUseCase,
   rememberedUseCase,
   resetFirstCallBannerMemoryForTest,
   shouldOfferStart,
+  shouldRedirectOAuthStartToDashboard,
   shouldShowFirstCallBanner,
   startDoneKey,
   useCaseFromQuery
@@ -234,5 +236,84 @@ describe('shouldShowFirstCallBanner', () => {
     expect(shouldShowFirstCallBanner(user({ role: 'admin' }), { total_api_keys: 1, total_requests: 0 }, NOW)).toBe(false)
     expect(shouldShowFirstCallBanner(user(), null, NOW)).toBe(false)
     expect(shouldShowFirstCallBanner(null, { total_api_keys: 1, total_requests: 0 }, NOW)).toBe(false)
+  })
+
+  it('hides for subscribed or topped-up users', () => {
+    expect(
+      shouldShowFirstCallBanner(
+        user({ subscriptions: [{ id: 1, status: 'active' } as any] }),
+        { total_api_keys: 1, total_requests: 0 },
+        NOW
+      )
+    ).toBe(false)
+    expect(
+      shouldShowFirstCallBanner(
+        user({ balance: 25 }),
+        { total_api_keys: 1, total_requests: 0 },
+        { now: NOW, defaultSignupBalance: 5 }
+      )
+    ).toBe(false)
+    expect(
+      shouldShowFirstCallBanner(
+        user({ balance: 5 }),
+        { total_api_keys: 1, total_requests: 0 },
+        { now: NOW, defaultSignupBalance: 5 }
+      )
+    ).toBe(true)
+  })
+})
+
+describe('pickExistingKeyForUseCase', () => {
+  const openaiGroup = group({ id: 3, name: 'OpenAI GPT', platform: 'openai' })
+  const claudeGroup = group({ id: 4, name: 'ClaudeCode专用', platform: 'anthropic' })
+
+  it('picks only an active key matching the selected platform', () => {
+    const keys = [
+      { id: 1, key: 'sk-inactive', status: 'inactive', group: openaiGroup },
+      { id: 2, key: 'sk-claude', status: 'active', group: claudeGroup },
+      { id: 3, key: 'sk-openai-ok', status: 'active', group: openaiGroup }
+    ] as ApiKey[]
+    expect(pickExistingKeyForUseCase(keys, 'codex')?.key).toBe('sk-openai-ok')
+    expect(pickExistingKeyForUseCase(keys, 'claude')?.key).toBe('sk-claude')
+  })
+
+  it('returns null when only wrong-platform or inactive keys exist', () => {
+    const keys = [
+      { id: 1, key: 'sk-inactive', status: 'inactive', group: openaiGroup },
+      { id: 2, key: 'sk-claude', status: 'active', group: claudeGroup }
+    ] as ApiKey[]
+    expect(pickExistingKeyForUseCase(keys, 'codex')).toBeNull()
+  })
+})
+
+describe('shouldRedirectOAuthStartToDashboard', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('keeps fresh OAuth users on /start and sends older or done accounts to /dashboard', () => {
+    expect(shouldRedirectOAuthStartToDashboard('/start', { use: 'codex', from: 'oauth' }, user({ id: 99 }), NOW)).toBe(false)
+    expect(
+      shouldRedirectOAuthStartToDashboard(
+        '/start',
+        { use: 'codex', from: 'oauth' },
+        user({ id: 100, created_at: '2026-11-01T00:00:00Z' }),
+        NOW
+      )
+    ).toBe(true)
+    expect(
+      shouldRedirectOAuthStartToDashboard(
+        '/start',
+        { use: 'codex', from: 'oauth', step: 'config' },
+        user({ id: 100, created_at: '2026-11-01T00:00:00Z' }),
+        NOW
+      )
+    ).toBe(false)
+    expect(
+      shouldRedirectOAuthStartToDashboard(
+        '/start',
+        { use: 'codex' },
+        user({ id: 100, created_at: '2026-11-01T00:00:00Z' }),
+        NOW
+      )
+    ).toBe(false)
   })
 })

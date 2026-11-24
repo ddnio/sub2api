@@ -119,7 +119,7 @@
               <div class="space-y-2">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                   <p class="text-sm text-gray-600 dark:text-dark-300">
-                    或复制下面命令到终端回车，自动写入 <code>~/.codex/config.toml</code>（与「使用密钥」一致）：
+                    或复制下面命令到终端回车，自动写入 <code>config.toml</code>（与「使用密钥」一致）：
                   </p>
                   <div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-xs dark:border-dark-700 dark:bg-dark-900">
                     <button
@@ -167,6 +167,9 @@
                   </div>
                   <pre class="overflow-x-auto p-4 font-mono text-xs text-gray-100"><code data-testid="start-codex-command">{{ codexQuickCommand }}</code></pre>
                 </div>
+                <p class="text-xs text-gray-500 dark:text-dark-400" data-testid="start-codex-safety-hint">
+                  已有配置会先自动备份为 <code>config.toml.bak-时间戳</code>（优先写入 <code>CODEX_HOME</code>，否则写入 <code>~/.codex</code>）。命令里含你的 Key，不要发给别人。
+                </p>
               </div>
             </div>
           </template>
@@ -253,9 +256,9 @@
       :show="showUseKeyModal"
       :api-key="createdKey?.key || ''"
       :base-url="publicSettings?.api_base_url || ''"
-      :platform="selectedGroup?.platform || null"
-      :claude-code-only="selectedGroup?.claude_code_only || false"
-      :allow-messages-dispatch="selectedGroup?.allow_messages_dispatch || false"
+      :platform="activeGroup?.platform || null"
+      :claude-code-only="activeGroup?.claude_code_only || false"
+      :allow-messages-dispatch="activeGroup?.allow_messages_dispatch || false"
       @close="showUseKeyModal = false"
     />
   </AppLayout>
@@ -279,6 +282,7 @@ import {
   extractError,
   extractReply,
   markStartDone,
+  pickExistingKeyForUseCase,
   pickGroupForUseCase,
   platformForUseCase,
   rememberedUseCase,
@@ -313,6 +317,7 @@ const useCaseOptions: { value: StartUseCase; title: string; desc: string }[] = [
 
 const platform = computed(() => platformForUseCase(useCase.value))
 const selectedGroup = computed(() => pickGroupForUseCase(groups.value, useCase.value))
+const activeGroup = computed(() => createdKey.value?.group ?? selectedGroup.value)
 const origin = computed(() => publicSettings.value?.api_base_url || window.location.origin)
 const baseUrl = computed(() => baseUrlFor(origin.value, platform.value))
 const codexQuickCommand = computed(() =>
@@ -360,7 +365,7 @@ function importToCcswitch() {
   const providerName = (publicSettings.value?.site_name || 'sub2api').trim() || 'sub2api'
   const deeplink = buildCcSwitchImportDeeplink({
     baseUrl: origin.value,
-    platform: selectedGroup.value?.platform || 'anthropic',
+    platform: activeGroup.value?.platform || 'anthropic',
     clientType: 'claude',
     providerName,
     apiKey: key.key,
@@ -407,12 +412,7 @@ onMounted(async () => {
     groups.value = g || []
     publicSettings.value = s
     if (resumeConfig && existing?.items?.length) {
-      const preferred =
-        existing.items.find((k) => k.group?.platform === 'openai') ?? existing.items[0]
-      createdKey.value = preferred
-      if (!useCaseFromQuery(route.query.use) && preferred.group?.platform === 'anthropic') {
-        useCase.value = 'claude'
-      }
+      createdKey.value = pickExistingKeyForUseCase(existing.items, useCase.value)
     }
   } catch (error: any) {
     appStore.showError(error?.message || '加载失败，可以先跳过，到「API 密钥」里手动创建')

@@ -580,10 +580,11 @@ const validationToastMessage = computed(() =>
   ''
 )
 
-// NanaFox fork: 注册页的 GitHub/OAuth 按钮默认跳 /start（保留 ?use=codex 等用途参数）
+// NanaFox fork: 注册页的 GitHub/OAuth 按钮默认跳 /start（保留 ?use=codex 等用途参数）；
+// 带 from=oauth 供路由守卫区分：仅新注册账号进 /start，老账号回 /dashboard。
 const oauthDefaultRedirect = computed(() => {
   const useCase = useCaseFromQuery(route.query.use) ?? rememberedUseCase() ?? DEFAULT_START_USE_CASE
-  return `/start?use=${useCase}`
+  return `/start?use=${useCase}&from=oauth`
 })
 
 // NanaFox fork: 开放注册且开了 GitHub 登录时，GitHub 按钮挪到表单上面，底部不再重复

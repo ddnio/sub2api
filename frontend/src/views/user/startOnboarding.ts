@@ -1,6 +1,6 @@
 // NanaFox fork: 注册后 /start 引导页的纯逻辑（选分组、拼测试请求、“已看过”标记）。
 // 单独成文件，方便单测，也让上游文件的改动只剩路由里的几行。
-import type { Group, User } from '@/types'
+import type { ApiKey, Group, User } from '@/types'
 
 export type StartUseCase = 'codex' | 'claude' | 'client' | 'code'
 
@@ -63,6 +63,18 @@ export function shouldOfferStart(user: User | null | undefined, now: number = Da
   return !isStartDone(user.id)
 }
 
+// 注册页 OAuth 回调带 /start?use=...&from=oauth：老账号（不满足新手引导条件）改回 /dashboard
+export function shouldRedirectOAuthStartToDashboard(
+  path: string,
+  query: Record<string, unknown> | undefined,
+  user: User | null | undefined,
+  now: number = Date.now()
+): boolean {
+  if (path !== '/start') return false
+  if (query?.from !== 'oauth' || query?.step === 'config') return false
+  return !shouldOfferStart(user, now)
+}
+
 export function firstCallBannerDismissKey(userId: number): string {
   return `nf_first_call_banner_dismissed_${userId}`
 }
@@ -98,19 +110,54 @@ export interface FirstCallBannerStats {
   total_requests?: number
 }
 
-// 控制台顶部轻提醒：注册 7 天内、有 Key、从没成功调用过、且未关闭横幅时显示
+export interface FirstCallBannerOptions {
+  now?: number
+  defaultSignupBalance?: number | null
+}
+
+function hasActiveSubscription(user: User): boolean {
+  if (!Array.isArray(user.subscriptions) || user.subscriptions.length === 0) return false
+  return user.subscriptions.some((s) => !s.status || s.status === 'active')
+}
+
+// 控制台顶部轻提醒：注册 7 天内、未订阅/未充值、有 Key、从没成功调用过、且未关闭横幅时显示
 export function shouldShowFirstCallBanner(
   user: User | null | undefined,
   stats: FirstCallBannerStats | null | undefined,
-  now: number = Date.now()
+  nowOrOptions: number | FirstCallBannerOptions = Date.now()
 ): boolean {
+  const options: FirstCallBannerOptions =
+    typeof nowOrOptions === 'number' ? { now: nowOrOptions } : nowOrOptions
+  const now = options.now ?? Date.now()
   if (!user || user.role === 'admin' || !user.id || !user.created_at || !stats) return false
   const created = Date.parse(user.created_at)
   if (Number.isNaN(created)) return false
   if (now - created > START_OFFER_DAYS * 24 * 3600 * 1000) return false
+  if (hasActiveSubscription(user)) return false
+  if (
+    typeof options.defaultSignupBalance === 'number' &&
+    options.defaultSignupBalance > 0 &&
+    typeof user.balance === 'number' &&
+    user.balance > options.defaultSignupBalance + 1e-6
+  ) {
+    return false
+  }
   if ((stats.total_api_keys ?? 0) <= 0) return false
   if ((stats.total_requests ?? 0) > 0) return false
   return !isFirstCallBannerDismissed(user.id)
+}
+
+// 横幅/文档带 ?step=config 回到 /start 时，按用途找一把状态为 active 且平台匹配的 Key；找不到就返回 null 停在建 Key 步骤
+export function pickExistingKeyForUseCase(keys: ApiKey[], useCase: StartUseCase): ApiKey | null {
+  const platform = platformForUseCase(useCase)
+  return (
+    keys.find(
+      (k) =>
+        k.status === 'active' &&
+        k.group?.platform === platform &&
+        (useCase === 'claude' || !k.group?.claude_code_only)
+    ) ?? null
+  )
 }
 
 export function useCaseFromQuery(value: unknown): StartUseCase | null {

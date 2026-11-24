@@ -26,7 +26,7 @@
           {{ guideCopy.quickJumpConfig }}
         </a>
         <RouterLink
-          to="/start?use=codex"
+          to="/start?step=config&use=codex"
           class="inline-flex items-center rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-700"
         >
           {{ guideCopy.quickJumpCcs }}

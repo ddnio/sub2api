@@ -388,16 +388,16 @@ describe('RegisterView', () => {
     expect(wrapper.find('email-o-auth-buttons-stub').attributes('label')).toBe('githubQuick.register')
   })
 
-  it('defaults OAuth redirect to /start?use=codex and preserves explicit ?use= query', async () => {
+  it('defaults OAuth redirect to /start?use=codex&from=oauth and preserves explicit ?use= query', async () => {
     getPublicSettingsMock.mockResolvedValueOnce({ ...publicSettings, github_oauth_enabled: true })
     let wrapper = mountRegister()
     await flushPromises()
-    expect(wrapper.find('email-o-auth-buttons-stub').attributes('defaultredirect')).toBe('/start?use=codex')
+    expect(wrapper.find('email-o-auth-buttons-stub').attributes('defaultredirect')).toBe('/start?use=codex&from=oauth')
 
     routeQuery.use = 'claude'
     getPublicSettingsMock.mockResolvedValueOnce({ ...publicSettings, github_oauth_enabled: true })
     wrapper = mountRegister()
     await flushPromises()
-    expect(wrapper.find('email-o-auth-buttons-stub').attributes('defaultredirect')).toBe('/start?use=claude')
+    expect(wrapper.find('email-o-auth-buttons-stub').attributes('defaultredirect')).toBe('/start?use=claude&from=oauth')
   })
 })

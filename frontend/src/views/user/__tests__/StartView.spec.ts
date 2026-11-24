@@ -122,8 +122,11 @@ describe('StartView', () => {
       apiKey: 'sk-codex-123'
     })
     const unixCmd = w.get('[data-testid="start-codex-command"]').text()
-    expect(unixCmd).toContain('mkdir -p ~/.codex')
+    expect(unixCmd).toContain('CODEX_HOME')
     expect(unixCmd).toContain(expectedToml)
+    const safetyHint = w.get('[data-testid="start-codex-safety-hint"]').text()
+    expect(safetyHint).toContain('自动备份')
+    expect(safetyHint).toContain('不要发给别人')
 
     await w.get('[data-testid="start-codex-shell-powershell"]').trigger('click')
     const psCmd = w.get('[data-testid="start-codex-command"]').text()
@@ -167,11 +170,14 @@ describe('StartView', () => {
     expect(w.text()).toContain('要加 /v1')
   })
 
-  it('resumes directly at step 3 with an existing key when ?step=config is passed', async () => {
+  it('resumes directly at step 3 with an existing active OpenAI key when ?step=config is passed', async () => {
     routeQuery.value = { step: 'config', use: 'codex' }
     listKeys.mockResolvedValue({
-      items: [{ id: 11, name: 'existing-key', key: 'sk-existing-999', group: GROUPS[0] }],
-      total: 1,
+      items: [
+        { id: 10, name: 'disabled-key', key: 'sk-disabled', status: 'inactive', group: GROUPS[0] },
+        { id: 11, name: 'existing-key', key: 'sk-existing-999', status: 'active', group: GROUPS[0] }
+      ],
+      total: 2,
       page: 1,
       page_size: 20,
       pages: 1
@@ -181,6 +187,26 @@ describe('StartView', () => {
     expect(replace).not.toHaveBeenCalled()
     expect(w.get('[data-testid="start-key"]').text()).toBe('sk-existing-999')
     expect(w.get('[data-testid="start-codex-command"]').text()).toContain('sk-existing-999')
+  })
+
+  it('stays at key creation step when ?step=config&use=codex has only Claude or inactive keys', async () => {
+    routeQuery.value = { step: 'config', use: 'codex' }
+    listKeys.mockResolvedValue({
+      items: [
+        { id: 12, name: 'claude-only', key: 'sk-claude-only', status: 'active', group: GROUPS[1] },
+        { id: 13, name: 'disabled-openai', key: 'sk-disabled', status: 'inactive', group: GROUPS[0] }
+      ],
+      total: 2,
+      page: 1,
+      page_size: 20,
+      pages: 1
+    })
+    const w = mountView()
+    await flushPromises()
+    expect(replace).not.toHaveBeenCalled()
+    expect(w.find('[data-testid="start-key"]').exists()).toBe(false)
+    expect(w.get('[data-testid="start-create"]').exists()).toBe(true)
+    expect(w.get('[data-testid="start-codex-command"]').text()).not.toContain('sk-claude-only')
   })
 
   it('preselects Claude Code from ?use=claude and creates the key in ClaudeCode专用', async () => {

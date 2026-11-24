@@ -3,7 +3,8 @@ import { createCodexCliFiles } from '@/utils/codexConfig'
 import {
   DEFAULT_CODEX_MODEL,
   buildCodexQuickSetupCommand,
-  buildOpenAICodexConfigToml
+  buildOpenAICodexConfigToml,
+  ensureOpenAIV1BaseUrl
 } from '@/utils/codexAuthConfig'
 
 describe('createCodexCliFiles', () => {
@@ -90,5 +91,31 @@ describe('createCodexCliFiles', () => {
 
     expect(files[0].content).toContain('model_provider = "OpenAI"')
     expect(files[0].content).not.toMatch(/prerender_site_name/i)
+  })
+
+  it('normalizes trailing slashes and /v1 without producing /v1/v1', () => {
+    expect(ensureOpenAIV1BaseUrl('https://relay.example.com/v1//')).toBe('https://relay.example.com/v1')
+    expect(ensureOpenAIV1BaseUrl('https://relay.example.com///')).toBe('https://relay.example.com/v1')
+    const toml = buildOpenAICodexConfigToml({
+      baseUrl: 'https://relay.example.com/v1//',
+      apiKey: 'sk-test'
+    })
+    expect(toml).toContain('base_url = "https://relay.example.com/v1"')
+    expect(toml).not.toContain('/v1/v1')
+  })
+
+  it('backs up existing config, restricts permissions, and respects CODEX_HOME in quick commands', () => {
+    const unixCmd = buildCodexQuickSetupCommand('https://relay.example.com', 'sk-secret', 'unix')
+    expect(unixCmd).toContain('CODEX_HOME:-$HOME/.codex')
+    expect(unixCmd).toContain('umask 077')
+    expect(unixCmd).toContain('chmod 600 "$f"')
+    expect(unixCmd).toContain('.bak-')
+    expect(unixCmd).toContain('已备份原有配置到')
+
+    const psCmd = buildCodexQuickSetupCommand('https://relay.example.com', 'sk-secret', 'powershell')
+    expect(psCmd).toContain('$env:CODEX_HOME')
+    expect(psCmd).toContain('icacls $f /inheritance:r')
+    expect(psCmd).toContain('.bak-')
+    expect(psCmd).toContain('已备份原有配置到')
   })
 })

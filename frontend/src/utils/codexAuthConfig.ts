@@ -28,7 +28,7 @@ export interface OpenAICodexConfigOptions {
 }
 
 export function ensureOpenAIV1BaseUrl(baseUrl: string): string {
-  const baseRoot = baseUrl.trim().replace(/\/v1\/?$/, '').replace(/\/+$/, '')
+  const baseRoot = baseUrl.trim().replace(/\/+$/, '').replace(/\/v1$/, '').replace(/\/+$/, '')
   return `${baseRoot}/v1`
 }
 
@@ -77,7 +77,7 @@ export function buildCodexQuickSetupCommand(
 ): string {
   const configToml = buildOpenAICodexConfigToml({ baseUrl, apiKey })
   if (shell === 'powershell') {
-    return `New-Item -ItemType Directory -Force "$HOME\\.codex" | Out-Null; @'\n${configToml}\n'@ | Set-Content -Encoding UTF8 "$HOME\\.codex\\config.toml"`
+    return `$d = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME '.codex' }; $f = Join-Path $d 'config.toml'; New-Item -ItemType Directory -Force $d | Out-Null; if (Test-Path $f) { $b = "$f.bak-$(Get-Date -Format yyyyMMddHHmmss)"; Copy-Item $f $b -Force; Write-Host "已备份原有配置到: $b" }; @'\n${configToml}\n'@ | Set-Content -Encoding UTF8 $f; icacls $f /inheritance:r /grant:r "$($env:USERNAME):F" | Out-Null; Write-Host "已写入配置: $f"`
   }
-  return `mkdir -p ~/.codex && cat <<'EOF' > ~/.codex/config.toml\n${configToml}\nEOF`
+  return `(umask 077; d="\${CODEX_HOME:-$HOME/.codex}"; f="$d/config.toml"; mkdir -p "$d"; if [ -f "$f" ]; then b="$f.bak-$(date +%Y%m%d%H%M%S)"; cp -p "$f" "$b" && echo "已备份原有配置到: $b"; fi; cat <<'EOF' > "$f"\n${configToml}\nEOF\nchmod 600 "$f" && echo "已写入配置: $f")`
 }
