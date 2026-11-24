@@ -245,6 +245,22 @@ describe('DocsView', () => {
     expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toContain('Billing')
   })
 
+  it('takes over prerendered head tags and removes them when leaving', async () => {
+    const canonical = document.createElement('link')
+    canonical.setAttribute('rel', 'canonical')
+    canonical.setAttribute('data-docs-seo', '')
+    canonical.setAttribute('href', 'https://router.example/docs/faq')
+    document.head.appendChild(canonical)
+
+    const { wrapper } = await createWrapper('/docs/faq')
+    expect(document.head.querySelectorAll('link[rel="canonical"]')).toHaveLength(1)
+    expect(canonical.getAttribute('href')).toBe(`${window.location.origin}/docs/faq`)
+    mounted.splice(mounted.indexOf(wrapper), 1)
+    wrapper.unmount()
+
+    expect(document.head.querySelector('link[rel="canonical"]')).toBeNull()
+  })
+
   it('restores a pre-existing description when leaving', async () => {
     const meta = document.createElement('meta')
     meta.setAttribute('name', 'description')
