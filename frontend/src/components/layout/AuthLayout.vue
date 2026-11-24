@@ -43,7 +43,7 @@
           <h1 class="text-gradient mb-2 text-3xl font-bold">
             {{ siteName }}
           </h1>
-          <p class="text-sm text-gray-500 dark:text-dark-400">
+          <p v-if="showSubtitle" class="text-sm text-gray-500 dark:text-dark-400">
             {{ siteSubtitle }}
           </p>
         </template>
@@ -81,6 +81,8 @@ const siteLogo = computed(() => sanitizeUrl(appStore.siteLogo || '', { allowRela
 const siteSubtitle = computed(() =>
   resolveSiteSubtitle(appStore.cachedPublicSettings?.site_subtitle, 'Subscription to API Conversion Platform')
 )
+// NanaFox fork: 副标题和站点名一样时不重复显示
+const showSubtitle = computed(() => !!siteSubtitle.value && siteSubtitle.value.trim() !== siteName.value.trim())
 const settingsLoaded = computed(() => appStore.publicSettingsLoaded)
 
 const currentYear = computed(() => new Date().getFullYear())
