@@ -8,6 +8,7 @@ import channelMonitorV2 from './channelMonitorV2'
 import batchImage from './batchImage'
 import admin from './admin'
 import misc from './misc'
+import firstPayNudges from './firstPayNudges'
 
 export default {
   adminAccessKeys,
@@ -20,4 +21,5 @@ export default {
   ...batchImage,
   admin,
   ...misc,
+  ...firstPayNudges,
 }
