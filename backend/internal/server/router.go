@@ -71,6 +71,9 @@ func SetupRouter(
 	}))
 	r.Use(middleware2.ServerTiming(cfg.Server.EnableServerTiming))
 
+	// NanaFox fork: 余额不足报错里附带后台配置的充值链接
+	middleware2.SetRechargeURLProvider(settingService.GetRechargeURL)
+
 	// Serve embedded frontend with settings injection if available
 	if web.HasEmbeddedFrontend() {
 		frontendServer, err := newFrontendServer(settingService)
