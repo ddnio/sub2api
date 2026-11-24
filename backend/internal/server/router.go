@@ -8,6 +8,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/handler"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/rechargehint"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/server/routes"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -73,7 +74,7 @@ func SetupRouter(
 
 	// NanaFox fork: 余额不足报错里附带后台配置的充值链接
 	if settingService != nil {
-		middleware2.SetRechargeURLProvider(settingService.GetRechargeURL)
+		rechargehint.SetURLProvider(settingService.GetRechargeURL)
 	}
 
 	// Serve embedded frontend with settings injection if available
