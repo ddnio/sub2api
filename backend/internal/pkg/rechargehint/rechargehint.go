@@ -5,8 +5,13 @@ package rechargehint
 
 import (
 	"context"
+	"strings"
 	"sync/atomic"
+	"time"
 )
+
+// lookupTimeout 限制读取充值地址的时间：计费路径可能没有请求上下文，读不到就退回通用提示。
+const lookupTimeout = 2 * time.Second
 
 var urlProvider atomic.Pointer[func(context.Context) string]
 
@@ -19,13 +24,20 @@ func SetURLProvider(provider func(context.Context) string) {
 	urlProvider.Store(&provider)
 }
 
-// Append 在英文报错后面接上中文充值提示。
+// Append 在英文报错后面接上中文充值提示；英文为空时只返回中文提示。
 func Append(ctx context.Context, message string) string {
 	hint := "余额不足，请登录控制台充值后继续使用。"
 	if provider := urlProvider.Load(); provider != nil {
-		if rechargeURL := (*provider)(ctx); rechargeURL != "" {
+		lookupCtx, cancel := context.WithTimeout(ctx, lookupTimeout)
+		rechargeURL := strings.TrimSpace((*provider)(lookupCtx))
+		cancel()
+		if rechargeURL != "" {
 			hint = "余额不足，请到 " + rechargeURL + " 充值后继续使用。"
 		}
+	}
+	message = strings.TrimRight(strings.TrimSpace(message), ". ")
+	if message == "" {
+		return hint
 	}
 	return message + ". " + hint
 }

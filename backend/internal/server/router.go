@@ -75,6 +75,8 @@ func SetupRouter(
 	// NanaFox fork: 余额不足报错里附带后台配置的充值链接
 	if settingService != nil {
 		rechargehint.SetURLProvider(settingService.GetRechargeURL)
+	} else {
+		rechargehint.SetURLProvider(nil)
 	}
 
 	// Serve embedded frontend with settings injection if available
