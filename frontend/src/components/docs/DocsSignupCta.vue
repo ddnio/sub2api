@@ -18,6 +18,7 @@
 
 <script setup lang="ts">
 // NanaFox fork: 文档页顶部给未登录访客一个显眼的注册入口；金额取后台的新用户默认余额，没配时不写金额。
+// 只在拿到公共设置且确认开放注册时显示：预渲染的静态页里没有它，已登录用户也不会先闪一下。
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore, useAuthStore } from '@/stores'
@@ -27,7 +28,7 @@ const appStore = useAppStore()
 const authStore = useAuthStore()
 
 const visible = computed(
-  () => !authStore.isAuthenticated && appStore.cachedPublicSettings?.registration_enabled !== false
+  () => !authStore.isAuthenticated && appStore.cachedPublicSettings?.registration_enabled === true
 )
 const bonusText = computed(() => {
   const amount = Number(Number(appStore.cachedPublicSettings?.default_balance || 0).toFixed(2))

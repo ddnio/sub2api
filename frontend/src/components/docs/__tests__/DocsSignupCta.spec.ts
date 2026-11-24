@@ -34,12 +34,17 @@ describe('DocsSignupCta', () => {
     expect(wrapper.get('a').attributes('data-to')).toBe('/register')
   })
 
-  it('falls back to a plain signup prompt without a bonus or settings', () => {
-    state.settings = null
+  it('falls back to a plain signup prompt without a bonus', () => {
+    state.settings = { registration_enabled: true, default_balance: 0 }
     const wrapper = mountCta()
     expect(wrapper.text()).toContain('docs.signupCta.title')
     expect(wrapper.text()).toContain('docs.signupCta.button')
     expect(wrapper.text()).not.toContain('$')
+  })
+
+  it('stays out of prerendered pages where settings are not loaded yet', () => {
+    state.settings = null
+    expect(mountCta().find('[data-testid="docs-signup-cta"]').exists()).toBe(false)
   })
 
   it('is hidden for signed-in users and when registration is closed', () => {

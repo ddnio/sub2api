@@ -1,7 +1,7 @@
 export default {
     title: 'Documentation',
     signupCta: {
-      title: 'No account yet? Sign up and follow the guide right away',
+      title: 'No account yet? Sign up to get your API key',
       titleWithBonus: 'Get {amount} free credit when you sign up',
       desc: 'One API key for Claude Code, Codex, Cursor and more.',
       button: 'Sign up free',
