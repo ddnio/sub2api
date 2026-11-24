@@ -146,4 +146,47 @@ describe('Referral share cards', () => {
     await flushPromises()
     expect(mountUserA.find('[data-testid="payment-success-referral-card"]').exists()).toBe(true)
   })
+
+  it('PaymentSuccessReferralCard aborts copy and hides card if user switches while /user/aff is in flight', async () => {
+    const wrapper = mount(PaymentSuccessReferralCard, {
+      global: { stubs: { Icon: true } }
+    })
+    await flushPromises()
+
+    let resolveInFlight!: (value: { user_id: number; aff_code: string; effective_rebate_rate_percent: number }) => void
+    getAffiliateDetail.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveInFlight = resolve
+        })
+    )
+
+    await wrapper.get('[data-testid="payment-referral-copy-share"]').trigger('click')
+
+    // Another tab switches from user 101 to user 202 before /user/aff resolves
+    localStorage.setItem('auth_token', 'token-b')
+    localStorage.setItem('auth_user', JSON.stringify({ id: 202 }))
+    resolveInFlight({ user_id: 101, aff_code: 'CODE_STALE_A', effective_rebate_rate_percent: 20 })
+    await flushPromises()
+
+    expect(copyToClipboard).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="payment-success-referral-card"]').exists()).toBe(false)
+  })
+
+  it('PaymentSuccessReferralCard does not persist dismissal when active account differs from card owner', async () => {
+    const wrapper = mount(PaymentSuccessReferralCard, {
+      global: { stubs: { Icon: true } }
+    })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="payment-success-referral-card"]').exists()).toBe(true)
+
+    // Switch to user B in another tab, then click dismiss on user A's stale card
+    localStorage.setItem('auth_token', 'token-b')
+    localStorage.setItem('auth_user', JSON.stringify({ id: 202 }))
+    await wrapper.get('[data-testid="payment-referral-dismiss"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="payment-success-referral-card"]').exists()).toBe(false)
+    expect(localStorage.getItem('nf_payment_success_referral_dismissed_101')).toBeNull()
+    expect(localStorage.getItem('nf_payment_success_referral_dismissed_202')).toBeNull()
+  })
 })

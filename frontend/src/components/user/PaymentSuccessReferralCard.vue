@@ -130,6 +130,16 @@ async function copyShareText(): Promise<void> {
     // 复制前按当前登录用户重新获取邀请码，避免多标签页切换账号后复制到旧用户的邀请码
     const freshDetail = await userAPI.getAffiliateDetail({ skipAuthRedirect: true })
     if (unmounted) return
+    // 请求返回后再次校验当前登录账号（以及响应里的 user_id），防止请求进行中跨标签页切换账号导致串码
+    const latestUserId = resolveAuthenticatedUserId()
+    const responseUserId = (freshDetail as { user_id?: unknown } | null)?.user_id
+    if (
+      latestUserId !== activeUserId ||
+      (typeof responseUserId === 'number' && responseUserId > 0 && responseUserId !== activeUserId)
+    ) {
+      detail.value = null
+      return
+    }
     detail.value = freshDetail
     const freshRate = Number(freshDetail?.effective_rebate_rate_percent) || 0
     const freshText =
@@ -147,9 +157,11 @@ async function copyShareText(): Promise<void> {
 }
 
 function dismiss(): void {
-  const activeUserId = resolveAuthenticatedUserId() ?? currentUserId.value
+  const latestUserId = resolveAuthenticatedUserId()
   dismissed.value = true
-  dismissPaymentSuccessReferral(activeUserId)
+  if (latestUserId !== null && latestUserId === currentUserId.value) {
+    dismissPaymentSuccessReferral(latestUserId)
+  }
 }
 
 let unmounted = false
