@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -52,7 +53,7 @@ func TestBillingErrorDetails_UnknownErrorFallsBackTo403(t *testing.T) {
 	status, code, msg, _ := billingErrorDetails(service.ErrInsufficientBalance)
 	require.Equal(t, http.StatusForbidden, status)
 	require.Equal(t, "billing_error", code)
-	require.NotEmpty(t, msg)
+	require.True(t, strings.HasPrefix(msg, "insufficient balance. 余额不足"), msg)
 }
 
 func TestExtractQuotaResetSeconds_T19_HappyPath(t *testing.T) {
