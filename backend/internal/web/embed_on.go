@@ -41,7 +41,8 @@ type FrontendServer struct {
 	baseHTML    []byte
 	cache       *HTMLCache
 	settings    PublicSettingsProvider
-	overrideDir string // local file override directory
+	overrideDir string            // local file override directory
+	prerender   *prerenderedPages // NanaFox fork: /docs 预渲染页面，见 prerender.go
 }
 
 // NewFrontendServer creates a new frontend server with settings injection
@@ -73,6 +74,7 @@ func NewFrontendServer(settingsProvider PublicSettingsProvider) (*FrontendServer
 		cache:       cache,
 		settings:    settingsProvider,
 		overrideDir: filepath.Join("data", "public"),
+		prerender:   loadPrerenderedPages(distFS),
 	}, nil
 }
 
@@ -80,6 +82,9 @@ func NewFrontendServer(settingsProvider PublicSettingsProvider) (*FrontendServer
 func (s *FrontendServer) InvalidateCache() {
 	if s != nil && s.cache != nil {
 		s.cache.Invalidate()
+	}
+	if s != nil && s.prerender != nil {
+		s.prerender.invalidate()
 	}
 }
 
@@ -91,6 +96,11 @@ func (s *FrontendServer) Middleware() gin.HandlerFunc {
 		// Skip API routes
 		if shouldBypassEmbeddedFrontend(path) {
 			c.Next()
+			return
+		}
+
+		// NanaFox fork: /docs 各小节有预渲染页面时优先返回
+		if s.tryServePrerendered(c, path) {
 			return
 		}
 
@@ -209,19 +219,24 @@ func (s *FrontendServer) serveIndexHTML(c *gin.Context) {
 }
 
 func (s *FrontendServer) injectSettings(settingsJSON []byte) []byte {
-	// Create the script tag to inject with nonce placeholder
-	// The placeholder will be replaced with actual nonce at request time
-	script := []byte(`<script nonce="` + NonceHTMLPlaceholder + `">window.__APP_CONFIG__=` + string(settingsJSON) + `;</script>`)
-
-	// Inject before </head>
-	headClose := []byte("</head>")
-	result := bytes.Replace(s.baseHTML, headClose, append(script, headClose...), 1)
+	result := injectAppConfig(s.baseHTML, settingsJSON)
 
 	// Apply custom branding before the browser paints the static defaults.
 	result = injectSiteTitle(result, settingsJSON)
 	result = injectSiteFavicon(result, settingsJSON)
 
 	return result
+}
+
+// injectAppConfig inserts window.__APP_CONFIG__ before </head>.
+func injectAppConfig(html, settingsJSON []byte) []byte {
+	// Create the script tag to inject with nonce placeholder
+	// The placeholder will be replaced with actual nonce at request time
+	script := []byte(`<script nonce="` + NonceHTMLPlaceholder + `">window.__APP_CONFIG__=` + string(settingsJSON) + `;</script>`)
+
+	// Inject before </head>
+	headClose := []byte("</head>")
+	return bytes.Replace(html, headClose, append(script, headClose...), 1)
 }
 
 // injectSiteFavicon replaces the static favicon with a configured, browser-safe image URL.

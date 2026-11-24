@@ -84,6 +84,7 @@ func SetupRouter(
 				frontendServer.InvalidateCache()
 				refreshFrameOrigins()
 			})
+			frontendServer.SetSiteOrigin(cfg.Server.FrontendURL) // NanaFox fork: 文档预渲染页面用的站点地址
 			r.Use(frontendServer.Middleware())
 		}
 	} else {

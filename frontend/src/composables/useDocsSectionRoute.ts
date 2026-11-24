@@ -15,23 +15,22 @@ import {
 export type { DocsSection }
 export { docsSectionPath }
 
-// 页面上原本就有的标签只改值并记下原值，离开时还原；自己新建的离开时删掉
-const restoreHeadTags: Array<() => void> = []
-
-function upsertHeadTag(selector: string, create: () => HTMLElement, attr: string, value: string) {
+// 自己新建的、以及预渲染页面带来的（带 data-docs-seo）标签离开时删掉；
+// 页面上原本就有的只改值并记下原值，离开时还原
+function upsertHeadTag(restoreHeadTags: Map<HTMLElement, () => void>, selector: string, create: () => HTMLElement, attr: string, value: string) {
   let el = document.head.querySelector<HTMLElement>(selector)
+  const owned = !el || el.hasAttribute('data-docs-seo')
   if (!el) {
     el = create()
     document.head.appendChild(el)
-    const created = el
-    restoreHeadTags.push(() => created.remove())
-  } else if (!el.hasAttribute('data-docs-seo')) {
-    const existing = el
-    const original = existing.getAttribute(attr)
-    restoreHeadTags.push(() => {
-      if (original === null) existing.removeAttribute(attr)
-      else existing.setAttribute(attr, original)
-      existing.removeAttribute('data-docs-seo')
+  }
+  if (!restoreHeadTags.has(el)) {
+    const tag = el
+    const original = tag.getAttribute(attr)
+    restoreHeadTags.set(tag, owned ? () => tag.remove() : () => {
+      if (original === null) tag.removeAttribute(attr)
+      else tag.setAttribute(attr, original)
+      tag.removeAttribute('data-docs-seo')
     })
   }
   el.setAttribute('data-docs-seo', '')
@@ -42,6 +41,7 @@ export function useDocsSectionRoute() {
   const route = useRoute()
   const router = useRouter()
   const { t, locale } = useI18n()
+  const restoreHeadTags = new Map<HTMLElement, () => void>()
 
   const activeSection = computed<DocsSection>(() =>
     toDocsSection(route.params.section) ?? toDocsSection(route.hash) ?? DEFAULT_DOCS_SECTION
@@ -56,12 +56,12 @@ export function useDocsSectionRoute() {
 
   // 页面标题由 router/title.ts 统一生成；这里只补搜索引擎要看的描述和规范地址
   watch([activeSection, locale], ([section]) => {
-    upsertHeadTag('meta[name="description"]', () => {
+    upsertHeadTag(restoreHeadTags, 'meta[name="description"]', () => {
       const m = document.createElement('meta')
       m.setAttribute('name', 'description')
       return m
     }, 'content', t(resolveDocsSectionMetaKeys(section).descriptionKey))
-    upsertHeadTag('link[rel="canonical"]', () => {
+    upsertHeadTag(restoreHeadTags, 'link[rel="canonical"]', () => {
       const l = document.createElement('link')
       l.setAttribute('rel', 'canonical')
       return l
@@ -70,7 +70,8 @@ export function useDocsSectionRoute() {
 
   // 离开文档页时去掉这里加的描述和规范地址，免得留给别的页面
   onBeforeUnmount(() => {
-    restoreHeadTags.splice(0).reverse().forEach(restore => restore())
+    restoreHeadTags.forEach(restore => restore())
+    restoreHeadTags.clear()
   })
 
   return {
