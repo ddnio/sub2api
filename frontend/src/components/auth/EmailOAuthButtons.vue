@@ -79,7 +79,7 @@ const providerGridClass = computed(() => [
 ])
 
 function providerLabel(provider: EmailOAuthProvider): string {
-  if (props.label) return props.label
+  if (props.label && !hasMultipleProviders.value) return props.label
   const name = provider === 'github' ? 'GitHub' : 'Google'
   return hasMultipleProviders.value ? name : t('auth.emailOAuth.signIn', { providerName: name })
 }

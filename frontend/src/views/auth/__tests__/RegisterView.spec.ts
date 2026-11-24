@@ -380,4 +380,11 @@ describe('RegisterView', () => {
     expect(wrapper.find('form').exists()).toBe(false)
     expect(wrapper.find('email-o-auth-buttons-stub').attributes('githubenabled')).toBe('true')
   })
+
+  it('falls back to plain GitHub sign-up text when there is no signup bonus', async () => {
+    getPublicSettingsMock.mockResolvedValueOnce({ ...publicSettings, github_oauth_enabled: true, default_balance: 0 })
+    const wrapper = mountRegister()
+    await flushPromises()
+    expect(wrapper.find('email-o-auth-buttons-stub').attributes('label')).toBe('githubQuick.register')
+  })
 })

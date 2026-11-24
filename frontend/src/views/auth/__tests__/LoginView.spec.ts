@@ -115,6 +115,7 @@ describe('LoginView registration entry', () => {
 
     expect(wrapper.text()).not.toContain('auth.signUp')
   })
+})
 
 describe('LoginView GitHub quick login', () => {
   beforeEach(() => {
@@ -146,5 +147,4 @@ describe('LoginView GitHub quick login', () => {
     await flushPromises()
     expect(wrapper.find('[data-testid="github-login-top"]').exists()).toBe(false)
   })
-})
 })

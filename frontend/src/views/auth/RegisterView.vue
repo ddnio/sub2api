@@ -33,6 +33,7 @@
         </div>
       </div>
 
+      <template v-else>
       <!-- NanaFox fork: 获客对象多是 GitHub 开发者，GitHub 一键注册放在表单上面 -->
       <div v-if="showGithubTop" data-testid="github-signup-top" class="space-y-3">
         <EmailOAuthButtons
@@ -57,7 +58,7 @@
       </div>
 
       <!-- Registration Form -->
-      <form v-if="registrationEnabled || !settingsLoaded" @submit.prevent="handleRegister" class="space-y-5">
+      <form @submit.prevent="handleRegister" class="space-y-5">
         <!-- Email Input -->
         <div>
           <label for="email" class="input-label">
@@ -344,6 +345,7 @@
         </button>
 
       </form>
+      </template>
 
       <div v-if="showBottomOAuth" class="space-y-3 pt-1">
         <div class="flex items-center gap-3">
