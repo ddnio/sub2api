@@ -31,6 +31,7 @@
         type="button"
         data-testid="payment-referral-copy-share"
         class="btn btn-primary btn-sm"
+        :disabled="copying"
         @click="copyShareText"
       >
         {{ t('firstPayNudges.copyShareText') }}
@@ -43,7 +44,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { getActivePinia } from 'pinia'
 import { useI18n } from 'vue-i18n'
-import { useAppStore } from '@/stores'
+import { useAppStore, useAuthStore } from '@/stores'
 import { userAPI } from '@/api/user'
 import { useClipboard } from '@/composables/useClipboard'
 import Icon from '@/components/icons/Icon.vue'
@@ -58,10 +59,46 @@ const i18n = useI18n()
 const { t } = i18n
 const hasPinia = Boolean(getActivePinia())
 const appStore = hasPinia ? useAppStore() : null
+const authStore = hasPinia ? useAuthStore() : null
 const clipboard = hasPinia ? useClipboard() : null
 
-const dismissed = ref(isPaymentSuccessReferralDismissed())
+function readStorageUserId(): number | null {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage.getItem('auth_token')) {
+      return null
+    }
+    const raw = window.localStorage.getItem('auth_user')
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { id?: unknown } | null
+    return typeof parsed?.id === 'number' && parsed.id > 0 ? parsed.id : null
+  } catch {
+    return null
+  }
+}
+
+function resolveAuthenticatedUserId(): number | null {
+  // 优先读 localStorage 中的最新登录态（可感知同浏览器其他标签页切换账号或登出）
+  const storageUserId = readStorageUserId()
+  if (storageUserId) return storageUserId
+
+  try {
+    const hasStorageToken = typeof window !== 'undefined' && Boolean(window.localStorage.getItem('auth_token'))
+    if (hasStorageToken) return null
+  } catch {
+    // ignore storage errors
+  }
+
+  // 测试环境或纯内存登录态：仅在 authStore 明确标记已登录且有有效 user.id 时放行
+  if (authStore?.isAuthenticated && typeof authStore.user?.id === 'number' && authStore.user.id > 0) {
+    return authStore.user.id
+  }
+  return null
+}
+
+const currentUserId = ref<number | null>(resolveAuthenticatedUserId())
+const dismissed = ref(isPaymentSuccessReferralDismissed(currentUserId.value))
 const detail = ref<UserAffiliateDetail | null>(null)
+const copying = ref(false)
 
 const localeCode = computed(() => {
   const raw = i18n.locale as unknown
@@ -81,13 +118,38 @@ const shareText = computed(() =>
 const visible = computed(() => !dismissed.value && rate.value > 0 && Boolean(shareText.value))
 
 async function copyShareText(): Promise<void> {
-  if (!shareText.value || !clipboard) return
-  await clipboard.copyToClipboard(shareText.value, t('firstPayNudges.shareTextCopied'))
+  if (!clipboard || copying.value) return
+  const activeUserId = resolveAuthenticatedUserId()
+  if (!activeUserId) {
+    detail.value = null
+    return
+  }
+  currentUserId.value = activeUserId
+  copying.value = true
+  try {
+    // 复制前按当前登录用户重新获取邀请码，避免多标签页切换账号后复制到旧用户的邀请码
+    const freshDetail = await userAPI.getAffiliateDetail({ skipAuthRedirect: true })
+    if (unmounted) return
+    detail.value = freshDetail
+    const freshRate = Number(freshDetail?.effective_rebate_rate_percent) || 0
+    const freshText =
+      freshRate > 0 && freshDetail?.aff_code
+        ? buildReferralShareText(window.location.origin, freshDetail.aff_code, localeCode.value)
+        : ''
+    if (!freshText) return
+    await clipboard.copyToClipboard(freshText, t('firstPayNudges.shareTextCopied'))
+  } catch {
+    // 请求失败（含 401）时静默隐藏卡片，不影响支付成功页
+    if (!unmounted) detail.value = null
+  } finally {
+    if (!unmounted) copying.value = false
+  }
 }
 
 function dismiss(): void {
+  const activeUserId = resolveAuthenticatedUserId() ?? currentUserId.value
   dismissed.value = true
-  dismissPaymentSuccessReferral()
+  dismissPaymentSuccessReferral(activeUserId)
 }
 
 let unmounted = false
@@ -96,14 +158,20 @@ onBeforeUnmount(() => {
 })
 
 onMounted(async () => {
-  if (dismissed.value || !appStore) return
+  const activeUserId = resolveAuthenticatedUserId()
+  currentUserId.value = activeUserId
+  if (!activeUserId || isPaymentSuccessReferralDismissed(activeUserId) || !appStore) {
+    dismissed.value = Boolean(activeUserId && isPaymentSuccessReferralDismissed(activeUserId))
+    return
+  }
   try {
     const settings = await appStore.fetchPublicSettings().catch(() => null)
     if (unmounted || !settings?.affiliate_enabled) return
-    const result = await userAPI.getAffiliateDetail()
+    const result = await userAPI.getAffiliateDetail({ skipAuthRedirect: true })
     if (!unmounted) detail.value = result
   } catch {
-    // 拿不到返佣信息时静默不展示，不影响支付成功页
+    // 拿不到返佣信息（含 401）时静默不展示，不影响支付成功页
+    if (!unmounted) detail.value = null
   }
 })
 </script>

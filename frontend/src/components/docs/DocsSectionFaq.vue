@@ -177,7 +177,7 @@ const codexErrorItems = computed<CodexErrorItem[]>(() => {
         title: '2. 余额不足（403）',
         symptoms: [
           '403 billing_error: insufficient balance',
-          '403 api_error: Insufficient account balance'
+          '403 INSUFFICIENT_BALANCE: Insufficient account balance'
         ],
         cause: '账户体验额度或按量余额已用完。',
         fixes: [
@@ -189,7 +189,7 @@ const codexErrorItems = computed<CodexErrorItem[]>(() => {
         id: 'quota-limit',
         title: '3. 套餐日限额或周限额已满（429 / 403）',
         symptoms: [
-          '429 api_error: DAILY_LIMIT_EXCEEDED / WEEKLY_LIMIT_EXCEEDED',
+          '429 USAGE_LIMIT_EXCEEDED / DAILY_LIMIT_EXCEEDED / WEEKLY_LIMIT_EXCEEDED',
           '403 billing_error: daily usage limit exceeded / weekly usage limit exceeded'
         ],
         cause: '当前订阅套餐的每日或每周额度已用完。',
@@ -202,7 +202,7 @@ const codexErrorItems = computed<CodexErrorItem[]>(() => {
         id: 'no-active-subscription',
         title: '4. Key 所在分组没有有效订阅（403）',
         symptoms: [
-          '403 api_error: No active subscription found for this group'
+          '403 SUBSCRIPTION_NOT_FOUND: No active subscription found for this group'
         ],
         cause: '当前使用的 API Key 绑定了订阅制分组，但账户在该分组下没有有效订阅（未开通或已过期）。',
         fixes: [
@@ -212,10 +212,10 @@ const codexErrorItems = computed<CodexErrorItem[]>(() => {
       },
       {
         id: 'concurrency-limit',
-        title: '5. 并发请求数超限（502）',
+        title: '5. 并发请求数超限（429）',
         symptoms: [
-          '502 upstream_error: Concurrency limit exceeded for user, please retry later',
-          '502 upstream_error: Concurrency limit exceeded for account, please retry later'
+          '429 rate_limit_error (gateway_concurrency_limit): Concurrency limit exceeded for user, please retry later',
+          '429 rate_limit_error (gateway_concurrency_limit): Concurrency limit exceeded for account, please retry later'
         ],
         cause: '同一时间并发进行的请求数超过当前账户或通道上限（例如同时开多个 Codex 窗口、子代理并行或脚本并发调用）。',
         fixes: [
@@ -285,7 +285,7 @@ const codexErrorItems = computed<CodexErrorItem[]>(() => {
       title: '2. Insufficient balance (403)',
       symptoms: [
         '403 billing_error: insufficient balance',
-        '403 api_error: Insufficient account balance'
+        '403 INSUFFICIENT_BALANCE: Insufficient account balance'
       ],
       cause: 'Trial credit or pay-as-you-go balance has been used up.',
       fixes: [
@@ -297,7 +297,7 @@ const codexErrorItems = computed<CodexErrorItem[]>(() => {
       id: 'quota-limit',
       title: '3. Daily or weekly plan limit reached (429 / 403)',
       symptoms: [
-        '429 api_error: DAILY_LIMIT_EXCEEDED / WEEKLY_LIMIT_EXCEEDED',
+        '429 USAGE_LIMIT_EXCEEDED / DAILY_LIMIT_EXCEEDED / WEEKLY_LIMIT_EXCEEDED',
         '403 billing_error: daily usage limit exceeded / weekly usage limit exceeded'
       ],
       cause: 'Your subscription daily or weekly quota has been reached.',
@@ -309,7 +309,7 @@ const codexErrorItems = computed<CodexErrorItem[]>(() => {
     {
       id: 'no-active-subscription',
       title: '4. No active subscription for this group (403)',
-      symptoms: ['403 api_error: No active subscription found for this group'],
+      symptoms: ['403 SUBSCRIPTION_NOT_FOUND: No active subscription found for this group'],
       cause: 'The API key belongs to a subscription group without an active subscription.',
       fixes: [
         'Check the key group on the dashboard API Keys page.',
@@ -318,10 +318,10 @@ const codexErrorItems = computed<CodexErrorItem[]>(() => {
     },
     {
       id: 'concurrency-limit',
-      title: '5. Concurrency limit exceeded (502)',
+      title: '5. Concurrency limit exceeded (429)',
       symptoms: [
-        '502 upstream_error: Concurrency limit exceeded for user, please retry later',
-        '502 upstream_error: Concurrency limit exceeded for account, please retry later'
+        '429 rate_limit_error (gateway_concurrency_limit): Concurrency limit exceeded for user, please retry later',
+        '429 rate_limit_error (gateway_concurrency_limit): Concurrency limit exceeded for account, please retry later'
       ],
       cause: 'Too many concurrent requests are running at the same time (multiple Codex windows, parallel subagents, or scripts).',
       fixes: ['Reduce concurrent Codex windows/tasks and retry after a few seconds.']

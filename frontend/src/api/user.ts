@@ -176,8 +176,11 @@ export async function startOAuthBinding(
   window.location.href = startURL
 }
 
-export async function getAffiliateDetail(): Promise<UserAffiliateDetail> {
-  const { data } = await apiClient.get<UserAffiliateDetail>('/user/aff')
+export async function getAffiliateDetail(options?: {
+  skipAuthRedirect?: boolean
+}): Promise<UserAffiliateDetail> {
+  const config = options?.skipAuthRedirect ? { skipAuthRedirect: true } : undefined
+  const { data } = await apiClient.get<UserAffiliateDetail>('/user/aff', config)
   return data
 }
 

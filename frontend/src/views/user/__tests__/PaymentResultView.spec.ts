@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { userAPI } from '@/api/user'
+import { useAppStore } from '@/stores/app'
 
 const routeState = vi.hoisted(() => ({
   query: {} as Record<string, unknown>,
@@ -536,5 +539,54 @@ describe('PaymentResultView', () => {
 
     expect(wrapper.text()).toContain('payment.methods.alipay')
     expect(wrapper.text()).not.toContain('payment.methods.alipay_direct')
+  })
+
+  it('does not request /user/aff or redirect to /login for unauthenticated resume_token success page', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const appStore = useAppStore()
+    vi.spyOn(appStore, 'fetchPublicSettings').mockResolvedValue({ affiliate_enabled: true } as any)
+    const getAffiliateSpy = vi.spyOn(userAPI, 'getAffiliateDetail')
+
+    routeState.query = {
+      resume_token: 'resume-unauth-success',
+    }
+    resolveOrderPublicByResumeToken.mockResolvedValueOnce({
+      data: orderFactory('COMPLETED'),
+    })
+
+    const originalLocation = window.location
+    const locationMock = { ...originalLocation, pathname: '/payment/result', href: 'http://localhost/payment/result' }
+    Object.defineProperty(window, 'location', {
+      value: locationMock,
+      writable: true,
+      configurable: true,
+    })
+
+    try {
+      const wrapper = mount(PaymentResultView, {
+        global: {
+          plugins: [pinia],
+          stubs: {
+            OrderStatusBadge: true,
+          },
+        },
+      })
+
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('payment.result.success')
+      expect(getAffiliateSpy).not.toHaveBeenCalled()
+      expect(wrapper.find('[data-testid="payment-success-referral-card"]').exists()).toBe(false)
+      expect(routerPush).not.toHaveBeenCalledWith('/login')
+      expect(locationMock.href).toBe('http://localhost/payment/result')
+    } finally {
+      Object.defineProperty(window, 'location', {
+        value: originalLocation,
+        writable: true,
+        configurable: true,
+      })
+      getAffiliateSpy.mockRestore()
+    }
   })
 })

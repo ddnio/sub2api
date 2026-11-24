@@ -305,6 +305,7 @@ describe('DocsView', () => {
     expect(codexFaq.text()).toContain('Codex 常见报错')
     expect(codexFaq.text()).toContain('DAILY_LIMIT_EXCEEDED')
     expect(codexFaq.text()).toContain('No active subscription found for this group')
+    expect(codexFaq.text()).toContain('429 rate_limit_error (gateway_concurrency_limit)')
     expect(codexFaq.text()).toContain('previous_response_id')
 
     const expectedToml = buildOpenAICodexConfigToml({

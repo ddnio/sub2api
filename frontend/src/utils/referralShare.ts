@@ -1,8 +1,12 @@
-// NanaFox fork: 控制台返佣卡片与付费成功页共用的推荐语、邀请链接与一次性提示关闭状态
+// NanaFox fork: 控制台返佣卡片与付费成功页共用的推荐语、邀请链接与按用户隔离的关闭状态
 
-export const PAYMENT_SUCCESS_REFERRAL_DISMISSED_KEY = 'nf_payment_success_referral_dismissed'
+const PAYMENT_SUCCESS_REFERRAL_DISMISSED_PREFIX = 'nf_payment_success_referral_dismissed_'
 
-let dismissedInMemory = false
+const dismissedUsersInMemory = new Set<number>()
+
+export function paymentSuccessReferralDismissKey(userId: number): string {
+  return `${PAYMENT_SUCCESS_REFERRAL_DISMISSED_PREFIX}${userId}`
+}
 
 export function buildCodexReferralLink(origin: string, affCode: string): string {
   const code = affCode.trim()
@@ -28,24 +32,26 @@ function safeLocalStorage(): Storage | null {
   }
 }
 
-export function isPaymentSuccessReferralDismissed(): boolean {
-  if (dismissedInMemory) return true
+export function isPaymentSuccessReferralDismissed(userId: number | null | undefined): boolean {
+  if (!userId || userId <= 0) return false
+  if (dismissedUsersInMemory.has(userId)) return true
   try {
-    return safeLocalStorage()?.getItem(PAYMENT_SUCCESS_REFERRAL_DISMISSED_KEY) === '1'
+    return safeLocalStorage()?.getItem(paymentSuccessReferralDismissKey(userId)) === '1'
   } catch {
     return false
   }
 }
 
-export function dismissPaymentSuccessReferral(): void {
-  dismissedInMemory = true
+export function dismissPaymentSuccessReferral(userId: number | null | undefined): void {
+  if (!userId || userId <= 0) return
+  dismissedUsersInMemory.add(userId)
   try {
-    safeLocalStorage()?.setItem(PAYMENT_SUCCESS_REFERRAL_DISMISSED_KEY, '1')
+    safeLocalStorage()?.setItem(paymentSuccessReferralDismissKey(userId), '1')
   } catch {
     // localStorage 不可写时回退到内存标记
   }
 }
 
 export function resetPaymentSuccessReferralForTest(): void {
-  dismissedInMemory = false
+  dismissedUsersInMemory.clear()
 }

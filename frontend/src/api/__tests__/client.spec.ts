@@ -542,6 +542,48 @@ describe('API Client', () => {
       expect(localStorage.getItem('auth_user')).toBe(JSON.stringify({ id: 8 }))
       expect(window.location.pathname).toBe('/')
     })
+
+    it('skipAuthRedirect 为 true 时，401 不清理登录态且不跳转 /login', async () => {
+      localStorage.setItem('auth_token', 'existing-token')
+      localStorage.setItem('auth_user', JSON.stringify({ id: 9 }))
+
+      const originalLocation = window.location
+      const locationMock = { ...originalLocation, pathname: '/payment/result', href: 'http://localhost/payment/result' }
+      Object.defineProperty(window, 'location', {
+        value: locationMock,
+        writable: true,
+        configurable: true,
+      })
+
+      try {
+        apiClient.defaults.adapter = vi.fn().mockRejectedValueOnce({
+          response: {
+            status: 401,
+            data: { code: 'UNAUTHORIZED', message: 'Unauthorized' },
+          },
+          config: {
+            url: '/user/aff',
+            skipAuthRedirect: true,
+            headers: {},
+          },
+          code: 'ERR_BAD_REQUEST',
+        })
+
+        await expect(apiClient.get('/user/aff', { skipAuthRedirect: true })).rejects.toMatchObject({
+          status: 401,
+          code: 'UNAUTHORIZED',
+        })
+        expect(locationMock.href).toBe('http://localhost/payment/result')
+        expect(localStorage.getItem('auth_token')).toBe('existing-token')
+        expect(sessionStorage.getItem('auth_expired')).toBeNull()
+      } finally {
+        Object.defineProperty(window, 'location', {
+          value: originalLocation,
+          writable: true,
+          configurable: true,
+        })
+      }
+    })
   })
 
   // --- 网络错误 ---

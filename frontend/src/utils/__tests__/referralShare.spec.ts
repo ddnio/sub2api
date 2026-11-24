@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  PAYMENT_SUCCESS_REFERRAL_DISMISSED_KEY,
   buildCodexReferralLink,
   buildReferralShareText,
   dismissPaymentSuccessReferral,
   isPaymentSuccessReferralDismissed,
+  paymentSuccessReferralDismissKey,
   resetPaymentSuccessReferralForTest
 } from '@/utils/referralShare'
 
@@ -32,10 +32,13 @@ describe('referralShare utils', () => {
     expect(en).not.toMatch(/lifetime|uncapped|rebate|%|ddnio\.com/i)
   })
 
-  it('persists one-time dismissal for the payment success referral prompt', () => {
-    expect(isPaymentSuccessReferralDismissed()).toBe(false)
-    dismissPaymentSuccessReferral()
-    expect(localStorage.getItem(PAYMENT_SUCCESS_REFERRAL_DISMISSED_KEY)).toBe('1')
-    expect(isPaymentSuccessReferralDismissed()).toBe(true)
+  it('persists one-time dismissal isolated per user ID', () => {
+    expect(isPaymentSuccessReferralDismissed(101)).toBe(false)
+    expect(isPaymentSuccessReferralDismissed(202)).toBe(false)
+    dismissPaymentSuccessReferral(101)
+    expect(localStorage.getItem(paymentSuccessReferralDismissKey(101))).toBe('1')
+    expect(isPaymentSuccessReferralDismissed(101)).toBe(true)
+    expect(isPaymentSuccessReferralDismissed(202)).toBe(false)
+    expect(isPaymentSuccessReferralDismissed(null)).toBe(false)
   })
 })
