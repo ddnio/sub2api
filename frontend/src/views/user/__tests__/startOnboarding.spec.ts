@@ -2,15 +2,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Group, User } from '@/types'
 import {
+  DEFAULT_START_USE_CASE,
+  START_USE_CASES,
   baseUrlFor,
   buildTestRequest,
+  dismissFirstCallBanner,
   extractError,
   extractReply,
+  firstCallBannerDismissKey,
   markStartDone,
   pickGroupForUseCase,
   rememberUseCase,
   rememberedUseCase,
+  resetFirstCallBannerMemoryForTest,
   shouldOfferStart,
+  shouldShowFirstCallBanner,
   startDoneKey,
   useCaseFromQuery
 } from '../startOnboarding'
@@ -182,5 +188,51 @@ describe('rememberUseCase', () => {
     expect(rememberedUseCase()).toBe('claude')
     rememberUseCase(undefined)
     expect(rememberedUseCase()).toBe('claude')
+  })
+})
+
+describe('default start use case and order', () => {
+  it('defaults to codex and lists codex first', () => {
+    expect(DEFAULT_START_USE_CASE).toBe('codex')
+    expect(START_USE_CASES).toEqual(['codex', 'claude', 'client', 'code'])
+  })
+})
+
+describe('shouldShowFirstCallBanner', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    resetFirstCallBannerMemoryForTest()
+  })
+
+  it('shows for a user registered within 7 days who has a key and zero requests', () => {
+    expect(shouldShowFirstCallBanner(user(), { total_api_keys: 1, total_requests: 0 }, NOW)).toBe(true)
+  })
+
+  it('hides when registered more than 7 days ago', () => {
+    expect(
+      shouldShowFirstCallBanner(
+        user({ created_at: '2026-11-15T10:00:00Z' }),
+        { total_api_keys: 1, total_requests: 0 },
+        NOW
+      )
+    ).toBe(false)
+  })
+
+  it('hides when the user has no key or already made a call', () => {
+    expect(shouldShowFirstCallBanner(user(), { total_api_keys: 0, total_requests: 0 }, NOW)).toBe(false)
+    expect(shouldShowFirstCallBanner(user(), { total_api_keys: 2, total_requests: 1 }, NOW)).toBe(false)
+  })
+
+  it('hides after dismissal only for that user', () => {
+    dismissFirstCallBanner(42)
+    expect(localStorage.getItem(firstCallBannerDismissKey(42))).toBe('1')
+    expect(shouldShowFirstCallBanner(user({ id: 42 }), { total_api_keys: 1, total_requests: 0 }, NOW)).toBe(false)
+    expect(shouldShowFirstCallBanner(user({ id: 43 }), { total_api_keys: 1, total_requests: 0 }, NOW)).toBe(true)
+  })
+
+  it('hides for admins or missing data', () => {
+    expect(shouldShowFirstCallBanner(user({ role: 'admin' }), { total_api_keys: 1, total_requests: 0 }, NOW)).toBe(false)
+    expect(shouldShowFirstCallBanner(user(), null, NOW)).toBe(false)
+    expect(shouldShowFirstCallBanner(null, { total_api_keys: 1, total_requests: 0 }, NOW)).toBe(false)
   })
 })

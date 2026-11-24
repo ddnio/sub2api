@@ -90,13 +90,13 @@ const apiBase = computed(() =>
 )
 
 const groupRows = computed(() => [
-  { id: 'anthropic', tools: t('docs.groups.anthropicTools'), group: t('docs.groups.anthropicName'), base: apiBase.value },
-  { id: 'openai', tools: t('docs.groups.openaiTools'), group: t('docs.groups.openaiName'), base: `${apiBase.value}/v1` }
+  { id: 'openai', tools: t('docs.groups.openaiTools'), group: t('docs.groups.openaiName'), base: `${apiBase.value}/v1` },
+  { id: 'anthropic', tools: t('docs.groups.anthropicTools'), group: t('docs.groups.anthropicName'), base: apiBase.value }
 ])
 
 const tools = computed(() => [
-  { section: 'claude-code' as DocsSection, title: 'Claude Code', desc: t('docs.quickStart.toolCards.claudeCode') },
   { section: 'codex-cli' as DocsSection, title: 'Codex CLI', desc: t('docs.quickStart.toolCards.codexCli') },
+  { section: 'claude-code' as DocsSection, title: 'Claude Code', desc: t('docs.quickStart.toolCards.claudeCode') },
   { section: 'clients' as DocsSection, title: t('docs.nav.clients'), desc: t('docs.quickStart.toolCards.clients') },
   { section: 'opencode' as DocsSection, title: 'OpenCode', desc: t('docs.quickStart.toolCards.opencode') },
   { section: 'api-usage' as DocsSection, title: t('docs.nav.apiUsage'), desc: t('docs.quickStart.toolCards.apiUsage') },

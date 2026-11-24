@@ -2,9 +2,10 @@
 // 单独成文件，方便单测，也让上游文件的改动只剩路由里的几行。
 import type { Group, User } from '@/types'
 
-export type StartUseCase = 'claude' | 'codex' | 'client' | 'code'
+export type StartUseCase = 'codex' | 'claude' | 'client' | 'code'
 
-export const START_USE_CASES: StartUseCase[] = ['claude', 'codex', 'client', 'code']
+export const START_USE_CASES: StartUseCase[] = ['codex', 'claude', 'client', 'code']
+export const DEFAULT_START_USE_CASE: StartUseCase = 'codex'
 
 // 注册多少天内、还没看过引导的用户，去控制台时先带到 /start
 export const START_OFFER_DAYS = 7
@@ -60,6 +61,56 @@ export function shouldOfferStart(user: User | null | undefined, now: number = Da
   if (Number.isNaN(created)) return false
   if (now - created > START_OFFER_DAYS * 24 * 3600 * 1000) return false
   return !isStartDone(user.id)
+}
+
+export function firstCallBannerDismissKey(userId: number): string {
+  return `nf_first_call_banner_dismissed_${userId}`
+}
+
+const dismissedBannerInMemory = new Set<number>()
+
+export function dismissFirstCallBanner(userId: number | undefined | null): void {
+  if (!userId) return
+  dismissedBannerInMemory.add(userId)
+  try {
+    safeStorage()?.setItem(firstCallBannerDismissKey(userId), '1')
+  } catch {
+    // 存储不可写时回退到内存标记
+  }
+}
+
+export function isFirstCallBannerDismissed(userId: number): boolean {
+  if (dismissedBannerInMemory.has(userId)) return true
+  try {
+    const storage = safeStorage()
+    return storage?.getItem(firstCallBannerDismissKey(userId)) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function resetFirstCallBannerMemoryForTest(): void {
+  dismissedBannerInMemory.clear()
+}
+
+export interface FirstCallBannerStats {
+  total_api_keys?: number
+  total_requests?: number
+}
+
+// 控制台顶部轻提醒：注册 7 天内、有 Key、从没成功调用过、且未关闭横幅时显示
+export function shouldShowFirstCallBanner(
+  user: User | null | undefined,
+  stats: FirstCallBannerStats | null | undefined,
+  now: number = Date.now()
+): boolean {
+  if (!user || user.role === 'admin' || !user.id || !user.created_at || !stats) return false
+  const created = Date.parse(user.created_at)
+  if (Number.isNaN(created)) return false
+  if (now - created > START_OFFER_DAYS * 24 * 3600 * 1000) return false
+  if ((stats.total_api_keys ?? 0) <= 0) return false
+  if ((stats.total_requests ?? 0) > 0) return false
+  return !isFirstCallBannerDismissed(user.id)
 }
 
 export function useCaseFromQuery(value: unknown): StartUseCase | null {

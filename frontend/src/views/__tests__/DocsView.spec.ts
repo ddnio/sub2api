@@ -160,10 +160,11 @@ describe('DocsView', () => {
     const { wrapper } = await createWrapper('/docs#codex-cli')
 
     expect(wrapper.text()).toContain('codex --version')
-    expect(wrapper.text()).toContain('auth.json')
+    expect(wrapper.text()).toContain('config.toml')
     expect(wrapper.text()).toContain('常见问题')
-    expect(wrapper.text()).toContain('model_provider = "sub2api"')
-    expect(wrapper.text()).toContain('https://relay.sub2api.test')
+    expect(wrapper.text()).toContain('model_provider = "OpenAI"')
+    expect(wrapper.text()).toContain('experimental_bearer_token')
+    expect(wrapper.text()).toContain('https://relay.sub2api.test/v1')
   })
 
   it('keeps rendering the same guide for legacy api mode links', async () => {
@@ -275,5 +276,22 @@ describe('DocsView', () => {
     expect(meta.getAttribute('content')).toBe('site description')
     expect(document.head.querySelectorAll('meta[name="description"]')).toHaveLength(1)
     meta.remove()
+  })
+
+  it('lists Codex CLI before Claude Code in nav and quick start, and shows quick jump card on codex docs', async () => {
+    const { wrapper } = await createWrapper('/docs')
+    const navHrefs = wrapper.findAll('nav a').map(a => a.attributes('href'))
+    expect(navHrefs.indexOf('/docs/codex-cli')).toBeGreaterThan(-1)
+    expect(navHrefs.indexOf('/docs/codex-cli')).toBeLessThan(navHrefs.indexOf('/docs/claude-code'))
+
+    const quickStartLinks = wrapper.findAll('main a').map(a => a.attributes('href'))
+    expect(quickStartLinks.indexOf('/docs/codex-cli')).toBeGreaterThan(-1)
+    expect(quickStartLinks.indexOf('/docs/codex-cli')).toBeLessThan(quickStartLinks.indexOf('/docs/claude-code'))
+
+    const { wrapper: codexWrapper } = await createWrapper('/docs/codex-cli')
+    const card = codexWrapper.find('[data-testid="codex-quick-jump"]')
+    expect(card.exists()).toBe(true)
+    expect(card.text()).toContain('第 3 步')
+    expect(card.text()).toContain('CC Switch')
   })
 })
