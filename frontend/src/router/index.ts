@@ -13,7 +13,7 @@ import { useRoutePrefetch } from '@/composables/useRoutePrefetch'
 import { getSetupStatus } from '@/api/setup'
 import { resolveCompletedSetupRedirectPath } from './setupRedirect'
 import { resolveRouteDocumentTitle } from './title'
-import { rememberUseCase, shouldOfferStart } from '@/views/user/startOnboarding'
+import { rememberUseCase, shouldOfferStart, shouldRedirectOAuthStartToDashboard } from '@/views/user/startOnboarding'
 import { DOCS_ROUTE_NAME, DOCS_SECTION_ROUTE_PATH, redirectLegacyDocsHash } from './docsSections'
 
 /**
@@ -1075,6 +1075,15 @@ router.beforeEach(async (to, _from, next) => {
       next('/login')
       return
     }
+  }
+
+  // NanaFox fork: 注册页 OAuth 默认带 /start?use=...&from=oauth，老账号（不满足 7 天新手引导条件）改回 /dashboard
+  if (
+    authStore.isAuthenticated &&
+    shouldRedirectOAuthStartToDashboard(to.path, to.query as Record<string, unknown>, authStore.user)
+  ) {
+    next('/dashboard')
+    return
   }
 
   // NanaFox fork: 注册 7 天内、本浏览器没看过引导的用户，去控制台时先带到 /start

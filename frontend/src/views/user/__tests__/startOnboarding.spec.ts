@@ -1,16 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { Group, User } from '@/types'
+import type { ApiKey, Group, User } from '@/types'
 import {
+  DEFAULT_START_USE_CASE,
+  START_USE_CASES,
   baseUrlFor,
   buildTestRequest,
+  dismissFirstCallBanner,
   extractError,
   extractReply,
+  firstCallBannerDismissKey,
   markStartDone,
+  pickExistingKeyForUseCase,
   pickGroupForUseCase,
   rememberUseCase,
   rememberedUseCase,
+  resetFirstCallBannerMemoryForTest,
   shouldOfferStart,
+  shouldRedirectOAuthStartToDashboard,
+  shouldShowFirstCallBanner,
   startDoneKey,
   useCaseFromQuery
 } from '../startOnboarding'
@@ -182,5 +190,148 @@ describe('rememberUseCase', () => {
     expect(rememberedUseCase()).toBe('claude')
     rememberUseCase(undefined)
     expect(rememberedUseCase()).toBe('claude')
+  })
+})
+
+describe('default start use case and order', () => {
+  it('defaults to codex and lists codex first', () => {
+    expect(DEFAULT_START_USE_CASE).toBe('codex')
+    expect(START_USE_CASES).toEqual(['codex', 'claude', 'client', 'code'])
+  })
+})
+
+describe('shouldShowFirstCallBanner', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    resetFirstCallBannerMemoryForTest()
+  })
+
+  it('shows for a user registered within 7 days who has a key and zero requests', () => {
+    expect(shouldShowFirstCallBanner(user(), { total_api_keys: 1, total_requests: 0 }, NOW)).toBe(true)
+  })
+
+  it('hides when registered more than 7 days ago', () => {
+    expect(
+      shouldShowFirstCallBanner(
+        user({ created_at: '2026-11-15T10:00:00Z' }),
+        { total_api_keys: 1, total_requests: 0 },
+        NOW
+      )
+    ).toBe(false)
+  })
+
+  it('hides when the user has no key or already made a call', () => {
+    expect(shouldShowFirstCallBanner(user(), { total_api_keys: 0, total_requests: 0 }, NOW)).toBe(false)
+    expect(shouldShowFirstCallBanner(user(), { total_api_keys: 2, total_requests: 1 }, NOW)).toBe(false)
+  })
+
+  it('hides after dismissal only for that user', () => {
+    dismissFirstCallBanner(42)
+    expect(localStorage.getItem(firstCallBannerDismissKey(42))).toBe('1')
+    expect(shouldShowFirstCallBanner(user({ id: 42 }), { total_api_keys: 1, total_requests: 0 }, NOW)).toBe(false)
+    expect(shouldShowFirstCallBanner(user({ id: 43 }), { total_api_keys: 1, total_requests: 0 }, NOW)).toBe(true)
+  })
+
+  it('hides for admins or missing data', () => {
+    expect(shouldShowFirstCallBanner(user({ role: 'admin' }), { total_api_keys: 1, total_requests: 0 }, NOW)).toBe(false)
+    expect(shouldShowFirstCallBanner(user(), null, NOW)).toBe(false)
+    expect(shouldShowFirstCallBanner(null, { total_api_keys: 1, total_requests: 0 }, NOW)).toBe(false)
+  })
+
+  it('hides when only disabled keys exist (active_api_keys === 0)', () => {
+    expect(
+      shouldShowFirstCallBanner(user(), { total_api_keys: 2, active_api_keys: 0, total_requests: 0 }, NOW)
+    ).toBe(false)
+    expect(
+      shouldShowFirstCallBanner(user(), { total_api_keys: 2, active_api_keys: 1, total_requests: 0 }, NOW)
+    ).toBe(true)
+  })
+
+  it('hides for subscribed or topped-up users (including when defaultSignupBalance is 0)', () => {
+    expect(
+      shouldShowFirstCallBanner(
+        user({ subscriptions: [{ id: 1, status: 'active' } as any] }),
+        { total_api_keys: 1, total_requests: 0 },
+        NOW
+      )
+    ).toBe(false)
+    expect(
+      shouldShowFirstCallBanner(
+        user({ balance: 25 }),
+        { total_api_keys: 1, total_requests: 0 },
+        { now: NOW, defaultSignupBalance: 5 }
+      )
+    ).toBe(false)
+    expect(
+      shouldShowFirstCallBanner(
+        user({ balance: 10 }),
+        { total_api_keys: 1, total_requests: 0 },
+        { now: NOW, defaultSignupBalance: 0 }
+      )
+    ).toBe(false)
+    expect(
+      shouldShowFirstCallBanner(
+        user({ balance: 5 }),
+        { total_api_keys: 1, total_requests: 0 },
+        { now: NOW, defaultSignupBalance: 5 }
+      )
+    ).toBe(true)
+  })
+})
+
+describe('pickExistingKeyForUseCase', () => {
+  const openaiGroup = group({ id: 3, name: 'OpenAI GPT', platform: 'openai' })
+  const claudeGroup = group({ id: 4, name: 'ClaudeCode专用', platform: 'anthropic' })
+
+  it('picks only an active, unexpired, non-exhausted key matching the selected platform', () => {
+    const keys = [
+      { id: 1, key: 'sk-inactive', status: 'inactive', group: openaiGroup },
+      { id: 2, key: 'sk-expired', status: 'active', expires_at: '2026-11-20T00:00:00Z', group: openaiGroup },
+      { id: 3, key: 'sk-exhausted', status: 'active', quota: 10, quota_used: 10, group: openaiGroup },
+      { id: 4, key: 'sk-claude', status: 'active', group: claudeGroup },
+      { id: 5, key: 'sk-openai-ok', status: 'active', quota: 10, quota_used: 2, group: openaiGroup }
+    ] as ApiKey[]
+    expect(pickExistingKeyForUseCase(keys, 'codex', NOW)?.key).toBe('sk-openai-ok')
+    expect(pickExistingKeyForUseCase(keys, 'claude', NOW)?.key).toBe('sk-claude')
+  })
+
+  it('returns null when only wrong-platform or inactive keys exist', () => {
+    const keys = [
+      { id: 1, key: 'sk-inactive', status: 'inactive', group: openaiGroup },
+      { id: 2, key: 'sk-claude', status: 'active', group: claudeGroup }
+    ] as ApiKey[]
+    expect(pickExistingKeyForUseCase(keys, 'codex')).toBeNull()
+  })
+})
+
+describe('shouldRedirectOAuthStartToDashboard', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('keeps fresh OAuth users on /start and sends older or done accounts to /dashboard', () => {
+    expect(shouldRedirectOAuthStartToDashboard('/start', { use: 'codex', from: 'oauth' }, user({ id: 99 }), NOW)).toBe(false)
+    expect(
+      shouldRedirectOAuthStartToDashboard(
+        '/start',
+        { use: 'codex', from: 'oauth' },
+        user({ id: 100, created_at: '2026-11-01T00:00:00Z' }),
+        NOW
+      )
+    ).toBe(true)
+    expect(
+      shouldRedirectOAuthStartToDashboard(
+        '/start',
+        { use: 'codex', from: 'oauth', step: 'config' },
+        user({ id: 100, created_at: '2026-11-01T00:00:00Z' }),
+        NOW
+      )
+    ).toBe(false)
+    expect(
+      shouldRedirectOAuthStartToDashboard(
+        '/start',
+        { use: 'codex' },
+        user({ id: 100, created_at: '2026-11-01T00:00:00Z' }),
+        NOW
+      )
+    ).toBe(false)
   })
 })

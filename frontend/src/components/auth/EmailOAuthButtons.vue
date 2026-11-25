@@ -52,8 +52,10 @@ const props = withDefaults(defineProps<{
   // NanaFox fork: 注册/登录页顶部的 GitHub 一键按钮用自定义文案和醒目样式
   label?: string
   prominent?: boolean
+  defaultRedirect?: string
 }>(), {
-  showDivider: true
+  showDivider: true,
+  defaultRedirect: '/dashboard'
 })
 const emit = defineEmits<{
   start: [request: OAuthLoginStart]
@@ -85,7 +87,7 @@ function providerLabel(provider: EmailOAuthProvider): string {
 }
 
 function startLogin(provider: EmailOAuthProvider): void {
-  const redirectTo = (route.query.redirect as string) || '/dashboard'
+  const redirectTo = (route.query.redirect as string) || props.defaultRedirect || '/dashboard'
   const affiliateCode = resolveAffiliateReferralCode(props.affCode, route.query.aff, route.query.aff_code)
   storeOAuthAffiliateCode(affiliateCode)
   window.sessionStorage.setItem(EMAIL_OAUTH_PENDING_PROVIDER_KEY, provider)

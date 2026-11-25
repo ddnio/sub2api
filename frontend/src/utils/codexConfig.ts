@@ -1,3 +1,5 @@
+import { buildOpenAICodexConfigToml, type CodexAuthMode } from '@/utils/codexAuthConfig'
+
 export type CodexCliOS = 'unix' | 'windows'
 
 export interface CodexCliFile {
@@ -11,69 +13,36 @@ interface CreateCodexCliFilesOptions {
   os: CodexCliOS
   providerName?: string
   websocket?: boolean
-  authMode?: 'legacy' | 'api-key'
-}
-
-function normalizeBaseUrl(baseUrl: string): string {
-  // Strip /v1 suffix and trailing slashes — Codex CLI handles the path internally
-  const trimmed = baseUrl.trim().replace(/\/v1\/?$/, '').replace(/\/+$/, '')
-  return trimmed || window.location.origin.replace(/\/+$/, '')
-}
-
-function toProviderKey(name: string): string {
-  return (
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '') || 'nanafox'
-  )
+  authMode?: CodexAuthMode
+  model?: string
 }
 
 export function createCodexCliFiles(options: CreateCodexCliFilesOptions): CodexCliFile[] {
-  const normalizedBaseUrl = normalizeBaseUrl(options.baseUrl)
+  const baseUrl = options.baseUrl.trim() || window.location.origin
   const configDir = options.os === 'windows' ? '%userprofile%\\.codex' : '~/.codex'
-  const providerName = options.providerName?.trim() || 'NanaFox API'
-  const providerKey = toProviderKey(providerName)
-  const websocketProviderExtension = options.websocket ? '\nsupports_websockets = true' : ''
-  const websocketFeatureExtension = options.websocket ? 'responses_websockets_v2 = true\n' : ''
-  const authConfig = options.authMode === 'api-key'
-    ? 'requires_openai_auth = false\nhttp_headers = { "x-openai-actor-authorization" = "local-image-extension" }'
-    : 'requires_openai_auth = true'
-  const standardConfig = `model_provider = "${providerKey}"
-model = "gpt-6.1-sol"
-review_model = "gpt-6.1-sol"
-model_reasoning_effort = "xhigh"
-network_access = "enabled"
-disable_response_storage = true
-windows_wsl_setup_acknowledged = true
-model_verbosity = "high"
+  const authMode: CodexAuthMode = options.authMode ?? 'api-key'
 
-[model_providers.${providerKey}]
-name = "${providerName}"
-base_url = "${normalizedBaseUrl}"
-wire_api = "responses"
-${authConfig}${websocketProviderExtension}
+  const configContent = buildOpenAICodexConfigToml({
+    baseUrl,
+    apiKey: options.apiKey,
+    authMode,
+    model: options.model,
+    websocket: options.websocket
+  })
 
-[features]
-${websocketFeatureExtension}goals = true`
-  const windowsConfig = options.os === 'windows'
-    ? '\n\n[windows]\nsandbox = "elevated"'
-    : ''
-
-  const configContent = `${standardConfig}${windowsConfig}`
-
-  const authContent = `{
-  "OPENAI_API_KEY": "${options.apiKey}"
-}`
-
-  return [
+  const files: CodexCliFile[] = [
     {
       path: `${configDir}/config.toml`,
       content: configContent
-    },
-    {
-      path: `${configDir}/auth.json`,
-      content: authContent
     }
   ]
+
+  if (authMode === 'legacy') {
+    files.push({
+      path: `${configDir}/auth.json`,
+      content: JSON.stringify({ OPENAI_API_KEY: options.apiKey }, null, 2)
+    })
+  }
+
+  return files
 }

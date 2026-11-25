@@ -1,10 +1,11 @@
 // NanaFox fork: 注册后 /start 引导页的纯逻辑（选分组、拼测试请求、“已看过”标记）。
 // 单独成文件，方便单测，也让上游文件的改动只剩路由里的几行。
-import type { Group, User } from '@/types'
+import type { ApiKey, Group, User } from '@/types'
 
-export type StartUseCase = 'claude' | 'codex' | 'client' | 'code'
+export type StartUseCase = 'codex' | 'claude' | 'client' | 'code'
 
-export const START_USE_CASES: StartUseCase[] = ['claude', 'codex', 'client', 'code']
+export const START_USE_CASES: StartUseCase[] = ['codex', 'claude', 'client', 'code']
+export const DEFAULT_START_USE_CASE: StartUseCase = 'codex'
 
 // 注册多少天内、还没看过引导的用户，去控制台时先带到 /start
 export const START_OFFER_DAYS = 7
@@ -60,6 +61,121 @@ export function shouldOfferStart(user: User | null | undefined, now: number = Da
   if (Number.isNaN(created)) return false
   if (now - created > START_OFFER_DAYS * 24 * 3600 * 1000) return false
   return !isStartDone(user.id)
+}
+
+// 注册页 OAuth 回调带 /start?use=...&from=oauth：老账号（不满足新手引导条件）改回 /dashboard
+export function shouldRedirectOAuthStartToDashboard(
+  path: string,
+  query: Record<string, unknown> | undefined,
+  user: User | null | undefined,
+  now: number = Date.now()
+): boolean {
+  if (path !== '/start') return false
+  if (query?.from !== 'oauth' || query?.step === 'config') return false
+  return !shouldOfferStart(user, now)
+}
+
+export function firstCallBannerDismissKey(userId: number): string {
+  return `nf_first_call_banner_dismissed_${userId}`
+}
+
+const dismissedBannerInMemory = new Set<number>()
+
+export function dismissFirstCallBanner(userId: number | undefined | null): void {
+  if (!userId) return
+  dismissedBannerInMemory.add(userId)
+  try {
+    safeStorage()?.setItem(firstCallBannerDismissKey(userId), '1')
+  } catch {
+    // 存储不可写时回退到内存标记
+  }
+}
+
+export function isFirstCallBannerDismissed(userId: number): boolean {
+  if (dismissedBannerInMemory.has(userId)) return true
+  try {
+    const storage = safeStorage()
+    return storage?.getItem(firstCallBannerDismissKey(userId)) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function resetFirstCallBannerMemoryForTest(): void {
+  dismissedBannerInMemory.clear()
+}
+
+export interface FirstCallBannerStats {
+  total_api_keys?: number
+  active_api_keys?: number
+  total_requests?: number
+}
+
+export interface FirstCallBannerOptions {
+  now?: number
+  defaultSignupBalance?: number | null
+}
+
+function hasActiveSubscription(user: User): boolean {
+  if (!Array.isArray(user.subscriptions) || user.subscriptions.length === 0) return false
+  return user.subscriptions.some((s) => !s.status || s.status === 'active')
+}
+
+// 控制台顶部轻提醒：注册 7 天内、未订阅/未充值、有有效 Key、从没成功调用过、且未关闭横幅时显示
+export function shouldShowFirstCallBanner(
+  user: User | null | undefined,
+  stats: FirstCallBannerStats | null | undefined,
+  nowOrOptions: number | FirstCallBannerOptions = Date.now()
+): boolean {
+  const options: FirstCallBannerOptions =
+    typeof nowOrOptions === 'number' ? { now: nowOrOptions } : nowOrOptions
+  const now = options.now ?? Date.now()
+  if (!user || user.role === 'admin' || !user.id || !user.created_at || !stats) return false
+  const created = Date.parse(user.created_at)
+  if (Number.isNaN(created)) return false
+  if (now - created > START_OFFER_DAYS * 24 * 3600 * 1000) return false
+  if (hasActiveSubscription(user)) return false
+  if (
+    typeof options.defaultSignupBalance === 'number' &&
+    options.defaultSignupBalance >= 0 &&
+    typeof user.balance === 'number' &&
+    user.balance > options.defaultSignupBalance + 1e-6
+  ) {
+    return false
+  }
+  const usableKeys = stats.active_api_keys ?? stats.total_api_keys ?? 0
+  if (usableKeys <= 0) return false
+  if ((stats.total_requests ?? 0) > 0) return false
+  return !isFirstCallBannerDismissed(user.id)
+}
+
+function isApiKeyUsable(key: ApiKey, now: number): boolean {
+  if (key.status !== 'active') return false
+  if (key.expires_at) {
+    const expiresAt = Date.parse(key.expires_at)
+    if (!Number.isNaN(expiresAt) && expiresAt <= now) return false
+  }
+  if (typeof key.quota === 'number' && key.quota > 0 && (key.quota_used ?? 0) >= key.quota) {
+    return false
+  }
+  return true
+}
+
+// 横幅/文档带 ?step=config 回到 /start 时，按用途找一把有效（active、未过期、未耗尽）且平台匹配的 Key；找不到就返回 null 停在建 Key 步骤
+export function pickExistingKeyForUseCase(
+  keys: ApiKey[],
+  useCase: StartUseCase,
+  now: number = Date.now()
+): ApiKey | null {
+  const platform = platformForUseCase(useCase)
+  return (
+    keys.find(
+      (k) =>
+        isApiKeyUsable(k, now) &&
+        k.group?.platform === platform &&
+        (useCase === 'claude' || !k.group?.claude_code_only)
+    ) ?? null
+  )
 }
 
 export function useCaseFromQuery(value: unknown): StartUseCase | null {

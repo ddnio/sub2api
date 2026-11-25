@@ -286,7 +286,12 @@ import Icon from '@/components/icons/Icon.vue'
 import { useClipboard } from '@/composables/useClipboard'
 import { buildCodexModelCatalogUrl, fetchCodexModelsManifest } from '@/api/codex'
 import type { GroupPlatform } from '@/types'
-import { buildCodexApiKeyAuthConfig } from '@/utils/codexAuthConfig'
+import {
+  DEFAULT_CODEX_MODEL,
+  buildCodexApiKeyAuthConfig,
+  buildOpenAICodexConfigToml,
+  escapeTomlBasicString
+} from '@/utils/codexAuthConfig'
 import {
   findCodexCatalogModel,
   formatCodexReasoningEffortTomlLine,
@@ -1049,26 +1054,18 @@ function generateOpenAIFiles(baseUrl: string, apiKey: string): FileConfig[] {
   const isWindows = activeTab.value === 'windows'
   const configDir = isWindows ? '%userprofile%\\.codex' : '~/.codex'
 
-  const model = selectCodexCatalogModel('gpt-6.1-sol')
+  const model = selectCodexCatalogModel(DEFAULT_CODEX_MODEL)
   const reasoningEffortLine = codexReasoningEffortTomlLine(model)
 
-  // config.toml content
-  const configContent = `model_provider = "OpenAI"
-model = "${model}"
-review_model = "${model}"
-web_search = "live"
-${reasoningEffortLine}disable_response_storage = true
-${codexLocalCatalogToml.value}network_access = "enabled"
-windows_wsl_setup_acknowledged = true
-
-[model_providers.OpenAI]
-name = "OpenAI"
-base_url = "${baseUrl}"
-${codexModelCatalogMode.value === 'remote' ? `model_catalog_url = "${escapeTomlBasicString(buildCodexModelCatalogUrl(baseUrl))}"\n` : ''}wire_api = "responses"
-${generateCodexProviderAuthConfig(apiKey)}
-
-[features]
-${codexModelCatalogMode.value === 'remote' ? 'api_key_model_discovery = true\n' : ''}${codexAuthMode.value === 'api-key' ? 'image_generation = true\n' : ''}goals = true`
+  const configContent = buildOpenAICodexConfigToml({
+    baseUrl,
+    apiKey,
+    authMode: codexAuthMode.value,
+    model,
+    reasoningEffortLine,
+    catalogMode: codexModelCatalogMode.value,
+    localCatalogToml: codexLocalCatalogToml.value
+  })
 
   return buildOpenAICodexFileConfigs(configDir, configContent, apiKey)
 }
@@ -1107,10 +1104,6 @@ function buildOpenAICodexFileConfigs(
 function joinConfigPath(dir: string, file: string, windows: boolean): string {
   if (!windows) return `${dir}/${file}`
   return `${dir}\\${file}`
-}
-
-function escapeTomlBasicString(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 }
 
 function generateGrokFiles(baseUrl: string, apiKey: string): FileConfig[] {
@@ -1396,7 +1389,7 @@ supports_websockets = false${codexModelCatalogMode.value === 'remote' ? '\n\n[fe
 function generateOpenAIWsFiles(baseUrl: string, apiKey: string): FileConfig[] {
   const isWindows = activeTab.value === 'windows'
   const configDir = isWindows ? '%userprofile%\\.codex' : '~/.codex'
-  const model = selectCodexCatalogModel('gpt-6.1-sol')
+  const model = selectCodexCatalogModel(DEFAULT_CODEX_MODEL)
   const reasoningEffortLine = codexReasoningEffortTomlLine(model)
 
   // config.toml content with WebSocket v2

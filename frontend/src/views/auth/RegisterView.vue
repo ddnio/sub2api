@@ -43,6 +43,7 @@
           :github-enabled="true"
           :google-enabled="false"
           :show-divider="false"
+          :default-redirect="oauthDefaultRedirect"
           :label="signupBonusText ? t('githubQuick.registerWithBonus', { amount: signupBonusText }) : t('githubQuick.register')"
           prominent
           @start="handleOAuthStart"
@@ -363,6 +364,7 @@
           :github-enabled="githubOAuthEnabled && !showGithubTop"
           :google-enabled="googleOAuthEnabled"
           :show-divider="false"
+          :default-redirect="oauthDefaultRedirect"
           @start="handleOAuthStart"
         />
 
@@ -442,6 +444,7 @@ import {
   resolveAffiliateReferralCode
 } from '@/utils/oauthAffiliate'
 import type { LoginAgreementDocument } from '@/types'
+import { DEFAULT_START_USE_CASE, rememberedUseCase, useCaseFromQuery } from '@/views/user/startOnboarding'
 
 const { t, locale } = useI18n()
 const LOGIN_AGREEMENT_STORAGE_KEY = 'sub2api_login_agreement_consent'
@@ -576,6 +579,13 @@ const validationToastMessage = computed(() =>
   errors.turnstile ||
   ''
 )
+
+// NanaFox fork: 注册页的 GitHub/OAuth 按钮默认跳 /start（保留 ?use=codex 等用途参数）；
+// 带 from=oauth 供路由守卫区分：仅新注册账号进 /start，老账号回 /dashboard。
+const oauthDefaultRedirect = computed(() => {
+  const useCase = useCaseFromQuery(route.query.use) ?? rememberedUseCase() ?? DEFAULT_START_USE_CASE
+  return `/start?use=${useCase}&from=oauth`
+})
 
 // NanaFox fork: 开放注册且开了 GitHub 登录时，GitHub 按钮挪到表单上面，底部不再重复
 const showGithubTop = computed(
@@ -923,8 +933,13 @@ async function acquireActionProof(): Promise<boolean> {
 async function handleOAuthStart(request: OAuthLoginStart): Promise<void> {
   if (registrationActionDisabled.value) return
 
+  const resolvedRequest: OAuthLoginStart =
+    !route.query.redirect && (!request.params.redirect || request.params.redirect === '/dashboard')
+      ? { ...request, params: { ...request.params, redirect: oauthDefaultRedirect.value } }
+      : request
+
   if (!actionCaptchaEnabled.value) {
-    window.location.href = buildOAuthLoginStartURL(request)
+    window.location.href = buildOAuthLoginStartURL(resolvedRequest)
     return
   }
 
@@ -934,7 +949,7 @@ async function handleOAuthStart(request: OAuthLoginStart): Promise<void> {
     if (!proof) return
 
     const result = await startOAuthLogin(
-      request,
+      resolvedRequest,
       tencentCaptchaEnabled.value
         ? {
             tencent_captcha_ticket: proof.token,

@@ -9,7 +9,12 @@
             账户里已有 ${{ (user?.balance ?? 0).toFixed(2) }} 额度。建 key → 复制配置 → 发一句话试试。
           </p>
         </div>
-        <button type="button" class="btn btn-secondary shrink-0" data-testid="start-skip" @click="skip">
+        <button
+          type="button"
+          class="shrink-0 text-sm text-gray-500 underline-offset-4 transition-colors hover:text-gray-700 hover:underline dark:text-dark-400 dark:hover:text-gray-200"
+          data-testid="start-skip"
+          @click="skip"
+        >
           跳过，去控制台
         </button>
       </div>
@@ -77,40 +82,131 @@
           </div>
         </section>
 
-        <!-- 第 3 步：复制配置（复用「使用密钥」和「导入到 CCS」） -->
-        <section class="card p-5" :class="{ 'opacity-50': !createdKey }">
+        <!-- 第 3 步：复制配置（Codex 直接内联 CC Switch + 一行写入命令；其他用途复用「使用密钥」弹窗） -->
+        <section id="start-step-config" class="card p-5" :class="{ 'opacity-50': !createdKey }">
           <h2 class="mb-3 text-base font-semibold text-gray-900 dark:text-white">3. 复制配置</h2>
-          <p class="mb-2 text-sm text-gray-600 dark:text-dark-300">
-            接口地址（{{ platform === 'anthropic' ? 'Claude Code 不加 /v1' : 'OpenAI 兼容写法要加 /v1' }}）：
-          </p>
-          <div class="mb-4 flex items-center gap-2">
-            <code
-              class="flex-1 break-all rounded-lg bg-gray-100 px-3 py-2 font-mono text-sm text-gray-900 dark:bg-dark-800 dark:text-gray-100"
-              data-testid="start-base-url"
-            >{{ baseUrl }}</code>
-            <button type="button" class="btn btn-secondary" @click="copy(baseUrl)">复制</button>
-          </div>
-          <div class="flex flex-wrap gap-3">
-            <button
-              type="button"
-              class="btn btn-primary"
-              data-testid="start-use-key"
-              :disabled="!createdKey"
-              @click="showUseKeyModal = true"
-            >
-              使用密钥（各客户端填法，key 已填好）
-            </button>
-            <button
-              v-if="!publicSettings?.hide_ccs_import_button"
-              type="button"
-              class="btn btn-secondary"
-              data-testid="start-ccs"
-              :disabled="!createdKey"
-              @click="importToCcswitch"
-            >
-              导入到 CCS
-            </button>
-          </div>
+
+          <template v-if="useCase === 'codex'">
+            <div class="space-y-4" data-testid="start-codex-setup">
+              <div class="flex flex-wrap items-center gap-3">
+                <button
+                  v-if="!publicSettings?.hide_ccs_import_button"
+                  type="button"
+                  class="btn btn-primary"
+                  data-testid="start-ccs"
+                  :disabled="!createdKey"
+                  @click="importToCcswitch"
+                >
+                  导入到 CC Switch
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  data-testid="start-use-key"
+                  :disabled="!createdKey"
+                  @click="showUseKeyModal = true"
+                >
+                  查看完整配置
+                </button>
+                <span
+                  v-if="!publicSettings?.hide_ccs_import_button"
+                  class="text-xs text-gray-500 dark:text-dark-400"
+                >
+                  已装 CC Switch 点一下即可自动写入配置
+                </span>
+              </div>
+
+              <div class="space-y-2">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <p class="text-sm text-gray-600 dark:text-dark-300">
+                    或复制下面命令到终端回车，自动写入 <code>config.toml</code>（与「使用密钥」一致）：
+                  </p>
+                  <div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-xs dark:border-dark-700 dark:bg-dark-900">
+                    <button
+                      type="button"
+                      data-testid="start-codex-shell-unix"
+                      class="rounded-md px-2.5 py-1 font-medium transition-colors"
+                      :class="
+                        codexShell === 'unix'
+                          ? 'bg-white text-gray-900 shadow-sm dark:bg-dark-800 dark:text-white'
+                          : 'text-gray-500 hover:text-gray-900 dark:text-dark-400 dark:hover:text-white'
+                      "
+                      @click="codexShell = 'unix'"
+                    >
+                      macOS / Linux
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="start-codex-shell-powershell"
+                      class="rounded-md px-2.5 py-1 font-medium transition-colors"
+                      :class="
+                        codexShell === 'powershell'
+                          ? 'bg-white text-gray-900 shadow-sm dark:bg-dark-800 dark:text-white'
+                          : 'text-gray-500 hover:text-gray-900 dark:text-dark-400 dark:hover:text-white'
+                      "
+                      @click="codexShell = 'powershell'"
+                    >
+                      PowerShell
+                    </button>
+                  </div>
+                </div>
+                <div class="overflow-hidden rounded-xl bg-gray-900 dark:bg-dark-900">
+                  <div class="flex items-center justify-between border-b border-gray-700 bg-gray-800 px-4 py-2 dark:border-dark-700 dark:bg-dark-800">
+                    <span class="font-mono text-xs text-gray-400">
+                      {{ codexShell === 'powershell' ? 'PowerShell' : 'macOS / Linux Terminal' }}
+                    </span>
+                    <button
+                      type="button"
+                      class="rounded-lg bg-gray-700 px-2.5 py-1 text-xs font-medium text-gray-200 transition-colors hover:bg-gray-600 hover:text-white disabled:opacity-50"
+                      data-testid="start-codex-copy"
+                      :disabled="!createdKey"
+                      @click="copy(codexQuickCommand)"
+                    >
+                      复制命令
+                    </button>
+                  </div>
+                  <pre class="overflow-x-auto p-4 font-mono text-xs text-gray-100"><code data-testid="start-codex-command">{{ codexQuickCommand }}</code></pre>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-dark-400" data-testid="start-codex-safety-hint">
+                  已有配置会先自动备份（优先写入 <code>CODEX_HOME</code>，否则写入 <code>~/.codex</code>）。命令里含你的 Key，不要发给别人，也不要在公司受监控的电脑上使用一键命令（可改用 CC Switch 导入或手动复制配置）。
+                </p>
+              </div>
+            </div>
+          </template>
+
+          <template v-else>
+            <p class="mb-2 text-sm text-gray-600 dark:text-dark-300">
+              接口地址（{{ platform === 'anthropic' ? 'Claude Code 不加 /v1' : 'OpenAI 兼容写法要加 /v1' }}）：
+            </p>
+            <div class="mb-4 flex items-center gap-2">
+              <code
+                class="flex-1 break-all rounded-lg bg-gray-100 px-3 py-2 font-mono text-sm text-gray-900 dark:bg-dark-800 dark:text-gray-100"
+                data-testid="start-base-url"
+              >{{ baseUrl }}</code>
+              <button type="button" class="btn btn-secondary" @click="copy(baseUrl)">复制</button>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <button
+                type="button"
+                class="btn btn-primary"
+                data-testid="start-use-key"
+                :disabled="!createdKey"
+                @click="showUseKeyModal = true"
+              >
+                使用密钥（各客户端填法，key 已填好）
+              </button>
+              <button
+                v-if="!publicSettings?.hide_ccs_import_button"
+                type="button"
+                class="btn btn-secondary"
+                data-testid="start-ccs"
+                :disabled="!createdKey"
+                @click="importToCcswitch"
+              >
+                导入到 CCS
+              </button>
+            </div>
+          </template>
         </section>
 
         <!-- 第 4 步：测一下 -->
@@ -145,7 +241,10 @@
               卡住了？加微信 nanafox-hi，我们帮你看。
             </template>
           </div>
-          <div v-if="testResult?.ok" class="mt-4">
+          <div v-if="testResult?.ok" class="mt-4 space-y-2">
+            <p v-if="useCase === 'codex'" class="text-sm text-gray-600 dark:text-dark-300">
+              现在回终端运行 <code>codex</code>，发一句“你好”即可开始写代码。
+            </p>
             <button type="button" class="btn btn-secondary" @click="finish">完成，去控制台</button>
           </div>
           </template>
@@ -157,9 +256,9 @@
       :show="showUseKeyModal"
       :api-key="createdKey?.key || ''"
       :base-url="publicSettings?.api_base_url || ''"
-      :platform="selectedGroup?.platform || null"
-      :claude-code-only="selectedGroup?.claude_code_only || false"
-      :allow-messages-dispatch="selectedGroup?.allow_messages_dispatch || false"
+      :platform="activeGroup?.platform || null"
+      :claude-code-only="activeGroup?.claude_code_only || false"
+      :allow-messages-dispatch="activeGroup?.allow_messages_dispatch || false"
       @close="showUseKeyModal = false"
     />
   </AppLayout>
@@ -175,12 +274,15 @@ import { useClipboard } from '@/composables/useClipboard'
 import { useAppStore, useAuthStore } from '@/stores'
 import type { ApiKey, Group, PublicSettings } from '@/types'
 import { CC_SWITCH_USAGE_SCRIPT, buildCcSwitchImportDeeplink } from '@/utils/ccswitchImport'
+import { buildCodexQuickSetupCommand, type CodexQuickSetupShell } from '@/utils/codexAuthConfig'
 import {
+  DEFAULT_START_USE_CASE,
   baseUrlFor,
   buildTestRequest,
   extractError,
   extractReply,
   markStartDone,
+  pickExistingKeyForUseCase,
   pickGroupForUseCase,
   platformForUseCase,
   rememberedUseCase,
@@ -198,24 +300,29 @@ const user = computed(() => authStore.user)
 const loading = ref(true)
 const groups = ref<Group[]>([])
 const publicSettings = ref<PublicSettings | null>(null)
-const useCase = ref<StartUseCase>(useCaseFromQuery(route.query.use) ?? rememberedUseCase() ?? 'code')
+const useCase = ref<StartUseCase>(useCaseFromQuery(route.query.use) ?? rememberedUseCase() ?? DEFAULT_START_USE_CASE)
 const createdKey = ref<ApiKey | null>(null)
 const creating = ref(false)
 const showUseKeyModal = ref(false)
+const codexShell = ref<CodexQuickSetupShell>('unix')
 const testing = ref(false)
 const testResult = ref<{ ok: boolean; text: string; seconds?: string } | null>(null)
 
 const useCaseOptions: { value: StartUseCase; title: string; desc: string }[] = [
-  { value: 'claude', title: 'Claude Code', desc: '命令行写代码，用 Claude 模型' },
   { value: 'codex', title: 'Codex', desc: 'OpenAI 的编程工具，用 GPT 模型' },
+  { value: 'claude', title: 'Claude Code', desc: '命令行写代码，用 Claude 模型' },
   { value: 'client', title: 'Cherry Studio / Cursor 等客户端', desc: 'OpenAI 兼容接口，用 GPT 模型' },
   { value: 'code', title: '自己写代码', desc: 'OpenAI SDK 等，用 GPT 模型' }
 ]
 
 const platform = computed(() => platformForUseCase(useCase.value))
 const selectedGroup = computed(() => pickGroupForUseCase(groups.value, useCase.value))
+const activeGroup = computed(() => createdKey.value?.group ?? selectedGroup.value)
 const origin = computed(() => publicSettings.value?.api_base_url || window.location.origin)
 const baseUrl = computed(() => baseUrlFor(origin.value, platform.value))
+const codexQuickCommand = computed(() =>
+  buildCodexQuickSetupCommand(origin.value, createdKey.value?.key || 'sk-your-api-key', codexShell.value)
+)
 const testModel = computed(() => buildTestRequest(origin.value, platform.value, '').model)
 
 function goDashboard() {
@@ -242,7 +349,9 @@ async function createKey() {
   try {
     createdKey.value = await keysAPI.create('我的第一个 key', group.id)
     markStartDone(user.value?.id)
-    showUseKeyModal.value = true
+    if (useCase.value !== 'codex') {
+      showUseKeyModal.value = true
+    }
   } catch (error: any) {
     appStore.showError(error?.response?.data?.detail || error?.message || '创建失败，请稍后重试')
   } finally {
@@ -256,7 +365,7 @@ function importToCcswitch() {
   const providerName = (publicSettings.value?.site_name || 'sub2api').trim() || 'sub2api'
   const deeplink = buildCcSwitchImportDeeplink({
     baseUrl: origin.value,
-    platform: selectedGroup.value?.platform || 'anthropic',
+    platform: activeGroup.value?.platform || 'anthropic',
     clientType: 'claude',
     providerName,
     apiKey: key.key,
@@ -290,10 +399,13 @@ async function runTest() {
 
 onMounted(async () => {
   try {
-    const existing = await keysAPI.list(1, 1)
-    if ((existing?.total ?? 0) > 0) {
-      goDashboard()
-      return
+    const resumeConfig = route.query.step === 'config'
+    if (!resumeConfig) {
+      const existing = await keysAPI.list(1, 1)
+      if ((existing?.total ?? 0) > 0) {
+        goDashboard()
+        return
+      }
     }
     const [g, s] = await Promise.all([
       userGroupsAPI.getAvailable(),
@@ -301,6 +413,21 @@ onMounted(async () => {
     ])
     groups.value = g || []
     publicSettings.value = s
+    if (resumeConfig) {
+      const pageSize = 50
+      const maxPages = 3
+      for (let page = 1; page <= maxPages; page += 1) {
+        const res = await keysAPI.list(page, pageSize, { status: 'active' })
+        const matched = pickExistingKeyForUseCase(res?.items || [], useCase.value)
+        if (matched) {
+          createdKey.value = matched
+          break
+        }
+        if ((res?.pages ?? 1) <= page || (res?.items?.length ?? 0) < pageSize) {
+          break
+        }
+      }
+    }
   } catch (error: any) {
     appStore.showError(error?.message || '加载失败，可以先跳过，到「API 密钥」里手动创建')
   } finally {

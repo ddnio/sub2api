@@ -73,7 +73,7 @@ it('prerenders every docs section', async () => {
       .replace(APP_MOUNT, () => `<div id="app">${root.innerHTML}</div>`)
     // 占位符只能原样出现；被转码或拼接后后端就替换不到了
     const stripped = Object.values(PRERENDER_PLACEHOLDERS).reduce((s, p) => s.split(p).join(''), html)
-    expect(stripped, `${path} has transformed placeholders`).not.toMatch(/prerender\.invalid|__PRERENDER_/)
+    expect(stripped, `${path} has transformed placeholders`).not.toMatch(/prerender\.invalid|__PRERENDER_|prerender_site_name/i)
     expect(html).toContain(PRERENDER_PLACEHOLDERS.siteName)
 
     const file = `${section}.html`

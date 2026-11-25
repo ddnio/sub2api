@@ -3,6 +3,9 @@ import { flushPromises, mount } from '@vue/test-utils'
 
 import StartView from '../StartView.vue'
 import { startDoneKey } from '../startOnboarding'
+import UseKeyModal from '@/components/keys/UseKeyModal.vue'
+import { buildOpenAICodexConfigToml } from '@/utils/codexAuthConfig'
+import { createCodexCliFiles } from '@/utils/codexConfig'
 
 const { listKeys, createKey, getAvailable, fetchPublicSettings, showError, replace, routeQuery } = vi.hoisted(() => ({
   listKeys: vi.fn(),
@@ -32,6 +35,14 @@ vi.mock('@/stores', () => ({
 vi.mock('@/composables/useClipboard', () => ({
   useClipboard: () => ({ copyToClipboard: vi.fn() })
 }))
+
+vi.mock('vue-i18n', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('vue-i18n')>()
+  return {
+    ...actual,
+    useI18n: () => ({ t: (key: string) => key })
+  }
+})
 
 const GROUPS = [
   { id: 3, name: 'OpenAI GPT', platform: 'openai', status: 'active', subscription_type: 'standard', is_exclusive: false, claude_code_only: false },
@@ -84,11 +95,145 @@ describe('StartView', () => {
     expect(localStorage.getItem(startDoneKey(7))).toBe('1')
   })
 
-  it('defaults to "write code" with the OpenAI group and /v1 address', async () => {
+  it('defaults to codex with codex-first option order and inline setup without /v1 hint', async () => {
+    createKey.mockResolvedValue({ id: 9, name: '我的第一个 key', key: 'sk-codex-123' })
     const w = mountView()
     await flushPromises()
+
+    const useCaseIds = w.findAll('[data-testid^="start-usecase-"]').map((el) => el.attributes('data-testid'))
+    expect(useCaseIds).toEqual([
+      'start-usecase-codex',
+      'start-usecase-claude',
+      'start-usecase-client',
+      'start-usecase-code'
+    ])
     expect(w.text()).toContain('OpenAI GPT')
+    expect(w.find('[data-testid="start-base-url"]').exists()).toBe(false)
+    expect(w.text()).not.toContain('要加 /v1')
+    expect(w.get('[data-testid="start-skip"]').classes()).not.toContain('btn-secondary')
+
+    await w.get('[data-testid="start-create"]').trigger('click')
+    await flushPromises()
+    expect(w.get('[data-testid="use-key-modal"]').attributes('data-show')).toBe('false')
+    expect(w.get('[data-testid="start-ccs"]').classes()).toContain('btn-primary')
+
+    const expectedToml = buildOpenAICodexConfigToml({
+      baseUrl: window.location.origin,
+      apiKey: 'sk-codex-123'
+    })
+    const unixCmd = w.get('[data-testid="start-codex-command"]').text()
+    expect(unixCmd).toContain('CODEX_HOME')
+    expect(unixCmd).toContain(expectedToml)
+    const safetyHint = w.get('[data-testid="start-codex-safety-hint"]').text()
+    expect(safetyHint).toContain('自动备份')
+    expect(safetyHint).toContain('不要发给别人')
+    expect(safetyHint).toContain('公司受监控的电脑')
+
+    await w.get('[data-testid="start-codex-shell-powershell"]').trigger('click')
+    const psCmd = w.get('[data-testid="start-codex-command"]').text()
+    expect(psCmd).toContain('Set-Content -LiteralPath $t -Encoding UTF8')
+    expect(psCmd).toContain(expectedToml)
+
+    // Cross-check directly against UseKeyModal's rendered OpenAI Codex config
+    const realModal = mount(UseKeyModal, {
+      props: {
+        show: true,
+        apiKey: 'sk-codex-123',
+        baseUrl: window.location.origin,
+        platform: 'openai'
+      },
+      global: {
+        mocks: { $t: (k: string) => k },
+        stubs: {
+          BaseDialog: { template: '<div><slot /><slot name="footer" /></div>' },
+          Icon: { template: '<span />' },
+          RouterLink: { template: '<a><slot /></a>' }
+        }
+      }
+    })
+    const modalToml = realModal.get('pre code').text()
+    const docsFiles = createCodexCliFiles({
+      baseUrl: window.location.origin,
+      apiKey: 'sk-codex-123',
+      os: 'unix'
+    })
+    expect(docsFiles).toHaveLength(1)
+    expect(docsFiles[0].content).toBe(modalToml)
+    expect(unixCmd).toContain(modalToml)
+    expect(psCmd).toContain(modalToml)
+  })
+
+  it('shows /v1 base url hint when switching to "write code"', async () => {
+    const w = mountView()
+    await flushPromises()
+    await w.get('[data-testid="start-usecase-code"]').trigger('click')
     expect(w.get('[data-testid="start-base-url"]').text()).toBe(`${window.location.origin}/v1`)
+    expect(w.text()).toContain('要加 /v1')
+  })
+
+  it('resumes directly at step 3 with an existing active OpenAI key when ?step=config is passed', async () => {
+    routeQuery.value = { step: 'config', use: 'codex' }
+    listKeys.mockResolvedValue({
+      items: [
+        { id: 10, name: 'disabled-key', key: 'sk-disabled', status: 'inactive', group: GROUPS[0] },
+        { id: 11, name: 'existing-key', key: 'sk-existing-999', status: 'active', group: GROUPS[0] }
+      ],
+      total: 2,
+      page: 1,
+      page_size: 20,
+      pages: 1
+    })
+    const w = mountView()
+    await flushPromises()
+    expect(listKeys).toHaveBeenCalledWith(1, 50, { status: 'active' })
+    expect(replace).not.toHaveBeenCalled()
+    expect(w.get('[data-testid="start-key"]').text()).toBe('sk-existing-999')
+    expect(w.get('[data-testid="start-codex-command"]').text()).toContain('sk-existing-999')
+  })
+
+  it('continues past page 1 when ?step=config finds matching active key on page 2', async () => {
+    routeQuery.value = { step: 'config', use: 'codex' }
+    const page1Items = Array.from({ length: 50 }, (_, i) => ({
+      id: i + 1,
+      name: `claude-${i}`,
+      key: `sk-claude-${i}`,
+      status: 'active',
+      group: GROUPS[1]
+    }))
+    listKeys
+      .mockResolvedValueOnce({ items: page1Items, total: 51, page: 1, page_size: 50, pages: 2 })
+      .mockResolvedValueOnce({
+        items: [{ id: 51, name: 'codex-page2', key: 'sk-codex-page2', status: 'active', group: GROUPS[0] }],
+        total: 51,
+        page: 2,
+        page_size: 50,
+        pages: 2
+      })
+    const w = mountView()
+    await flushPromises()
+    expect(listKeys).toHaveBeenNthCalledWith(1, 1, 50, { status: 'active' })
+    expect(listKeys).toHaveBeenNthCalledWith(2, 2, 50, { status: 'active' })
+    expect(w.get('[data-testid="start-key"]').text()).toBe('sk-codex-page2')
+  })
+
+  it('stays at key creation step when ?step=config&use=codex has only Claude or inactive keys', async () => {
+    routeQuery.value = { step: 'config', use: 'codex' }
+    listKeys.mockResolvedValue({
+      items: [
+        { id: 12, name: 'claude-only', key: 'sk-claude-only', status: 'active', group: GROUPS[1] },
+        { id: 13, name: 'disabled-openai', key: 'sk-disabled', status: 'inactive', group: GROUPS[0] }
+      ],
+      total: 2,
+      page: 1,
+      page_size: 20,
+      pages: 1
+    })
+    const w = mountView()
+    await flushPromises()
+    expect(replace).not.toHaveBeenCalled()
+    expect(w.find('[data-testid="start-key"]').exists()).toBe(false)
+    expect(w.get('[data-testid="start-create"]').exists()).toBe(true)
+    expect(w.get('[data-testid="start-codex-command"]').text()).not.toContain('sk-claude-only')
   })
 
   it('preselects Claude Code from ?use=claude and creates the key in ClaudeCode专用', async () => {

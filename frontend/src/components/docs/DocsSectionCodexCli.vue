@@ -9,6 +9,31 @@
 
     <DocsGroupHint platform="openai" key-only />
 
+    <!-- Quick jump card for users who already have Codex installed -->
+    <div
+      data-testid="codex-quick-jump"
+      class="flex flex-col gap-3 rounded-xl border border-primary-200 bg-primary-50/70 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-primary-800/60 dark:bg-primary-900/20"
+    >
+      <div class="text-sm text-gray-800 dark:text-gray-200">
+        <p class="font-medium text-gray-900 dark:text-white">{{ guideCopy.quickJumpTitle }}</p>
+        <p class="mt-0.5 text-xs text-gray-600 dark:text-dark-300">{{ guideCopy.quickJumpDesc }}</p>
+      </div>
+      <div class="flex shrink-0 flex-wrap items-center gap-2">
+        <a
+          href="#codex-step-config"
+          class="inline-flex items-center rounded-lg border border-primary-300 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 transition-colors hover:bg-primary-50 dark:border-primary-700 dark:bg-dark-900 dark:text-primary-300 dark:hover:bg-dark-800"
+        >
+          {{ guideCopy.quickJumpConfig }}
+        </a>
+        <RouterLink
+          to="/start?step=config&use=codex"
+          class="inline-flex items-center rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-700"
+        >
+          {{ guideCopy.quickJumpCcs }}
+        </RouterLink>
+      </div>
+    </div>
+
     <!-- Platform selector -->
     <div class="inline-flex rounded-full border border-gray-200 bg-gray-50 p-1 dark:border-dark-700 dark:bg-dark-950">
       <button
@@ -81,7 +106,7 @@
     </section>
 
     <!-- Step 3: Configure -->
-    <section class="space-y-3">
+    <section id="codex-step-config" class="space-y-3 scroll-mt-24">
       <div class="flex items-start gap-3">
         <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary-700 dark:bg-primary-900/20 dark:text-primary-300">3</span>
         <div class="min-w-0 flex-1">
@@ -207,15 +232,19 @@ const guideCopy = computed(() => {
       kicker: '教程',
       title: 'Codex CLI 使用指南',
       subtitle: `配置 Codex CLI 连接 ${siteName.value} API 服务，替换端点和 API Key 后即可开箱即用。`,
+      quickJumpTitle: '已装好 Codex CLI / Desktop？直接看第 3 步配置',
+      quickJumpDesc: '无需重复安装 Node.js 和 Codex，直接复制配置或登录后台一键导入 CC Switch。',
+      quickJumpConfig: '跳到第 3 步配置',
+      quickJumpCcs: '一键导入 CC Switch',
       nodeTitle: '安装 Node.js',
       nodeDescription: 'Codex CLI 需要 Node.js v18 或更高版本。',
       nodeVerifyTitle: '安装完成后验证',
       installTitle: '安装 Codex CLI',
       installVerifyTitle: '验证安装',
       connectTitle: `连接 ${siteName.value} API 服务`,
-      connectDescription: '需要创建两个配置文件：`config.toml` 和 `auth.json`。',
+      connectDescription: '创建配置文件 `config.toml`（单文件即可，与控制台「使用密钥」一致）。',
       keyReplaceText: '将 `your-api-key-here` 替换为你在控制台创建的 API Key。',
-      authNote: '此方式通过 `auth.json` 文件存储 API 密钥，`config.toml` 中无需配置 `env_key` 字段。',
+      authNote: '此方式将 API 密钥直接写入 `config.toml`（无需额外创建 `auth.json`），与后台「使用密钥」生成的默认配置完全一致。',
       vscodeTitle: 'VS Code 扩展配置（可选）',
       vscodeDescription: '如果你使用 VS Code，可以安装 Codex 扩展获得更好的 IDE 集成体验。',
       startTitle: '启动 Codex',
@@ -229,15 +258,19 @@ const guideCopy = computed(() => {
     kicker: 'Guide',
     title: 'Codex CLI Guide',
     subtitle: `Configure Codex CLI to connect to the ${siteName.value} API service. Replace the endpoint and API key, then start immediately.`,
+    quickJumpTitle: 'Already have Codex CLI / Desktop installed? Jump straight to Step 3',
+    quickJumpDesc: 'Skip Node.js and Codex installation — copy the config or sign in for 1-click CC Switch import.',
+    quickJumpConfig: 'Jump to Step 3',
+    quickJumpCcs: '1-Click CC Switch Import',
     nodeTitle: 'Install Node.js',
     nodeDescription: 'Codex CLI requires Node.js v18 or later.',
     nodeVerifyTitle: 'Verify the installation',
     installTitle: 'Install Codex CLI',
     installVerifyTitle: 'Verify the CLI',
     connectTitle: `Connect to the ${siteName.value} API service`,
-    connectDescription: 'Create two config files: `config.toml` and `auth.json`.',
+    connectDescription: 'Create a single config file: `config.toml` (matches the dashboard "Use Key" default).',
     keyReplaceText: 'Replace `your-api-key-here` with the API key you created in the dashboard.',
-    authNote: 'This setup stores the API key in `auth.json`, so `config.toml` does not need an `env_key` field.',
+    authNote: 'This setup writes the API key directly into `config.toml` (no separate `auth.json` needed), matching the default config in the dashboard.',
     vscodeTitle: 'VS Code extension setup (optional)',
     vscodeDescription: 'If you use VS Code, install the Codex extension for a better IDE workflow.',
     startTitle: 'Start Codex',
@@ -409,14 +442,14 @@ const vscodeItems = computed(() => {
   if (isZh.value) {
     return [
       '在 VS Code 扩展商店搜索并安装 Codex \u2013 OpenAI\u2019s coding agent',
-      '确保已经按上面的步骤配置好 `config.toml` 和 `auth.json`',
+      '确保已经按上面的步骤配置好 `config.toml`',
       '如需扩展内读取密钥，可设置一个环境变量名并在扩展中引用该名称'
     ]
   }
 
   return [
     'Install Codex – OpenAI\u2019s coding agent from the VS Code marketplace',
-    'Make sure `config.toml` and `auth.json` are already configured',
+    'Make sure `config.toml` is already configured',
     'If the extension needs a key, set an environment variable and reference its name there'
   ]
 })
@@ -442,7 +475,7 @@ const faqItems = computed<FaqItem[]>(() => {
         {
           title: '2. API 连接失败',
           shell: 'PowerShell',
-          code: `# 测试 API 端点\ncurl.exe -I ${apiBaseRoot.value}\n\n# 检查配置文件\nGet-Content $HOME\\.codex\\config.toml\nGet-Content $HOME\\.codex\\auth.json`
+          code: `# 测试 API 端点\ncurl.exe -I ${apiBaseRoot.value}\n\n# 检查配置文件\nGet-Content $HOME\\.codex\\config.toml`
         },
         {
           title: '3. 更新 Codex CLI',
@@ -463,7 +496,7 @@ const faqItems = computed<FaqItem[]>(() => {
       {
         title: '2. API 连接失败',
         shell: 'bash',
-        code: `# 测试 API 端点\ncurl -I ${apiBaseRoot.value}\n\n# 检查配置文件\ncat ~/.codex/config.toml\ncat ~/.codex/auth.json`
+        code: `# 测试 API 端点\ncurl -I ${apiBaseRoot.value}\n\n# 检查配置文件\ncat ~/.codex/config.toml`
       },
       {
         title: '3. 更新 Codex CLI',
@@ -486,7 +519,7 @@ const faqItems = computed<FaqItem[]>(() => {
       {
         title: '2. API connection failed',
         shell: 'PowerShell',
-        code: `# Test the API endpoint\ncurl.exe -I ${apiBaseRoot.value}\n\n# Inspect config files\nGet-Content $HOME\\.codex\\config.toml\nGet-Content $HOME\\.codex\\auth.json`
+        code: `# Test the API endpoint\ncurl.exe -I ${apiBaseRoot.value}\n\n# Inspect config file\nGet-Content $HOME\\.codex\\config.toml`
       },
       {
         title: '3. Update Codex CLI',
@@ -507,7 +540,7 @@ const faqItems = computed<FaqItem[]>(() => {
     {
       title: '2. API connection failed',
       shell: 'bash',
-      code: `# Test the API endpoint\ncurl -I ${apiBaseRoot.value}\n\n# Inspect config files\ncat ~/.codex/config.toml\ncat ~/.codex/auth.json`
+      code: `# Test the API endpoint\ncurl -I ${apiBaseRoot.value}\n\n# Inspect config file\ncat ~/.codex/config.toml`
     },
     {
       title: '3. Update Codex CLI',

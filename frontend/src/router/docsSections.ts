@@ -2,9 +2,9 @@
 // 每个小节一个独立地址（/docs/clients），方便搜索引擎分别收录；快速开始用 /docs 本身。
 import type { RouteLocationNormalized } from 'vue-router'
 
-export type DocsSection = 'quick-start' | 'claude-code' | 'codex-cli' | 'clients' | 'opencode' | 'api-usage' | 'faq'
+export type DocsSection = 'quick-start' | 'codex-cli' | 'claude-code' | 'clients' | 'opencode' | 'api-usage' | 'faq'
 
-export const DOCS_SECTIONS: DocsSection[] = ['quick-start', 'claude-code', 'codex-cli', 'clients', 'opencode', 'api-usage', 'faq']
+export const DOCS_SECTIONS: DocsSection[] = ['quick-start', 'codex-cli', 'claude-code', 'clients', 'opencode', 'api-usage', 'faq']
 export const DEFAULT_DOCS_SECTION: DocsSection = 'quick-start'
 export const DOCS_ROUTE_NAME = 'Docs'
 

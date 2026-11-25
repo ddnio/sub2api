@@ -55,8 +55,8 @@ interface NavItem {
 
 const navItems = computed<NavItem[]>(() => [
   { section: 'quick-start', label: t('docs.nav.quickStart') },
-  { section: 'claude-code', label: t('docs.nav.claudeCode') },
   { section: 'codex-cli', label: t('docs.nav.codexCli') },
+  { section: 'claude-code', label: t('docs.nav.claudeCode') },
   { section: 'clients', label: t('docs.nav.clients') },
   { section: 'opencode', label: t('docs.nav.opencode') },
   { section: 'api-usage', label: t('docs.nav.apiUsage') },
