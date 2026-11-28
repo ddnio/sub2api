@@ -162,6 +162,9 @@ func (s *AuthService) createEmailOAuthUser(ctx context.Context, email, username,
 	if s.settingService.IsRegistrationEmailBlacklisted(ctx, email) {
 		return nil, ErrEmailBlocked
 	}
+	if IsDisallowedRegistrationEmailAlias(email) {
+		return nil, ErrEmailAliasNotAllowed
+	}
 	invitationRedeemCode, err := s.validateOAuthRegistrationInvitation(ctx, invitationCode)
 	if err != nil {
 		if errors.Is(err, ErrInvitationCodeRequired) {
@@ -194,13 +197,16 @@ func (s *AuthService) createEmailOAuthUser(ctx context.Context, email, username,
 		Status:       StatusActive,
 		SignupSource: providerType,
 	}
-	if err := s.userRepo.Create(ctx, user); err != nil {
+	if err := s.userRepo.CreateWithEmailAliasGuard(ctx, user); err != nil {
 		if errors.Is(err, ErrEmailExists) {
 			existing, loadErr := s.userRepo.GetByEmail(ctx, email)
-			if loadErr != nil {
-				return nil, ErrServiceUnavailable
+			if loadErr == nil {
+				return existing, nil
 			}
-			return existing, nil
+			if errors.Is(loadErr, ErrUserNotFound) {
+				return nil, ErrEmailExists
+			}
+			return nil, ErrServiceUnavailable
 		}
 		return nil, ErrServiceUnavailable
 	}

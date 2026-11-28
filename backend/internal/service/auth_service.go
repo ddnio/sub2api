@@ -1137,11 +1137,14 @@ func (s *AuthService) validateRegistrationEmailSuffixPolicy(ctx context.Context,
 // 配置白名单后，非白名单域名默认直接拒绝（严格白名单模式）；仅当域名限量注册开关开启时，
 // 非白名单域名每个最多允许一个账户。
 func (s *AuthService) validateRegistrationEmailQuota(ctx context.Context, email string) error {
+	if s.settingService != nil && s.settingService.IsRegistrationEmailBlacklisted(ctx, email) {
+		return ErrEmailBlocked
+	}
+	if IsDisallowedRegistrationEmailAlias(email) {
+		return ErrEmailAliasNotAllowed
+	}
 	if s.settingService == nil {
 		return nil
-	}
-	if s.settingService.IsRegistrationEmailBlacklisted(ctx, email) {
-		return ErrEmailBlocked
 	}
 	whitelist := s.settingService.GetRegistrationEmailSuffixWhitelist(ctx)
 	if !IsRegistrationEmailSuffixLimited(email, whitelist) {

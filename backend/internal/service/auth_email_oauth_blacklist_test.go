@@ -58,3 +58,50 @@ func TestLoginOrRegisterVerifiedEmailOAuth_BlacklistedNewEmailRejected(t *testin
 	require.NoError(t, err)
 	require.Zero(t, count)
 }
+
+func TestLoginOrRegisterVerifiedEmailOAuth_DisallowedGmailAliasRejected(t *testing.T) {
+	svc, _, client := newAuthServiceForEmailBindWithRefreshCache(t, map[string]string{
+		service.SettingKeyRegistrationEnabled: "true",
+	}, nil, nil, newEmailBindRefreshTokenCacheStub())
+	ctx := context.Background()
+
+	_, _, err := svc.LoginOrRegisterVerifiedEmailOAuth(ctx, service.EmailOAuthIdentityInput{
+		ProviderType:    "oidc",
+		ProviderSubject: "oidc-multidot-user",
+		Email:           "brucecol.li.n.s9227@gmail.com",
+		EmailVerified:   true,
+	})
+	require.ErrorIs(t, err, service.ErrEmailAliasNotAllowed)
+
+	count, err := client.User.Query().Where(dbuser.EmailEQ("brucecol.li.n.s9227@gmail.com")).Count(ctx)
+	require.NoError(t, err)
+	require.Zero(t, count)
+}
+
+func TestLoginOrRegisterVerifiedEmailOAuth_AliasCollisionRejected(t *testing.T) {
+	svc, repo, client := newAuthServiceForEmailBindWithRefreshCache(t, map[string]string{
+		service.SettingKeyRegistrationEnabled: "true",
+	}, nil, nil, newEmailBindRefreshTokenCacheStub())
+	ctx := context.Background()
+
+	existing := &service.User{
+		Email:        "firstlast@gmail.com",
+		PasswordHash: "hash",
+		Role:         service.RoleUser,
+		Status:       service.StatusActive,
+		Concurrency:  1,
+	}
+	require.NoError(t, repo.Create(ctx, existing))
+
+	_, _, err := svc.LoginOrRegisterVerifiedEmailOAuth(ctx, service.EmailOAuthIdentityInput{
+		ProviderType:    "oidc",
+		ProviderSubject: "oidc-alias-collision",
+		Email:           "first.last@gmail.com",
+		EmailVerified:   true,
+	})
+	require.ErrorIs(t, err, service.ErrEmailExists)
+
+	count, err := client.User.Query().Where(dbuser.EmailEQ("first.last@gmail.com")).Count(ctx)
+	require.NoError(t, err)
+	require.Zero(t, count)
+}

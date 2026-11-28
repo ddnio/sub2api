@@ -254,6 +254,8 @@ export default {
     errors: {
       USER_NOT_ACTIVE: '账号已被禁用',
       EMAIL_BLOCKED: '该邮箱不允许注册，请更换其他邮箱。',
+      EMAIL_ALIAS_NOT_ALLOWED:
+        'Gmail 邮箱不支持含 "+" 号或多个英文点的别名格式，请使用原始邮箱注册。',
     },
     registrationFailed: '注册失败，请重试。',
     emailDomainRegistrationLimit:

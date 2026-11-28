@@ -162,3 +162,41 @@ func TestExistsByEmailOrAlias(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestIsDisallowedRegistrationEmailAlias(t *testing.T) {
+	cases := []struct {
+		name  string
+		email string
+		want  bool
+	}{
+		{"plain gmail allowed", "alice@gmail.com", false},
+		{"single dot gmail allowed", "first.last@gmail.com", false},
+		{"single dot googlemail allowed", "first.last@googlemail.com", false},
+		{"two dots gmail blocked", "fr.ied.almandos@gmail.com", true},
+		{"three dots gmail blocked", "brucecol.li.n.s9227@gmail.com", true},
+		{"four dots gmail blocked", "cu.r.a.t.orcvn@gmail.com", true},
+		{"two dots googlemail with root dot blocked", "a.b.c@googlemail.com.", true},
+		{"gmail plus alias blocked", "alice+tag@gmail.com", true},
+		{"gmail uppercase plus alias blocked", "  Alice+1@GMAIL.COM ", true},
+		{"non-gmail multi dot allowed", "a.b.c@company.example", false},
+		{"non-gmail plus allowed", "alice+tag@qq.com", false},
+		{"malformed email not flagged here", "not-an-email", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, IsDisallowedRegistrationEmailAlias(tc.email))
+		})
+	}
+}
+
+func TestValidateRegistrationEmailQuotaBlocksGmailAliases(t *testing.T) {
+	ctx := context.Background()
+	svc := &AuthService{}
+
+	require.ErrorIs(t, svc.validateRegistrationEmailQuota(ctx, "brucecol.li.n.s9227@gmail.com"), ErrEmailAliasNotAllowed)
+	require.ErrorIs(t, svc.validateRegistrationEmailQuota(ctx, "alice+promo@gmail.com"), ErrEmailAliasNotAllowed)
+	require.ErrorIs(t, svc.validateRegistrationEmailQuota(ctx, "a.b.c@googlemail.com."), ErrEmailAliasNotAllowed)
+	require.NoError(t, svc.validateRegistrationEmailQuota(ctx, "first.last@gmail.com"))
+	require.NoError(t, svc.validateRegistrationEmailQuota(ctx, "alice@gmail.com"))
+	require.NoError(t, svc.validateRegistrationEmailQuota(ctx, "a.b.c@company.example"))
+}

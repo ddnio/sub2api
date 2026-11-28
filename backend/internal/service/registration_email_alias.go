@@ -3,6 +3,16 @@ package service
 import (
 	"context"
 	"strings"
+
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+)
+
+// ErrEmailAliasNotAllowed is returned when a registration email uses a
+// Gmail-family alias format commonly abused by disposable Gmail pools
+// (plus-addressing or two or more dots in the local part).
+var ErrEmailAliasNotAllowed = infraerrors.BadRequest(
+	"EMAIL_ALIAS_NOT_ALLOWED",
+	"gmail addresses with '+' or multiple dots are not allowed for registration",
 )
 
 // Email alias normalization for registration dedup.
@@ -124,6 +134,22 @@ func stripEmailLocalDots(local string) string {
 func isGmailFamilyDomain(domain string) bool {
 	_, ok := gmailFamilyDomains[domain]
 	return ok
+}
+
+// IsDisallowedRegistrationEmailAlias reports whether email is a Gmail-family
+// address (gmail.com / googlemail.com, ignoring FQDN root dots) that uses
+// plus-addressing ('+') or two or more dots ('.') in its local part.
+// Single-dot Gmail addresses (e.g. first.last@gmail.com) and non-Gmail domains
+// are allowed.
+func IsDisallowedRegistrationEmailAlias(email string) bool {
+	local, domain, ok := splitEmailForAliasDedup(email)
+	if !ok || !isGmailFamilyDomain(domain) {
+		return false
+	}
+	if strings.ContainsRune(local, '+') {
+		return true
+	}
+	return strings.Count(local, ".") >= 2
 }
 
 // existsByEmailOrAlias reports whether an email — or any alias variant that

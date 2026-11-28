@@ -254,6 +254,8 @@ export default {
     errors: {
       USER_NOT_ACTIVE: 'Account has been disabled.',
       EMAIL_BLOCKED: 'This email address is not allowed. Please use a different one.',
+      EMAIL_ALIAS_NOT_ALLOWED:
+        'Gmail addresses with "+" or multiple dots are not supported for registration. Please use your original Gmail address.',
     },
     registrationFailed: 'Registration failed. Please try again.',
     emailDomainRegistrationLimit:
