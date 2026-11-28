@@ -1299,6 +1299,12 @@ func (h *AuthHandler) tryOIDCVerifiedEmailFastPath(
 		readOAuthPromoCode(c),
 	)
 	if err != nil {
+		if errors.Is(err, service.ErrEmailBlocked) ||
+			errors.Is(err, service.ErrEmailAliasNotAllowed) ||
+			errors.Is(err, service.ErrEmailExists) {
+			redirectOAuthError(c, frontendCallback, infraerrors.Reason(err), infraerrors.Message(err), "")
+			return true
+		}
 		log.Printf("[OIDC OAuth] verified-email fast path skipped: reason=%s", infraerrors.Reason(err))
 		return false
 	}
